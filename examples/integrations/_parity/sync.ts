@@ -298,7 +298,7 @@ function main(): void {
     `\n${mode}total: ${totalFiles} file change(s), ${totalKeys} package.json key(s) across ${targets.length} instance(s)\n`,
   );
   process.stdout.write(
-    `\nmanual-merge reminder: agent/ dir, api/copilotkit route, and Dockerfile are NOT synced.\n` +
+    `\nmanual-merge reminder: agent/ dir and api/copilotkit route are NOT synced.\n` +
       `run \`pnpm parity:verify\` to check agent-surface and prompt alignment.\n`,
   );
 }

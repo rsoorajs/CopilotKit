@@ -2,7 +2,7 @@
  * Docker-specific route override.
  * In Docker, the agent is served via AG-UI (not LangGraph Platform)
  * because langgraph-cli dev requires Docker-in-Docker.
- * The original route.ts (using LangGraphHttpAgent) is preserved unchanged.
+ * The original route.ts (using LangGraphAgent) is preserved unchanged.
  */
 import {
   CopilotRuntime,
@@ -23,7 +23,7 @@ export const POST = async (req: NextRequest) => {
     endpoint: "/api/copilotkit",
     serviceAdapter: new ExperimentalEmptyAdapter(),
     runtime: new CopilotRuntime({
-      agents: { sample_agent: defaultAgent },
+      agents: { default: defaultAgent },
     }),
   });
 
