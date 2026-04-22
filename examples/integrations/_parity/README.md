@@ -19,8 +19,10 @@ Declared in [`manifest.json`](./manifest.json):
   overrides in manifest (`packageJsonOverrides`) win where the instance
   legitimately differs (e.g. `dev:agent` runs `npm install` in JS but
   `uv sync` in FastAPI).
-- **canonical prompt** — `_parity/canonical/PROMPT.md`. Copied into each
-  instance's `agent/PROMPT.md` on sync. Agents read this file at startup.
+- **canonical prompt** — `_parity/canonical/PROMPT.md`. Each agent
+  **inlines** the prompt as a string literal in its source (matching the
+  north-star's `main.py` pattern). Verifier greps the canonical prompt's
+  first non-blank line against instance agent source — drift = error.
 - **agent surface** — tool names + state keys expected to appear in each
   instance's agent source. Grep-level check — doesn't validate call-site
   correctness, that's the aimock fixture tests' job.
@@ -101,9 +103,14 @@ The verifier will then flag every instance that hasn't caught up.
 
 ### Canonical prompt changed
 
-Edit `_parity/canonical/PROMPT.md`. Run `pnpm parity:sync --all` — the new
-prompt lands at each instance's `agent/PROMPT.md`. No other changes needed
-if agents already read from that file.
+1. Edit `_parity/canonical/PROMPT.md`.
+2. Update north-star's `agent/main.py` to use the new prompt string
+   (north-star is where humans read; canonical file is what the
+   verifier reads).
+3. Port the new prompt into every instance's agent source (same
+   manual-merge rules as any agent change).
+4. `pnpm parity:verify` — verifier greps first line of canonical against
+   each instance's agent source. Passes when all instances inline it.
 
 ## CI
 

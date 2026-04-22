@@ -184,9 +184,10 @@ function verifyInstance(root: ParityRoot, instance: string): Report {
     }
   }
 
-  // Canonical prompt
+  // Canonical prompt: grep agent source for the first non-blank line of
+  // the canonical prompt. Full-text match is too brittle across triple-quote
+  // indentation; first line is a deterministic, high-signal marker.
   const promptSrc = resolve(root.integrationsDir, manifest.canonicalPromptFile);
-  const promptDst = join(to, "agent", "PROMPT.md");
   if (!fileExists(promptSrc)) {
     items.push({
       severity: "error",
@@ -195,29 +196,43 @@ function verifyInstance(root: ParityRoot, instance: string): Report {
       subject: manifest.canonicalPromptFile,
       detail: "canonical prompt missing in repo",
     });
-  } else if (!fileExists(promptDst)) {
-    items.push({
-      severity: "error",
-      instance,
-      kind: "prompt",
-      subject: "agent/PROMPT.md",
-      detail: "prompt missing in instance — run `pnpm parity:sync`",
-    });
-  } else if (fileSha256(promptSrc) !== fileSha256(promptDst)) {
-    items.push({
-      severity: "error",
-      instance,
-      kind: "prompt",
-      subject: "agent/PROMPT.md",
-      detail: "prompt differs from canonical",
-    });
   } else {
-    items.push({
-      severity: "ok",
-      instance,
-      kind: "prompt",
-      subject: "agent/PROMPT.md",
-    });
+    const canonicalFirstLine = readFirstNonBlankLine(promptSrc);
+    if (canonicalFirstLine === null) {
+      items.push({
+        severity: "error",
+        instance,
+        kind: "prompt",
+        subject: manifest.canonicalPromptFile,
+        detail: "canonical prompt is empty",
+      });
+    } else {
+      const agentTextForPrompt = readAgentText(to);
+      if (agentTextForPrompt === null) {
+        items.push({
+          severity: "warn",
+          instance,
+          kind: "prompt",
+          subject: "agent/",
+          detail: "agent source not readable — skipping prompt check",
+        });
+      } else if (!agentTextForPrompt.includes(canonicalFirstLine)) {
+        items.push({
+          severity: "error",
+          instance,
+          kind: "prompt",
+          subject: "canonical prompt",
+          detail: `first line not found in agent source: "${truncate(canonicalFirstLine, 80)}"`,
+        });
+      } else {
+        items.push({
+          severity: "ok",
+          instance,
+          kind: "prompt",
+          subject: "canonical prompt",
+        });
+      }
+    }
   }
 
   // Agent surface: tool names + state keys grep-check.
@@ -315,6 +330,20 @@ function readAgentText(instanceRoot: string): string | null {
     }
   }
   return parts.join("\n");
+}
+
+function readFirstNonBlankLine(path: string): string | null {
+  const text = readFileSync(path, "utf8");
+  for (const line of text.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (trimmed.length > 0) return trimmed;
+  }
+  return null;
+}
+
+function truncate(s: string, max: number): string {
+  if (s.length <= max) return s;
+  return s.slice(0, max) + "…";
 }
 
 function isAllowedDivergence(relPath: string, patterns: string[]): boolean {

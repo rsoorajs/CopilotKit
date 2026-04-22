@@ -25,7 +25,7 @@ import {
   readdirSync,
   statSync,
 } from "node:fs";
-import { dirname, join, resolve, relative } from "node:path";
+import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ParityRoot } from "./lib/manifest.js";
 import {
@@ -88,7 +88,6 @@ interface SyncResult {
   filesCopied: number;
   filesSkipped: number;
   pkgKeysRewritten: string[];
-  promptUpdated: boolean;
 }
 
 function syncInstance(
@@ -128,20 +127,10 @@ function syncInstance(
     }
   }
 
-  // canonical prompt → <instance>/agent/PROMPT.md
-  const promptSrc = resolve(root.integrationsDir, manifest.canonicalPromptFile);
-  const promptDst = join(to, "agent", "PROMPT.md");
-  let promptUpdated = false;
-  if (!fileExists(promptSrc)) {
-    throw new Error(`canonical prompt not found: ${promptSrc}`);
-  }
-  if (fileExists(dirname(promptDst))) {
-    promptUpdated = copyIfChanged(promptSrc, promptDst, dryRun);
-  } else {
-    process.stderr.write(
-      `[parity] warn: ${instance} has no agent/ dir — skipping prompt sync\n`,
-    );
-  }
+  // Canonical prompt: not copied as a file. Each agent inlines the prompt
+  // string in source. sync.ts used to write PROMPT.md per instance, but that
+  // file was never loaded at runtime — it was cosmetic. Verifier now
+  // grep-checks the canonical prompt's first line against instance source.
 
   // package.json key rewrite
   const pkgSrcPath = join(from, "package.json");
@@ -188,7 +177,6 @@ function syncInstance(
     filesCopied,
     filesSkipped,
     pkgKeysRewritten: rewritten,
-    promptUpdated,
   };
 }
 
@@ -274,9 +262,6 @@ function printSyncResult(r: SyncResult, dryRun: boolean): void {
       process.stdout.write(`      - ${k}\n`);
     }
   }
-  process.stdout.write(
-    `  prompt:          ${r.promptUpdated ? "updated" : "unchanged"}\n`,
-  );
 }
 
 function main(): void {

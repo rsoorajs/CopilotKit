@@ -46,10 +46,13 @@
       "src/hooks/use-theme.tsx",
       "src/lib/a2ui-theme.css",
       "src/lib/utils.ts",
+      "Dockerfile",
       "docker/Dockerfile.app",
+      "docker/Dockerfile.agent",
       "docker-compose.test.yml",
       "docker-route-override.ts",
       "entrypoint.sh",
+      "serve.py",
       "showcase.json"
     ],
     "packageJsonPaths": [
@@ -137,9 +140,6 @@
       "allowedDivergence": [
         "agent/**",
         "src/app/api/copilotkit/**",
-        "Dockerfile",
-        "docker/Dockerfile.agent",
-        "serve.py",
         "scripts/**"
       ],
       "packageJsonOverrides": {

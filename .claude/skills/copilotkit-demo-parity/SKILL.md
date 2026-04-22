@@ -26,7 +26,8 @@ anything memorized:
 - `examples/integrations/_parity/manifest.json` — what is tracked, what is
   allowed to diverge, per-instance overrides.
 - `examples/integrations/_parity/canonical/PROMPT.md` — the canonical
-  system prompt. Every instance's `agent/PROMPT.md` must equal this.
+  system prompt. Every agent inlines this as a string literal in source.
+  The verifier greps the canonical first line against each agent's source.
 - `examples/integrations/_parity/README.md` — human-facing how-to.
 
 ## Procedure: sync from north-star to instance(s)
@@ -72,7 +73,8 @@ Output kinds:
 
 - `verbatim-file` — byte-compare against north-star.
 - `package-json` — tracked key mismatch vs expected value.
-- `prompt` — `agent/PROMPT.md` missing or differs from canonical.
+- `prompt` — canonical prompt first line not found in instance agent
+  source. Instance agent needs the prompt inlined as a string literal.
 - `agent-tool` — tool name from manifest not found in instance agent
   source. Usually means a tool was renamed or dropped; update manifest
   OR port the tool.
