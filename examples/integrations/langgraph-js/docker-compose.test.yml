@@ -20,13 +20,7 @@ services:
       aimock:
         condition: service_started
     healthcheck:
-      test:
-        [
-          "CMD",
-          "python",
-          "-c",
-          "import urllib.request; urllib.request.urlopen('http://localhost:8123/ok')",
-        ]
+      test: ["CMD", "wget", "-qO-", "http://localhost:8123/ok"]
       interval: 5s
       timeout: 5s
       retries: 30
@@ -61,7 +55,7 @@ services:
       - ../../../showcase/tests:/tests
       - test-results:/tests/test-results
     environment:
-      - STARTER=${STARTER:-langgraph-python}
+      - STARTER=${STARTER:-langgraph-js}
       - STARTER_URL=http://app:3000
     depends_on:
       app:

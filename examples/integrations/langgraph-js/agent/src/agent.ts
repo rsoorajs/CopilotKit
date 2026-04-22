@@ -1,86 +1,46 @@
-import { readFileSync } from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { RunnableConfig } from "@langchain/core/runnables";
-import { AIMessage, SystemMessage } from "@langchain/core/messages";
-import {
-  Annotation,
-  MemorySaver,
-  START,
-  StateGraph,
-} from "@langchain/langgraph";
-import { ToolNode } from "@langchain/langgraph/prebuilt";
+import { z } from "zod";
+import { createAgent } from "langchain";
 import { ChatOpenAI } from "@langchain/openai";
+import { copilotkitMiddleware } from "@copilotkit/sdk-js/langgraph";
 import {
-  convertActionsToDynamicStructuredTools,
-  CopilotKitStateAnnotation,
-} from "@copilotkit/sdk-js/langgraph";
+  stateItem,
+  stateStreamingMiddleware,
+} from "@copilotkit/sdk-js/langgraph-middlewares";
 
-import { todo_tools, type Todo } from "./todos.js";
+import { todo_tools, TodoSchema } from "./todos.js";
 import { query_data } from "./query.js";
 import { search_flights } from "./a2ui_fixed_schema.js";
 import { generate_a2ui } from "./a2ui_dynamic_schema.js";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const SYSTEM_PROMPT = readFileSync(
-  path.join(__dirname, "..", "PROMPT.md"),
-  "utf8",
-);
-
-const AgentStateAnnotation = Annotation.Root({
-  ...CopilotKitStateAnnotation.spec,
-  todos: Annotation<Todo[]>({
-    reducer: (_prev, next) => next,
-    default: () => [],
-  }),
+const AgentStateSchema = z.object({
+  todos: z.array(TodoSchema).default(() => []),
 });
 
-export type AgentState = typeof AgentStateAnnotation.State;
+const model = new ChatOpenAI({
+  model: "gpt-5.4",
+  modelKwargs: { parallel_tool_calls: false },
+});
 
-const tools = [query_data, ...todo_tools, generate_a2ui, search_flights];
+export const graph = createAgent({
+  model,
+  tools: [query_data, ...todo_tools, generate_a2ui, search_flights],
+  middleware: [
+    copilotkitMiddleware,
+    stateStreamingMiddleware(
+      stateItem({ stateKey: "todos", tool: "manage_todos", toolArgument: "todos" }),
+    ),
+  ] as const,
+  stateSchema: AgentStateSchema,
+  systemPrompt: `
+    You are a polished, professional demo assistant. Keep responses to 1-2 sentences.
 
-async function chat_node(state: AgentState, config: RunnableConfig) {
-  const model = new ChatOpenAI({ model: "gpt-5.4" });
-
-  const modelWithTools = model.bindTools!(
-    [
-      ...convertActionsToDynamicStructuredTools(state.copilotkit?.actions ?? []),
-      ...tools,
-    ],
-    { parallel_tool_calls: false },
-  );
-
-  const systemMessage = new SystemMessage({ content: SYSTEM_PROMPT });
-
-  const response = await modelWithTools.invoke(
-    [systemMessage, ...state.messages],
-    config,
-  );
-
-  return { messages: response };
-}
-
-function shouldContinue({ messages, copilotkit }: AgentState) {
-  const lastMessage = messages[messages.length - 1] as AIMessage;
-  if (lastMessage.tool_calls?.length) {
-    const actions = copilotkit?.actions;
-    const toolCallName = lastMessage.tool_calls[0].name;
-    if (!actions || actions.every((action) => action.name !== toolCallName)) {
-      return "tool_node";
-    }
-  }
-  return "__end__";
-}
-
-const workflow = new StateGraph(AgentStateAnnotation)
-  .addNode("chat_node", chat_node)
-  .addNode("tool_node", new ToolNode(tools))
-  .addEdge(START, "chat_node")
-  .addEdge("tool_node", "chat_node")
-  .addConditionalEdges("chat_node", shouldContinue as any);
-
-const memory = new MemorySaver();
-
-export const graph = workflow.compile({ checkpointer: memory });
+    Tool guidance:
+    - Flights: call search_flights to show flight cards with a pre-built schema.
+    - Dashboards & rich UI: call generate_a2ui to create dashboard UIs with metrics,
+      charts, tables, and cards. It handles rendering automatically.
+    - Charts: call query_data first, then render with the chart component.
+    - Todos: enable app mode first, then manage todos.
+    - A2UI actions: when you see a log_a2ui_event result (e.g. "view_details"),
+      respond with a brief confirmation. The UI already updated on the frontend.
+  `,
+});

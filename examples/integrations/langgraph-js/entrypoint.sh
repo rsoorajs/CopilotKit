@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-echo "[entrypoint] Starting: langgraph-python starter"
+echo "[entrypoint] Starting: langgraph-js starter"
 
 if [ -z "$OPENAI_API_KEY" ]; then
   echo "[entrypoint] WARNING: OPENAI_API_KEY not set!"
@@ -9,10 +9,13 @@ else
   echo "[entrypoint] OPENAI_API_KEY: set"
 fi
 
-# Start agent via AG-UI protocol (serve.py wraps the original graph)
+# Start agent via LangGraph CLI
 echo "[entrypoint] Starting agent on port 8123..."
-AGENT_PORT=8123 python serve.py 2>&1 &
+cd /app/agent
+AGENT_PORT=8123 npx --yes @langchain/langgraph-cli dev \
+  --host 0.0.0.0 --port 8123 --no-browser 2>&1 &
 AGENT_PID=$!
+cd /app
 
 sleep 3
 

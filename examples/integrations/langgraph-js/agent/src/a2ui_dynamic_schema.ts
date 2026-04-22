@@ -1,8 +1,7 @@
 import { z } from "zod";
-import { tool } from "@langchain/core/tools";
+import { tool, type ToolRuntime } from "@langchain/core/tools";
 import { SystemMessage } from "@langchain/core/messages";
 import { ChatOpenAI } from "@langchain/openai";
-import { getCurrentTaskInput } from "@langchain/langgraph";
 import {
   createSurface,
   render,
@@ -26,16 +25,25 @@ const renderA2ui = tool(async () => "rendered", {
   schema: renderA2uiSchema,
 });
 
-type AgentStateShape = {
-  messages?: unknown[];
-  copilotkit?: { context?: Array<{ value?: string }> };
-};
+const DynamicStateSchema = z.object({
+  messages: z.array(z.any()).default(() => []),
+  copilotkit: z
+    .object({
+      context: z
+        .array(z.object({ value: z.string().optional() }).passthrough())
+        .optional(),
+    })
+    .passthrough()
+    .optional(),
+});
 
 export const generate_a2ui = tool(
-  async () => {
-    const state = getCurrentTaskInput() as AgentStateShape;
-    const messages = (state.messages ?? []).slice(0, -1);
-    const contextEntries = state.copilotkit?.context ?? [];
+  async (
+    _input: Record<string, never>,
+    runtime: ToolRuntime<typeof DynamicStateSchema>,
+  ) => {
+    const messages = (runtime.state.messages ?? []).slice(0, -1);
+    const contextEntries = runtime.state.copilotkit?.context ?? [];
     const contextText = contextEntries
       .map((e) => (e && typeof e === "object" ? e.value ?? "" : ""))
       .filter(Boolean)
@@ -51,8 +59,9 @@ export const generate_a2ui = tool(
       ...(messages as never[]),
     ]);
 
-    const toolCalls = (response as { tool_calls?: Array<{ args: Record<string, unknown> }> })
-      .tool_calls;
+    const toolCalls = (
+      response as { tool_calls?: Array<{ args: Record<string, unknown> }> }
+    ).tool_calls;
     if (!toolCalls || toolCalls.length === 0) {
       return JSON.stringify({ error: "LLM did not call render_a2ui" });
     }

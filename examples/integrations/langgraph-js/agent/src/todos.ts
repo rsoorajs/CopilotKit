@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
-import { tool } from "@langchain/core/tools";
+import { tool, type ToolRuntime } from "@langchain/core/tools";
 import { ToolMessage } from "@langchain/core/messages";
-import { Command, getCurrentTaskInput } from "@langchain/langgraph";
+import { Command } from "@langchain/langgraph";
 
 export const TodoSchema = z.object({
   id: z.string().optional(),
@@ -14,11 +14,12 @@ export const TodoSchema = z.object({
 
 export type Todo = z.infer<typeof TodoSchema>;
 
+const TodosStateSchema = z.object({
+  todos: z.array(TodoSchema).default(() => []),
+});
+
 export const manage_todos = tool(
-  (
-    input: { todos: Todo[] },
-    config?: { toolCall?: { id?: string } },
-  ) => {
+  (input: { todos: Todo[] }, runtime: ToolRuntime<typeof TodosStateSchema>) => {
     const todos = input.todos.map((t) => ({
       ...t,
       id: t.id && t.id.length > 0 ? t.id : randomUUID(),
@@ -29,7 +30,7 @@ export const manage_todos = tool(
         messages: [
           new ToolMessage({
             content: "Successfully updated todos",
-            tool_call_id: config?.toolCall?.id ?? "manage_todos",
+            tool_call_id: runtime.toolCallId,
           }),
         ],
       },
@@ -43,9 +44,8 @@ export const manage_todos = tool(
 );
 
 export const get_todos = tool(
-  () => {
-    const state = getCurrentTaskInput() as { todos?: Todo[] };
-    return JSON.stringify(state.todos ?? []);
+  (_input: Record<string, never>, runtime: ToolRuntime<typeof TodosStateSchema>) => {
+    return JSON.stringify(runtime.state.todos ?? []);
   },
   {
     name: "get_todos",
