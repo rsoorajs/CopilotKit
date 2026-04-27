@@ -26,6 +26,9 @@ from google.genai import types
 logger = logging.getLogger(__name__)
 
 PREFS_PREFIX_SIGNATURE = "[shared-state-read-write] preferences:"
+# Single source of truth for the trailing sentence — the strip-prior-block
+# logic in `_inject_preferences` looks for this exact string.
+PREFS_END_MARKER = "Address the user by name when appropriate."
 
 
 def set_notes(tool_context: ToolContext, notes: list[str]) -> dict:
@@ -39,7 +42,15 @@ def set_notes(tool_context: ToolContext, notes: list[str]) -> dict:
 
 
 def _build_prefs_block(prefs: dict | None) -> str | None:
-    if not prefs or not isinstance(prefs, dict):
+    if not isinstance(prefs, dict):
+        if prefs is not None:
+            logger.warning(
+                "shared-state-read-write: state['preferences'] is %s, "
+                "expected dict; treating as empty",
+                type(prefs).__name__,
+            )
+        return None
+    if not prefs:
         return None
     lines = [PREFS_PREFIX_SIGNATURE]
     if prefs.get("name"):
@@ -52,8 +63,7 @@ def _build_prefs_block(prefs: dict | None) -> str | None:
     if interests:
         lines.append(f"- Interests: {', '.join(interests)}")
     lines.append(
-        "Tailor every response to these preferences. Address the user by "
-        "name when appropriate."
+        "Tailor every response to these preferences. " + PREFS_END_MARKER
     )
     return "\n".join(lines)
 
@@ -66,7 +76,7 @@ def _inject_preferences(
     Strips any prior preferences block (signature-prefixed) so multiple turns
     don't stack the same prefs N times.
     """
-    prefs = callback_context.state.get("preferences") or {}
+    prefs = callback_context.state.get("preferences")
     block = _build_prefs_block(prefs)
 
     original = llm_request.config.system_instruction
@@ -81,10 +91,17 @@ def _inject_preferences(
     sig_idx = original_text.find(PREFS_PREFIX_SIGNATURE)
     if sig_idx != -1:
         # Strip prior block — find the trailing sentence we always append.
-        end_marker = "Address the user by name when appropriate."
-        end_idx = original_text.find(end_marker, sig_idx)
+        end_idx = original_text.find(PREFS_END_MARKER, sig_idx)
         if end_idx != -1:
-            original_text = original_text[end_idx + len(end_marker) :].lstrip("\n")
+            original_text = original_text[
+                end_idx + len(PREFS_END_MARKER) :
+            ].lstrip("\n")
+        else:
+            logger.warning(
+                "shared-state-read-write: prior prefs block has signature "
+                "but no end marker; leaving original_text untouched to "
+                "avoid losing user content"
+            )
 
     if block:
         new_text = block + "\n\n" + original_text if original_text else block
