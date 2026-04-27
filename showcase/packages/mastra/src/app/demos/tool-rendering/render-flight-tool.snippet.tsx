@@ -7,10 +7,7 @@
 //
 // See chat-component.snippet.tsx in agentic-chat for the same pattern.
 
-import {
-  useRenderTool,
-  useDefaultRenderTool,
-} from "@copilotkit/react-core/v2";
+import { useRenderTool, useDefaultRenderTool } from "@copilotkit/react-core/v2";
 import { z } from "zod";
 
 type CatchallToolStatus = "in_progress" | "complete" | "error";
