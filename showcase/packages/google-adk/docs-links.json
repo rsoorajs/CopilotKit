@@ -3,41 +3,41 @@
   "features": {
     "agentic-chat": {
       "og_docs_url": "https://docs.copilotkit.ai/adk",
-      "shell_docs_path": null
+      "shell_docs_path": "/prebuilt-components"
     },
     "hitl-in-chat": {
       "og_docs_url": "https://docs.copilotkit.ai/adk/human-in-the-loop",
-      "shell_docs_path": null
+      "shell_docs_path": "/generative-ui/your-components/interactive"
     },
     "tool-rendering": {
       "og_docs_url": "https://docs.copilotkit.ai/adk/generative-ui/tool-rendering",
-      "shell_docs_path": null
+      "shell_docs_path": "/generative-ui/tool-rendering"
     },
     "gen-ui-tool-based": {
       "og_docs_url": "https://docs.copilotkit.ai/adk/generative-ui/your-components/display-only",
-      "shell_docs_path": null
+      "shell_docs_path": "/generative-ui/your-components/display-only"
     },
     "gen-ui-agent": {
       "og_docs_url": "https://docs.copilotkit.ai/adk/generative-ui/state-rendering",
-      "shell_docs_path": null
+      "shell_docs_path": "/generative-ui/state-rendering"
     },
     "shared-state-read-write": {
       "og_docs_url": "https://docs.copilotkit.ai/adk/shared-state/in-app-agent-write",
-      "shell_docs_path": null
+      "shell_docs_path": "/shared-state"
     },
     "shared-state-streaming": {
       "og_docs_url": "https://docs.copilotkit.ai/adk/shared-state/predictive-state-updates",
-      "shell_docs_path": null
+      "shell_docs_path": "/shared-state"
     },
     "subagents": {
-      "og_docs_url": null,
-      "shell_docs_path": null
+      "og_docs_url": "https://docs.copilotkit.ai/adk",
+      "shell_docs_path": "/multi-agent/subagents"
     }
   },
   "missing": [
     {
-      "feature": "all",
-      "reason": "4085 shell does not have a google-adk-scoped docs tree. Shell paths set to null rather than linking to framework-agnostic pages that would be misleading under the google-adk URL. OG URLs point at the real /adk/... pages on docs.copilotkit.ai."
+      "feature": "subagents",
+      "reason": "No /adk/multi-agent or /adk/subagents page on docs.copilotkit.ai (SPA fallback). OG falls back to the adk framework root; shell points at the unified /multi-agent/subagents content."
     }
   ]
 }

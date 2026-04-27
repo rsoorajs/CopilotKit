@@ -7,7 +7,7 @@
     },
     "hitl-in-chat": {
       "og_docs_url": "https://docs.copilotkit.ai/microsoft-agent-framework/human-in-the-loop",
-      "shell_docs_path": null
+      "shell_docs_path": "/generative-ui/your-components/interactive"
     },
     "tool-rendering": {
       "og_docs_url": "https://docs.copilotkit.ai/microsoft-agent-framework/generative-ui/tool-rendering",
@@ -19,7 +19,7 @@
     },
     "gen-ui-agent": {
       "og_docs_url": "https://docs.copilotkit.ai/microsoft-agent-framework/generative-ui/state-rendering",
-      "shell_docs_path": null
+      "shell_docs_path": "/generative-ui/state-rendering"
     },
     "shared-state-read-write": {
       "og_docs_url": "https://docs.copilotkit.ai/microsoft-agent-framework/shared-state/in-app-agent-write",
@@ -27,11 +27,11 @@
     },
     "shared-state-streaming": {
       "og_docs_url": "https://docs.copilotkit.ai/microsoft-agent-framework/shared-state/predictive-state-updates",
-      "shell_docs_path": null
+      "shell_docs_path": "/shared-state"
     },
     "subagents": {
-      "og_docs_url": null,
-      "shell_docs_path": null
+      "og_docs_url": "https://docs.copilotkit.ai/microsoft-agent-framework",
+      "shell_docs_path": "/multi-agent/subagents"
     }
   }
 }

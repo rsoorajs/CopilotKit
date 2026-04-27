@@ -31,13 +31,13 @@
     },
     "subagents": {
       "og_docs_url": null,
-      "shell_docs_path": null
+      "shell_docs_path": "/multi-agent/subagents"
     }
   },
   "missing": [
     {
       "feature": "subagents",
-      "reason": "No /crewai-crews/multi-agent-flows page on docs.copilotkit.ai (returns SPA fallback). Previous port used /crewai-flows/multi-agent-flows which is a different product."
+      "reason": "/crewai-crews/multi-agent-flows on docs.copilotkit.ai 308-redirects through /crewai-flows/multi-agent-flows to /crewai-flows — a different product (CrewAI Flows, not CrewAI Crews). OG left null (renders red) rather than pointing at the wrong-product overview; shell points at the unified /multi-agent/subagents content."
     }
   ]
 }
