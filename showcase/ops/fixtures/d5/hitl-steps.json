@@ -13,10 +13,15 @@
         "toolCalls": [
           {
             "id": "call_d5_generate_steps_001",
-            "type": "function",
-            "function": {
-              "name": "generate_task_steps",
-              "arguments": "{\"steps\":[{\"description\":\"Research Mars mission requirements and timeline\",\"status\":\"enabled\"},{\"description\":\"Design spacecraft and life support systems\",\"status\":\"enabled\"},{\"description\":\"Recruit and train the crew\",\"status\":\"enabled\"},{\"description\":\"Launch and navigate to Mars\",\"status\":\"enabled\"},{\"description\":\"Land and establish base camp\",\"status\":\"enabled\"}]}"
+            "name": "generate_task_steps",
+            "arguments": {
+              "steps": [
+                { "description": "Research Mars mission requirements and timeline", "status": "enabled" },
+                { "description": "Design spacecraft and life support systems", "status": "enabled" },
+                { "description": "Recruit and train the crew", "status": "enabled" },
+                { "description": "Launch and navigate to Mars", "status": "enabled" },
+                { "description": "Land and establish base camp", "status": "enabled" }
+              ]
             }
           }
         ]

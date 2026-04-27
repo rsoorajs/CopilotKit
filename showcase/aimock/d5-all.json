@@ -134,10 +134,15 @@
         "toolCalls": [
           {
             "id": "call_d5_generate_steps_001",
-            "type": "function",
-            "function": {
-              "name": "generate_task_steps",
-              "arguments": "{\"steps\":[{\"description\":\"Research Mars mission requirements and timeline\",\"status\":\"enabled\"},{\"description\":\"Design spacecraft and life support systems\",\"status\":\"enabled\"},{\"description\":\"Recruit and train the crew\",\"status\":\"enabled\"},{\"description\":\"Launch and navigate to Mars\",\"status\":\"enabled\"},{\"description\":\"Land and establish base camp\",\"status\":\"enabled\"}]}"
+            "name": "generate_task_steps",
+            "arguments": {
+              "steps": [
+                { "description": "Research Mars mission requirements and timeline", "status": "enabled" },
+                { "description": "Design spacecraft and life support systems", "status": "enabled" },
+                { "description": "Recruit and train the crew", "status": "enabled" },
+                { "description": "Launch and navigate to Mars", "status": "enabled" },
+                { "description": "Land and establish base camp", "status": "enabled" }
+              ]
             }
           }
         ]
@@ -259,14 +264,6 @@
     },
     {
       "match": {
-        "toolCallId": "call_d5_search_flights_001"
-      },
-      "response": {
-        "content": "Tokyo is currently 22\u00b0C and partly cloudy \u2014 pleasant and walk-friendly. I also pulled SFO\u2192NRT options in case you want to head over: most carriers have non-stops at around $720\u2013$890 round-trip in the next two weeks. Want me to narrow by date or airline?"
-      }
-    },
-    {
-      "match": {
         "toolCallId": "call_d5_get_weather_001"
       },
       "response": {
@@ -284,14 +281,6 @@
             "name": "get_weather",
             "arguments": {
               "location": "Tokyo"
-            }
-          },
-          {
-            "id": "call_d5_search_flights_001",
-            "name": "search_flights",
-            "arguments": {
-              "origin": "SFO",
-              "destination": "Tokyo"
             }
           }
         ]
