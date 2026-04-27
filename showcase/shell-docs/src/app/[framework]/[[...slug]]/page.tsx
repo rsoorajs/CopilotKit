@@ -64,13 +64,19 @@ function frameworkHasCellFor(framework: string, cell: string): boolean {
 
 /**
  * Merge per-framework overrides into the root nav tree. The override
- * block is inserted as a labeled section right after "App Control" in
- * the root ordering — this mirrors upstream's `integrations/built-in-agent/
- * meta.json`, which puts BIA-specific topics immediately after App
- * Control (before Backend / Premium / Troubleshooting). Implementation:
- * locate the "App Control" section and insert at the next section
- * boundary. Fallbacks in order: insert before "Threads", "Backend", or
- * append at the end.
+ * block is inserted as a labeled section right after the agent-control
+ * section in the root ordering — this mirrors upstream's
+ * `integrations/built-in-agent/meta.json`, which puts BIA-specific
+ * topics immediately after the App-Control / agent-behavior section.
+ *
+ * Anchor names are tried in priority order so the merge survives
+ * section renames (the JTBD reorg renamed "App Control" → "Give Your
+ * App Agent Powers"). Each candidate is matched as a section header;
+ * when found, the override block is inserted right before the *next*
+ * section, so the framework-unique pages end up sandwiched after the
+ * anchor section's own pages.
+ *
+ * Final fallback: append at the end of the nav.
  */
 function mergeFrameworkNav(
   rootNav: NavNode[],
@@ -84,24 +90,27 @@ function mergeFrameworkNav(
   };
   const isSection = (n: NavNode, title: string) =>
     n.type === "section" && n.title.toLowerCase() === title.toLowerCase();
-  const appControlIdx = rootNav.findIndex((n) => isSection(n, "app control"));
+  // Section names tried in priority order. The first match wins; the
+  // override block is inserted right before the *next* section header
+  // after the matched anchor. Update this list when the JTBD section
+  // names change in content/docs/meta.json.
+  const ANCHOR_CANDIDATES = [
+    "give your app agent powers",
+    "app control",
+    "agents & backends",
+    "backend",
+  ];
   let insertAt = -1;
-  if (appControlIdx !== -1) {
-    // Find the next section after App Control; insert right before it
-    // so the override block lands between App Control's pages and
-    // whatever comes next.
-    for (let i = appControlIdx + 1; i < rootNav.length; i++) {
+  for (const anchor of ANCHOR_CANDIDATES) {
+    const anchorIdx = rootNav.findIndex((n) => isSection(n, anchor));
+    if (anchorIdx === -1) continue;
+    for (let i = anchorIdx + 1; i < rootNav.length; i++) {
       if (rootNav[i].type === "section") {
         insertAt = i;
         break;
       }
     }
-  }
-  if (insertAt === -1) {
-    insertAt = rootNav.findIndex((n) => isSection(n, "threads"));
-  }
-  if (insertAt === -1) {
-    insertAt = rootNav.findIndex((n) => isSection(n, "backend"));
+    if (insertAt !== -1) break;
   }
   if (insertAt === -1) {
     return [...rootNav, sectionHeader, ...overrideNav];
