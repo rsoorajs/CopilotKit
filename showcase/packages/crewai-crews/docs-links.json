@@ -30,8 +30,14 @@
       "shell_docs_path": "/shared-state"
     },
     "subagents": {
-      "og_docs_url": "https://docs.copilotkit.ai/crewai-crews/multi-agent-flows",
+      "og_docs_url": null,
       "shell_docs_path": "/multi-agent/subagents"
     }
-  }
+  },
+  "missing": [
+    {
+      "feature": "subagents",
+      "reason": "/crewai-crews/multi-agent-flows on docs.copilotkit.ai 308-redirects through /crewai-flows/multi-agent-flows to /crewai-flows — a different product (CrewAI Flows, not CrewAI Crews). OG left null (renders red) rather than pointing at the wrong-product overview; shell points at the unified /multi-agent/subagents content."
+    }
+  ]
 }
