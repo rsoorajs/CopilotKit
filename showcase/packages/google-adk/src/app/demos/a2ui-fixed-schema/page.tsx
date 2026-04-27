@@ -11,7 +11,7 @@
  * - Definitions (zod schemas): `./a2ui/definitions.ts`
  * - Renderers (React): `./a2ui/renderers.tsx`
  * - Catalog wiring: `./a2ui/catalog.ts` (includes the basic catalog)
- * - Agent: `src/agents/a2ui_fixed.py` (emits an `a2ui_operations` container)
+ * - Agent: `src/agents/a2ui_fixed_agent.py` (emits an `a2ui_operations` container)
  *
  * Reference:
  * https://docs.copilotkit.ai/integrations/langgraph/generative-ui/a2ui/fixed-schema

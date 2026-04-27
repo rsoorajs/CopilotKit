@@ -1,13 +1,13 @@
 "use client";
 
 /**
- * byoc-hashbrown demo page (Wave 4a).
+ * byoc-hashbrown demo page.
  *
  * Dedicated single-mode demo that ports the starter's hashbrown renderer
- * onto a langgraph-python agent. Streaming structured output from the agent
- * (`byoc_hashbrown_agent`) is parsed progressively by `@hashbrownai/react`'s
- * `useJsonParser` + `useUiKit` and rendered with MetricCard + PieChart +
- * BarChart from `./charts/`.
+ * onto the Google ADK `byoc_agent` (a Gemini 2.5 Flash LlmAgent). Streaming
+ * structured output from the agent is parsed progressively by
+ * `@hashbrownai/react`'s `useJsonParser` + `useUiKit` and rendered with
+ * MetricCard + PieChart + BarChart from `./charts/`.
  *
  * Layout:
  * - Header with title + short description.

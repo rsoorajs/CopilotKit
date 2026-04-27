@@ -3,12 +3,15 @@
 /**
  * Open-Ended Generative UI — minimal setup.
  * -----------------------------------------
- * The simplest possible example. Enabling `openGenerativeUI` in the
- * runtime (see `src/app/api/copilotkit-ogui/route.ts`) is all that's
- * needed — the runtime middleware streams agent-authored HTML + CSS to
- * the built-in `OpenGenerativeUIActivityRenderer`, which mounts it
- * inside a sandboxed iframe. No custom sandbox functions, no custom
- * tools — just chat.
+ * The simplest possible example. Two things turn the feature on:
+ *   1. `openGenerativeUI: { agents: [...] }` on the runtime (see
+ *      `src/app/api/copilotkit-ogui/route.ts`) — the middleware that
+ *      converts each agent's streamed `generateSandboxedUi` tool call
+ *      into `open-generative-ui` activity events.
+ *   2. `openGenerativeUI={...}` on the `<CopilotKit>` provider below —
+ *      the activity renderer that mounts the streamed HTML+CSS into a
+ *      sandboxed iframe.
+ * No custom sandbox functions, no custom tools — just chat.
  *
  * This page customises the LLM's visual-authoring prompt via
  * `openGenerativeUI.designSkill` on the provider (see

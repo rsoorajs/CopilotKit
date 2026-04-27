@@ -3,12 +3,13 @@
 /**
  * BYOC json-render demo.
  *
- * Scenario: user asks for a sales-dashboard-style UI; the LangGraph agent
- * emits a JSON spec shaped like `{ root, elements }`, and `@json-render/react`
- * renders it against a Zod-validated catalog of three components
- * (MetricCard, BarChart, PieChart).
+ * Scenario: user asks for a sales-dashboard-style UI; the Google ADK
+ * `byoc_agent` (Gemini 2.5 Flash) emits a JSON spec shaped like
+ * `{ root, elements }`, and `@json-render/react` renders it against a
+ * Zod-validated catalog of three components (MetricCard, BarChart,
+ * PieChart).
  *
- * Structurally mirrors Wave 4a's hashbrown demo so the two dashboard rows
+ * Structurally mirrors the byoc-hashbrown demo so the two dashboard rows
  * are directly comparable — the only substantive difference is the message
  * renderer (this file swaps in `JsonRenderAssistantMessage`).
  */
