@@ -122,6 +122,11 @@ When updating D5 fixtures, edit the individual files in `showcase/ops/fixtures/d
 then re-bundle into `d5-all.json` by running the merge script or manually
 combining the `fixtures` arrays. The bundle must stay in sync.
 
+> **showcase-ops memory budget.** D5 e2e-deep runs up to 4 services x 2
+> features = 8 concurrent Chromium contexts (~2.4 GB peak). If OOM occurs,
+> reduce `FEATURE_CONCURRENCY` in `e2e-deep.ts` or `max_concurrency` in
+> `e2e-deep.yml`.
+
 ## 5. Start command
 
 > **Railway overrides Docker ENTRYPOINT.** When `startCommand` is set, Railway
