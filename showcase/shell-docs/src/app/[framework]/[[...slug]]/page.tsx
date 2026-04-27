@@ -189,11 +189,25 @@ export default async function FrameworkScopedDocsPage({
   const docsFolder = getDocsFolder(framework);
 
   let contentSlugPath: string = slugPath;
-  let doc = loadDoc(slugPath);
+  let doc: ReturnType<typeof loadDoc> = null;
+
+  // `/quickstart` at the root is a routing shim — it exists only so
+  // the sidebar's Quickstart entry has a backing page. Real quickstart
+  // content lives per-framework at `integrations/<framework>/quickstart.mdx`,
+  // so for framework-scoped URLs the override always wins over the shim.
+  if (slugPath === "quickstart") {
+    const overridePath = `integrations/${docsFolder}/${slugPath}`;
+    doc = loadDoc(overridePath);
+    if (doc) contentSlugPath = overridePath;
+  }
+
   if (!doc) {
-    const fallbackPath = `integrations/${docsFolder}/${slugPath}`;
-    doc = loadDoc(fallbackPath);
-    if (doc) contentSlugPath = fallbackPath;
+    doc = loadDoc(slugPath);
+    if (!doc) {
+      const fallbackPath = `integrations/${docsFolder}/${slugPath}`;
+      doc = loadDoc(fallbackPath);
+      if (doc) contentSlugPath = fallbackPath;
+    }
   }
 
   // Sidebar nav needs to render on both the happy path and the
