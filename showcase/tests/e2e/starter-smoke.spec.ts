@@ -48,7 +48,7 @@ const STARTERS: Starter[] = [
   { ...DEFAULT_STARTER, slug: "adk" },
   { ...DEFAULT_STARTER, slug: "agno" },
   { ...DEFAULT_STARTER, slug: "llamaindex" },
-  { ...DEFAULT_STARTER, slug: "langgraph-fastapi" },
+  { ...DEFAULT_STARTER, slug: "langgraph-fastapi", hasAppMode: true },
   { ...DEFAULT_STARTER, slug: "strands-python" },
   { ...DEFAULT_STARTER, slug: "ms-agent-framework-python" },
   { ...DEFAULT_STARTER, slug: "ms-agent-framework-dotnet" },
