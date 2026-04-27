@@ -367,6 +367,9 @@ export async function* convertTanStackStream(
       yield resultEvent;
       toolNamesById.delete(toolCallId);
     } else if (type === "REASONING_START") {
+      // If a prior reasoning run is still open (no REASONING_END before this
+      // new START), close it cleanly first so MSG_END / END pair correctly.
+      yield* closeReasoningIfOpen();
       reasoningRunOpen = true;
       reasoningMessageId = (raw.messageId as string) ?? randomUUID();
       const startEvt: ReasoningStartEvent = {
@@ -397,6 +400,18 @@ export async function* convertTanStackStream(
       };
       yield evt;
     } else if (type === "REASONING_END") {
+      // If upstream sends REASONING_END while a message is still open, emit
+      // the missing REASONING_MESSAGE_END FIRST so the closing pair stays in
+      // order (MSG_END before END). Otherwise the next non-reasoning chunk
+      // would trigger closeReasoningIfOpen and emit MSG_END after END.
+      if (reasoningMessageOpen) {
+        reasoningMessageOpen = false;
+        const msgEnd: ReasoningMessageEndEvent = {
+          type: EventType.REASONING_MESSAGE_END,
+          messageId: reasoningMessageId,
+        };
+        yield msgEnd;
+      }
       reasoningRunOpen = false;
       const evt: ReasoningEndEvent = {
         type: EventType.REASONING_END,

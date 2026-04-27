@@ -496,6 +496,72 @@ describe("TanStack AI converter — reasoning", () => {
     expect(types).toContain(EventType.REASONING_END);
   });
 
+  it("emits REASONING_MESSAGE_END before REASONING_END when upstream sends END with message still open", async () => {
+    // Regression: if the converter received REASONING_END while a message
+    // was still open, it cleared run-open and emitted END only — leaving
+    // message-open true. The next non-reasoning chunk then triggered
+    // closeReasoningIfOpen, which emitted MSG_END AFTER END (wrong order).
+    // Fix: REASONING_END handler closes any open message first.
+    const agent = createAgent("tanstack", [
+      tanstackReasoningStart("r1"),
+      tanstackReasoningMessageStart("r1"),
+      tanstackReasoningMessageContent("r1", "thinking"),
+      // Upstream skips MSG_END and goes straight to END
+      tanstackReasoningEnd("r1"),
+      tanstackTextChunk("Hi"),
+    ]);
+    const events = await collectEvents(agent.run(createDefaultInput()));
+    const types = events.map((e) => e.type);
+
+    const msgEndIdx = types.indexOf(EventType.REASONING_MESSAGE_END);
+    const endIdx = types.indexOf(EventType.REASONING_END);
+
+    expect(msgEndIdx).toBeGreaterThan(-1);
+    expect(endIdx).toBeGreaterThan(-1);
+    expect(msgEndIdx).toBeLessThan(endIdx);
+    // No duplicate MSG_END or END from auto-close on the text chunk
+    expect(
+      types.filter((t) => t === EventType.REASONING_MESSAGE_END),
+    ).toHaveLength(1);
+    expect(types.filter((t) => t === EventType.REASONING_END)).toHaveLength(1);
+  });
+
+  it("auto-closes prior reasoning run when a new REASONING_START arrives without END", async () => {
+    // Regression: REASONING_START used to overwrite reasoningMessageId
+    // unconditionally, orphaning the prior run's MSG_END / END.
+    // Fix: REASONING_START handler calls closeReasoningIfOpen() first.
+    const agent = createAgent("tanstack", [
+      tanstackReasoningStart("r1"),
+      tanstackReasoningMessageStart("r1"),
+      tanstackReasoningMessageContent("r1", "first"),
+      // Second START with no intervening END
+      tanstackReasoningStart("r2"),
+      tanstackReasoningMessageStart("r2"),
+      tanstackReasoningMessageContent("r2", "second"),
+      tanstackReasoningMessageEnd("r2"),
+      tanstackReasoningEnd("r2"),
+    ]);
+    const events = await collectEvents(agent.run(createDefaultInput()));
+    const types = events.map((e) => e.type);
+
+    // Two complete START → MSG_START → ... → MSG_END → END sequences
+    expect(
+      types.filter((t) => t === EventType.REASONING_START),
+    ).toHaveLength(2);
+    expect(types.filter((t) => t === EventType.REASONING_END)).toHaveLength(2);
+    expect(
+      types.filter((t) => t === EventType.REASONING_MESSAGE_END),
+    ).toHaveLength(2);
+
+    // First START's prior message gets closed BEFORE the second START
+    const firstEndIdx = types.indexOf(EventType.REASONING_END);
+    const secondStartIdx = types.indexOf(
+      EventType.REASONING_START,
+      firstEndIdx + 1,
+    );
+    expect(firstEndIdx).toBeLessThan(secondStartIdx);
+  });
+
   it("does NOT duplicate REASONING_MESSAGE_END when upstream emits it explicitly before text", async () => {
     // Regression: a single isInReasoning flag conflated message-open with
     // run-open, so closeReasoningIfOpen on TEXT_MESSAGE_CONTENT emitted a
