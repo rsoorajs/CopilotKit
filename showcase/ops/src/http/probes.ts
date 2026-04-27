@@ -343,11 +343,16 @@ export function registerProbesRoutes(app: Hono, deps: ProbesRouteDeps): void {
     // reading audit logs.
     let filterSlugs: string[] = [];
     let filterProvided = false;
-    let opts: { filter?: { slugs?: string[] } } | undefined;
+    let filterFeatureTypes: string[] | undefined;
+    let opts:
+      | { filter?: { slugs?: string[]; featureTypes?: string[] } }
+      | undefined;
     if (raw.length > 0) {
-      let parsed: { filter?: { slugs?: unknown } };
+      let parsed: { filter?: { slugs?: unknown; featureTypes?: unknown } };
       try {
-        parsed = JSON.parse(raw) as { filter?: { slugs?: unknown } };
+        parsed = JSON.parse(raw) as {
+          filter?: { slugs?: unknown; featureTypes?: unknown };
+        };
       } catch {
         return c.json({ error: "invalid_json" }, 400);
       }
@@ -364,7 +369,44 @@ export function registerProbesRoutes(app: Hono, deps: ProbesRouteDeps): void {
           }
           filterSlugs = slugs;
           filterProvided = true;
-          opts = { filter: { slugs } };
+        }
+
+        // B2: validate featureTypes — must be a non-empty array of
+        // non-empty strings when present. Empty array is ambiguous
+        // (all vs none), so reject it explicitly.
+        const featureTypes = (
+          parsed.filter as { featureTypes?: unknown }
+        ).featureTypes;
+        if (featureTypes !== undefined) {
+          if (
+            !Array.isArray(featureTypes) ||
+            featureTypes.length === 0 ||
+            !featureTypes.every(
+              (s): s is string => typeof s === "string" && s.length > 0,
+            )
+          ) {
+            return c.json(
+              {
+                error: "invalid_filter",
+                message:
+                  "featureTypes must be a non-empty array of strings",
+              },
+              400,
+            );
+          }
+          filterFeatureTypes = featureTypes;
+        }
+
+        // Build opts with whichever filter fields were provided.
+        if (slugs !== undefined || featureTypes !== undefined) {
+          opts = {
+            filter: {
+              ...(slugs !== undefined ? { slugs: filterSlugs } : {}),
+              ...(filterFeatureTypes !== undefined
+                ? { featureTypes: filterFeatureTypes }
+                : {}),
+            },
+          };
         }
       }
     }
