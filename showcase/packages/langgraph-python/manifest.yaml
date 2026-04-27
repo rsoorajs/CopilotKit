@@ -47,8 +47,9 @@ features:
   - frontend-tools
   - frontend-tools-async
   - gen-ui-tool-based
+  - hitl
   - hitl-in-chat
-  - hitl-in-app
+  - hitl-in-chat-booking
   - gen-ui-interrupt
   - interrupt-headless
   - declarative-gen-ui
@@ -59,7 +60,6 @@ features:
   - tool-rendering-custom-catchall
   - tool-rendering
   - tool-rendering-reasoning-chain
-  - shared-state-read-write
   - shared-state-streaming
   - readonly-state-agent-context
   - subagents
@@ -147,6 +147,18 @@ demos:
       - src/app/demos/frontend-tools-async/page.tsx
       - src/app/demos/frontend-tools-async/notes-card.tsx
       - src/app/api/copilotkit/route.ts
+  - id: hitl
+    name: In-Chat Human in the Loop (Original)
+    description: Interactive approval/decision surface rendered inline in the chat via the high-level `useHumanInTheLoop` hook (original HITL demo)
+    tags:
+      - interactivity
+    route: /demos/hitl-in-chat
+    animated_preview_url:
+    highlight:
+      - src/agents/hitl_in_chat_agent.py
+      - src/app/demos/hitl-in-chat/page.tsx
+      - src/app/demos/hitl-in-chat/time-picker-card.tsx
+      - src/app/api/copilotkit/route.ts
   - id: hitl-in-chat
     name: In-Chat HITL (useHumanInTheLoop — ergonomic API)
     description: Interactive approval/decision surface rendered inline in the chat via the high-level `useHumanInTheLoop` hook
@@ -159,17 +171,17 @@ demos:
       - src/app/demos/hitl-in-chat/page.tsx
       - src/app/demos/hitl-in-chat/time-picker-card.tsx
       - src/app/api/copilotkit/route.ts
-  - id: hitl-in-app
-    name: In-App Human in the Loop (Frontend Tools + async HITL)
-    description: Agent requests approval via useFrontendTool with an async handler; the approval UI pops up as an app-level modal OUTSIDE the chat, and a completion callback resolves the pending tool Promise with the user's decision
+  - id: hitl-in-chat-booking
+    name: In-Chat HITL (Booking)
+    description: Time-picker card rendered inline via useHumanInTheLoop for a booking flow
     tags:
       - interactivity
-    route: /demos/hitl-in-app
+    route: /demos/hitl-in-chat
     animated_preview_url:
     highlight:
-      - src/agents/hitl_in_app.py
-      - src/app/demos/hitl-in-app/page.tsx
-      - src/app/demos/hitl-in-app/approval-dialog.tsx
+      - src/agents/hitl_in_chat_agent.py
+      - src/app/demos/hitl-in-chat/page.tsx
+      - src/app/demos/hitl-in-chat/time-picker-card.tsx
       - src/app/api/copilotkit/route.ts
   - id: tool-rendering
     name: Tool Rendering
@@ -207,19 +219,6 @@ demos:
       - src/agents/gen_ui_agent.py
       - src/app/demos/gen-ui-agent/page.tsx
       - src/app/demos/gen-ui-agent/InlineAgentStateCard.tsx
-      - src/app/api/copilotkit/route.ts
-  - id: shared-state-read-write
-    name: Shared State (Read + Write)
-    description: Bidirectional agent state — UI writes preferences, agent writes notes back
-    tags:
-      - agent-state
-    route: /demos/shared-state-read-write
-    animated_preview_url:
-    highlight:
-      - src/agents/shared_state_read_write.py
-      - src/app/demos/shared-state-read-write/page.tsx
-      - src/app/demos/shared-state-read-write/preferences-card.tsx
-      - src/app/demos/shared-state-read-write/notes-card.tsx
       - src/app/api/copilotkit/route.ts
   - id: shared-state-streaming
     name: State Streaming
@@ -474,7 +473,7 @@ demos:
       - src/app/demos/auth/auth-banner.tsx
       - src/app/demos/auth/use-demo-auth.ts
       - src/app/demos/auth/demo-token.ts
-      - src/app/api/copilotkit-auth/route.ts
+      - src/app/api/copilotkit-auth/[[...slug]]/route.ts
   - id: byoc-hashbrown
     name: BYOC Hashbrown
     description: Streaming structured output via @hashbrownai/react, rendering a sales dashboard catalog (MetricCard + PieChart + BarChart)
@@ -527,7 +526,7 @@ demos:
       - src/agents/main.py
       - src/app/demos/voice/page.tsx
       - src/app/demos/voice/sample-audio-button.tsx
-      - src/app/api/copilotkit-voice/route.ts
+      - src/app/api/copilotkit-voice/[[...slug]]/route.ts
   - id: agent-config
     name: Agent Config Object
     description: Forward a typed config object (tone / expertise / response length) from the provider to the agent's dynamic system prompt
