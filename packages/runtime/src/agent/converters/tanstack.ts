@@ -240,6 +240,21 @@ export async function* convertTanStackStream(
   let isInReasoning = false;
   let reasoningMessageId = randomUUID();
 
+  function* closeReasoningIfOpen(): Generator<BaseEvent> {
+    if (!isInReasoning) return;
+    isInReasoning = false;
+    const msgEnd: ReasoningMessageEndEvent = {
+      type: EventType.REASONING_MESSAGE_END,
+      messageId: reasoningMessageId,
+    };
+    yield msgEnd;
+    const end: ReasoningEndEvent = {
+      type: EventType.REASONING_END,
+      messageId: reasoningMessageId,
+    };
+    yield end;
+  }
+
   for await (const chunk of stream) {
     if (abortSignal.aborted) break;
 
@@ -247,6 +262,7 @@ export async function* convertTanStackStream(
     const type = raw.type as string;
 
     if (type === "TEXT_MESSAGE_CONTENT" && raw.delta) {
+      yield* closeReasoningIfOpen();
       const textEvent: TextMessageChunkEvent = {
         type: EventType.TEXT_MESSAGE_CHUNK,
         role: "assistant",
@@ -255,6 +271,7 @@ export async function* convertTanStackStream(
       };
       yield textEvent;
     } else if (type === "TOOL_CALL_START") {
+      yield* closeReasoningIfOpen();
       toolNamesById.set(raw.toolCallId as string, raw.toolCallName as string);
       const startEvent: ToolCallStartEvent = {
         type: EventType.TOOL_CALL_START,
@@ -264,6 +281,7 @@ export async function* convertTanStackStream(
       };
       yield startEvent;
     } else if (type === "TOOL_CALL_ARGS") {
+      yield* closeReasoningIfOpen();
       const argsEvent: ToolCallArgsEvent = {
         type: EventType.TOOL_CALL_ARGS,
         toolCallId: raw.toolCallId as string,
@@ -271,12 +289,14 @@ export async function* convertTanStackStream(
       };
       yield argsEvent;
     } else if (type === "TOOL_CALL_END") {
+      yield* closeReasoningIfOpen();
       const endEvent: ToolCallEndEvent = {
         type: EventType.TOOL_CALL_END,
         toolCallId: raw.toolCallId as string,
       };
       yield endEvent;
     } else if (type === "TOOL_CALL_RESULT") {
+      yield* closeReasoningIfOpen();
       const toolCallId = raw.toolCallId as string;
       const toolName = toolNamesById.get(toolCallId);
       const rawContent = raw.content;
@@ -366,10 +386,9 @@ export async function* convertTanStackStream(
       };
       yield evt;
     }
-    // Unhandled chunk types are silently ignored.
-    // Reasoning auto-close (closing an open reasoning lifecycle when text/tool
-    // arrives without explicit close events) is handled in the next task.
   }
+
+  yield* closeReasoningIfOpen();
 }
 
 function safeParse(value: string): unknown {

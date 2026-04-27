@@ -416,4 +416,54 @@ describe("TanStack AI converter — reasoning", () => {
       EventType.REASONING_END,
     ]);
   });
+
+  it("auto-closes an open reasoning lifecycle when text starts", async () => {
+    const agent = createAgent("tanstack", [
+      tanstackReasoningStart("r1"),
+      tanstackReasoningMessageStart("r1"),
+      tanstackReasoningMessageContent("r1", "thinking"),
+      // No REASONING_MESSAGE_END / REASONING_END before text
+      tanstackTextChunk("Hi"),
+    ]);
+    const events = await collectEvents(agent.run(createDefaultInput()));
+    const types = events.map((e) => e.type);
+
+    const reasonEndIdx = types.indexOf(EventType.REASONING_END);
+    const reasonMsgEndIdx = types.indexOf(EventType.REASONING_MESSAGE_END);
+    const textIdx = types.indexOf(EventType.TEXT_MESSAGE_CHUNK);
+
+    expect(reasonMsgEndIdx).toBeGreaterThan(-1);
+    expect(reasonEndIdx).toBeGreaterThan(-1);
+    expect(reasonEndIdx).toBeLessThan(textIdx);
+  });
+
+  it("auto-closes an open reasoning lifecycle when a tool call starts", async () => {
+    const agent = createAgent("tanstack", [
+      tanstackReasoningStart("r1"),
+      tanstackReasoningMessageStart("r1"),
+      tanstackReasoningMessageContent("r1", "..."),
+      tanstackToolCallStart("t1", "x"),
+    ]);
+    const events = await collectEvents(agent.run(createDefaultInput()));
+    const types = events.map((e) => e.type);
+
+    expect(types).toContain(EventType.REASONING_MESSAGE_END);
+    expect(types).toContain(EventType.REASONING_END);
+    expect(types.indexOf(EventType.REASONING_END)).toBeLessThan(
+      types.indexOf(EventType.TOOL_CALL_START),
+    );
+  });
+
+  it("auto-closes when the stream ends without explicit reasoning end", async () => {
+    const agent = createAgent("tanstack", [
+      tanstackReasoningStart("r1"),
+      tanstackReasoningMessageStart("r1"),
+      tanstackReasoningMessageContent("r1", "x"),
+    ]);
+    const events = await collectEvents(agent.run(createDefaultInput()));
+    const types = events.map((e) => e.type);
+
+    expect(types).toContain(EventType.REASONING_MESSAGE_END);
+    expect(types).toContain(EventType.REASONING_END);
+  });
 });
