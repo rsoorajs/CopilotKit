@@ -30,7 +30,7 @@
       "shell_docs_path": "/shared-state"
     },
     "subagents": {
-      "og_docs_url": "https://docs.copilotkit.ai/multi-agent",
+      "og_docs_url": null,
       "shell_docs_path": "/multi-agent/subagents"
     }
   },
@@ -49,7 +49,7 @@
     },
     {
       "feature": "subagents",
-      "reason": "No claude-sdk-scoped subagents/multi-agent docs exist. OG falls back to the framework-agnostic /multi-agent overview; shell points at the unified /multi-agent/subagents content."
+      "reason": "No claude-sdk-scoped or framework-agnostic indexable subagents/multi-agent overview page exists on docs.copilotkit.ai. OG left null (renders red) rather than pointing at a soft-404; shell points at the unified /multi-agent/subagents content."
     }
   ]
 }

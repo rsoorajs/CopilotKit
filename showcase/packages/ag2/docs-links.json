@@ -30,14 +30,14 @@
       "shell_docs_path": "/shared-state"
     },
     "subagents": {
-      "og_docs_url": "https://docs.copilotkit.ai/multi-agent",
+      "og_docs_url": "https://docs.copilotkit.ai/ag2",
       "shell_docs_path": "/multi-agent/subagents"
     }
   },
   "missing": [
     {
       "feature": "subagents",
-      "reason": "No /ag2/multi-agent/subagents page on docs.copilotkit.ai (SPA fallback). OG falls back to the framework-agnostic /multi-agent overview; shell points at the unified /multi-agent/subagents content."
+      "reason": "No /ag2/multi-agent/subagents page on docs.copilotkit.ai (SPA fallback). OG falls back to the ag2 framework root; shell points at the unified /multi-agent/subagents content."
     }
   ]
 }

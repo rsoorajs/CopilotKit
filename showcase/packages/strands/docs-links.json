@@ -30,14 +30,14 @@
       "shell_docs_path": "/shared-state"
     },
     "subagents": {
-      "og_docs_url": "https://docs.copilotkit.ai/multi-agent",
+      "og_docs_url": "https://docs.copilotkit.ai/aws-strands",
       "shell_docs_path": "/multi-agent/subagents"
     }
   },
   "missing": [
     {
-      "feature": "all",
-      "reason": "4085 shell has no strands-scoped docs tree. Shell paths point at framework-agnostic pages that render under the strands URL (with snippets resolved for the framework when tagged)."
+      "feature": "all-shell-paths",
+      "reason": "shell-docs has no strands-scoped tree. Shell paths point at framework-agnostic content rendered under /strands/unselected/... with snippets resolved for the framework when tagged."
     }
   ]
 }

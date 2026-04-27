@@ -320,7 +320,6 @@
       "name": "Sub-Agents",
       "category": "multi-agent",
       "description": "Multiple agents with visible task delegation",
-      "og_docs_url": "https://docs.copilotkit.ai/multi-agent",
       "shell_docs_path": "/multi-agent/subagents"
     },
     {
