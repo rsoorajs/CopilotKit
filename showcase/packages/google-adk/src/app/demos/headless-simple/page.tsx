@@ -52,7 +52,9 @@ function HeadlessChat() {
     const text = input.trim();
     if (!text || agent.isRunning) return;
     agent.addMessage({ id: crypto.randomUUID(), role: "user", content: text });
-    void copilotkit.runAgent({ agent }).catch(() => {});
+    void copilotkit.runAgent({ agent }).catch((err) => {
+      console.error("[headless-simple] runAgent failed:", err);
+    });
     setInput("");
   };
 
