@@ -228,6 +228,39 @@ export interface E2eDeepDriverDeps {
 const DEFAULT_TIMEOUT_MS = 5 * 60 * 1000;
 const DEFAULT_PAGE_TIMEOUT_MS = 30 * 1000;
 
+/**
+ * Maximum number of features that run concurrently within a single service
+ * invocation. Each feature opens its own browser context so parallelism is
+ * safe — but too many contexts at once OOMs the container on Railway. A
+ * value of 1 degrades to the old sequential behaviour.
+ */
+const FEATURE_CONCURRENCY = 2;
+
+/**
+ * Inline counting semaphore — gates concurrent access to a bounded
+ * resource (here: browser contexts). No npm dependency required.
+ */
+class Semaphore {
+  private queue: (() => void)[] = [];
+  private active = 0;
+  constructor(private readonly limit: number) {}
+  async acquire(): Promise<void> {
+    if (this.active < this.limit) {
+      this.active++;
+      return;
+    }
+    return new Promise<void>((resolve) => this.queue.push(resolve));
+  }
+  release(): void {
+    this.active--;
+    const next = this.queue.shift();
+    if (next) {
+      this.active++;
+      next();
+    }
+  }
+}
+
 /** Default route shape for a feature when the script doesn't override. */
 function defaultRoute(featureType: D5FeatureType, _ctx?: unknown): string {
   return `/demos/${featureType}`;
@@ -611,10 +644,17 @@ export function createE2eDeepDriver(
           });
         }
 
-        const failed: string[] = [];
-        let passed = 0;
+        // Run features with bounded parallelism. Each feature creates
+        // its own browser context so there is no shared mutable state
+        // between concurrent runs. FEATURE_CONCURRENCY = 1 degrades
+        // to sequential behaviour identical to the old for-loop.
+        const sem = new Semaphore(FEATURE_CONCURRENCY);
+        // Capture narrowed browser reference — TS can't narrow through
+        // the async closure boundary but we know browser is defined here
+        // (launcher() succeeded above, catch returned early).
+        const browserRef: E2eDeepBrowser = browser!;
 
-        for (const ft of runnable) {
+        const featurePromises = runnable.map(async (ft) => {
           const sideKey = `d5:${slug}/${ft}`;
           const script = D5_REGISTRY.get(ft)!;
           const route = (script.preNavigateRoute ?? defaultRoute)(ft, {
@@ -622,79 +662,104 @@ export function createE2eDeepDriver(
           });
           const url = `${backendUrl}${route}`;
 
-          if (abort.signal.aborted) {
-            failed.push(ft);
-            await sideEmit(ctx, {
-              key: sideKey,
-              state: "red",
-              signal: {
-                slug,
+          await sem.acquire();
+          try {
+            if (abort.signal.aborted) {
+              await sideEmit(ctx, {
+                key: sideKey,
+                state: "red",
+                signal: {
+                  slug,
+                  featureType: ft,
+                  backendUrl,
+                  url,
+                  fixtureFile: script.fixtureFile,
+                  errorClass: "abort",
+                  errorDesc: timedOut
+                    ? `timeout after ${timeoutMs}ms`
+                    : "aborted",
+                },
+                observedAt: ctx.now().toISOString(),
+              });
+              return { ft, ok: false as const };
+            }
+
+            const featureResult = await runFeature({
+              browser: browserRef,
+              url,
+              pageTimeoutMs,
+              script,
+              buildCtx: {
+                integrationSlug: slug,
                 featureType: ft,
-                backendUrl,
-                url,
-                fixtureFile: script.fixtureFile,
-                errorClass: "abort",
-                errorDesc: timedOut
-                  ? `timeout after ${timeoutMs}ms`
-                  : "aborted",
+                baseUrl: backendUrl,
               },
-              observedAt: ctx.now().toISOString(),
+              abortSignal: abort.signal,
             });
-            continue;
+
+            if (featureResult.ok) {
+              await sideEmit(ctx, {
+                key: sideKey,
+                state: "green",
+                signal: {
+                  slug,
+                  featureType: ft,
+                  backendUrl,
+                  url,
+                  fixtureFile: script.fixtureFile,
+                  turns_completed: featureResult.conversation.turns_completed,
+                  total_turns: featureResult.conversation.total_turns,
+                  turn_durations_ms:
+                    featureResult.conversation.turn_durations_ms,
+                },
+                observedAt: ctx.now().toISOString(),
+              });
+              return { ft, ok: true as const };
+            } else {
+              await sideEmit(ctx, {
+                key: sideKey,
+                state: "red",
+                signal: {
+                  slug,
+                  featureType: ft,
+                  backendUrl,
+                  url,
+                  fixtureFile: script.fixtureFile,
+                  turns_completed: featureResult.conversation?.turns_completed,
+                  total_turns: featureResult.conversation?.total_turns,
+                  failure_turn: featureResult.conversation?.failure_turn,
+                  turn_durations_ms:
+                    featureResult.conversation?.turn_durations_ms,
+                  errorDesc: featureResult.errorDesc,
+                  errorClass: featureResult.errorClass,
+                  diagnostics: featureResult.diagnostics,
+                },
+                observedAt: ctx.now().toISOString(),
+              });
+              return { ft, ok: false as const };
+            }
+          } finally {
+            sem.release();
           }
+        });
 
-          const featureResult = await runFeature({
-            browser,
-            url,
-            pageTimeoutMs,
-            script,
-            buildCtx: {
-              integrationSlug: slug,
-              featureType: ft,
-              baseUrl: backendUrl,
-            },
-            abortSignal: abort.signal,
-          });
+        const settled = await Promise.allSettled(featurePromises);
 
-          if (featureResult.ok) {
-            passed++;
-            await sideEmit(ctx, {
-              key: sideKey,
-              state: "green",
-              signal: {
-                slug,
-                featureType: ft,
-                backendUrl,
-                url,
-                fixtureFile: script.fixtureFile,
-                turns_completed: featureResult.conversation.turns_completed,
-                total_turns: featureResult.conversation.total_turns,
-                turn_durations_ms: featureResult.conversation.turn_durations_ms,
-              },
-              observedAt: ctx.now().toISOString(),
-            });
+        // Aggregate results. Promise.allSettled preserves input order
+        // so `settled[i]` corresponds to `runnable[i]`.
+        let passed = 0;
+        const failed: string[] = [];
+        for (const outcome of settled) {
+          if (outcome.status === "fulfilled") {
+            if (outcome.value.ok) {
+              passed++;
+            } else {
+              failed.push(outcome.value.ft);
+            }
           } else {
-            failed.push(ft);
-            await sideEmit(ctx, {
-              key: sideKey,
-              state: "red",
-              signal: {
-                slug,
-                featureType: ft,
-                backendUrl,
-                url,
-                fixtureFile: script.fixtureFile,
-                turns_completed: featureResult.conversation?.turns_completed,
-                total_turns: featureResult.conversation?.total_turns,
-                failure_turn: featureResult.conversation?.failure_turn,
-                turn_durations_ms:
-                  featureResult.conversation?.turn_durations_ms,
-                errorDesc: featureResult.errorDesc,
-                errorClass: featureResult.errorClass,
-                diagnostics: featureResult.diagnostics,
-              },
-              observedAt: ctx.now().toISOString(),
-            });
+            // Rejected promise — should not happen since runFeature
+            // catches internally, but guard defensively.
+            failed.push("unknown");
           }
         }
 
