@@ -7,5 +7,7 @@ test("shared-state-streaming: page loads with document panel + chat", async ({
   await expect(
     page.getByRole("heading", { name: /state streaming/i }),
   ).toBeVisible();
-  await expect(page.getByRole("textbox").first()).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByRole("textbox").first()).toBeVisible({
+    timeout: 15_000,
+  });
 });

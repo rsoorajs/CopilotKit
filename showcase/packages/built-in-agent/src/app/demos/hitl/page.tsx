@@ -31,8 +31,8 @@ function Demo() {
     <main className="p-8">
       <h1 className="text-2xl font-semibold mb-4">In-Chat Human in the Loop</h1>
       <p className="text-sm opacity-70 mb-6">
-        Try: &ldquo;Delete the README; it&rsquo;s outdated.&rdquo; The agent will
-        ask you to approve the action inline.
+        Try: &ldquo;Delete the README; it&rsquo;s outdated.&rdquo; The agent
+        will ask you to approve the action inline.
       </p>
       <CopilotChat />
     </main>
@@ -83,7 +83,9 @@ function ApprovalCard(props: any) {
   return (
     <div className="border rounded p-3 my-2 opacity-70">
       <div className="font-medium">Decision recorded — {action}</div>
-      <div className="text-sm">{typeof result === "string" ? result : JSON.stringify(result)}</div>
+      <div className="text-sm">
+        {typeof result === "string" ? result : JSON.stringify(result)}
+      </div>
     </div>
   );
 }

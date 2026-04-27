@@ -6,5 +6,7 @@ test("gen-ui-agent: page loads with plan panel + chat", async ({ page }) => {
     page.getByRole("heading", { name: /agentic generative ui/i }),
   ).toBeVisible();
   await expect(page.getByText(/no plan yet/i)).toBeVisible();
-  await expect(page.getByRole("textbox").first()).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByRole("textbox").first()).toBeVisible({
+    timeout: 15_000,
+  });
 });

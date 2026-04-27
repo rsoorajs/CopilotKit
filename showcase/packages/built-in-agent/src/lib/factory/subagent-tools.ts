@@ -10,8 +10,7 @@ const subagentRoles = [
   },
   {
     id: "researcher",
-    systemPrompt:
-      "You are a researcher. Reply concisely with verified facts.",
+    systemPrompt: "You are a researcher. Reply concisely with verified facts.",
   },
 ] as const;
 

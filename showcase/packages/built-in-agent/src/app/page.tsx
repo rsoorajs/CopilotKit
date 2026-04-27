@@ -18,9 +18,8 @@ export default function Home() {
         Built-in Agent (TanStack AI) — Showcase
       </h1>
       <p className="text-sm opacity-70 mb-6">
-        CopilotKit&apos;s BuiltInAgent in factory mode with TanStack AI as
-        the LLM backend. The agent runs in-process inside the Next.js route
-        handler.
+        CopilotKit&apos;s BuiltInAgent in factory mode with TanStack AI as the
+        LLM backend. The agent runs in-process inside the Next.js route handler.
       </p>
       <ul className="space-y-2">
         {demos.map((d) => (

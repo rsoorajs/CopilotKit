@@ -62,8 +62,8 @@ function Demo() {
           Shared State (Read + Write)
         </h1>
         <p className="text-sm opacity-70 mb-4">
-          Edit the title; the agent reads from <code>input.state</code>. Ask
-          the agent to add an ingredient; it calls{" "}
+          Edit the title; the agent reads from <code>input.state</code>. Ask the
+          agent to add an ingredient; it calls{" "}
           <code>AGUISendStateSnapshot</code> and the panel updates live.
         </p>
         <input

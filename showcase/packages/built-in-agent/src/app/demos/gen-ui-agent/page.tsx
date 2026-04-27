@@ -33,8 +33,7 @@ function Demo() {
       <div>
         <h1 className="text-2xl font-semibold mb-4">Agentic Generative UI</h1>
         <p className="text-sm opacity-70 mb-4">
-          The agent emits a live plan via <code>AGUISendStateDelta</code>{" "}
-          (
+          The agent emits a live plan via <code>AGUISendStateDelta</code> (
           <code>{`{ op: "replace", path: "/steps", value: [...] }`}</code>
           ). Each tick re-renders the panel below. Try: &ldquo;Plan a 4-step
           morning routine and execute it; emit the plan to state.&rdquo;

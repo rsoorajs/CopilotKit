@@ -21,8 +21,7 @@ function Demo() {
     updates: [UseAgentUpdate.OnStateChanged],
   });
 
-  const document =
-    (agent.state as { document?: string }).document ?? "";
+  const document = (agent.state as { document?: string }).document ?? "";
 
   return (
     <main className="p-8 grid grid-cols-2 gap-8 h-screen">
@@ -30,8 +29,8 @@ function Demo() {
         <h1 className="text-2xl font-semibold mb-4">State Streaming</h1>
         <p className="text-sm opacity-70 mb-4">
           The agent streams the document into <code>state.document</code> by
-          repeatedly calling <code>AGUISendStateDelta</code>. Try: &ldquo;Write a
-          short essay about small habits, and stream the document to state as
+          repeatedly calling <code>AGUISendStateDelta</code>. Try: &ldquo;Write
+          a short essay about small habits, and stream the document to state as
           you go.&rdquo;
         </p>
         <pre className="whitespace-pre-wrap font-serif text-base border rounded p-4 min-h-[300px]">

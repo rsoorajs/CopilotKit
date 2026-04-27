@@ -44,9 +44,7 @@ function Demo() {
 function DelegationCard(props: any) {
   const { name, status, parameters, result } = props;
   const role =
-    typeof name === "string"
-      ? name.replace(/^delegate_to_/, "")
-      : "subagent";
+    typeof name === "string" ? name.replace(/^delegate_to_/, "") : "subagent";
 
   let parsed: { role?: string; text?: string } = {};
   if (status === "complete" && typeof result === "string") {

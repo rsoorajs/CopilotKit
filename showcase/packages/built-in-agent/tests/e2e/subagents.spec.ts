@@ -5,5 +5,7 @@ test("subagents: page loads and chat input is visible", async ({ page }) => {
   await expect(
     page.getByRole("heading", { name: /sub-agents/i }),
   ).toBeVisible();
-  await expect(page.getByRole("textbox").first()).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByRole("textbox").first()).toBeVisible({
+    timeout: 15_000,
+  });
 });
