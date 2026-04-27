@@ -367,6 +367,35 @@ describe("TanStack AI converter — state tools", () => {
     expect(eventField<unknown>(events[deltaIdx], "delta")).toEqual(delta);
   });
 
+  it("emits STATE_SNAPSHOT when payload arrives in raw.result instead of raw.content", async () => {
+    // Regression: serialization fell back to raw.result (`?? raw.result ?? null`)
+    // but state-tool detection only inspected raw.content, so STATE_* events
+    // were silently dropped if upstream used `result` for the state-tool body.
+    // See the "TOOL_CALL_RESULT with object content serializes to JSON" test
+    // above which already exercises the `result` field on a non-state tool.
+    const snapshot = { counter: 99 };
+    const agent = createAgent("tanstack", [
+      tanstackToolCallStart("call1", "AGUISendStateSnapshot"),
+      tanstackToolCallEnd("call1"),
+      {
+        type: "TOOL_CALL_RESULT",
+        toolCallId: "call1",
+        result: { success: true, snapshot },
+      },
+    ]);
+    const events = await collectEvents(agent.run(createDefaultInput()));
+
+    expectLifecycleWrapped(events);
+
+    const snapshotIdx = events.findIndex(
+      (e) => e.type === EventType.STATE_SNAPSHOT,
+    );
+    expect(snapshotIdx).toBeGreaterThanOrEqual(0);
+    expect(eventField<unknown>(events[snapshotIdx], "snapshot")).toEqual(
+      snapshot,
+    );
+  });
+
   it("does NOT emit STATE_* for non-state tool results", async () => {
     const agent = createAgent("tanstack", [
       tanstackToolCallStart("call1", "getWeather"),

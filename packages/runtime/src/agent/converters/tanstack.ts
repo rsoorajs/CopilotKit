@@ -272,7 +272,7 @@ export async function* convertTanStackStream(
     const raw = chunk as Record<string, unknown>;
     const type = raw.type as string;
 
-    if (type === "TEXT_MESSAGE_CONTENT" && raw.delta) {
+    if (type === "TEXT_MESSAGE_CONTENT" && raw.delta != null) {
       yield* closeReasoningIfOpen();
       const textEvent: TextMessageChunkEvent = {
         type: EventType.TEXT_MESSAGE_CHUNK,
@@ -310,10 +310,15 @@ export async function* convertTanStackStream(
       yield* closeReasoningIfOpen();
       const toolCallId = raw.toolCallId as string;
       const toolName = toolNamesById.get(toolCallId);
-      const rawContent = raw.content;
+      // Accept the payload from either `content` (canonical TanStack shape)
+      // or `result` (alternate shape used by some adapters / tests). Both
+      // state-tool detection and the final TOOL_CALL_RESULT serialization
+      // must read the same field, otherwise STATE_SNAPSHOT/STATE_DELTA can
+      // be silently dropped when upstream uses `result`.
+      const rawPayload = raw.content ?? raw.result;
 
       const parsedContent =
-        typeof rawContent === "string" ? safeParse(rawContent) : rawContent;
+        typeof rawPayload === "string" ? safeParse(rawPayload) : rawPayload;
 
       if (
         toolName === "AGUISendStateSnapshot" &&
@@ -342,11 +347,11 @@ export async function* convertTanStackStream(
       }
 
       let serializedContent: string;
-      if (typeof rawContent === "string") {
-        serializedContent = rawContent;
+      if (typeof rawPayload === "string") {
+        serializedContent = rawPayload;
       } else {
         try {
-          serializedContent = JSON.stringify(rawContent ?? raw.result ?? null);
+          serializedContent = JSON.stringify(rawPayload ?? null);
         } catch {
           serializedContent = "[Unserializable tool result]";
         }
