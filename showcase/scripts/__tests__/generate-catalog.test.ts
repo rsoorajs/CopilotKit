@@ -128,10 +128,10 @@ describe("Catalog Generator", () => {
     const stub = lgpCells.filter((c: any) => c.status === "stub");
     const unshipped = lgpCells.filter((c: any) => c.status === "unshipped");
 
-    // LGP has 40 features: 37 wired + 1 stub (cli-start) + 2 unshipped
-    expect(wired.length).toBe(37);
+    // LGP has 40 features: 39 wired + 1 stub (cli-start) + 0 unshipped
+    expect(wired.length).toBe(39);
     expect(stub.length).toBe(1);
-    expect(unshipped.length).toBe(2);
+    expect(unshipped.length).toBe(0);
   });
 
   it("stub detection: LGP/cli-start has stub status (demo exists, no route)", () => {
@@ -172,7 +172,7 @@ describe("Catalog Generator", () => {
         c.integration === "crewai-crews" && c.manifestation === "integrated",
     );
     const crewaiWired = crewaiCells.filter((c: any) => c.status === "wired");
-    expect(crewaiWired.length).toBe(28);
+    expect(crewaiWired.length).toBe(34);
 
     // All cells for crewai should have parity_tier = "partial"
     for (const cell of crewaiCells) {
@@ -188,10 +188,12 @@ describe("Catalog Generator", () => {
     expect(catalog.metadata.total_cells).toBe(737);
 
     // 18 integrations x 40 features + 17 starters = 737 total cells
-    // Wired = 452, Stub = 8, Unshipped = 277
-    expect(catalog.metadata.wired).toBe(452);
-    expect(catalog.metadata.stub).toBe(8);
-    expect(catalog.metadata.unshipped).toBe(277);
+    // Wired = 552, Stub = 9, Unshipped = 176 (post-google-adk parity port:
+    // google-adk went from 8 → 35 wired cells, see PR adding 27 demos +
+    // splitting tool_rendering_agents into per-variant files)
+    expect(catalog.metadata.wired).toBe(552);
+    expect(catalog.metadata.stub).toBe(9);
+    expect(catalog.metadata.unshipped).toBe(176);
   });
 
   it("max_depth: D4 for wired/stub cells, D0 for unshipped", () => {
