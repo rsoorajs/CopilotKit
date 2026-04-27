@@ -1,5 +1,23 @@
 # Showcase Railway Operations
 
+## Pending Service Provisioning
+
+Two services are wired into `showcase_deploy.yml` with placeholder
+`railway_id="PLACEHOLDER-CREATE-RAILWAY-SERVICE"` and need real Railway
+service IDs filled in before their first successful deploy:
+
+- `built-in-agent` → image `showcase-built-in-agent`
+- `starter-built-in-agent` → image `showcase-starter-built-in-agent`
+
+Both are single-service Next.js apps (`BuiltInAgent` runs in-process; no
+separate agent server). Required env: `OPENAI_API_KEY`. Health probe at
+`/api/health`.
+
+Until the Railway services exist, the deploy job for these entries will
+fail loudly on `serviceInstanceRedeploy` — that's intentional. Provision
+them via the "Adding a New Railway Service" flow below, then swap the
+placeholder IDs in the matrix.
+
 ## Auto-Updates (Fleet-Wide)
 
 All 41 Railway services have `source.autoUpdates.type = "minor"` with no

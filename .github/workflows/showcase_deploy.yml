@@ -32,6 +32,7 @@ on:
           - claude-sdk-typescript
           - ms-agent-dotnet
           - claude-sdk-python
+          - built-in-agent
           - starter-ag2
           - starter-agno
           - starter-claude-sdk-python
@@ -49,6 +50,7 @@ on:
           - starter-pydantic-ai
           - starter-spring-ai
           - starter-strands
+          - starter-built-in-agent
           - shell-dojo
           - shell-dashboard
           - shell-docs
@@ -127,6 +129,8 @@ jobs:
               - 'showcase/packages/ms-agent-dotnet/**'
             claude_sdk_python:
               - 'showcase/packages/claude-sdk-python/**'
+            built_in_agent:
+              - 'showcase/packages/built-in-agent/**'
             starter_ag2:
               - 'showcase/starters/ag2/**'
             starter_agno:
@@ -161,6 +165,8 @@ jobs:
               - 'showcase/starters/spring-ai/**'
             starter_strands:
               - 'showcase/starters/strands/**'
+            starter_built_in_agent:
+              - 'showcase/starters/built-in-agent/**'
             shell_dojo:
               - 'showcase/shell-dojo/**'
               - 'showcase/shared/**'
@@ -206,6 +212,7 @@ jobs:
             {"dispatch_name":"claude-sdk-typescript","filter_key":"claude_sdk_typescript","context":"showcase/packages/claude-sdk-typescript","image":"showcase-claude-sdk-typescript","railway_id":"18a98727-5700-44aa-b497-b60795dbbd6a","timeout":15,"lfs":false,"build_args":"","dockerfile":"","health_path":"/api/health"},
             {"dispatch_name":"ms-agent-dotnet","filter_key":"ms_agent_dotnet","context":"showcase/packages/ms-agent-dotnet","image":"showcase-ms-agent-dotnet","railway_id":"beeb2dd6-87a4-4599-aa07-0578f7bd6519","timeout":15,"lfs":false,"build_args":"","dockerfile":"","health_path":"/api/health"},
             {"dispatch_name":"claude-sdk-python","filter_key":"claude_sdk_python","context":"showcase/packages/claude-sdk-python","image":"showcase-claude-sdk-python","railway_id":"b122ab65-9854-4cb2-a68e-b50ff13f7481","timeout":15,"lfs":false,"build_args":"","dockerfile":"","health_path":"/api/health"},
+            {"dispatch_name":"built-in-agent","filter_key":"built_in_agent","context":"showcase/packages/built-in-agent","image":"showcase-built-in-agent","railway_id":"PLACEHOLDER-CREATE-RAILWAY-SERVICE","timeout":15,"lfs":false,"build_args":"","dockerfile":"","health_path":"/api/health"},
             {"dispatch_name":"starter-ag2","filter_key":"starter_ag2","context":"showcase/starters/ag2","image":"showcase-starter-ag2","railway_id":"0d7ce4ea-0ebe-4ba6-a408-503f7425c175","timeout":15,"lfs":false,"build_args":"","dockerfile":"","health_path":"/api/health"},
             {"dispatch_name":"starter-agno","filter_key":"starter_agno","context":"showcase/starters/agno","image":"showcase-starter-agno","railway_id":"baf9f0db-1f62-462e-a603-2e1448652473","timeout":15,"lfs":false,"build_args":"","dockerfile":"","health_path":"/api/health"},
             {"dispatch_name":"starter-claude-sdk-python","filter_key":"starter_claude_sdk_python","context":"showcase/starters/claude-sdk-python","image":"showcase-starter-claude-sdk-python","railway_id":"912b480d-ee38-4d8d-ab32-237bee146fed","timeout":15,"lfs":false,"build_args":"","dockerfile":"","health_path":"/api/health"},
@@ -223,6 +230,7 @@ jobs:
             {"dispatch_name":"starter-pydantic-ai","filter_key":"starter_pydantic_ai","context":"showcase/starters/pydantic-ai","image":"showcase-starter-pydantic-ai","railway_id":"f9e01966-ce8d-4e57-a336-315e41d92654","timeout":15,"lfs":false,"build_args":"","dockerfile":"","health_path":"/api/health"},
             {"dispatch_name":"starter-spring-ai","filter_key":"starter_spring_ai","context":"showcase/starters/spring-ai","image":"showcase-starter-spring-ai","railway_id":"3559ece3-7ba3-41ac-b24c-1f780133ec58","timeout":15,"lfs":false,"build_args":"","dockerfile":"","health_path":"/api/health"},
             {"dispatch_name":"starter-strands","filter_key":"starter_strands","context":"showcase/starters/strands","image":"showcase-starter-strands","railway_id":"06db2bb8-e15d-4c6a-97ad-e14777c92d9f","timeout":15,"lfs":false,"build_args":"","dockerfile":"","health_path":"/api/health"},
+            {"dispatch_name":"starter-built-in-agent","filter_key":"starter_built_in_agent","context":"showcase/starters/built-in-agent","image":"showcase-starter-built-in-agent","railway_id":"PLACEHOLDER-CREATE-RAILWAY-SERVICE","timeout":15,"lfs":false,"build_args":"","dockerfile":"","health_path":"/api/health"},
             {"dispatch_name":"shell-dojo","filter_key":"shell_dojo","context":".","image":"showcase-shell-dojo","railway_id":"7ad1ece7-2228-49cd-8a78-bddf30322907","timeout":10,"lfs":false,"build_args":"","dockerfile":"showcase/shell-dojo/Dockerfile","health_path":"/"},
             {"dispatch_name":"shell-dashboard","filter_key":"shell_dashboard","context":".","image":"showcase-shell-dashboard","railway_id":"4d5dfd74-be61-40b2-8564-b53b7dd4c15b","timeout":10,"lfs":true,"build_args_sha":"${{ github.sha }}","build_args_branch":"${{ github.ref_name }}","build_args_pb_url":"https://showcase-pocketbase-production.up.railway.app","build_args_shell_url":"https://showcase.copilotkit.ai","dockerfile":"showcase/shell-dashboard/Dockerfile","health_path":"/"},
             {"dispatch_name":"shell-docs","filter_key":"shell_docs","context":".","image":"showcase-shell-docs","railway_id":"7badfb8d-4228-414c-9145-b4026803714f","timeout":10,"lfs":true,"build_args_sha":"${{ github.sha }}","build_args_branch":"${{ github.ref_name }}","dockerfile":"showcase/shell-docs/Dockerfile","health_path":"/"}
