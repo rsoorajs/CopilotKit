@@ -140,6 +140,7 @@ export async function DocsPageView({
             scope={scope}
             fallbackHref={`${slugHrefPrefix}/${node.slug}`}
             active={isActive}
+            hideWhenUnscoped={node.slug === "quickstart"}
             className={`block py-[5px] text-[13px] transition-colors ${
               isActive
                 ? "text-[var(--accent)] font-medium"

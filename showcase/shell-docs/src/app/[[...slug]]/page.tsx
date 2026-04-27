@@ -148,6 +148,7 @@ function OverviewNavItem({
       <div style={{ paddingLeft: `${indent}px` }}>
         <SidebarLink
           slug={node.slug}
+          hideWhenUnscoped={node.slug === "quickstart"}
           className="block py-[5px] text-[13px] text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors"
         >
           {node.title}
