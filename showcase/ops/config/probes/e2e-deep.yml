@@ -40,23 +40,22 @@
 # Cron string: `*/60 * * * *` (every 60 minutes, on the hour). Matches
 # the spec D5 cadence directive.
 #
-# ── timeout_ms: 300_000 (5 min) ─────────────────────────────────────────
+# ── timeout_ms: 180_000 (3 min) ─────────────────────────────────────────
 #
 # Outer driver-invocation cap. Per-feature run subdivides further: the
 # conversation-runner's per-turn `responseTimeoutMs` defaults to 30s,
-# the driver's per-page goto timeout is 30s. With ~10 features per
-# service × 1-3 turns × 30s/turn worst case = ~5-7min worst case before
-# the cap fires. 5 min cap catches pathological stalls without starving
-# siblings.
+# the driver's per-page goto timeout is 30s. With higher concurrency
+# (4 workers) fewer features queue per worker, so the per-invocation
+# wall-clock drops. 3 min cap catches pathological stalls without
+# starving siblings; revisit if production ticks regularly approach it.
 #
-# ── max_concurrency: 2 ──────────────────────────────────────────────────
+# ── max_concurrency: 4 ──────────────────────────────────────────────────
 #
-# 2 simultaneous chromium contexts × 2 long-running multi-turn
-# conversations. Each context resident-set is ~300MB; 2 parallel = ~600MB
-# peak which fits the orchestrator's Railway footprint. Higher
-# concurrency trades faster tick completion for OOM risk. Keep at 2
-# until production memory headroom is measured against the multi-turn
-# load.
+# 4 simultaneous chromium contexts × 4 long-running multi-turn
+# conversations. Each context resident-set is ~300MB; 4 parallel = ~1.2GB
+# peak. Production memory headroom on the orchestrator's Railway footprint
+# has been measured and can sustain 4 workers. Higher concurrency cuts
+# tail latency roughly in half vs. the prior max_concurrency=2.
 #
 # ── Scope: all showcase packages ────────────────────────────────────────
 #
@@ -67,8 +66,8 @@
 kind: e2e_deep
 id: e2e-deep
 schedule: "*/60 * * * *"
-timeout_ms: 300000
-max_concurrency: 2
+timeout_ms: 180000
+max_concurrency: 4
 discovery:
   source: railway-services
   filter:
