@@ -287,7 +287,7 @@ export default async function FrameworkScopedDocsPage({
       contentSlugPath={contentSlugPath}
       slugHrefPrefix={`/${framework}`}
       frameworkOverride={framework}
-      sidebarTitle="CopilotKit Docs"
+      sidebarTitle={integration.name}
       backLink={backLink}
       navTree={navTree}
       bannerSlot={banner}
