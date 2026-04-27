@@ -84,6 +84,15 @@ const nextConfig: NextConfig = {
         destination: "/migrate/1.8.2",
         permanent: true,
       },
+      // Concept page renamed from "OSS vs Cloud" to "OSS vs Enterprise"
+      // because "Cloud" implied a single deployment shape — the layer is
+      // the Intelligence Platform, which runs hosted at Copilot Cloud
+      // OR self-hosted via the Helm chart. "Enterprise" covers both.
+      {
+        source: "/concepts/oss-vs-cloud",
+        destination: "/concepts/oss-vs-enterprise",
+        permanent: true,
+      },
     ];
   },
 };
