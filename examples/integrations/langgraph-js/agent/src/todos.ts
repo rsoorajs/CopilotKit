@@ -15,14 +15,14 @@ export const TodoSchema = z.object({
 export type Todo = z.infer<typeof TodoSchema>;
 
 const TodosStateSchema = z.object({
-  todos: z.array(TodoSchema).default(() => []),
+  todos: z.array(TodoSchema),
 });
 
 export const manage_todos = tool(
   (input: { todos: Todo[] }, runtime: ToolRuntime<typeof TodosStateSchema>) => {
     const todos = input.todos.map((t) => ({
       ...t,
-      id: t.id && t.id.length > 0 ? t.id : randomUUID(),
+      id: t.id ?? randomUUID(),
     }));
     return new Command({
       update: {

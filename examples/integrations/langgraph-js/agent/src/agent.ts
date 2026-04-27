@@ -1,7 +1,13 @@
 import { z } from "zod";
 import { createAgent } from "langchain";
 import { ChatOpenAI } from "@langchain/openai";
-import { copilotkitMiddleware } from "@copilotkit/sdk-js/langgraph";
+import {
+  copilotkitMiddleware,
+  CopilotKitStateSchema,
+  zodState,
+} from "@copilotkit/sdk-js/langgraph";
+import { StateSchema } from "@langchain/langgraph";
+
 import {
   stateItem,
   stateStreamingMiddleware,
@@ -12,8 +18,9 @@ import { query_data } from "./query.js";
 import { search_flights } from "./a2ui_fixed_schema.js";
 import { generate_a2ui } from "./a2ui_dynamic_schema.js";
 
-const AgentStateSchema = z.object({
-  todos: z.array(TodoSchema).default(() => []),
+const AgentStateSchema = new StateSchema({
+  todos: zodState(z.array(TodoSchema).default(() => [])),
+  ...(CopilotKitStateSchema.fields as Record<string, any>),
 });
 
 const model = new ChatOpenAI({
@@ -29,7 +36,7 @@ export const graph = createAgent({
     stateStreamingMiddleware(
       stateItem({ stateKey: "todos", tool: "manage_todos", toolArgument: "todos" }),
     ),
-  ] as const,
+  ],
   stateSchema: AgentStateSchema,
   systemPrompt: `
     You are a polished, professional demo assistant. Keep responses to 1-2 sentences.
