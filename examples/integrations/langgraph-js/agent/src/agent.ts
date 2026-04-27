@@ -34,7 +34,11 @@ export const graph = createAgent({
   middleware: [
     copilotkitMiddleware,
     stateStreamingMiddleware(
-      stateItem({ stateKey: "todos", tool: "manage_todos", toolArgument: "todos" }),
+      stateItem({
+        stateKey: "todos",
+        tool: "manage_todos",
+        toolArgument: "todos",
+      }),
     ),
   ],
   stateSchema: AgentStateSchema,

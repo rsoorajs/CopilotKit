@@ -120,6 +120,7 @@ Output kinds:
 ## Procedure: change the tracked surface
 
 To track a new file or key:
+
 1. Edit `manifest.json` → `tracked.verbatimFiles` or `tracked.packageJsonPaths`.
 2. Run `pnpm parity:verify` — instances will flag as drifted until synced.
 3. `pnpm parity:sync --all` to apply.
@@ -129,13 +130,13 @@ and sync stop touching it. Any drift that already exists stays.
 
 ## Red flags
 
-| Signal | What it means | Do instead |
-|--------|---------------|------------|
-| "Just copy the file manually" | Bypasses the manifest | Add to `tracked.verbatimFiles` then sync |
-| "Add a try/catch so verify doesn't fail" | Silencing drift | Resolve the drift or declare divergence |
-| "Move this into `allowedDivergence` to unblock" | Scope creep | Only add to divergence with explicit reason |
-| `pnpm parity:sync` on north-star directly | Overwrites canonical | Sync is instance-only; script refuses |
-| Agent code copied between languages | Doesn't work | Port by hand; `tracked.agentSurface` names what |
+| Signal                                          | What it means         | Do instead                                      |
+| ----------------------------------------------- | --------------------- | ----------------------------------------------- |
+| "Just copy the file manually"                   | Bypasses the manifest | Add to `tracked.verbatimFiles` then sync        |
+| "Add a try/catch so verify doesn't fail"        | Silencing drift       | Resolve the drift or declare divergence         |
+| "Move this into `allowedDivergence` to unblock" | Scope creep           | Only add to divergence with explicit reason     |
+| `pnpm parity:sync` on north-star directly       | Overwrites canonical  | Sync is instance-only; script refuses           |
+| Agent code copied between languages             | Doesn't work          | Port by hand; `tracked.agentSurface` names what |
 
 ## Related skills
 

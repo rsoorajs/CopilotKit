@@ -44,7 +44,10 @@ export const manage_todos = tool(
 );
 
 export const get_todos = tool(
-  (_input: Record<string, never>, runtime: ToolRuntime<typeof TodosStateSchema>) => {
+  (
+    _input: Record<string, never>,
+    runtime: ToolRuntime<typeof TodosStateSchema>,
+  ) => {
     return JSON.stringify(runtime.state.todos ?? []);
   },
   {

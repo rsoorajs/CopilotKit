@@ -45,7 +45,7 @@ export const generate_a2ui = tool(
     const messages = (runtime.state.messages ?? []).slice(0, -1);
     const contextEntries = runtime.state.copilotkit?.context ?? [];
     const contextText = contextEntries
-      .map((e) => (e && typeof e === "object" ? e.value ?? "" : ""))
+      .map((e) => (e && typeof e === "object" ? (e.value ?? "") : ""))
       .filter(Boolean)
       .join("\n\n");
 
