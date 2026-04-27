@@ -12,6 +12,11 @@ import {
   tanstackToolCallArgs,
   tanstackToolCallEnd,
   tanstackToolCallResult,
+  tanstackReasoningStart,
+  tanstackReasoningMessageStart,
+  tanstackReasoningMessageContent,
+  tanstackReasoningMessageEnd,
+  tanstackReasoningEnd,
 } from "./agent-test-helpers";
 
 describe("TanStack AI converter (via Agent)", () => {
@@ -385,5 +390,30 @@ describe("TanStack AI converter — state tools", () => {
     expect(
       events.find((e) => e.type === EventType.TOOL_CALL_RESULT),
     ).toBeDefined();
+  });
+});
+
+describe("TanStack AI converter — reasoning", () => {
+  it("emits the full REASONING lifecycle for reasoning chunks", async () => {
+    const agent = createAgent("tanstack", [
+      tanstackReasoningStart("r1"),
+      tanstackReasoningMessageStart("r1"),
+      tanstackReasoningMessageContent("r1", "thinking"),
+      tanstackReasoningMessageEnd("r1"),
+      tanstackReasoningEnd("r1"),
+    ]);
+    const events = await collectEvents(agent.run(createDefaultInput()));
+
+    expectLifecycleWrapped(events);
+
+    // Strip the lifecycle wrap and inspect the inner sequence.
+    const inner = events.slice(1, -1).map((e) => e.type);
+    expect(inner).toEqual([
+      EventType.REASONING_START,
+      EventType.REASONING_MESSAGE_START,
+      EventType.REASONING_MESSAGE_CONTENT,
+      EventType.REASONING_MESSAGE_END,
+      EventType.REASONING_END,
+    ]);
   });
 });

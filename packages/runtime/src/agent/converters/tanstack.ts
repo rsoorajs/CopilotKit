@@ -10,6 +10,11 @@ import {
   ToolCallResultEvent,
   StateSnapshotEvent,
   StateDeltaEvent,
+  ReasoningStartEvent,
+  ReasoningMessageStartEvent,
+  ReasoningMessageContentEvent,
+  ReasoningMessageEndEvent,
+  ReasoningEndEvent,
 } from "@ag-ui/client";
 import { randomUUID } from "@copilotkit/shared";
 
@@ -232,6 +237,8 @@ export async function* convertTanStackStream(
 ): AsyncGenerator<BaseEvent> {
   const messageId = randomUUID();
   const toolNamesById = new Map<string, string>();
+  let isInReasoning = false;
+  let reasoningMessageId = randomUUID();
 
   for await (const chunk of stream) {
     if (abortSignal.aborted) break;
@@ -323,11 +330,45 @@ export async function* convertTanStackStream(
       };
       yield resultEvent;
       toolNamesById.delete(toolCallId);
+    } else if (type === "REASONING_START") {
+      isInReasoning = true;
+      reasoningMessageId = (raw.messageId as string) ?? randomUUID();
+      const startEvt: ReasoningStartEvent = {
+        type: EventType.REASONING_START,
+        messageId: reasoningMessageId,
+      };
+      yield startEvt;
+    } else if (type === "REASONING_MESSAGE_START") {
+      const evt: ReasoningMessageStartEvent = {
+        type: EventType.REASONING_MESSAGE_START,
+        messageId: reasoningMessageId,
+        role: "reasoning",
+      };
+      yield evt;
+    } else if (type === "REASONING_MESSAGE_CONTENT") {
+      const evt: ReasoningMessageContentEvent = {
+        type: EventType.REASONING_MESSAGE_CONTENT,
+        messageId: reasoningMessageId,
+        delta: raw.delta as string,
+      };
+      yield evt;
+    } else if (type === "REASONING_MESSAGE_END") {
+      const evt: ReasoningMessageEndEvent = {
+        type: EventType.REASONING_MESSAGE_END,
+        messageId: reasoningMessageId,
+      };
+      yield evt;
+    } else if (type === "REASONING_END") {
+      isInReasoning = false;
+      const evt: ReasoningEndEvent = {
+        type: EventType.REASONING_END,
+        messageId: reasoningMessageId,
+      };
+      yield evt;
     }
     // Unhandled chunk types are silently ignored.
-    // Known gap: REASONING events are not yet converted from TanStack streams.
-    // Reasoning will not surface when using the TanStack backend.
-    // Use the AI SDK backend if reasoning is required.
+    // Reasoning auto-close (closing an open reasoning lifecycle when text/tool
+    // arrives without explicit close events) is handled in the next task.
   }
 }
 
