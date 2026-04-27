@@ -91,9 +91,12 @@ def _inject_context(
     if sig_idx != -1:
         end_idx = original_text.find(CONTEXT_END_MARKER, sig_idx)
         if end_idx != -1:
-            original_text = original_text[
-                end_idx + len(CONTEXT_END_MARKER) :
-            ].lstrip("\n")
+            # Splice out only the prior block (preserve head + tail).
+            # See agent_config_agent.py for the full rationale.
+            original_text = (
+                original_text[:sig_idx]
+                + original_text[end_idx + len(CONTEXT_END_MARKER) :]
+            ).lstrip("\n")
         else:
             logger.warning(
                 "agent-context: prior context block has signature but no "
@@ -105,6 +108,9 @@ def _inject_context(
         new_text = block + "\n\n" + original_text if original_text else block
     else:
         new_text = original_text
+
+    if not new_text and original is None:
+        return None
 
     llm_request.config.system_instruction = types.Content(
         role="system", parts=[types.Part(text=new_text)]

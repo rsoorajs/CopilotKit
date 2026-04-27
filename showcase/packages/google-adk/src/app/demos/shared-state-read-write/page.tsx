@@ -68,21 +68,27 @@ function DemoContent() {
     if (agentState === undefined) return; // wait for first state event
     seededRef.current = true;
     if (!agentState?.preferences) {
+      // Spread the observed state so any keys the runtime owns
+      // (`copilotkit` slot, future framework additions) survive the
+      // seed write — `agent.setState` replaces the whole state object
+      // rather than merging.
       agent.setState({
+        ...((agentState as object | undefined) ?? {}),
         preferences: INITIAL_PREFERENCES,
         notes: [],
       } as RWAgentState);
     }
   }, [agent, agentState]);
 
-  // Read latest agent state inside the handlers via the closure-fresh
-  // `agentState` rather than the destructured `preferences` / `notes`.
-  // Concurrent edits (rapid prefs change followed by Clear notes) under
-  // the prior implementation could revert the in-flight prefs change
-  // because both handlers wrote a whole-state snapshot computed at
-  // render time.
+  // Handlers spread the closure-fresh `agentState` so no key is dropped.
+  // Each handler is recreated every render, so `agentState` reflects the
+  // most recent committed snapshot. Rapid back-to-back interactions
+  // before React re-renders can still write the same snapshot twice —
+  // CopilotKit's STATE_DELTA stream resolves the merge upstream and
+  // either order is correct because both writes carry the full pair.
   const handlePreferencesChange = (next: Preferences) => {
     agent.setState({
+      ...((agentState as object | undefined) ?? {}),
       preferences: next,
       notes: agentState?.notes ?? [],
     } as RWAgentState);
@@ -90,6 +96,7 @@ function DemoContent() {
 
   const handleClearNotes = () => {
     agent.setState({
+      ...((agentState as object | undefined) ?? {}),
       preferences: agentState?.preferences ?? INITIAL_PREFERENCES,
       notes: [],
     } as RWAgentState);

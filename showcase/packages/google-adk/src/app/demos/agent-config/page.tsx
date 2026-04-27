@@ -54,12 +54,24 @@ function DemoContent() {
     if (state === undefined) return; // wait for first state event
     seededRef.current = true;
     if (!state?.config) {
-      agent.setState({ config: INITIAL_CONFIG } as AgentConfigState);
+      // Spread the observed state so any other keys the runtime added
+      // (e.g. \`copilotkit\` for read-only context, future framework
+      // additions) survive the seed write — \`agent.setState\` replaces
+      // the whole state object rather than merging.
+      agent.setState({
+        ...(state ?? {}),
+        config: INITIAL_CONFIG,
+      } as AgentConfigState);
     }
   }, [agent, state]);
 
   const handleChange = (next: AgentConfigValue) => {
-    agent.setState({ config: next } as AgentConfigState);
+    // Same spread discipline as the seed effect — preserve any keys the
+    // runtime owns (copilotkit slot, etc.) when writing config back.
+    agent.setState({
+      ...(state ?? {}),
+      config: next,
+    } as AgentConfigState);
   };
 
   return (

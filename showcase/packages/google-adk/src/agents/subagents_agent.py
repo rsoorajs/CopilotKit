@@ -70,9 +70,16 @@ def _invoke_sub_agent(system_prompt: str, task: str) -> str:
             config=types.GenerateContentConfig(system_instruction=system_prompt),
         )
     except Exception as exc:
+        # `logger.exception` keeps the full traceback + str(exc) server-side.
+        # The user-facing message intentionally surfaces only the exception
+        # CLASS name, not str(exc) — Gemini SDK errors can include URLs,
+        # request IDs, partial credentials, or quota details that we should
+        # not ship to the showcase frontend (manifest declares
+        # \`deployed: true\`, so the public Railway URL would receive them).
         logger.exception("subagent: Gemini call failed")
         raise _SubAgentError(
-            f"sub-agent call failed: {exc.__class__.__name__}: {exc}"
+            f"sub-agent call failed: {exc.__class__.__name__} "
+            "(see server logs for details)"
         ) from exc
 
     candidates = getattr(response, "candidates", None) or []

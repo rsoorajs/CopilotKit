@@ -78,7 +78,18 @@ def _inject_config(
     if sig_idx != -1:
         end_idx = original_text.find(CONFIG_END_MARKER, sig_idx)
         if end_idx != -1:
-            original_text = original_text[end_idx + len(CONFIG_END_MARKER) :].lstrip("\n")
+            # Splice out only the prior block. Earlier versions sliced
+            # `original_text[end_idx + len(...):]` which silently DROPPED
+            # everything from position 0 to sig_idx — fine when our prior
+            # block sits at the start of the system instruction (the
+            # steady-state pattern), but if any other middleware ever
+            # prepends content to system_instruction between turns, that
+            # prefix would be lost. Splice preserves both the head and
+            # the tail.
+            original_text = (
+                original_text[:sig_idx]
+                + original_text[end_idx + len(CONFIG_END_MARKER) :]
+            ).lstrip("\n")
         else:
             # Signature present without trailing end-marker — likely a
             # mangled prior block. Log so the drift surfaces server-side
@@ -93,6 +104,14 @@ def _inject_config(
         new_text = block + "\n\n" + original_text if original_text else block
     else:
         new_text = original_text
+
+    if not new_text and original is None:
+        # Nothing to inject AND nothing was there originally. Don't
+        # overwrite system_instruction with an empty Content — leave
+        # whatever the LlmAgent's `instruction=` field provided to ADK
+        # untouched. Writing an empty Content here previously stomped
+        # the agent's static instruction on subsequent turns.
+        return None
 
     llm_request.config.system_instruction = types.Content(
         role="system", parts=[types.Part(text=new_text)]

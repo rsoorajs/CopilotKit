@@ -60,6 +60,12 @@ def _build_prefs_block(prefs: dict | None) -> str | None:
     interests = prefs.get("interests") or []
     if interests:
         lines.append(f"- Interests: {', '.join(interests)}")
+    if len(lines) == 1:
+        # Truthy dict but no recognized keys (schema drift /
+        # forward-extension UI prop). Don't emit a meaningless
+        # [SIGNATURE, "Tailor every response..."] block. Mirrors the
+        # same guard in agent_config_agent._format_config.
+        return None
     lines.append(
         "Tailor every response to these preferences. " + PREFS_END_MARKER
     )
@@ -87,12 +93,14 @@ def _inject_preferences(
 
     sig_idx = original_text.find(PREFS_PREFIX_SIGNATURE)
     if sig_idx != -1:
-        # Strip prior block — find the trailing sentence we always append.
+        # Splice out only the prior block (preserve head + tail).
+        # See agent_config_agent.py for the full rationale.
         end_idx = original_text.find(PREFS_END_MARKER, sig_idx)
         if end_idx != -1:
-            original_text = original_text[
-                end_idx + len(PREFS_END_MARKER) :
-            ].lstrip("\n")
+            original_text = (
+                original_text[:sig_idx]
+                + original_text[end_idx + len(PREFS_END_MARKER) :]
+            ).lstrip("\n")
         else:
             logger.warning(
                 "shared-state-read-write: prior prefs block has signature "
@@ -104,6 +112,9 @@ def _inject_preferences(
         new_text = block + "\n\n" + original_text if original_text else block
     else:
         new_text = original_text
+
+    if not new_text and original is None:
+        return None
 
     llm_request.config.system_instruction = types.Content(
         role="system", parts=[types.Part(text=new_text)]
