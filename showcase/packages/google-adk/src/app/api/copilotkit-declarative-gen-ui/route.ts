@@ -25,7 +25,7 @@ const declarativeGenUiAgent = new HttpAgent({
 });
 
 const runtime = new CopilotRuntime({
-  // @ts-ignore -- see main route.ts
+  // @ts-expect-error -- see main route.ts
   agents: { "declarative-gen-ui": declarativeGenUiAgent },
   a2ui: { injectA2UITool: false },
 });
@@ -39,9 +39,9 @@ export const POST = async (req: NextRequest) => {
     });
     return await handleRequest(req);
   } catch (error: unknown) {
-    const e = error as { message?: string; stack?: string };
+    console.error("[copilotkit-declarative-gen-ui]", error);
     return NextResponse.json(
-      { error: e.message, stack: e.stack },
+      { error: "Internal server error" },
       { status: 500 },
     );
   }

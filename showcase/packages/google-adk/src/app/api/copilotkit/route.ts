@@ -11,9 +11,6 @@ import { AbstractAgent, HttpAgent } from "@ag-ui/client";
 // this runtime maps each agent name to its dedicated backend path.
 const AGENT_URL = process.env.AGENT_URL || "http://localhost:8000";
 
-console.log("[copilotkit/route] Initializing CopilotKit runtime");
-console.log(`[copilotkit/route] AGENT_URL: ${AGENT_URL}`);
-
 // Each agent NAME corresponds to a path mounted by the Python backend
 // (see src/agents/registry.py AGENT_REGISTRY). Names with dashes preserved
 // for backwards-compat with already-shipped demos (gen-ui-agent etc.).
@@ -73,44 +70,32 @@ for (const name of agentNames) {
   agents[name] = new HttpAgent({ url: `${AGENT_URL}/${name}` });
 }
 
-console.log(
-  `[copilotkit/route] Registered ${Object.keys(agents).length} agents.`,
-);
+const runtime = new CopilotRuntime({
+  // @ts-expect-error -- Published CopilotRuntime agents type wraps Record in
+  // MaybePromise<NonEmptyRecord<...>> which rejects plain Records;
+  // fixed in source, pending release.
+  agents,
+});
+
+const { handleRequest } = copilotRuntimeNextJSAppRouterEndpoint({
+  endpoint: "/api/copilotkit",
+  serviceAdapter: new ExperimentalEmptyAdapter(),
+  runtime,
+});
 
 export const POST = async (req: NextRequest) => {
-  const url = req.url;
-  const contentType = req.headers.get("content-type");
-  console.log(`[copilotkit/route] POST ${url} (content-type: ${contentType})`);
-
   try {
-    const { handleRequest } = copilotRuntimeNextJSAppRouterEndpoint({
-      endpoint: "/api/copilotkit",
-      serviceAdapter: new ExperimentalEmptyAdapter(),
-      runtime: new CopilotRuntime({
-        // @ts-ignore -- Published CopilotRuntime agents type wraps Record in
-        // MaybePromise<NonEmptyRecord<...>> which rejects plain Records;
-        // fixed in source, pending release.
-        agents,
-      }),
-    });
-
-    const response = await handleRequest(req);
-    console.log(`[copilotkit/route] Response status: ${response.status}`);
-    return response;
+    return await handleRequest(req);
   } catch (error: unknown) {
-    const err = error as Error;
-    console.error(`[copilotkit/route] ERROR: ${err.message}`);
-    console.error(`[copilotkit/route] Stack: ${err.stack}`);
+    console.error("[copilotkit]", error);
     return NextResponse.json(
-      { error: err.message, stack: err.stack },
+      { error: "Internal server error" },
       { status: 500 },
     );
   }
 };
 
 export const GET = async () => {
-  console.log("[copilotkit/route] GET /api/copilotkit (health probe)");
-
   let agentStatus = "unknown";
   try {
     const res = await fetch(`${AGENT_URL}/health`, {

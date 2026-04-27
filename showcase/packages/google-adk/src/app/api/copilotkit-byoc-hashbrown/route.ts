@@ -14,7 +14,7 @@ const AGENT_URL = process.env.AGENT_URL || "http://localhost:8000";
 const byocHashbrownAgent = new HttpAgent({ url: `${AGENT_URL}/byoc_hashbrown` });
 
 const runtime = new CopilotRuntime({
-  // @ts-ignore -- see main route.ts
+  // @ts-expect-error -- see main route.ts
   agents: { "byoc-hashbrown-demo": byocHashbrownAgent },
 });
 
@@ -27,9 +27,9 @@ export const POST = async (req: NextRequest) => {
     });
     return await handleRequest(req);
   } catch (error: unknown) {
-    const e = error as { message?: string; stack?: string };
+    console.error("[copilotkit-byoc-hashbrown]", error);
     return NextResponse.json(
-      { error: e.message, stack: e.stack },
+      { error: "Internal server error" },
       { status: 500 },
     );
   }

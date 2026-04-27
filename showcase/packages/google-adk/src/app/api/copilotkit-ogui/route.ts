@@ -13,7 +13,7 @@ import { HttpAgent } from "@ag-ui/client";
 const AGENT_URL = process.env.AGENT_URL || "http://localhost:8000";
 
 const runtime = new CopilotRuntime({
-  // @ts-ignore -- see main route.ts
+  // @ts-expect-error -- see main route.ts
   agents: {
     "open-gen-ui": new HttpAgent({ url: `${AGENT_URL}/open_gen_ui` }),
     "open-gen-ui-advanced": new HttpAgent({
@@ -39,9 +39,9 @@ export const POST = async (req: NextRequest) => {
     });
     return await handleRequest(req);
   } catch (error: unknown) {
-    const e = error as { message?: string; stack?: string };
+    console.error("[copilotkit-ogui]", error);
     return NextResponse.json(
-      { error: e.message, stack: e.stack },
+      { error: "Internal server error" },
       { status: 500 },
     );
   }

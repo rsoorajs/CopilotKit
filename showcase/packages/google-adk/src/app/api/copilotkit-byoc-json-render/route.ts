@@ -16,7 +16,7 @@ const byocJsonRenderAgent = new HttpAgent({
 });
 
 const runtime = new CopilotRuntime({
-  // @ts-ignore -- see main route.ts
+  // @ts-expect-error -- see main route.ts
   // Kebab-case + `-demo` suffix matches the sibling
   // `byoc-hashbrown-demo` / `a2ui-fixed-schema` / `auth-demo` routes.
   agents: { "byoc-json-render-demo": byocJsonRenderAgent },
@@ -31,9 +31,9 @@ export const POST = async (req: NextRequest) => {
     });
     return await handleRequest(req);
   } catch (error: unknown) {
-    const e = error as { message?: string; stack?: string };
+    console.error("[copilotkit-byoc-json-render]", error);
     return NextResponse.json(
-      { error: e.message, stack: e.stack },
+      { error: "Internal server error" },
       { status: 500 },
     );
   }
