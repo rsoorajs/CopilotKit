@@ -2,59 +2,22 @@
 
 ## Prerequisites
 
-- Set `OPENAI_API_KEY` environment variable
-- Run `npm install && npm run dev` from the built-in-agent package directory
-- Demo is accessible at `http://localhost:3000/demos/gen-ui-tool-based`
+- Set `OPENAI_API_KEY` in `.env.local` (or environment).
+- Run `npm install --legacy-peer-deps && npm run dev` from the `built-in-agent/` package directory.
+- Demo URL: `http://localhost:3000/demos/gen-ui-tool-based`
 
-## Test Steps
+## Page load
 
-### 1. Basic Functionality
+- [ ] Page heading "Tool-Based Generative UI" is visible.
+- [ ] Hint text 'Try: "Write me a haiku about morning dew."' is visible.
+- [ ] Chat input is visible.
 
-- [ ] Navigate to the gen-ui-tool-based demo page
-- [ ] Verify the CopilotSidebar opens by default with title "Haiku Generator"
-- [ ] Verify a placeholder haiku card is displayed on the main area
-- [ ] Send a basic message via the sidebar
-- [ ] Verify the agent responds
+## Happy path interaction
 
-### 2. Feature-Specific Checks
+- [ ] Send: "Write me a haiku about morning dew." While the agent is composing, verify a "Composing haiku about morning dew…" in-progress card appears inline in the chat.
+- [ ] After the agent finishes, verify the card changes to an amber-background card titled "Haiku — morning dew" containing three lines of text in serif italic style.
 
-#### Suggestions
+## Edge cases worth checking
 
-- [ ] Verify "Nature Haiku" suggestion button is visible
-- [ ] Verify "Ocean Haiku" suggestion button is visible
-- [ ] Verify "Spring Haiku" suggestion button is visible
-
-#### Haiku Generation (useFrontendTool)
-
-- [ ] Click the "Nature Haiku" suggestion or type "Write me a haiku about nature"
-- [ ] Verify a HaikuCard renders (`data-testid="haiku-card"`) with:
-  - [ ] Three Japanese text lines (`data-testid="haiku-japanese-line"`)
-  - [ ] Three English translation lines (`data-testid="haiku-english-line"`)
-  - [ ] A background gradient style applied to the card
-- [ ] Verify the Japanese text contains actual Japanese characters (not Latin)
-- [ ] Verify the English lines are a readable English translation
-
-#### Image Display
-
-- [ ] After haiku generation, verify an image renders (`data-testid="haiku-image"`) if the agent provides an image_name
-- [ ] Verify the image src points to /images/ with a valid filename from the predefined list
-
-#### Multiple Haikus
-
-- [ ] Generate a second haiku (e.g. "Ocean Haiku")
-- [ ] Verify the new haiku card appears at the top
-- [ ] Verify the previous haiku card is still visible below
-- [ ] Verify the initial placeholder haiku is removed
-
-### 3. Error Handling
-
-- [ ] Send an empty message (should be handled gracefully)
-- [ ] Verify no console errors during normal usage
-
-## Expected Results
-
-- Sidebar loads within 3 seconds
-- Agent responds and generates haiku within 10 seconds
-- Haiku cards display with Japanese and English text
-- Generated haikus stack with newest on top
-- No UI errors or broken layouts
+- [ ] Request a second haiku on a different topic. Verify a new haiku card is rendered in the chat without replacing the first.
+- [ ] Send a message that does not request a haiku (e.g. "Tell me a joke"). Verify the agent replies in chat without rendering a haiku card.

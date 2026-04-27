@@ -2,40 +2,22 @@
 
 ## Prerequisites
 
-- Set `OPENAI_API_KEY` environment variable
-- Run `npm install && npm run dev` from the built-in-agent package directory
-- Demo is accessible at `http://localhost:3000/demos/shared-state-streaming`
+- Set `OPENAI_API_KEY` in `.env.local` (or environment).
+- Run `npm install --legacy-peer-deps && npm run dev` from the `built-in-agent/` package directory.
+- Demo URL: `http://localhost:3000/demos/shared-state-streaming`
 
-## Test Steps
+## Page load
 
-### 1. Basic Functionality
+- [ ] Page heading "State Streaming" is visible in the left column.
+- [ ] Left panel shows the italic placeholder "The agent will fill this panel as it streams updates." inside a bordered pre block.
+- [ ] Chat input is visible in the right column.
 
-- [ ] Navigate to the shared-state-streaming demo page
-- [ ] Verify the chat interface loads with title "State Streaming"
-- [ ] Verify the chat input placeholder "Type a message..." is visible
-- [ ] Send a basic message (e.g. "Hello! What can you do?")
-- [ ] Verify the agent responds
+## Happy path interaction
 
-### 2. Feature-Specific Checks
+- [ ] Send: "Write a short essay about small habits, and stream the document to state as you go." Verify that text begins appearing in the left panel incrementally while the agent is still responding (not only after it finishes). This requires the agent to call `AGUISendStateDelta` with `{ op: "replace", path: "/document", value: <partial text> }` on each chunk.
+- [ ] After the agent finishes, verify the full essay text is displayed in the left panel.
 
-#### Suggestions
+## Edge cases worth checking
 
-- [ ] Verify "Get started" suggestion button is visible
-
-#### Note: Stub Demo
-
-- [ ] This demo is currently a stub (TODO: implement full state streaming)
-- [ ] Verify the basic CopilotChat loads and accepts messages
-- [ ] Verify the agent responds to messages
-- [ ] No custom UI components are expected beyond the chat interface
-
-### 3. Error Handling
-
-- [ ] Send an empty message (should be handled gracefully)
-- [ ] Verify no console errors during normal usage
-
-## Expected Results
-
-- Chat loads within 3 seconds
-- Agent responds within 10 seconds
-- No UI errors or broken layouts
+- [ ] Send a message that does not ask for document streaming (e.g. "What time is it?"). Verify the agent replies in chat and the left document panel remains unchanged.
+- [ ] Send a second streaming request. Verify the left panel is replaced with the new document rather than appending to the previous one.

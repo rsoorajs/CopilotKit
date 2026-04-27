@@ -2,61 +2,23 @@
 
 ## Prerequisites
 
-- Set `OPENAI_API_KEY` environment variable
-- Run `npm install && npm run dev` from the built-in-agent package directory
-- Demo is accessible at `http://localhost:3000/demos/tool-rendering`
+- Set `OPENAI_API_KEY` in `.env.local` (or environment).
+- Run `npm install --legacy-peer-deps && npm run dev` from the `built-in-agent/` package directory.
+- Demo URL: `http://localhost:3000/demos/tool-rendering`
 
-## Test Steps
+## Page load
 
-### 1. Basic Functionality
+- [ ] Page heading "Tool Rendering" is visible.
+- [ ] Hint text 'Try: "What\'s the weather in Tokyo?"' is visible.
+- [ ] Chat input is visible.
 
-- [ ] Navigate to the tool-rendering demo page
-- [ ] Verify the chat interface loads in a centered full-height layout
-- [ ] Verify the chat input placeholder "Type a message" is visible
-- [ ] Send a basic message
-- [ ] Verify the agent responds
+## Happy path interaction
 
-### 2. Feature-Specific Checks
+- [ ] Send: "What's the weather in Tokyo?" While the tool runs, verify a "Fetching weather…" in-progress card appears inline in the chat.
+- [ ] After the agent finishes, verify the card shows: city name, temperature (°F), condition text, and humidity percentage.
+- [ ] Ask about weather in a second city (e.g. "And what about London?"). Verify a second weather card renders without disturbing the first.
 
-#### Suggestions
+## Edge cases worth checking
 
-- [ ] Verify "Weather in San Francisco" suggestion button is visible
-- [ ] Verify "Weather in New York" suggestion button is visible
-- [ ] Verify "Weather in Tokyo" suggestion button is visible
-- [ ] Click a weather suggestion and verify it populates the input or sends the message
-
-#### Weather Card Rendering (useRenderTool)
-
-- [ ] Type "What's the weather in San Francisco?"
-- [ ] Verify loading state shows "Retrieving weather..." with a spinner
-- [ ] Verify the WeatherCard renders (`data-testid="weather-card"`) with:
-  - [ ] City name displayed (`data-testid="weather-city"`)
-  - [ ] Temperature in both Celsius and Fahrenheit
-  - [ ] Humidity percentage (`data-testid="weather-humidity"`)
-  - [ ] Wind speed in mph (`data-testid="weather-wind"`)
-  - [ ] Feels-like temperature (`data-testid="weather-feels-like"`)
-  - [ ] Conditions text with appropriate weather icon (sun/rain/cloud)
-- [ ] Verify the card background color matches the weather condition theme:
-  - Clear/Sunny: #667eea (blue-purple)
-  - Rain/Storm: #4A5568 (dark gray)
-  - Cloudy: #718096 (medium gray)
-  - Snow: #63B3ED (light blue)
-
-#### Multiple Weather Queries
-
-- [ ] Ask about weather in a second city
-- [ ] Verify a second WeatherCard renders without breaking the first
-- [ ] Verify each card shows the correct city name
-
-### 3. Error Handling
-
-- [ ] Send an empty message (should be handled gracefully)
-- [ ] Verify no console errors during normal usage
-
-## Expected Results
-
-- Chat loads within 3 seconds
-- Agent responds within 10 seconds
-- Weather cards render with all data fields populated
-- Weather icon and theme color match the conditions
-- No UI errors or broken layouts
+- [ ] Send a message that triggers a tool other than `weather` (e.g. "Tell me today's date"). Verify the generic tool card renders showing the tool name, status, and JSON payload — not a custom weather card.
+- [ ] Send a plain conversational message (e.g. "Hi there"). Verify the agent replies normally with no tool cards rendered.

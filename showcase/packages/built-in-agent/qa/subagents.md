@@ -2,40 +2,22 @@
 
 ## Prerequisites
 
-- Set `OPENAI_API_KEY` environment variable
-- Run `npm install && npm run dev` from the built-in-agent package directory
-- Demo is accessible at `http://localhost:3000/demos/subagents`
+- Set `OPENAI_API_KEY` in `.env.local` (or environment).
+- Run `npm install --legacy-peer-deps && npm run dev` from the `built-in-agent/` package directory.
+- Demo URL: `http://localhost:3000/demos/subagents`
 
-## Test Steps
+## Page load
 
-### 1. Basic Functionality
+- [ ] Page heading "Sub-Agents" is visible.
+- [ ] Hint text referencing `delegate_to_planner` / `delegate_to_researcher` tool names is visible.
+- [ ] Chat input is visible.
 
-- [ ] Navigate to the subagents demo page
-- [ ] Verify the chat interface loads with title "Sub-Agents"
-- [ ] Verify the chat input placeholder "Type a message..." is visible
-- [ ] Send a basic message (e.g. "Hello! What can you do?")
-- [ ] Verify the agent responds
+## Happy path interaction
 
-### 2. Feature-Specific Checks
+- [ ] Send: "Plan a 2-day trip to Tokyo with key sights." Verify that one or more delegation cards appear inline in the chat. Each card shows the subagent role ("planner" or "researcher"), a task description, and a "running…" status while in progress.
+- [ ] After the agent finishes, verify the delegation card(s) transition to "· done" status and display the subagent's output text.
 
-#### Suggestions
+## Edge cases worth checking
 
-- [ ] Verify "Get started" suggestion button is visible
-
-#### Note: Stub Demo
-
-- [ ] This demo is currently a stub (TODO: implement full sub-agent routing)
-- [ ] Verify the basic CopilotChat loads and accepts messages
-- [ ] Verify the agent responds to messages
-- [ ] No custom UI components are expected beyond the chat interface
-
-### 3. Error Handling
-
-- [ ] Send an empty message (should be handled gracefully)
-- [ ] Verify no console errors during normal usage
-
-## Expected Results
-
-- Chat loads within 3 seconds
-- Agent responds within 10 seconds
-- No UI errors or broken layouts
+- [ ] Send a message that does not require delegation (e.g. "What is 3 × 7?"). Verify the agent replies without rendering any delegation cards.
+- [ ] Send a request that triggers both planner and researcher subagents. Verify two separate delegation cards render, one per subagent.

@@ -2,62 +2,23 @@
 
 ## Prerequisites
 
-- Set `OPENAI_API_KEY` environment variable
-- Run `npm install && npm run dev` from the built-in-agent package directory
-- Demo is accessible at `http://localhost:3000/demos/gen-ui-agent`
+- Set `OPENAI_API_KEY` in `.env.local` (or environment).
+- Run `npm install --legacy-peer-deps && npm run dev` from the `built-in-agent/` package directory.
+- Demo URL: `http://localhost:3000/demos/gen-ui-agent`
 
-## Test Steps
+## Page load
 
-### 1. Basic Functionality
+- [ ] Page heading "Agentic Generative UI" is visible in the left column.
+- [ ] Left panel shows the placeholder "No plan yet. The agent will fill this panel as it works." in the bordered box.
+- [ ] Chat input is visible in the right column.
 
-- [ ] Navigate to the gen-ui-agent demo page
-- [ ] Verify the chat interface loads in a centered full-height layout
-- [ ] Verify the chat input placeholder "Type a message" is visible
-- [ ] Send a basic message
-- [ ] Verify the agent responds
+## Happy path interaction
 
-### 2. Feature-Specific Checks
+- [ ] Send: "Plan a 4-step morning routine and execute it; emit the plan to state." Verify that a "Plan" panel appears in the left column listing numbered steps.
+- [ ] While the agent is responding, verify that steps with status `in_progress` show a bullet (•) and steps marked `done` show a checkmark (✓) with strikethrough text.
+- [ ] After the agent finishes, verify all steps show ✓ and the panel title "Plan" remains visible.
 
-#### Suggestions
+## Edge cases worth checking
 
-- [ ] Verify "Simple plan" suggestion button is visible (plan to go to Mars in 5 steps)
-- [ ] Verify "Complex plan" suggestion button is visible (plan to make pizza in 10 steps)
-
-#### Task Progress Tracker (useComponent with state streaming)
-
-- [ ] Click "Simple plan" suggestion or type "Build a plan to go to Mars in 5 steps"
-- [ ] Verify the TaskProgress component renders (`data-testid="task-progress"`)
-- [ ] Verify the progress bar appears with a gradient fill
-- [ ] Verify step items appear with descriptions (`data-testid="task-step-text"`)
-- [ ] Verify the "N/N Complete" counter updates as steps complete
-- [ ] Verify completed steps show:
-  - Green background gradient
-  - Check icon
-  - Green text color
-- [ ] Verify the current pending step shows:
-  - Blue/purple background gradient
-  - Spinner icon with "Processing..." text
-  - Pulsing animation
-- [ ] Verify future pending steps show:
-  - Gray background
-  - Clock icon
-  - Muted text color
-
-#### Complex Plan
-
-- [ ] Type "Plan to make pizza in 10 steps"
-- [ ] Verify 10 steps appear in the progress tracker
-- [ ] Verify progress bar width increases as steps complete
-
-### 3. Error Handling
-
-- [ ] Send an empty message (should be handled gracefully)
-- [ ] Verify no console errors during normal usage
-
-## Expected Results
-
-- Chat loads within 3 seconds
-- Agent responds within 10 seconds
-- Task progress tracker shows live step completion
-- Progress bar animates smoothly
-- No UI errors or broken layouts
+- [ ] Send a plain conversational message (e.g. "What is the capital of France?"). Verify the agent replies in chat and the left panel remains unchanged.
+- [ ] Send a second planning request. Verify the left panel replaces the previous plan with the new one.
