@@ -59,7 +59,7 @@ function DemoContent() {
       // additions) survive the seed write — \`agent.setState\` replaces
       // the whole state object rather than merging.
       agent.setState({
-        ...(state ?? {}),
+        ...state,
         config: INITIAL_CONFIG,
       } as AgentConfigState);
     }
@@ -69,7 +69,7 @@ function DemoContent() {
     // Same spread discipline as the seed effect — preserve any keys the
     // runtime owns (copilotkit slot, etc.) when writing config back.
     agent.setState({
-      ...(state ?? {}),
+      ...state,
       config: next,
     } as AgentConfigState);
   };

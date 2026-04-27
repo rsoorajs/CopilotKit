@@ -76,7 +76,7 @@ function DemoContent() {
       // (or `[]` if absent) so an existing notes list isn't wiped just
       // because the user landed without persisted preferences.
       agent.setState({
-        ...((agentState as object | undefined) ?? {}),
+        ...(agentState as object | undefined),
         preferences: INITIAL_PREFERENCES,
         notes: agentState?.notes ?? [],
       } as RWAgentState);
@@ -91,7 +91,7 @@ function DemoContent() {
   // either order is correct because both writes carry the full pair.
   const handlePreferencesChange = (next: Preferences) => {
     agent.setState({
-      ...((agentState as object | undefined) ?? {}),
+      ...(agentState as object | undefined),
       preferences: next,
       notes: agentState?.notes ?? [],
     } as RWAgentState);
@@ -99,7 +99,7 @@ function DemoContent() {
 
   const handleClearNotes = () => {
     agent.setState({
-      ...((agentState as object | undefined) ?? {}),
+      ...(agentState as object | undefined),
       preferences: agentState?.preferences ?? INITIAL_PREFERENCES,
       notes: [],
     } as RWAgentState);
