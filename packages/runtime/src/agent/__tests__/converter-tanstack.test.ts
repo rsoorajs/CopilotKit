@@ -11,6 +11,7 @@ import {
   tanstackToolCallStart,
   tanstackToolCallArgs,
   tanstackToolCallEnd,
+  tanstackToolCallResult,
 } from "./agent-test-helpers";
 
 describe("TanStack AI converter (via Agent)", () => {
@@ -310,5 +311,33 @@ describe("TanStack AI converter (via Agent)", () => {
       expect(eventField<string>(textEvent, "delta")).toBe(largeDelta);
       expect(eventField<string>(textEvent, "delta").length).toBe(100_000);
     });
+  });
+});
+
+describe("TanStack AI converter — state tools", () => {
+  it("emits STATE_SNAPSHOT before TOOL_CALL_RESULT for AGUISendStateSnapshot", async () => {
+    const snapshot = { counter: 5, items: ["x", "y"] };
+    const agent = createAgent("tanstack", [
+      tanstackToolCallStart("call1", "AGUISendStateSnapshot"),
+      tanstackToolCallEnd("call1"),
+      tanstackToolCallResult("call1", { success: true, snapshot }),
+    ]);
+    const events = await collectEvents(agent.run(createDefaultInput()));
+
+    expectLifecycleWrapped(events);
+
+    const snapshotIdx = events.findIndex(
+      (e) => e.type === EventType.STATE_SNAPSHOT,
+    );
+    const resultIdx = events.findIndex(
+      (e) => e.type === EventType.TOOL_CALL_RESULT,
+    );
+
+    expect(snapshotIdx).toBeGreaterThanOrEqual(0);
+    expect(resultIdx).toBeGreaterThanOrEqual(0);
+    expect(snapshotIdx).toBeLessThan(resultIdx);
+    expect(eventField<unknown>(events[snapshotIdx], "snapshot")).toEqual(
+      snapshot,
+    );
   });
 });

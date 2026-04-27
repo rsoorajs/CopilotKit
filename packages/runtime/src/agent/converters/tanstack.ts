@@ -8,6 +8,8 @@ import {
   ToolCallEndEvent,
   ToolCallStartEvent,
   ToolCallResultEvent,
+  StateSnapshotEvent,
+  StateDeltaEvent,
 } from "@ag-ui/client";
 import { randomUUID } from "@copilotkit/shared";
 
@@ -229,6 +231,7 @@ export async function* convertTanStackStream(
   abortSignal: AbortSignal,
 ): AsyncGenerator<BaseEvent> {
   const messageId = randomUUID();
+  const toolNamesById = new Map<string, string>();
 
   for await (const chunk of stream) {
     if (abortSignal.aborted) break;
@@ -245,6 +248,7 @@ export async function* convertTanStackStream(
       };
       yield textEvent;
     } else if (type === "TOOL_CALL_START") {
+      toolNamesById.set(raw.toolCallId as string, raw.toolCallName as string);
       const startEvent: ToolCallStartEvent = {
         type: EventType.TOOL_CALL_START,
         parentMessageId: messageId,
@@ -266,29 +270,59 @@ export async function* convertTanStackStream(
       };
       yield endEvent;
     } else if (type === "TOOL_CALL_RESULT") {
+      const toolCallId = raw.toolCallId as string;
+      const toolName = toolNamesById.get(toolCallId);
+      const rawContent = raw.content;
+
+      const parsedContent =
+        typeof rawContent === "string" ? safeParse(rawContent) : rawContent;
+
+      if (
+        toolName === "AGUISendStateSnapshot" &&
+        parsedContent &&
+        typeof parsedContent === "object" &&
+        "snapshot" in parsedContent
+      ) {
+        const stateSnapshotEvent: StateSnapshotEvent = {
+          type: EventType.STATE_SNAPSHOT,
+          snapshot: (parsedContent as Record<string, unknown>).snapshot,
+        };
+        yield stateSnapshotEvent;
+      }
+
       let serializedContent: string;
-      if (typeof raw.content === "string") {
-        serializedContent = raw.content;
+      if (typeof rawContent === "string") {
+        serializedContent = rawContent;
       } else {
         try {
-          serializedContent = JSON.stringify(raw.content ?? raw.result ?? null);
+          serializedContent = JSON.stringify(rawContent ?? raw.result ?? null);
         } catch {
           serializedContent = "[Unserializable tool result]";
         }
       }
+
       const resultEvent: ToolCallResultEvent = {
         type: EventType.TOOL_CALL_RESULT,
         role: "tool",
         messageId: randomUUID(),
-        toolCallId: raw.toolCallId as string,
+        toolCallId,
         content: serializedContent,
       };
       yield resultEvent;
+      toolNamesById.delete(toolCallId);
     }
     // Unhandled chunk types are silently ignored.
-    // Known gaps: STATE_SNAPSHOT, STATE_DELTA, and REASONING events are not
-    // converted from TanStack streams. Shared state and reasoning will not
-    // surface when using the TanStack backend. Use the AI SDK backend if these
-    // features are required.
+    // Known gaps: STATE_DELTA and REASONING events are not yet converted from
+    // TanStack streams. Shared state (STATE_SNAPSHOT) is now supported.
+    // Reasoning will not surface when using the TanStack backend.
+    // Use the AI SDK backend if these features are required.
+  }
+}
+
+function safeParse(value: string): unknown {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return value;
   }
 }
