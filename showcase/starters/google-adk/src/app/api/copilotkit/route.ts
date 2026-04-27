@@ -4,96 +4,65 @@ import {
   ExperimentalEmptyAdapter,
   copilotRuntimeNextJSAppRouterEndpoint,
 } from "@copilotkit/runtime";
-import { AbstractAgent, HttpAgent } from "@ag-ui/client";
+import { LangGraphAgent } from "@copilotkit/runtime/langgraph";
 
-// The agent backend runs as a separate process on port 8123.
-// agent_server.py mounts ONE ADKAgent middleware per demo at /<agent_name>;
-// this runtime maps each agent name to its dedicated backend path.
-const AGENT_URL = process.env.AGENT_URL || "http://localhost:8123";
+const AGENT_URL =
+  process.env.AGENT_URL ||
+  process.env.LANGGRAPH_DEPLOYMENT_URL ||
+  "http://localhost:8123";
 
-// Each agent NAME corresponds to a path mounted by the Python backend
-// (see src/agents/registry.py AGENT_REGISTRY). Names with dashes preserved
-// for backwards-compat with already-shipped demos (gen-ui-agent etc.).
+if (!process.env.AGENT_URL && !process.env.LANGGRAPH_DEPLOYMENT_URL) {
+  console.warn(
+    "[copilotkit/route] WARNING: No AGENT_URL or LANGGRAPH_DEPLOYMENT_URL set, falling back to localhost:8123",
+  );
+}
+
+console.log("[copilotkit/route] Initializing CopilotKit runtime");
+console.log(`[copilotkit/route] AGENT_URL: ${AGENT_URL}`);
+
+function createAgent(graphId: string = "sample_agent") {
+  return new LangGraphAgent({
+    deploymentUrl: AGENT_URL,
+    graphId,
+    langsmithApiKey: process.env.LANGSMITH_API_KEY || "",
+  });
+}
+
 const agentNames = [
-  // starter default
   "sample_agent",
-  // existing demos
   "agentic_chat",
+  "human_in_the_loop",
   "tool-rendering",
   "gen-ui-tool-based",
   "gen-ui-agent",
-  "human_in_the_loop",
   "shared-state-read",
   "shared-state-write",
-  "shared-state-read-write",
   "shared-state-streaming",
   "subagents",
-  // frontend-only demos (share simple chat agent on the backend)
-  "frontend_tools",
-  "frontend_tools_async",
-  "prebuilt_sidebar",
-  "prebuilt_popup",
-  "chat_slots",
-  "chat_customization_css",
-  "headless_simple",
-  "headless_complete",
-  "voice",
-  // reasoning
-  "agentic_chat_reasoning",
-  "reasoning_default_render",
-  // tool-rendering variants
-  "tool_rendering_default_catchall",
-  "tool_rendering_custom_catchall",
-  "tool_rendering_reasoning_chain",
-  // hitl variants
-  "hitl_in_chat",
-  "hitl_in_app",
-  // multimodal & state-context
-  "multimodal",
-  "readonly_state_agent_context",
-  "agent_config",
-  // a2ui
-  "declarative_gen_ui",
-  "a2ui_fixed_schema",
-  // byoc
-  "byoc_hashbrown",
-  "byoc_json_render",
-  // open gen ui
-  "open_gen_ui",
-  "open_gen_ui_advanced",
-  // beautiful chat
-  "beautiful_chat",
-  // auth
-  "auth",
+  "default",
 ];
 
-const agents: Record<string, AbstractAgent> = {};
+const agents: Record<string, LangGraphAgent> = {};
 for (const name of agentNames) {
-  agents[name] = new HttpAgent({ url: `${AGENT_URL}/${name}` });
+  agents[name] = createAgent();
 }
-
-const runtime = new CopilotRuntime({
-  // @ts-expect-error -- Published CopilotRuntime agents type wraps Record in
-  // MaybePromise<NonEmptyRecord<...>> which rejects plain Records;
-  // fixed in source, pending release.
-  agents,
-});
-
-const { handleRequest } = copilotRuntimeNextJSAppRouterEndpoint({
-  endpoint: "/api/copilotkit",
-  serviceAdapter: new ExperimentalEmptyAdapter(),
-  runtime,
-});
 
 export const POST = async (req: NextRequest) => {
   try {
+    const { handleRequest } = copilotRuntimeNextJSAppRouterEndpoint({
+      endpoint: "/api/copilotkit",
+      serviceAdapter: new ExperimentalEmptyAdapter(),
+      runtime: new CopilotRuntime({
+        // @ts-expect-error -- type wrapping mismatch, fixed in source pending release
+        agents,
+      }),
+    });
+
     return await handleRequest(req);
   } catch (error: unknown) {
-    console.error("[copilotkit]", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    const message = error instanceof Error ? error.message : "Unknown error";
+    console.error("[copilotkit/route] ERROR:", error);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 };
 
@@ -105,16 +74,18 @@ export const GET = async () => {
     });
     agentStatus = res.ok ? "reachable" : `error (${res.status})`;
   } catch (e: unknown) {
-    agentStatus = `unreachable (${(e as Error).message})`;
+    const msg = e instanceof Error ? e.message : String(e);
+    agentStatus = `unreachable (${msg})`;
   }
 
+  const topStatus = agentStatus.startsWith("unreachable") ? "degraded" : "ok";
+
   return NextResponse.json({
-    status: "ok",
+    status: topStatus,
     agent_url: AGENT_URL,
     agent_status: agentStatus,
-    agent_count: Object.keys(agents).length,
     env: {
-      GOOGLE_API_KEY: process.env.GOOGLE_API_KEY ? "set" : "NOT SET",
+      OPENAI_API_KEY: process.env.OPENAI_API_KEY ? "set" : "NOT SET",
       NODE_ENV: process.env.NODE_ENV,
     },
   });
