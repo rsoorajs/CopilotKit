@@ -871,6 +871,169 @@ async function res2Body(r: Response): Promise<Record<string, unknown>> {
 }
 
 // ---------------------------------------------------------------------
+// B2: featureTypes filter validation in the trigger handler.
+// The route validates featureTypes is a non-empty array of non-empty
+// strings when present in the filter body.
+// ---------------------------------------------------------------------
+describe("POST /api/probes/:id/trigger — B2 featureTypes validation", () => {
+  let sched: FakeScheduler;
+  let writer: ReturnType<typeof makeFakeWriter>;
+  let configs: Map<string, ProbeConfig>;
+
+  beforeEach(() => {
+    sched = makeFakeScheduler();
+    writer = makeFakeWriter();
+    configs = new Map<string, ProbeConfig>([["smoke", baseConfig("smoke")]]);
+    sched.setEntry({
+      entry: { id: "smoke", cron: "*/5 * * * *", handler: async () => {} },
+      status: baseStatus({ id: "smoke", cron: "*/5 * * * *" }),
+      nextRunAt: null,
+    });
+    sched.setTriggerBehavior({
+      result: { runId: "r", status: "queued", probe: "smoke" },
+    });
+  });
+
+  it("returns 200 when featureTypes is a valid non-empty string array", async () => {
+    const app = buildApp(sched, writer, configs);
+    const res = await app.request("/api/probes/smoke/trigger", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${TOKEN}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        filter: { featureTypes: ["hitl-steps"] },
+      }),
+    });
+    expect(res.status).toBe(200);
+    // Verify featureTypes is threaded through to scheduler.trigger opts
+    expect(sched.lastTriggerOpts).toEqual({
+      filter: { featureTypes: ["hitl-steps"] },
+    });
+  });
+
+  it("returns 400 when featureTypes is an empty array", async () => {
+    const app = buildApp(sched, writer, configs);
+    const res = await app.request("/api/probes/smoke/trigger", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${TOKEN}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        filter: { featureTypes: [] },
+      }),
+    });
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as Record<string, unknown>;
+    expect(body.error).toBe("invalid_filter");
+    expect(body.message).toMatch(/featureTypes/);
+  });
+
+  it("returns 400 when featureTypes contains empty strings", async () => {
+    const app = buildApp(sched, writer, configs);
+    const res = await app.request("/api/probes/smoke/trigger", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${TOKEN}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        filter: { featureTypes: [""] },
+      }),
+    });
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as Record<string, unknown>;
+    expect(body.error).toBe("invalid_filter");
+  });
+
+  it("returns 400 when featureTypes is not an array (string)", async () => {
+    const app = buildApp(sched, writer, configs);
+    const res = await app.request("/api/probes/smoke/trigger", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${TOKEN}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        filter: { featureTypes: "not-an-array" },
+      }),
+    });
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as Record<string, unknown>;
+    expect(body.error).toBe("invalid_filter");
+  });
+
+  it("returns 200 when no featureTypes in filter (all features run)", async () => {
+    const app = buildApp(sched, writer, configs);
+    const res = await app.request("/api/probes/smoke/trigger", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${TOKEN}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        filter: { slugs: ["a"] },
+      }),
+    });
+    expect(res.status).toBe(200);
+    // featureTypes should NOT appear in opts when not provided
+    expect(sched.lastTriggerOpts).toEqual({
+      filter: { slugs: ["a"] },
+    });
+  });
+
+  it("passes both slugs and featureTypes when both provided", async () => {
+    const app = buildApp(sched, writer, configs);
+    const res = await app.request("/api/probes/smoke/trigger", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${TOKEN}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        filter: {
+          slugs: ["svc-a"],
+          featureTypes: ["tool-rendering", "agentic-chat"],
+        },
+      }),
+    });
+    expect(res.status).toBe(200);
+    expect(sched.lastTriggerOpts).toEqual({
+      filter: {
+        slugs: ["svc-a"],
+        featureTypes: ["tool-rendering", "agentic-chat"],
+      },
+    });
+  });
+
+  it("featureTypes validation failure does not consume rate-limit window", async () => {
+    let nowMs = 1_000_000_000_000;
+    const app = buildApp(sched, writer, configs, { now: () => nowMs });
+    // Send invalid featureTypes (empty array)
+    const first = await app.request("/api/probes/smoke/trigger", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${TOKEN}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        filter: { featureTypes: [] },
+      }),
+    });
+    expect(first.status).toBe(400);
+    // 1ms later, a legit request must succeed
+    nowMs += 1;
+    const second = await app.request("/api/probes/smoke/trigger", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${TOKEN}` },
+    });
+    expect(second.status).toBe(200);
+  });
+});
+
+// ---------------------------------------------------------------------
 // R4-A.1: scope semantics — null when no filter sent, array when filter
 // provided. Operators must be able to distinguish "no filter" from
 // "empty scope" in the response envelope.

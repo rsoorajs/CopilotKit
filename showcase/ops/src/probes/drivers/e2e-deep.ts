@@ -234,13 +234,15 @@ const DEFAULT_PAGE_TIMEOUT_MS = 30 * 1000;
  * safe — but too many contexts at once OOMs the container on Railway. A
  * value of 1 degrades to the old sequential behaviour.
  */
-const FEATURE_CONCURRENCY = 2;
+export const FEATURE_CONCURRENCY = 2;
 
 /**
  * Inline counting semaphore — gates concurrent access to a bounded
  * resource (here: browser contexts). No npm dependency required.
+ *
+ * Exported for unit testing; not part of the public driver surface.
  */
-class Semaphore {
+export class Semaphore {
   private queue: (() => void)[] = [];
   private active = 0;
   constructor(private readonly limit: number) {}

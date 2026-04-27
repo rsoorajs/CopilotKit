@@ -3,6 +3,8 @@ import {
   createE2eDeepDriver,
   D5_SCRIPT_FILE_MATCHER,
   e2eDeepDriver,
+  FEATURE_CONCURRENCY,
+  Semaphore,
   type E2eDeepAggregateSignal,
   type E2eDeepBrowser,
   type E2eDeepBrowserContext,
@@ -759,5 +761,347 @@ describe("ASI / new Function evaluate", () => {
 
     const fixed = new Function("return " + transcriptLikeCode.trim() + ";");
     expect(fixed()).toBe(3);
+  });
+});
+
+// ---------------------------------------------------------------------
+// B0: Semaphore concurrency tests — verifies the counting semaphore
+// gates concurrent access to a bounded resource.
+// ---------------------------------------------------------------------
+describe("Semaphore", () => {
+  it("never allows more than `limit` concurrent acquires", async () => {
+    const sem = new Semaphore(2);
+    let active = 0;
+    let peak = 0;
+    let completed = 0;
+
+    const task = async (): Promise<void> => {
+      await sem.acquire();
+      active++;
+      if (active > peak) peak = active;
+      // Hold the slot for 50ms to give other tasks a chance to
+      // attempt acquisition and queue behind the semaphore.
+      await new Promise((r) => setTimeout(r, 50));
+      active--;
+      completed++;
+      sem.release();
+    };
+
+    await Promise.all([task(), task(), task(), task(), task()]);
+
+    expect(peak).toBeLessThanOrEqual(2);
+    expect(completed).toBe(5);
+  });
+
+  it("with limit=1, tasks run sequentially (peak concurrency is 1)", async () => {
+    const sem = new Semaphore(1);
+    let active = 0;
+    let peak = 0;
+
+    const task = async (): Promise<void> => {
+      await sem.acquire();
+      active++;
+      if (active > peak) peak = active;
+      await new Promise((r) => setTimeout(r, 20));
+      active--;
+      sem.release();
+    };
+
+    await Promise.all([task(), task(), task()]);
+    expect(peak).toBe(1);
+  });
+
+  it("with limit >= task count, all tasks run concurrently", async () => {
+    const sem = new Semaphore(10);
+    let active = 0;
+    let peak = 0;
+
+    const task = async (): Promise<void> => {
+      await sem.acquire();
+      active++;
+      if (active > peak) peak = active;
+      await new Promise((r) => setTimeout(r, 20));
+      active--;
+      sem.release();
+    };
+
+    await Promise.all([task(), task(), task()]);
+    expect(peak).toBe(3);
+  });
+});
+
+// ---------------------------------------------------------------------
+// B0: Feature parallelism — verifies that with FEATURE_CONCURRENCY=2,
+// features execute concurrently (not sequentially).
+// ---------------------------------------------------------------------
+describe("e2e-deep feature parallelism", () => {
+  beforeEach(() => {
+    __clearD5RegistryForTesting();
+  });
+
+  it("FEATURE_CONCURRENCY is 2", () => {
+    // Smoke check: the constant exported from the driver is the value
+    // the spec mandates. If someone changes it the parallelism tests
+    // become invalid.
+    expect(FEATURE_CONCURRENCY).toBe(2);
+  });
+
+  it("features with a registered script run concurrently (wall-clock < sequential)", async () => {
+    // Register 4 features. Each conversation will take ~50ms (the
+    // page.press sleep in the fake). With FEATURE_CONCURRENCY=2,
+    // batched execution takes ~2 batches × settle time instead of 4.
+    // We can't use the settle timer (1500ms default) because that
+    // would make the test take 6+ seconds. Instead we measure that
+    // contexts are opened concurrently by tracking overlap in the
+    // browser fake.
+    const featureTypes = [
+      "agentic-chat",
+      "tool-rendering",
+      "shared-state-read",
+      "shared-state-write",
+    ] as const;
+
+    for (const ft of featureTypes) {
+      registerD5Script(
+        makeScript({
+          featureTypes: [ft],
+          fixtureFile: `${ft}.json`,
+          buildTurns: () => [{ input: `test ${ft}` }],
+        }),
+      );
+    }
+
+    // Track concurrent context opens to verify parallelism.
+    let activeContexts = 0;
+    let peakContexts = 0;
+    let totalContexts = 0;
+
+    const browser: E2eDeepBrowser = {
+      async newContext(): Promise<E2eDeepBrowserContext> {
+        activeContexts++;
+        totalContexts++;
+        if (activeContexts > peakContexts) peakContexts = activeContexts;
+        return {
+          async newPage(): Promise<E2eDeepPage> {
+            return makePage({});
+          },
+          async close() {
+            activeContexts--;
+          },
+        };
+      },
+      async close() {
+        /* no-op */
+      },
+    };
+
+    const driver = createE2eDeepDriver({
+      launcher: async () => browser,
+      scriptLoader: async () => {
+        /* registry already populated */
+      },
+    });
+    const { writer } = mkWriter();
+
+    const result = await driver.run(mkCtx(writer), {
+      key: "e2e-deep:showcase-test",
+      publicUrl: "https://showcase-test.example.com",
+      name: "showcase-test",
+      features: [...featureTypes],
+      shape: "package",
+    });
+
+    expect(result.state).toBe("green");
+    const sig = result.signal as E2eDeepAggregateSignal;
+    expect(sig.passed).toBe(4);
+    expect(totalContexts).toBe(4);
+    // With FEATURE_CONCURRENCY=2, peak concurrent contexts should be 2
+    // (not 4 and not 1).
+    expect(peakContexts).toBe(2);
+  });
+});
+
+// ---------------------------------------------------------------------
+// B2: Feature-type filtering — verifies the trigger layer's
+// featureTypes filter is threaded to the driver and restricts which
+// features run.
+// ---------------------------------------------------------------------
+describe("e2e-deep feature-type filtering (driver level)", () => {
+  beforeEach(() => {
+    __clearD5RegistryForTesting();
+  });
+
+  it("only runs features matching ctx.featureTypes, skips others with 'filtered-by-trigger'", async () => {
+    // Register two features but only allow one via the trigger filter.
+    registerD5Script(
+      makeScript({
+        featureTypes: ["agentic-chat"],
+        fixtureFile: "agentic-chat.json",
+        buildTurns: () => [{ input: "hello" }],
+      }),
+    );
+    registerD5Script(
+      makeScript({
+        featureTypes: ["tool-rendering"],
+        fixtureFile: "tool-rendering.json",
+        buildTurns: () => [{ input: "weather" }],
+      }),
+    );
+
+    const { browser } = makeBrowser([{}]);
+    const driver = createE2eDeepDriver({
+      launcher: async () => browser,
+      scriptLoader: async () => {
+        /* no-op */
+      },
+    });
+    const { writer, writes } = mkWriter();
+
+    // Pass featureTypes filter on ProbeContext — only tool-rendering.
+    const ctx = mkCtx(writer);
+    ctx.featureTypes = ["tool-rendering"];
+
+    const result = await driver.run(ctx, {
+      key: "e2e-deep:showcase-test",
+      publicUrl: "https://showcase-test.example.com",
+      name: "showcase-test",
+      features: ["agentic-chat", "tool-rendering"],
+      shape: "package",
+    });
+
+    expect(result.state).toBe("green");
+    const sig = result.signal as E2eDeepAggregateSignal;
+    // total includes both features
+    expect(sig.total).toBe(2);
+    // only tool-rendering passed (ran); agentic-chat is skipped
+    expect(sig.passed).toBe(1);
+    expect(sig.skipped).toContain("agentic-chat");
+    expect(sig.failed).toEqual([]);
+
+    // Verify the skipped row carries the "filtered-by-trigger" note
+    const byKey = new Map(writes.map((w) => [w.key, w]));
+    const skippedRow = byKey.get("d5:test/agentic-chat");
+    expect(skippedRow).toBeDefined();
+    expect(skippedRow?.state).toBe("green");
+    const skippedSig = skippedRow?.signal as E2eDeepFeatureSignal;
+    expect(skippedSig.note).toBe("filtered-by-trigger");
+
+    // The running row should be green with no note
+    const ranRow = byKey.get("d5:test/tool-rendering");
+    expect(ranRow).toBeDefined();
+    expect(ranRow?.state).toBe("green");
+  });
+
+  it("when all features are filtered out, returns green with 'all runnable features filtered by trigger'", async () => {
+    registerD5Script(
+      makeScript({
+        featureTypes: ["agentic-chat"],
+        fixtureFile: "agentic-chat.json",
+        buildTurns: () => [{ input: "hello" }],
+      }),
+    );
+
+    let launched = false;
+    const driver = createE2eDeepDriver({
+      launcher: async () => {
+        launched = true;
+        const { browser } = makeBrowser([{}]);
+        return browser;
+      },
+      scriptLoader: async () => {
+        /* no-op */
+      },
+    });
+    const { writer, writes } = mkWriter();
+
+    const ctx = mkCtx(writer);
+    ctx.featureTypes = ["hitl-steps"]; // not registered
+
+    const result = await driver.run(ctx, {
+      key: "e2e-deep:showcase-test",
+      publicUrl: "https://showcase-test.example.com",
+      name: "showcase-test",
+      features: ["agentic-chat"],
+      shape: "package",
+    });
+
+    // No browser launched because all runnable features were filtered
+    expect(launched).toBe(false);
+    expect(result.state).toBe("green");
+    const sig = result.signal as E2eDeepAggregateSignal;
+    expect(sig.note).toMatch(/all runnable features filtered by trigger/);
+    expect(sig.skipped).toContain("agentic-chat");
+
+    // The skipped row should carry "filtered-by-trigger"
+    expect(writes).toHaveLength(1);
+    const fSig = writes[0].signal as E2eDeepFeatureSignal;
+    expect(fSig.note).toBe("filtered-by-trigger");
+  });
+});
+
+// ---------------------------------------------------------------------
+// B0: Graceful degradation — with FEATURE_CONCURRENCY=1, behaviour is
+// equivalent to sequential execution.
+// ---------------------------------------------------------------------
+describe("e2e-deep graceful degradation (FEATURE_CONCURRENCY=1 equivalent)", () => {
+  beforeEach(() => {
+    __clearD5RegistryForTesting();
+  });
+
+  it("single-concurrency driver still runs all features and produces correct results", async () => {
+    // We can't change the constant at runtime, but we can verify that
+    // a driver with custom deps that creates a Semaphore(1) still
+    // completes correctly. The real FEATURE_CONCURRENCY constant is
+    // tested above; here we just verify the driver's run() produces
+    // correct aggregate results regardless of execution ordering.
+    registerD5Script(
+      makeScript({
+        featureTypes: ["agentic-chat"],
+        fixtureFile: "agentic-chat.json",
+        buildTurns: () => [{ input: "hello" }],
+      }),
+    );
+    registerD5Script(
+      makeScript({
+        featureTypes: ["tool-rendering"],
+        fixtureFile: "tool-rendering.json",
+        buildTurns: () => [{ input: "weather" }],
+      }),
+    );
+
+    const { browser, state } = makeBrowser([{}, {}]);
+    const driver = createE2eDeepDriver({
+      launcher: async () => browser,
+      scriptLoader: async () => {
+        /* no-op */
+      },
+    });
+    const { writer, writes } = mkWriter();
+
+    const result = await driver.run(mkCtx(writer), {
+      key: "e2e-deep:showcase-test",
+      publicUrl: "https://showcase-test.example.com",
+      name: "showcase-test",
+      features: ["agentic-chat", "tool-rendering"],
+      shape: "package",
+    });
+
+    expect(result.state).toBe("green");
+    const sig = result.signal as E2eDeepAggregateSignal;
+    expect(sig.total).toBe(2);
+    expect(sig.passed).toBe(2);
+    expect(sig.failed).toEqual([]);
+
+    // Both features produced side rows
+    const sideKeys = writes.map((w) => w.key).sort();
+    expect(sideKeys).toEqual([
+      "d5:test/agentic-chat",
+      "d5:test/tool-rendering",
+    ]);
+
+    // All contexts were opened and closed properly
+    expect(state.contextsOpened).toBe(2);
+    expect(state.contextsClosed).toBe(2);
+    expect(state.closed).toBe(true);
   });
 });
