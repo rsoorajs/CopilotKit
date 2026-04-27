@@ -188,10 +188,10 @@ describe("Catalog Generator", () => {
     expect(catalog.metadata.total_cells).toBe(737);
 
     // 18 integrations x 40 features + 17 starters = 737 total cells
-    // Wired = 452, Stub = 8, Unshipped = 277
-    expect(catalog.metadata.wired).toBe(452);
+    // Wired = 460, Stub = 8, Unshipped = 269
+    expect(catalog.metadata.wired).toBe(460);
     expect(catalog.metadata.stub).toBe(8);
-    expect(catalog.metadata.unshipped).toBe(277);
+    expect(catalog.metadata.unshipped).toBe(269);
   });
 
   it("max_depth: D4 for wired/stub cells, D0 for unshipped", () => {
