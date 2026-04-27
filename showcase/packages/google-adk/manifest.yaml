@@ -344,6 +344,8 @@ demos:
     animated_preview_url:
     highlight:
       - src/agents/a2ui_fixed_agent.py
+      - src/agents/a2ui_schemas/flight_schema.json
+      - src/agents/a2ui_schemas/booked_schema.json
       - src/app/demos/a2ui-fixed-schema/page.tsx
       - src/app/demos/a2ui-fixed-schema/a2ui/catalog.ts
       - src/app/demos/a2ui-fixed-schema/a2ui/renderers.tsx

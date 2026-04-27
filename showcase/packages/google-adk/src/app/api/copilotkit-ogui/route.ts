@@ -20,6 +20,14 @@ const runtime = new CopilotRuntime({
       url: `${AGENT_URL}/open_gen_ui_advanced`,
     }),
   },
+  // The runtime's OpenGenerativeUIMiddleware turns each agent's streamed
+  // `generateSandboxedUi` tool call into `open-generative-ui` activity
+  // events that the provider's <CopilotKit openGenerativeUI={...}>
+  // renderer mounts in a sandboxed iframe. Without this list, the
+  // middleware never engages and the demo's iframe stays empty.
+  openGenerativeUI: {
+    agents: ["open-gen-ui", "open-gen-ui-advanced"],
+  },
 });
 
 export const POST = async (req: NextRequest) => {

@@ -20,11 +20,15 @@ export default function HitlInAppDemo() {
 }
 
 function DemoContent() {
-  const [pending, setPending] = useState<ApprovalRequest | null>(null);
+  // Queue of in-flight approval requests rather than a single-slot ref.
+  // Gemini's parallel-tool-call paths can fire `request_approval` more
+  // than once before the first resolves; the previous single-slot
+  // `useState<ApprovalRequest | null>` orphaned the first promise on
+  // any second call, leaving the agent waiting on a tool result that
+  // never arrived. We render the head of the queue, advance on each
+  // user decision, and let every Promise resolve in arrival order.
+  const [pendingQueue, setPendingQueue] = useState<ApprovalRequest[]>([]);
 
-  // useFrontendTool with an async handler — agent awaits the user's
-  // decision via a resolved Promise. The tool returns whatever the user
-  // clicks; the agent then continues its turn with that result.
   useFrontendTool({
     name: "request_approval",
     description:
@@ -33,20 +37,34 @@ function DemoContent() {
       summary: z.string().describe("Short summary of the proposed action."),
       reason: z.string().describe("Why the action is being proposed."),
     }),
-    handler: async ({ summary, reason }: { summary: string; reason: string }) => {
-      const decision = await new Promise<{ accepted: boolean; reason?: string }>(
-        (resolve) => {
-          setPending({
-            id: crypto.randomUUID(),
+    handler: async ({
+      summary,
+      reason,
+    }: {
+      summary: string;
+      reason: string;
+    }) => {
+      const requestId = crypto.randomUUID();
+      const decision = await new Promise<{
+        accepted: boolean;
+        reason?: string;
+      }>((resolve) => {
+        setPendingQueue((prev) => [
+          ...prev,
+          {
+            id: requestId,
             summary,
             reason,
             resolve: (d) => {
-              setPending(null);
+              // Drop our own entry from the queue, then resolve. Filter
+              // by id so concurrent resolves don't accidentally drop
+              // each other.
+              setPendingQueue((q) => q.filter((r) => r.id !== requestId));
               resolve(d);
             },
-          });
-        },
-      );
+          },
+        ]);
+      });
       return decision;
     },
   });
@@ -65,6 +83,10 @@ function DemoContent() {
     available: "always",
   });
 
+  // Render only the head of the queue; subsequent approvals are answered
+  // in arrival order as the user dispatches each decision.
+  const head = pendingQueue[0];
+
   return (
     <div className="flex justify-center items-center h-screen w-full bg-gray-50">
       <div className="h-full w-full max-w-4xl">
@@ -77,7 +99,7 @@ function DemoContent() {
           }}
         />
       </div>
-      {pending && <ApprovalDialog request={pending} />}
+      {head && <ApprovalDialog request={head} />}
     </div>
   );
 }

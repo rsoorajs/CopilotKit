@@ -66,13 +66,23 @@ class AgentSpec:
     llm_agent: LlmAgent
     predict_state: Optional[Iterable[PredictStateMapping]] = field(default=None)
     emit_messages_snapshot: bool = False
+    # `streaming_function_call_arguments=True` opts the ADKAgent middleware
+    # into per-token TOOL_CALL_ARGS events (requires google-adk >= 1.24.0
+    # via Vertex AI; on older / Gemini-Studio paths the middleware emits a
+    # UserWarning and falls back to chunk-level emission). We pair this
+    # with `PredictStateMapping(stream_tool_call=True)` for the
+    # shared-state-streaming demo so the UI sees the document grow as the
+    # tool arguments arrive.
+    streaming_function_call_arguments: bool = False
 
 # Simple conversational agents (no backend tools — frontend may inject tools).
 # Used by every chat-UI demo whose only customisation is on the frontend.
 _SIMPLE_CHAT_INSTRUCTION = (
-    "You are a helpful, concise assistant. Keep answers short unless the user "
-    "asks for detail. If a frontend tool is registered (e.g. change_background, "
-    "get_weather), call it when appropriate."
+    "You are a helpful, concise assistant. Keep answers short unless the "
+    "user asks for detail. The frontend may register tools at request time "
+    "(useFrontendTool / useComponent / useHumanInTheLoop) — these will "
+    "appear in your tool list at the start of each turn. Call them when "
+    "the user's request maps to one; fall back to plain text otherwise."
 )
 _simple_chat = build_simple_chat_agent(
     name="SimpleChatAgent", instruction=_SIMPLE_CHAT_INSTRUCTION
@@ -90,7 +100,7 @@ _thinking_chat = build_thinking_chat_agent(
 )
 
 AGENT_REGISTRY: dict[str, AgentSpec] = {
-    # ----- Already-implemented demos -----
+    # ----- Core demos with bespoke LlmAgent + tools -----
     "agentic_chat": AgentSpec(_simple_chat),
     "tool-rendering": AgentSpec(tool_rendering_agent),
     "gen-ui-tool-based": AgentSpec(gen_ui_tool_based_agent),
@@ -102,6 +112,7 @@ AGENT_REGISTRY: dict[str, AgentSpec] = {
     "shared-state-streaming": AgentSpec(
         shared_state_streaming_agent,
         predict_state=SHARED_STATE_STREAMING_PREDICT_STATE,
+        streaming_function_call_arguments=True,
     ),
     "subagents": AgentSpec(subagents_root_agent),
     # ----- Frontend-only demos that share the simple chat agent -----

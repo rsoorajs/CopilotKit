@@ -17,7 +17,9 @@ const byocJsonRenderAgent = new HttpAgent({
 
 const runtime = new CopilotRuntime({
   // @ts-ignore -- see main route.ts
-  agents: { byoc_json_render: byocJsonRenderAgent },
+  // Kebab-case + `-demo` suffix matches the sibling
+  // `byoc-hashbrown-demo` / `a2ui-fixed-schema` / `auth-demo` routes.
+  agents: { "byoc-json-render-demo": byocJsonRenderAgent },
 });
 
 export const POST = async (req: NextRequest) => {

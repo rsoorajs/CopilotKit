@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { CopilotKit } from "@copilotkit/react-core";
 import {
   CopilotChat,
@@ -58,22 +58,41 @@ function DemoContent() {
   const preferences = agentState?.preferences ?? INITIAL_PREFERENCES;
   const notes = agentState?.notes ?? [];
 
+  // Seed initial preferences exactly once, AFTER agent.state has been
+  // observed at least once. The previous mount-only effect with empty
+  // deps could fire before the runtime hydrated state on reload, wiping
+  // backend-persisted preferences with INITIAL_PREFERENCES.
+  const seededRef = useRef(false);
   useEffect(() => {
+    if (seededRef.current) return;
+    if (agentState === undefined) return; // wait for first state event
+    seededRef.current = true;
     if (!agentState?.preferences) {
       agent.setState({
         preferences: INITIAL_PREFERENCES,
         notes: [],
       } as RWAgentState);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [agent, agentState]);
 
+  // Read latest agent state inside the handlers via the closure-fresh
+  // `agentState` rather than the destructured `preferences` / `notes`.
+  // Concurrent edits (rapid prefs change followed by Clear notes) under
+  // the prior implementation could revert the in-flight prefs change
+  // because both handlers wrote a whole-state snapshot computed at
+  // render time.
   const handlePreferencesChange = (next: Preferences) => {
-    agent.setState({ preferences: next, notes } as RWAgentState);
+    agent.setState({
+      preferences: next,
+      notes: agentState?.notes ?? [],
+    } as RWAgentState);
   };
 
   const handleClearNotes = () => {
-    agent.setState({ preferences, notes: [] } as RWAgentState);
+    agent.setState({
+      preferences: agentState?.preferences ?? INITIAL_PREFERENCES,
+      notes: [],
+    } as RWAgentState);
   };
 
   return (

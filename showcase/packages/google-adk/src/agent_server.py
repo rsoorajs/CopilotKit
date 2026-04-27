@@ -6,10 +6,20 @@ CopilotKit runtime in src/app/api/copilotkit/route.ts proxies each agent name
 to the matching backend path via AG-UI protocol.
 
 NOTE on /agents/state: ag_ui_adk.endpoint.add_adk_fastapi_endpoint() also
-registers a hardcoded `POST /agents/state` route. Calling it N times registers
-N duplicate handlers; FastAPI/Starlette serve whichever was registered first.
-For our demos this is fine — only a handful (e.g. headless-complete) call
-that endpoint, and they all use the first registered agent's session service.
+registers a hardcoded `POST /agents/state` route. Calling it N times
+registers N duplicate handlers; FastAPI/Starlette serve whichever was
+registered first — which for us is the FIRST entry in `AGENT_REGISTRY`
+iteration order (currently `agentic_chat`, backed by the shared
+`_simple_chat` LlmAgent). All demos that share `_simple_chat`
+(prebuilt-sidebar, prebuilt-popup, chat-slots, chat-customization-css,
+headless-simple, headless-complete, voice, frontend-tools, etc.) get
+correct behaviour from the same session service. Demos with their own
+LlmAgent (gen-ui-agent, subagents, shared-state-streaming, agent-config,
+…) currently store sessions in their own ADKAgent's service that
+/agents/state does NOT reach — those sessions are still readable via the
+in-stream STATE_DELTA path used by useAgent, just not via the optional
+/agents/state retrieval endpoint. A proper fix is in ag_ui_adk
+(de-hardcode the path), tracked separately.
 """
 
 import os
@@ -57,6 +67,7 @@ for agent_name, spec in AGENT_REGISTRY.items():
         use_in_memory_services=True,
         predict_state=spec.predict_state,
         emit_messages_snapshot=spec.emit_messages_snapshot,
+        streaming_function_call_arguments=spec.streaming_function_call_arguments,
     )
     add_adk_fastapi_endpoint(app, middleware, path=f"/{agent_name}")
 
@@ -64,11 +75,16 @@ for agent_name, spec in AGENT_REGISTRY.items():
 def main():
     """Run the uvicorn server."""
     port = int(os.getenv("PORT", "8000"))
+    # Reload is dev-only — it spawns a file-watching subprocess that pegs
+    # CPU and rebuilds in-memory ADK sessions on every fs touch. Gate
+    # explicitly via UVICORN_RELOAD=1 (entrypoint.sh sets PORT but no
+    # reload flag, so production stays cool).
+    reload = os.getenv("UVICORN_RELOAD", "0") == "1"
     uvicorn.run(
         "agent_server:app",
         host="0.0.0.0",
         port=port,
-        reload=True,
+        reload=reload,
     )
 
 

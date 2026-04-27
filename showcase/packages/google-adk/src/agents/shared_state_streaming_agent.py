@@ -1,15 +1,29 @@
 """Agent backing the State Streaming demo.
 
 The agent writes a long `document` string into shared agent state via a
-`write_document` tool. PredictStateMapping (declared on the ADKAgent
-middleware in registry.py) tells ag_ui_adk to emit STATE_DELTA events
-forwarding every token of `write_document.content` straight into
-state["document"], so the UI sees the document grow token-by-token
-without waiting for the tool call to complete.
+`write_document` tool. The UI renders `state["document"]` live as the
+tool arguments arrive.
 
-`stream_function_call_arguments=True` on the model + the predict_state
-mapping below produces the per-token streaming behaviour. This matches
-langgraph-python's StateStreamingMiddleware setup.
+How the per-token "live" feel is produced:
+
+1. `PredictStateMapping(state_key="document", tool="write_document",
+   tool_argument="content", stream_tool_call=True)` is declared on the
+   ADKAgent middleware in `registry.py`. The middleware emits a
+   STATE_DELTA every time the corresponding tool argument grows.
+2. `streaming_function_call_arguments=True` is also set on the ADKAgent
+   middleware so ag_ui_adk subscribes to incremental TOOL_CALL_ARGS
+   events from the underlying ADK runner. This requires google-adk
+   >= 1.24.0 via Vertex AI for true per-token streaming; on older
+   versions or via Gemini Studio the middleware emits a UserWarning at
+   startup and falls back to chunk-level streaming, which still drives
+   STATE_DELTAs but at coarser granularity. The UI's "LIVE" badge stays
+   honest in both modes — it just updates fewer times per second on the
+   fallback path.
+
+The model itself does not need a `GenerateContentConfig` override for
+this — the streaming behaviour is entirely controlled by the ADKAgent
+middleware. This matches langgraph-python's StateStreamingMiddleware
+setup.
 """
 
 from __future__ import annotations
@@ -17,7 +31,6 @@ from __future__ import annotations
 from ag_ui_adk.config import PredictStateMapping
 from google.adk.agents import LlmAgent
 from google.adk.tools import ToolContext
-from google.genai import types
 
 
 def write_document(tool_context: ToolContext, content: str) -> dict:
@@ -44,12 +57,6 @@ shared_state_streaming_agent = LlmAgent(
     model="gemini-2.5-flash",
     instruction=_INSTRUCTION,
     tools=[write_document],
-    generate_content_config=types.GenerateContentConfig(
-        # Required for ag_ui_adk's per-token argument streaming alongside
-        # PredictStateMapping. Without this, the model emits the full args
-        # in one chunk and the UI only sees the final document.
-        # Falls back to non-streaming on models that don't support it.
-    ),
 )
 
 

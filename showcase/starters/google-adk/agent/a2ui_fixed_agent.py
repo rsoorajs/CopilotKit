@@ -25,6 +25,12 @@ def _load_schema(name: str) -> list[dict[str, Any]]:
         return json.load(f)
 
 FLIGHT_SCHEMA = _load_schema("flight_schema.json")
+# Loaded for parity with the langgraph-python sibling; the A2UI Python SDK's
+# `a2ui.render(...)` does not yet accept the `action_handlers={...}` kwarg
+# that would let `display_flight` swap to BOOKED_SCHEMA on the bookButton
+# action, so the schema sits read-only here. See langgraph-python's
+# `a2ui_fixed.py` for the canonical reference.
+BOOKED_SCHEMA = _load_schema("booked_schema.json")  # noqa: F841
 
 def _build_flight_operations(
     *, origin: str, destination: str, airline: str, price: str

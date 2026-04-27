@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { CopilotKit } from "@copilotkit/react-core";
 import {
   CopilotChat,
@@ -43,12 +43,20 @@ function DemoContent() {
   const state = agent.state as AgentConfigState | undefined;
   const config = state?.config ?? INITIAL_CONFIG;
 
+  // Seed `config` exactly once, AFTER `agent.state` has actually been
+  // observed at least once. The previous mount-only effect with empty
+  // deps could fire before the runtime's first state-hydration tick,
+  // overwriting a backend-persisted config with INITIAL_CONFIG. The ref
+  // gates the seed to a single emission for the lifetime of the component.
+  const seededRef = useRef(false);
   useEffect(() => {
+    if (seededRef.current) return;
+    if (state === undefined) return; // wait for first state event
+    seededRef.current = true;
     if (!state?.config) {
       agent.setState({ config: INITIAL_CONFIG } as AgentConfigState);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [agent, state]);
 
   const handleChange = (next: AgentConfigValue) => {
     agent.setState({ config: next } as AgentConfigState);

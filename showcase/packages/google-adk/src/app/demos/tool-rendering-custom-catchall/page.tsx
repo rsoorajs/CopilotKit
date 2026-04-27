@@ -26,13 +26,22 @@ export default function ToolRenderingCustomCatchallDemo() {
 }
 
 function Chat() {
+  // The render prop is typed by useDefaultRenderTool's `DefaultRenderProps`
+  // — destructure without casting and let inference flow through. The
+  // CustomCatchallRenderer accepts `args` as `Record<string, unknown>`
+  // and a narrower status enum, so we coerce inside the call where the
+  // shape is known.
   useDefaultRenderTool(
     {
-      render: ({ name, parameters, status, result }: any) => (
+      render: ({ name, parameters, status, result }) => (
         <CustomCatchallRenderer
           name={name}
-          args={parameters}
-          status={status}
+          args={(parameters ?? {}) as Record<string, unknown>}
+          // The runtime emits `"inProgress" | "executing" | "complete"`
+          // for streaming tool calls; the renderer treats both
+          // pre-completion states identically, so collapse them to
+          // "executing" before handing off.
+          status={status === "complete" ? "complete" : "executing"}
           result={result}
         />
       ),

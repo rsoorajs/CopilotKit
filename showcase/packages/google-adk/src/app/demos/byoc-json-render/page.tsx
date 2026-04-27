@@ -24,7 +24,10 @@ import {
 import { JsonRenderAssistantMessage } from "./json-render-renderer";
 import { BYOC_JSON_RENDER_SUGGESTIONS } from "./suggestions";
 
-const AGENT_ID = "byoc_json_render";
+// Match the sibling byoc-hashbrown-demo / a2ui-fixed-schema kebab-case
+// convention so a future copy-paste of `"byoc-json-render-demo"` from one
+// route into another doesn't silently 404.
+const AGENT_ID = "byoc-json-render-demo";
 
 export default function ByocJsonRenderDemo() {
   return (

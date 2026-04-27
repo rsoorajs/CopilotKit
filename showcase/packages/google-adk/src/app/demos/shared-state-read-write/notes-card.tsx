@@ -39,8 +39,15 @@ export function NotesCard({
       ) : (
         <ul className="space-y-2">
           {notes.map((note, i) => (
+            // Stable key derived from content + index. Pure index keys
+            // would reuse the same DOM node when the agent rewrites the
+            // notes list (e.g. set_notes(["b","a"]) after set_notes(["a"]))
+            // and selection / scroll state would attach to the wrong row.
+            // Scoped to this demo because we don't control note-id
+            // generation upstream — index disambiguates duplicate-content
+            // entries without requiring a backend schema change.
             <li
-              key={i}
+              key={`${i}::${note}`}
               className="text-sm text-[#010507] bg-[#FAFAFC] border border-[#E9E9EF] rounded-lg p-2.5"
             >
               {note}
