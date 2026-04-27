@@ -262,7 +262,7 @@ export function registerProbesRoutes(app: Hono, deps: ProbesRouteDeps): void {
     let runs: Awaited<ReturnType<typeof writer.recent>> = [];
     let runsError: string | undefined;
     try {
-      runs = await writer.recent(id, 10);
+      runs = await writer.recent(cfg?.id ?? id, 10);
     } catch (err) {
       runsError = "history_unavailable";
       // Best-effort logging — without a route-level logger, fall back to
