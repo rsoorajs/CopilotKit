@@ -374,9 +374,8 @@ export function registerProbesRoutes(app: Hono, deps: ProbesRouteDeps): void {
         // B2: validate featureTypes — must be a non-empty array of
         // non-empty strings when present. Empty array is ambiguous
         // (all vs none), so reject it explicitly.
-        const featureTypes = (
-          parsed.filter as { featureTypes?: unknown }
-        ).featureTypes;
+        const featureTypes = (parsed.filter as { featureTypes?: unknown })
+          .featureTypes;
         if (featureTypes !== undefined) {
           if (
             !Array.isArray(featureTypes) ||
@@ -388,8 +387,7 @@ export function registerProbesRoutes(app: Hono, deps: ProbesRouteDeps): void {
             return c.json(
               {
                 error: "invalid_filter",
-                message:
-                  "featureTypes must be a non-empty array of strings",
+                message: "featureTypes must be a non-empty array of strings",
               },
               400,
             );

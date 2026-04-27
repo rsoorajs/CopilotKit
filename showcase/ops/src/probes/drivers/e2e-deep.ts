@@ -260,9 +260,7 @@ export class Semaphore {
   }
   release(): void {
     if (this.active <= 0) {
-      throw new Error(
-        "Semaphore.release() called without matching acquire()",
-      );
+      throw new Error("Semaphore.release() called without matching acquire()");
     }
     this.active--;
     const next = this.queue.shift();
