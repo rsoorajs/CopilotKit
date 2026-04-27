@@ -2,21 +2,25 @@
 
 ## Pending Service Provisioning
 
-Two services are wired into `showcase_deploy.yml` with placeholder
-`railway_id="PLACEHOLDER-CREATE-RAILWAY-SERVICE"` and need real Railway
-service IDs filled in before their first successful deploy:
+One service is wired into `showcase_deploy.yml` with placeholder
+`railway_id="PLACEHOLDER-CREATE-RAILWAY-SERVICE"` and needs a real Railway
+service ID filled in before its first successful deploy:
 
 - `built-in-agent` → image `showcase-built-in-agent`
-- `starter-built-in-agent` → image `showcase-starter-built-in-agent`
 
-Both are single-service Next.js apps (`BuiltInAgent` runs in-process; no
-separate agent server). Required env: `OPENAI_API_KEY`. Health probe at
+Single-service Next.js app (`BuiltInAgent` runs in-process; no separate
+agent server). Required env: `OPENAI_API_KEY`. Health probe at
 `/api/health`.
 
-Until the Railway services exist, the deploy job for these entries will
+Until the Railway service exists, the deploy job for this entry will
 fail loudly on `serviceInstanceRedeploy` — that's intentional. Provision
-them via the "Adding a New Railway Service" flow below, then swap the
-placeholder IDs in the matrix.
+it via the "Adding a New Railway Service" flow below, then swap the
+placeholder ID in the matrix.
+
+The matching `starter-built-in-agent` is intentionally absent: the
+starter generator (`showcase/scripts/generate-starters.ts`) does not
+yet support single-service packages, so the starter will be added in a
+follow-up PR alongside generator support.
 
 ## Auto-Updates (Fleet-Wide)
 
