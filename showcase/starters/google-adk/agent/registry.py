@@ -104,6 +104,7 @@ _thinking_chat = build_thinking_chat_agent(
 
 AGENT_REGISTRY: dict[str, AgentSpec] = {
     # ----- Core demos with bespoke LlmAgent + tools -----
+    "sample_agent": AgentSpec(_simple_chat),
     "agentic_chat": AgentSpec(_simple_chat),
     "tool-rendering": AgentSpec(tool_rendering_agent),
     "gen-ui-tool-based": AgentSpec(gen_ui_tool_based_agent),
