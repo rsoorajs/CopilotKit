@@ -65,6 +65,25 @@ const nextConfig: NextConfig = {
         destination: "/frontend-tools",
         permanent: true,
       },
+      // Migration guides moved out of /troubleshooting into a dedicated
+      // /migrate section as part of the IA restructure. Files were
+      // renamed to drop the redundant "migrate-to-" prefix at the same
+      // time, since /migrate/v2 reads cleaner than /migrate/migrate-to-v2.
+      {
+        source: "/troubleshooting/migrate-to-v2",
+        destination: "/migrate/v2",
+        permanent: true,
+      },
+      {
+        source: "/troubleshooting/migrate-to-1.10.X",
+        destination: "/migrate/1.10.X",
+        permanent: true,
+      },
+      {
+        source: "/troubleshooting/migrate-to-1.8.2",
+        destination: "/migrate/1.8.2",
+        permanent: true,
+      },
     ];
   },
 };
