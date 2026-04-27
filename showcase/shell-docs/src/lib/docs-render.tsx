@@ -15,28 +15,12 @@ import { resolveWithinDir } from "./safe-fs";
 export const CONTENT_DIR = path.join(process.cwd(), "src/content/docs");
 export const SNIPPETS_DIR = path.join(CONTENT_DIR, "..", "snippets");
 
-/**
- * Canonical category ordering for the framework picker / integrations
- * grid / sidebar framework selector. Defined here so every consumer
- * imports the same source of truth.
- *
- * Consumer files (sidebar-framework-selector.tsx, [[...slug]]/page.tsx)
- * previously defined this constant independently — any drift between
- * the copies would show up as divergent category ordering across the
- * UI. Follow-up: once all consumers import from here, remove their
- * local duplicates (owned by later blitz agents / registry refactor).
- */
-export const FRAMEWORK_CATEGORY_ORDER = [
-  "popular",
-  "agent-framework",
-  "provider-sdk",
-  "enterprise-platform",
-  "protocol",
-  "emerging",
-  "starter",
-] as const;
-
-export type FrameworkCategory = (typeof FRAMEWORK_CATEGORY_ORDER)[number];
+// Re-exported from lib/framework-categories so client components can
+// pull the constant without dragging fs through the bundle.
+export {
+  FRAMEWORK_CATEGORY_ORDER,
+  type FrameworkCategory,
+} from "./framework-categories";
 
 // ---------------------------------------------------------------------------
 // Nav tree types
