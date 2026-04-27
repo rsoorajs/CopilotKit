@@ -37,6 +37,7 @@ export type D5FeatureType =
   | "shared-state-read"
   | "shared-state-write"
   | "hitl-approve-deny"
+  | "hitl-steps"
   | "hitl-text-input"
   | "gen-ui-headless"
   | "gen-ui-custom"
@@ -55,6 +56,7 @@ const D5_FEATURE_TYPES: readonly D5FeatureType[] = [
   "shared-state-read",
   "shared-state-write",
   "hitl-approve-deny",
+  "hitl-steps",
   "hitl-text-input",
   "gen-ui-headless",
   "gen-ui-custom",
