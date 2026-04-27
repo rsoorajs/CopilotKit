@@ -7,6 +7,7 @@ import {
   type D5BuildContext,
   type D5FeatureType,
   type D5Script,
+  isD5FeatureType,
 } from "../helpers/d5-registry.js";
 import {
   runConversation,
@@ -289,22 +290,13 @@ function defaultRoute(featureType: D5FeatureType, _ctx?: unknown): string {
   return `/demos/${featureType}`;
 }
 
-const ALL_KNOWN_FEATURES: readonly D5FeatureType[] = [
-  "agentic-chat",
-  "tool-rendering",
-  "shared-state-read",
-  "shared-state-write",
-  "hitl-approve-deny",
-  "hitl-text-input",
-  "gen-ui-headless",
-  "gen-ui-custom",
-  "mcp-apps",
-  "subagents",
-] as const;
-
-function isKnownFeatureType(value: string): value is D5FeatureType {
-  return (ALL_KNOWN_FEATURES as readonly string[]).includes(value);
-}
+/**
+ * Re-use the canonical `isD5FeatureType` from `d5-registry.ts` as
+ * `isKnownFeatureType` so the driver's filter stays in sync with
+ * the closed enum without maintaining a redundant list.
+ */
+const isKnownFeatureType: (value: string) => value is D5FeatureType =
+  isD5FeatureType;
 
 /**
  * Default reference-snapshot directory. Resolves to

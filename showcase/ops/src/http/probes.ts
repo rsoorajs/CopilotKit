@@ -342,12 +342,17 @@ export function registerProbesRoutes(app: Hono, deps: ProbesRouteDeps): void {
     // (filter sent but empty). Operators rely on this distinction when
     // reading audit logs.
     let filterSlugs: string[] = [];
-    let filterProvided = false;
-    let opts: { filter?: { slugs?: string[] } } | undefined;
+    let slugsProvided = false;
+    let filterFeatureTypes: string[] | undefined;
+    let opts:
+      | { filter?: { slugs?: string[]; featureTypes?: string[] } }
+      | undefined;
     if (raw.length > 0) {
-      let parsed: { filter?: { slugs?: unknown } };
+      let parsed: { filter?: { slugs?: unknown; featureTypes?: unknown } };
       try {
-        parsed = JSON.parse(raw) as { filter?: { slugs?: unknown } };
+        parsed = JSON.parse(raw) as {
+          filter?: { slugs?: unknown; featureTypes?: unknown };
+        };
       } catch {
         return c.json({ error: "invalid_json" }, 400);
       }
@@ -363,8 +368,43 @@ export function registerProbesRoutes(app: Hono, deps: ProbesRouteDeps): void {
             return c.json({ error: "invalid_filter" }, 400);
           }
           filterSlugs = slugs;
-          filterProvided = true;
-          opts = { filter: { slugs } };
+          slugsProvided = true;
+        }
+
+        // B2: validate featureTypes — must be a non-empty array of
+        // non-empty strings when present. Empty array is ambiguous
+        // (all vs none), so reject it explicitly.
+        const featureTypes = (parsed.filter as { featureTypes?: unknown })
+          .featureTypes;
+        if (featureTypes !== undefined) {
+          if (
+            !Array.isArray(featureTypes) ||
+            featureTypes.length === 0 ||
+            !featureTypes.every(
+              (s): s is string => typeof s === "string" && s.length > 0,
+            )
+          ) {
+            return c.json(
+              {
+                error: "invalid_filter",
+                message: "featureTypes must be a non-empty array of strings",
+              },
+              400,
+            );
+          }
+          filterFeatureTypes = featureTypes;
+        }
+
+        // Build opts with whichever filter fields were provided.
+        if (slugs !== undefined || featureTypes !== undefined) {
+          opts = {
+            filter: {
+              ...(slugs !== undefined ? { slugs: filterSlugs } : {}),
+              ...(filterFeatureTypes !== undefined
+                ? { featureTypes: filterFeatureTypes }
+                : {}),
+            },
+          };
         }
       }
     }
@@ -399,14 +439,16 @@ export function registerProbesRoutes(app: Hono, deps: ProbesRouteDeps): void {
     try {
       const result = await scheduler.trigger(id, opts);
       // Stamp already in place — leave it.
-      // R4-A.1: scope is null when no filter was provided in the body;
+      // R4-A.1: scope is null when filter.slugs was NOT sent;
       // the actual array (possibly empty) when filter.slugs was sent.
-      // This lets operators distinguish "no filter" from "filter:[]".
+      // This lets operators distinguish "no slug filter" from "filter:[]".
+      // featureTypesScope follows the same convention for featureTypes.
       return c.json({
         runId: result.runId,
         status: result.status,
         probe: result.probe,
-        scope: filterProvided ? filterSlugs : null,
+        scope: slugsProvided ? filterSlugs : null,
+        featureTypesScope: filterFeatureTypes ?? null,
       });
     } catch (err) {
       // R4-A.6: roll back the rate-limit stamp on ALL non-success paths,

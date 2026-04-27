@@ -70,7 +70,7 @@ export interface RunSummary {
  * never enqueued or written.
  */
 export interface InvokerTriggerOptions {
-  filter?: { slugs?: string[] };
+  filter?: { slugs?: string[]; featureTypes?: string[] };
 }
 
 /**
@@ -296,6 +296,7 @@ export function buildProbeInvoker(
     // filter list means "no slugs match" — keep the run honest rather
     // than silently degrading to "filter=undefined → run everything".
     const filterSlugs = invokeOpts?.filter?.slugs;
+    const featureTypes = invokeOpts?.filter?.featureTypes;
     let inputs: ResolvedInput[] = allInputs;
     if (filterSlugs !== undefined) {
       const wanted = new Set(filterSlugs);
@@ -534,6 +535,7 @@ export function buildProbeInvoker(
                 probeId: cfg.id,
                 fetchImpl,
                 parentWriter: writer,
+                featureTypes,
               });
         // B7: classify the per-target outcome for the tracker. The
         // ProbeState → tracker-result mapping:
@@ -1205,6 +1207,12 @@ interface ExecuteOneOpts {
    * the invoker performs one level up.
    */
   parentWriter: ProbeResultWriter;
+  /**
+   * Optional feature-type filter threaded from trigger opts. Forwarded
+   * into `ProbeContext.featureTypes` so drivers that support per-feature
+   * filtering can restrict their run scope.
+   */
+  featureTypes?: string[];
 }
 
 /**
@@ -1225,6 +1233,7 @@ async function executeOne(opts: ExecuteOneOpts): Promise<ProbeResult<unknown>> {
     probeId,
     fetchImpl,
     parentWriter,
+    featureTypes,
   } = opts;
   const parsed = driver.inputSchema.safeParse(input);
   if (!parsed.success) {
@@ -1300,6 +1309,7 @@ async function executeOne(opts: ExecuteOneOpts): Promise<ProbeResult<unknown>> {
     writer: parentWriter,
     fetchImpl,
     abortSignal: abortCtrl.signal,
+    featureTypes,
   };
   try {
     if (timeoutMs === undefined || timeoutPromise === null) {
