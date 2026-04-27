@@ -147,18 +147,18 @@ node /app/dist/cli.js \
 
 Flag-by-flag:
 
-| Flag                    | Value                                       | Purpose                                                                                   |
-| ----------------------- | ------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| `node /app/dist/cli.js` | —                                           | Explicit bin invocation — required because Railway's `startCommand` overrides ENTRYPOINT. |
-| `--proxy-only`          | —                                           | Forward unmatched requests to upstream providers instead of failing.                      |
-| `--provider-openai`     | `https://api.openai.com`                    | Upstream URL for OpenAI passthrough.                                                      |
-| `--provider-anthropic`  | `https://api.anthropic.com`                 | Upstream URL for Anthropic passthrough.                                                   |
-| `--provider-gemini`     | `https://generativelanguage.googleapis.com` | Upstream URL for Gemini passthrough.                                                      |
+| Flag                    | Value                                       | Purpose                                                                                                                          |
+| ----------------------- | ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `node /app/dist/cli.js` | —                                           | Explicit bin invocation — required because Railway's `startCommand` overrides ENTRYPOINT.                                        |
+| `--proxy-only`          | —                                           | Forward unmatched requests to upstream providers instead of failing.                                                             |
+| `--provider-openai`     | `https://api.openai.com`                    | Upstream URL for OpenAI passthrough.                                                                                             |
+| `--provider-anthropic`  | `https://api.anthropic.com`                 | Upstream URL for Anthropic passthrough.                                                                                          |
+| `--provider-gemini`     | `https://generativelanguage.googleapis.com` | Upstream URL for Gemini passthrough.                                                                                             |
 | `--fixtures` (×3 URLs)  | Remote URLs above                           | Repeatable flag; each loads one JSON fixture at boot, with cache-fallback on failure. D5 must appear first for match precedence. |
-| `--validate-on-load`    | —                                           | Fail-loud on schema errors; allows cache-fallback only when network fetch fails.          |
-| `--host`                | `0.0.0.0`                                   | Bind all interfaces so Railway can route to the container.                                |
-| `--port`                | `4010`                                      | Hardcoded listen port — matches the legacy wrapper container convention and the fixed     |
-|                         |                                             | Railway domain routing. Railway injects `$PORT` but the image defaults align with 4010.   |
+| `--validate-on-load`    | —                                           | Fail-loud on schema errors; allows cache-fallback only when network fetch fails.                                                 |
+| `--host`                | `0.0.0.0`                                   | Bind all interfaces so Railway can route to the container.                                                                       |
+| `--port`                | `4010`                                      | Hardcoded listen port — matches the legacy wrapper container convention and the fixed                                            |
+|                         |                                             | Railway domain routing. Railway injects `$PORT` but the image defaults align with 4010.                                          |
 
 If adopting `$PORT` interpolation in the future, both startCommand and any
 upstream `OPENAI_BASE_URL` env vars pointing at this service stay unchanged —

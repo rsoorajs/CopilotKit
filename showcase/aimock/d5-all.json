@@ -243,9 +243,7 @@
             "id": "call_d5_set_notes_001",
             "name": "set_notes",
             "arguments": {
-              "notes": [
-                "Favorite color: blue"
-              ]
+              "notes": ["Favorite color: blue"]
             }
           }
         ]

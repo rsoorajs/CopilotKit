@@ -72,8 +72,7 @@ describe("d5-hitl-steps script", () => {
     expect(
       calls.some(
         (c) =>
-          c.method === "waitForSelector" &&
-          c.selector.includes("select-steps"),
+          c.method === "waitForSelector" && c.selector.includes("select-steps"),
       ),
     ).toBe(true);
     expect(calls.some((c) => c.method === "click")).toBe(true);
