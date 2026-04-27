@@ -18,4 +18,6 @@ export const sortOrder: Record<string, number> = {
   llamaindex: 67,
   langroid: 68,
   "spring-ai": 69,
+
+  "built-in-agent": 900,
 };
