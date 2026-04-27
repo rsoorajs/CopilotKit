@@ -28,14 +28,10 @@ import {
   findFrameworksWithCell,
   findFrameworksWithPage,
   loadDoc,
-  type NavNode,
 } from "@/lib/docs-render";
-import {
-  getDocsFolder,
-  getIntegration,
-  getIntegrations,
-  type Integration,
-} from "@/lib/registry";
+import type { NavNode } from "@/lib/docs-render";
+import { getDocsFolder, getIntegration, getIntegrations } from "@/lib/registry";
+import type { Integration } from "@/lib/registry";
 import { RESERVED_ROUTE_SLUGS } from "@/app/layout";
 import demoContent from "@/data/demo-content.json";
 
@@ -369,8 +365,8 @@ function FrameworkLandingPage({ framework }: { framework: string }) {
           </h1>
           <p className="text-base text-[var(--text-secondary)] leading-relaxed mb-8 max-w-2xl">
             CopilotKit is the <strong>frontend stack for agents</strong> and{" "}
-            <strong>generative UI</strong>. Connect any agent framework or
-            model to your React app for chat, generative UI, canvas apps, and
+            <strong>generative UI</strong>. Connect any agent framework or model
+            to your React app for chat, generative UI, canvas apps, and
             human-in-the-loop workflows.
           </p>
 
