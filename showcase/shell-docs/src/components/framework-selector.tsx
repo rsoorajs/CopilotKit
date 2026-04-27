@@ -107,7 +107,13 @@ export function FrameworkSelector({
     };
   }, [open]);
 
-  const current = options.find((o) => o.slug === framework);
+  // Display the URL-derived framework when present; fall back to the
+  // stored choice so unscoped pages (/, /quickstart, etc.) still show
+  // the user's last pick instead of resetting to the placeholder. Same
+  // precedence used by the Clear-Selection button below (line ~262).
+  const current = options.find(
+    (o) => o.slug === (framework ?? storedFramework),
+  );
   const label = current?.name ?? "Pick an agentic backend";
 
   // Compute the target href for a given framework option given the current
