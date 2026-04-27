@@ -18,6 +18,7 @@ export default function ToolRenderingDemo() {
 }
 
 function Chat() {
+  // @region[render-weather-tool]
   useRenderTool({
     name: "get_weather",
     parameters: z.object({
@@ -51,6 +52,7 @@ function Chat() {
       );
     },
   });
+  // @endregion[render-weather-tool]
 
   useConfigureSuggestions({
     suggestions: [

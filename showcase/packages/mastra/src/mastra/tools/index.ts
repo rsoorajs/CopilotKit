@@ -13,6 +13,7 @@ import {
   buildA2uiOperationsFromToolCall,
 } from "@copilotkit/showcase-shared-tools";
 
+// @region[weather-tool-backend]
 export const weatherTool = createTool({
   id: "get-weather",
   description: "Get current weather for a location",
@@ -22,6 +23,7 @@ export const weatherTool = createTool({
   execute: async ({ context }) =>
     JSON.stringify(getWeatherImpl(context.location)),
 });
+// @endregion[weather-tool-backend]
 
 // Mock stock-price tool used by the headless-complete demo to exercise the
 // manual `useRenderTool` path alongside `get_weather`. Returns a fixed
