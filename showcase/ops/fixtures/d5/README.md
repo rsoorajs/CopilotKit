@@ -1,6 +1,6 @@
 # D5 Multi-Turn aimock Fixtures
 
-Eight feature-type fixtures used by the D5 (complex interact) probes in
+Nine feature-type fixtures used by the D5 (complex interact) probes in
 `showcase/ops/src/probes/drivers/e2e-deep.ts` (forthcoming) against the LangGraph
 Python (LGP) showcase as the reference implementation.
 
@@ -36,8 +36,8 @@ color"` rather than `"What is my favorite color"`).
   will never fire.
 
 `tool-rendering`, `shared-state`, `hitl-approve-deny`, `hitl-text-input`,
-`gen-ui-headless`, `gen-ui-custom`, and `mcp-subagents` all rely on this
-toolCallId-routed pattern. `agentic-chat` is purely text — no tools — so it uses
+`hitl-steps`, `gen-ui-headless`, `gen-ui-custom`, and `mcp-subagents` all rely
+on this toolCallId-routed pattern. `agentic-chat` is purely text — no tools — so it uses
 three plain `userMessage` substring matches.
 
 ## Per-feature-type-against-LGP-only
@@ -51,7 +51,7 @@ specific integration; we will then either (a) update the integration to bring
 it in line or (b) add a per-integration override fixture.
 
 This trade — replay a single canonical fixture rather than re-record per
-integration — keeps the fleet of fixtures small (8 files, not 8×17 = 136), and
+integration — keeps the fleet of fixtures small (9 files, not 9×17 = 153), and
 keeps drift contained: when LGP changes, we re-record once, not 17 times.
 
 ## How each fixture was constructed
@@ -69,10 +69,11 @@ For each feature type, the authoring inputs were:
 | Feature           | LGP source files                                                                                                                                                   |
 | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | agentic-chat      | `showcase/packages/langgraph-python/src/agents/agentic_chat.py`                                                                                                    |
-| tool-rendering    | `src/agents/tool_rendering_agent.py` (chains `get_weather` → `search_flights`) + `src/app/demos/tool-rendering/{weather-card,flight-list-card}.tsx`                |
+| tool-rendering    | `src/agents/tool_rendering_agent.py` (`get_weather`) + `src/app/demos/tool-rendering/weather-card.tsx`                                                             |
 | shared-state      | `src/agents/shared_state_read_write.py` (`set_notes` tool, `Preferences` shared state) + `src/app/demos/shared-state-read-write/{notes-card,preferences-card}.tsx` |
 | hitl-approve-deny | `src/agents/hitl_in_app.py` + `src/app/demos/hitl-in-app/{page,approval-dialog}.tsx` (`request_user_approval` frontend tool)                                       |
 | hitl-text-input   | `src/agents/hitl_in_chat_agent.py` + `src/app/demos/hitl-in-chat/{page,time-picker-card}.tsx` (`book_call` HITL tool)                                              |
+| hitl-steps        | `src/agents/hitl_agent.py` + `src/app/demos/hitl/page.tsx` (`generate_task_steps` frontend tool)                                                                   |
 | gen-ui-headless   | `src/app/demos/headless-simple/page.tsx` (`show_card` `useComponent`) — backend agent is `src/agents/main.py`                                                      |
 | gen-ui-custom     | `src/agents/gen_ui_tool_based.py` + `src/app/demos/gen-ui-tool-based/page.tsx` (`render_bar_chart` / `render_pie_chart`)                                           |
 | mcp-subagents     | `src/agents/subagents.py` + `src/app/demos/subagents/{page,delegation-log}.tsx` (`research_agent` / `writing_agent` / `critique_agent`)                            |
@@ -116,8 +117,8 @@ re-author the affected fixture by hand following the existing pattern:
    then issue chat-completions requests for each turn (turn 1 user message,
    turn 1 follow-up after tool result, turn 2 user message, ...) and assert
    the response shape matches what the fixture promises (text content or
-   `tool_calls`). The set of 8 fixtures was bootstrapped this way at
-   authoring time — 20 legs across 8 files, all replay-passing.
+   `tool_calls`). The set of 9 fixtures was bootstrapped this way at
+   authoring time — 22 legs across 9 files, all replay-passing.
 6. Once the D5 driver exists, run it against the LGP showcase locally with
    aimock pointed at the per-fixture file and confirm the full conversation
    short-circuits the live LLM (no requests should escape to the real
@@ -132,7 +133,7 @@ providers and diffs against checked-in fixtures — same idea sketched in
 
 **Pros:**
 
-- 8 fixture files, not 136. Fewer files to keep in sync.
+- 9 fixture files, not 153. Fewer files to keep in sync.
 - LGP is the reference implementation by design — fixtures that match LGP's
   contract surface other integrations' divergences as legitimate parity
   failures rather than masking them with bespoke fixtures.
@@ -157,13 +158,14 @@ fixture pool (first-match-wins).
 | Fixture                  | Status                                              |
 | ------------------------ | --------------------------------------------------- |
 | `agentic-chat.json`      | real (3 turns, no tools)                            |
-| `tool-rendering.json`    | real (1 turn, 2 chained tool calls)                 |
+| `tool-rendering.json`    | real (1 turn, 1 tool call)                          |
 | `shared-state.json`      | real (2 user turns + 1 tool-routed leg)             |
 | `hitl-approve-deny.json` | real (1 turn, frontend HITL tool, approve path)     |
 | `hitl-text-input.json`   | real (1 turn, frontend HITL tool, text/time picker) |
+| `hitl-steps.json`        | real (2 legs: toolCallId match + userMessage match) |
 | `gen-ui-headless.json`   | real (1 turn, `show_card` `useComponent`)           |
 | `gen-ui-custom.json`     | real (1 turn, custom chart component)               |
 | `mcp-subagents.json`     | real (1 turn, 3 chained sub-agent delegations)      |
 
-None are marked `pending` — all eight are exercisable on LGP today against the
+None are marked `pending` — all nine are exercisable on LGP today against the
 agent source as it stands.
