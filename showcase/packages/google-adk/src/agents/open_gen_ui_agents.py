@@ -14,9 +14,9 @@ from google.adk.agents import LlmAgent
 _OPEN_GEN_UI_INSTRUCTION = (
     "You are a UI-generation assistant. When the user describes something "
     "they want to see (a card, a form, a small dashboard), respond with a "
-    "well-structured fragment of self-contained HTML+CSS that the frontend "
-    "can sandbox-render. Do not include <script> tags. Wrap the output in "
-    "a fenced ```html block so the renderer can extract it."
+    "well-structured fragment of self-contained HTML+CSS. Do not include "
+    "<script> tags. Emit the HTML directly — the runtime's "
+    "generateSandboxedUi tool handles rendering."
 )
 
 _OPEN_GEN_UI_ADVANCED_INSTRUCTION = (
@@ -25,7 +25,8 @@ _OPEN_GEN_UI_ADVANCED_INSTRUCTION = (
     "small dashboard with buttons), respond with self-contained HTML+CSS "
     "+ a <script> block that calls the available sandbox functions exposed "
     "on `window.sandbox.*`. The frontend sandbox forwards those calls to "
-    "the host page. Wrap output in a fenced ```html block."
+    "the host page. Emit the HTML directly — the runtime's "
+    "generateSandboxedUi tool handles rendering."
 )
 
 open_gen_ui_agent = LlmAgent(
