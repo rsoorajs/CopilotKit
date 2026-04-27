@@ -3,9 +3,7 @@ title: "Configurable"
 icon: "lucide/Bolt"
 description: "Using agent execution parameters when communicating with an agent."
 ---
-
 ## What is this?
-
 LangGraph agents are able to take execution parameters, such as auth tokens and similar properties.
 You can add these using this feature.
 
@@ -16,9 +14,7 @@ If you wish to read further, you can refer to [the configuration guide by LangGr
 This is useful when you want to send execution-time configuration information (such as different tokens or metadata for a given session) that should not be part of the agent state.
 
 <Callout type="info" title="Looking for authentication?">
-  If you need to pass authentication tokens specifically, see the dedicated
-  [Authentication guide](/langgraph/auth) which covers LangGraph Platform and
-  self-hosted authentication patterns in detail.
+  If you need to pass authentication tokens specifically, see the dedicated [Authentication guide](/langgraph/auth) which covers LangGraph Platform and self-hosted authentication patterns in detail.
 </Callout>
 
 ## Implementation
@@ -28,9 +24,7 @@ By default, LangGraph agents are invoked with a `config` argument. This config h
 <Steps>
 <Step>
 ### Pass configuration from the frontend
-First, pass the configuration properties as you would like to receive them in the agent.
-
-Do not call `runAgent` directly in the component body: it would run on every render and can trigger errors such as **thread is already processing**. Use a `useEffect` with an empty dependency array (or call `runAgent` from an event handler) when you want to start the run once with a given config.
+First, pass the configuration properties as you would like to receive them in the agent
 
 ```tsx title="app/page.tsx"
 import { useAgent } from "@copilotkit/react-core/v2"; // [!code highlight]
@@ -63,7 +57,6 @@ function YourMainContent() {
   return (... your component UI markdown)
 }
 ```
-
 </Step>
 <Step>
 ### Use configurables in agent
@@ -88,7 +81,6 @@ Now you can simply pull the values from the provided config argument in any agen
         }
         ```
     </Tab>
-
 </Tabs>
 </Step>
 <Step>
@@ -114,19 +106,20 @@ Now you can simply pull the values from the provided config argument in any agen
         </Tab>
         <Tab value="TypeScript">
             ```typescript
+            import { StateSchema } from "@langchain/langgraph";
+            import { z } from "zod";
 
             // define which properties will be allowed in the configuration
-            export const ConfigSchemaAnnotation = Annotation.Root({
-              authToken: Annotation<string>
+            export const ConfigSchema = new StateSchema({
+              authToken: z.string()
             })
 
             // ...add all necessary graph nodes
 
             // when defining the state graph, apply the config schema
-            const workflow = new StateGraph(AgentStateAnnotation, ConfigSchemaAnnotation)
+            const workflow = new StateGraph(AgentStateSchema, ConfigSchema)
             ```
         </Tab>
     </Tabs>
-
 </Step>
 </Steps>
