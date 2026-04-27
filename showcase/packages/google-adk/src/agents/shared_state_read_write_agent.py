@@ -95,11 +95,13 @@ def _inject_preferences(
         original_text = str(original)
 
     sig_idx = original_text.find(PREFS_PREFIX_SIGNATURE)
+    stripped_prior_block = False
     if sig_idx != -1:
         # Splice out only the prior block (preserve head + tail).
         # See agent_config_agent.py for the full rationale.
         end_idx = original_text.find(PREFS_END_MARKER, sig_idx)
         if end_idx != -1:
+            stripped_prior_block = True
             original_text = (
                 original_text[:sig_idx]
                 + original_text[end_idx + len(PREFS_END_MARKER) :]
@@ -116,11 +118,14 @@ def _inject_preferences(
     else:
         new_text = original_text
 
-    if not new_text:
-        # Nothing to inject. Leave system_instruction as-is — writing
-        # Content(text="") would clobber the LlmAgent's static
-        # `instruction=` if `original` is a non-None empty Content (e.g.
-        # after stripping a prior block that was the entire Content).
+    if not new_text and not stripped_prior_block:
+        # Nothing to inject AND we didn't strip anything. Leave
+        # system_instruction as-is — writing Content(text="") would
+        # clobber the LlmAgent's static `instruction=`. If we DID
+        # strip a prior block we must fall through and write the
+        # result so the stale block doesn't stay embedded in the
+        # existing Content. See agent_config_agent.py for full
+        # rationale.
         return None
 
     llm_request.config.system_instruction = types.Content(

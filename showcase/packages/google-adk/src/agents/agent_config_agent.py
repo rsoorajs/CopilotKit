@@ -77,9 +77,11 @@ def _inject_config(
         original_text = str(original)
 
     sig_idx = original_text.find(CONFIG_PREFIX_SIGNATURE)
+    stripped_prior_block = False
     if sig_idx != -1:
         end_idx = original_text.find(CONFIG_END_MARKER, sig_idx)
         if end_idx != -1:
+            stripped_prior_block = True
             # Splice out only the prior block. Earlier versions sliced
             # `original_text[end_idx + len(...):]` which silently DROPPED
             # everything from position 0 to sig_idx — fine when our prior
@@ -107,15 +109,20 @@ def _inject_config(
     else:
         new_text = original_text
 
-    if not new_text:
-        # Nothing to inject. Leave system_instruction as-is — writing an
-        # empty Content here would stomp whatever the LlmAgent's
-        # `instruction=` field provided to ADK. The earlier guard also
-        # required `original is None`, but that missed the case where
-        # `original` is a non-None Content with empty text (which can
-        # happen after stripping a prior block that was the entire
-        # Content); in that branch we'd still write Content(text="") and
-        # clobber the static instruction on subsequent turns.
+    if not new_text and not stripped_prior_block:
+        # Nothing to inject AND we didn't strip anything from `original`.
+        # Leave system_instruction as-is — writing an empty Content here
+        # would stomp whatever the LlmAgent's `instruction=` field
+        # provided to ADK.
+        #
+        # If we DID strip a prior block (stripped_prior_block=True) we
+        # must fall through and write the result, even if empty —
+        # otherwise the stale block stays embedded in the existing
+        # Content. In practice this branch is unreachable for our agents
+        # (their `_INSTRUCTION` is non-empty so `original_text` after
+        # stripping always contains at least the static instruction),
+        # but the explicit gate keeps the invariant honest if anyone
+        # ever wires up an LlmAgent with an empty `instruction=`.
         return None
 
     llm_request.config.system_instruction = types.Content(
