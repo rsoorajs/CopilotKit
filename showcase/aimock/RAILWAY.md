@@ -100,18 +100,27 @@ query {
 
 ## 4. Fixture sources
 
-Two fixtures are served, fetched remotely at container boot:
+Three fixtures are served, fetched remotely at container boot:
 
+- D5 fixture bundle: <https://raw.githubusercontent.com/CopilotKit/CopilotKit/main/showcase/aimock/d5-all.json>
+  — 23 fixtures covering the 9 D5 (e2e-deep) probe feature types. Bundled
+  from `showcase/ops/fixtures/d5/*.json`. Must load BEFORE feature-parity
+  to win match precedence (D5 uses specific prompts that overlap with
+  feature-parity's broader substring matches).
 - Smoke fixture: <https://raw.githubusercontent.com/CopilotKit/CopilotKit/main/showcase/aimock/smoke.json>
   — minimal "OK" ping for health verification.
 - Feature-parity fixture: <https://raw.githubusercontent.com/CopilotKit/CopilotKit/main/showcase/aimock/feature-parity.json>
   — realistic tool-call / reasoning / streaming responses used by the
   showcase demos.
 
-Both files sit in this same directory (`showcase/aimock/`). Edits land in the
+All files sit in this directory (`showcase/aimock/`). Edits land in the
 container on the next Railway restart — aimock fetches fixtures at boot and
 caches to disk. Note the `raw.githubusercontent.com` edge cache is ~5 minutes,
 so propagation after a merge is usually ~5 min + restart latency.
+
+When updating D5 fixtures, edit the individual files in `showcase/ops/fixtures/d5/`,
+then re-bundle into `d5-all.json` by running the merge script or manually
+combining the `fixtures` arrays. The bundle must stay in sync.
 
 ## 5. Start command
 
@@ -128,6 +137,7 @@ node /app/dist/cli.js \
   --provider-openai https://api.openai.com \
   --provider-anthropic https://api.anthropic.com \
   --provider-gemini https://generativelanguage.googleapis.com \
+  --fixtures https://raw.githubusercontent.com/CopilotKit/CopilotKit/main/showcase/aimock/d5-all.json \
   --fixtures https://raw.githubusercontent.com/CopilotKit/CopilotKit/main/showcase/aimock/smoke.json \
   --fixtures https://raw.githubusercontent.com/CopilotKit/CopilotKit/main/showcase/aimock/feature-parity.json \
   --validate-on-load \
@@ -144,7 +154,7 @@ Flag-by-flag:
 | `--provider-openai`     | `https://api.openai.com`                    | Upstream URL for OpenAI passthrough.                                                      |
 | `--provider-anthropic`  | `https://api.anthropic.com`                 | Upstream URL for Anthropic passthrough.                                                   |
 | `--provider-gemini`     | `https://generativelanguage.googleapis.com` | Upstream URL for Gemini passthrough.                                                      |
-| `--fixtures` (×2 URLs)  | Remote URLs above                           | Repeatable flag; each loads one JSON fixture at boot, with cache-fallback on failure.     |
+| `--fixtures` (×3 URLs)  | Remote URLs above                           | Repeatable flag; each loads one JSON fixture at boot, with cache-fallback on failure. D5 must appear first for match precedence. |
 | `--validate-on-load`    | —                                           | Fail-loud on schema errors; allows cache-fallback only when network fetch fails.          |
 | `--host`                | `0.0.0.0`                                   | Bind all interfaces so Railway can route to the container.                                |
 | `--port`                | `4010`                                      | Hardcoded listen port — matches the legacy wrapper container convention and the fixed     |
