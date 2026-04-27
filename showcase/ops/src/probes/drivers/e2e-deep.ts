@@ -9,6 +9,7 @@ import {
   type D5BuildContext,
   type D5FeatureType,
   type D5Script,
+  isD5FeatureType,
 } from "../helpers/d5-registry.js";
 import { demosToFeatureTypes } from "../helpers/d5-feature-mapping.js";
 import {
@@ -245,7 +246,11 @@ export const FEATURE_CONCURRENCY = 2;
 export class Semaphore {
   private queue: (() => void)[] = [];
   private active = 0;
-  constructor(private readonly limit: number) {}
+  constructor(private readonly limit: number) {
+    if (!Number.isFinite(limit) || limit < 1) {
+      throw new Error(`Semaphore limit must be >= 1, got ${limit}`);
+    }
+  }
   async acquire(): Promise<void> {
     if (this.active < this.limit) {
       this.active++;
@@ -254,6 +259,11 @@ export class Semaphore {
     return new Promise<void>((resolve) => this.queue.push(resolve));
   }
   release(): void {
+    if (this.active <= 0) {
+      throw new Error(
+        "Semaphore.release() called without matching acquire()",
+      );
+    }
     this.active--;
     const next = this.queue.shift();
     if (next) {
@@ -268,23 +278,13 @@ function defaultRoute(featureType: D5FeatureType, _ctx?: unknown): string {
   return `/demos/${featureType}`;
 }
 
-/** True when the registered featureType set still has wave-2b gaps. */
-const ALL_KNOWN_FEATURES: readonly D5FeatureType[] = [
-  "agentic-chat",
-  "tool-rendering",
-  "shared-state-read",
-  "shared-state-write",
-  "hitl-approve-deny",
-  "hitl-text-input",
-  "gen-ui-headless",
-  "gen-ui-custom",
-  "mcp-apps",
-  "subagents",
-] as const;
-
-function isKnownFeatureType(value: string): value is D5FeatureType {
-  return (ALL_KNOWN_FEATURES as readonly string[]).includes(value);
-}
+/**
+ * Re-use the canonical `isD5FeatureType` from `d5-registry.ts` as
+ * `isKnownFeatureType` so the driver's filter stays in sync with
+ * the closed enum without maintaining a redundant list.
+ */
+const isKnownFeatureType: (value: string) => value is D5FeatureType =
+  isD5FeatureType;
 
 /**
  * Default Playwright-backed launcher. Mirrors the e2e-demos driver
@@ -785,7 +785,8 @@ export function createE2eDeepDriver(
         // so `settled[i]` corresponds to `runnable[i]`.
         let passed = 0;
         const failed: string[] = [];
-        for (const outcome of settled) {
+        for (let i = 0; i < settled.length; i++) {
+          const outcome = settled[i]!;
           if (outcome.status === "fulfilled") {
             if (outcome.value.ok) {
               passed++;
@@ -795,7 +796,16 @@ export function createE2eDeepDriver(
           } else {
             // Rejected promise — should not happen since runFeature
             // catches internally, but guard defensively.
-            failed.push("unknown");
+            const ft = runnable[i]!;
+            ctx.logger.error("probe.e2e-deep.feature-promise-rejected", {
+              slug,
+              featureType: ft,
+              err:
+                outcome.reason instanceof Error
+                  ? outcome.reason.message
+                  : String(outcome.reason),
+            });
+            failed.push(ft);
           }
         }
 

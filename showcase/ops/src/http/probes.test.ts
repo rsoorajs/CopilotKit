@@ -403,11 +403,13 @@ describe("POST /api/probes/:id/trigger", () => {
     expect(res.headers.get("cache-control")).toBe("no-cache");
     const body = await res.json();
     // R4-A.1: scope is null when no filter was provided in the body.
+    // featureTypesScope is null when no featureTypes filter was sent.
     expect(body).toEqual({
       runId: "run_xyz",
       status: "queued",
       probe: "smoke",
       scope: null,
+      featureTypesScope: null,
     });
   });
 

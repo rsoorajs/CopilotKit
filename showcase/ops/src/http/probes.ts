@@ -395,6 +395,7 @@ export function registerProbesRoutes(app: Hono, deps: ProbesRouteDeps): void {
             );
           }
           filterFeatureTypes = featureTypes;
+          filterProvided = true;
         }
 
         // Build opts with whichever filter fields were provided.
@@ -444,11 +445,13 @@ export function registerProbesRoutes(app: Hono, deps: ProbesRouteDeps): void {
       // R4-A.1: scope is null when no filter was provided in the body;
       // the actual array (possibly empty) when filter.slugs was sent.
       // This lets operators distinguish "no filter" from "filter:[]".
+      // featureTypesScope follows the same convention for featureTypes.
       return c.json({
         runId: result.runId,
         status: result.status,
         probe: result.probe,
         scope: filterProvided ? filterSlugs : null,
+        featureTypesScope: filterFeatureTypes ?? null,
       });
     } catch (err) {
       // R4-A.6: roll back the rate-limit stamp on ALL non-success paths,
