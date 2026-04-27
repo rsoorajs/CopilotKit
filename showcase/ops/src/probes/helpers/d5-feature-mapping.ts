@@ -40,10 +40,11 @@ import type { D5FeatureType } from "./d5-registry.js";
  * Entries are grouped by D5 destination to make the many-to-one shape
  * obvious at a glance:
  *   - `agentic-chat`           : 1 demo
- *   - `tool-rendering`         : 4 demos (all the tool-rendering variants)
+ *   - `tool-rendering`         : 3 demos (all the tool-rendering variants)
  *   - `gen-ui-headless`        : 2 demos (headless chat surfaces)
  *   - `gen-ui-custom`          : 1 demo
- *   - `hitl-text-input`        : 4 demos (in-chat HITL variants)
+ *   - `hitl-text-input`        : 3 demos (in-chat HITL variants)
+ *   - `hitl-steps`             : 1 demo (step-selection confirmation)
  *   - `hitl-approve-deny`      : 1 demo (modal/in-app approval)
  *   - `shared-state-read|write`: 1 demo, 2 D5 types (one-to-many)
  *   - `mcp-apps`               : 1 demo
@@ -78,7 +79,7 @@ const REGISTRY_TO_D5: Readonly<Record<string, readonly D5FeatureType[]>> = {
   "hitl-in-chat": ["hitl-text-input"],
   "hitl-in-chat-booking": ["hitl-text-input"],
   "gen-ui-interrupt": ["hitl-text-input"],
-  hitl: ["hitl-text-input"],
+  hitl: ["hitl-steps"],
 
   // hitl (approve/deny tier) — out-of-chat modal approval flow.
   "hitl-in-app": ["hitl-approve-deny"],

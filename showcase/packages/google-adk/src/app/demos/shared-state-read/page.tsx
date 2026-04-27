@@ -445,7 +445,9 @@ function Recipe() {
                 role: "user",
                 content: "Improve the recipe",
               });
-              copilotkit.runAgent({ agent });
+              void copilotkit.runAgent({ agent }).catch((err) => {
+                console.error("[shared-state-read] runAgent failed:", err);
+              });
             }
           }}
           disabled={isLoading}

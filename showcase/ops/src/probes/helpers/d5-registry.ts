@@ -37,6 +37,7 @@ export type D5FeatureType =
   | "shared-state-read"
   | "shared-state-write"
   | "hitl-approve-deny"
+  | "hitl-steps"
   | "hitl-text-input"
   | "gen-ui-headless"
   | "gen-ui-custom"
@@ -45,9 +46,8 @@ export type D5FeatureType =
 
 /**
  * Closed-set runtime mirror of `D5FeatureType`. Kept in lock-step with
- * the type union so a TypeScript error fires if the two drift apart
- * (the `satisfies` constraint forces this list to remain a superset
- * of the union).
+ * the type union manually. The `satisfies` constraint ensures no invalid
+ * entries but does not enforce completeness.
  */
 const D5_FEATURE_TYPES: readonly D5FeatureType[] = [
   "agentic-chat",
@@ -55,6 +55,7 @@ const D5_FEATURE_TYPES: readonly D5FeatureType[] = [
   "shared-state-read",
   "shared-state-write",
   "hitl-approve-deny",
+  "hitl-steps",
   "hitl-text-input",
   "gen-ui-headless",
   "gen-ui-custom",
