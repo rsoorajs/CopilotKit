@@ -142,6 +142,8 @@
       "allowedDivergence": [
         "agent/**",
         "src/app/api/copilotkit/**",
+        "docker/Dockerfile.agent",
+        "docker-compose.test.yml",
         "scripts/**"
       ],
       "packageJsonOverrides": {
