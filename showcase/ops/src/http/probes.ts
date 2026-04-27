@@ -342,7 +342,7 @@ export function registerProbesRoutes(app: Hono, deps: ProbesRouteDeps): void {
     // (filter sent but empty). Operators rely on this distinction when
     // reading audit logs.
     let filterSlugs: string[] = [];
-    let filterProvided = false;
+    let slugsProvided = false;
     let filterFeatureTypes: string[] | undefined;
     let opts:
       | { filter?: { slugs?: string[]; featureTypes?: string[] } }
@@ -368,7 +368,7 @@ export function registerProbesRoutes(app: Hono, deps: ProbesRouteDeps): void {
             return c.json({ error: "invalid_filter" }, 400);
           }
           filterSlugs = slugs;
-          filterProvided = true;
+          slugsProvided = true;
         }
 
         // B2: validate featureTypes — must be a non-empty array of
@@ -395,7 +395,6 @@ export function registerProbesRoutes(app: Hono, deps: ProbesRouteDeps): void {
             );
           }
           filterFeatureTypes = featureTypes;
-          filterProvided = true;
         }
 
         // Build opts with whichever filter fields were provided.
@@ -442,15 +441,15 @@ export function registerProbesRoutes(app: Hono, deps: ProbesRouteDeps): void {
     try {
       const result = await scheduler.trigger(id, opts);
       // Stamp already in place — leave it.
-      // R4-A.1: scope is null when no filter was provided in the body;
+      // R4-A.1: scope is null when filter.slugs was NOT sent;
       // the actual array (possibly empty) when filter.slugs was sent.
-      // This lets operators distinguish "no filter" from "filter:[]".
+      // This lets operators distinguish "no slug filter" from "filter:[]".
       // featureTypesScope follows the same convention for featureTypes.
       return c.json({
         runId: result.runId,
         status: result.status,
         probe: result.probe,
-        scope: filterProvided ? filterSlugs : null,
+        scope: slugsProvided ? filterSlugs : null,
         featureTypesScope: filterFeatureTypes ?? null,
       });
     } catch (err) {

@@ -806,6 +806,25 @@ export function createE2eDeepDriver(
                   : String(outcome.reason),
             });
             failed.push(ft);
+            try {
+              await sideEmit(ctx, {
+                key: `d5:${slug}/${ft}`,
+                state: "red",
+                signal: {
+                  slug,
+                  featureType: ft,
+                  backendUrl,
+                  errorClass: "promise-rejected",
+                  errorDesc:
+                    outcome.reason instanceof Error
+                      ? outcome.reason.message
+                      : String(outcome.reason),
+                },
+                observedAt: ctx.now().toISOString(),
+              });
+            } catch {
+              // Best-effort — sideEmit already logs internally.
+            }
           }
         }
 
