@@ -3,16 +3,17 @@ import {
   createCopilotEndpoint,
   InMemoryAgentRunner,
 } from "@copilotkit/runtime/v2";
-import { LangGraphAgent } from "@copilotkit/runtime/langgraph";
 import { handle } from "hono/vercel";
+import { LangGraphHttpAgent } from "@copilotkit/runtime/langgraph";
 
-const defaultAgent = new LangGraphAgent({
-  deploymentUrl:
-    process.env.AGENT_URL ||
-    process.env.LANGGRAPH_DEPLOYMENT_URL ||
-    "http://localhost:8123",
-  graphId: "sample_agent",
-  langsmithApiKey: process.env.LANGSMITH_API_KEY || "",
+// FastAPI-specific: the agent runs under uvicorn + ag-ui-langgraph, which
+// speaks AG-UI directly. We talk to it via HttpAgent, not LangGraphAgent
+// (LangGraphAgent targets the LangGraph Platform / langgraph-cli dev
+// surface, which is a different protocol). Everything else — runtime
+// config, v2 endpoint wiring, MCP apps, openGenerativeUI, a2ui — mirrors
+// the reference demo.
+const defaultAgent = new LangGraphHttpAgent({
+  url: `${process.env.AGENT_URL || "http://localhost:8123"}/`,
 });
 
 const runtime = new CopilotRuntime({

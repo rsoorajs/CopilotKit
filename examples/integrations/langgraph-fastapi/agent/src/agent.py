@@ -8,6 +8,7 @@ FastAPI wrapper in main.py imports `graph` from here.
 from copilotkit import CopilotKitMiddleware, StateStreamingMiddleware, StateItem
 from langchain.agents import create_agent
 from langchain_openai import ChatOpenAI
+from langgraph.checkpoint.memory import MemorySaver
 
 from src.a2ui_dynamic_schema import generate_a2ui
 from src.a2ui_fixed_schema import search_flights
@@ -16,6 +17,10 @@ from src.todos import AgentState, todo_tools
 
 model = ChatOpenAI(model="gpt-5.4", model_kwargs={"parallel_tool_calls": False})
 
+# FastAPI-specific: langgraph-cli dev supplies its own checkpointer in the
+# reference demo. Here we run under uvicorn + ag-ui-langgraph, so the graph
+# needs an explicit MemorySaver for state/thread persistence within a
+# process.
 agent = create_agent(
     model=model,
     tools=[query_data, *todo_tools, generate_a2ui, search_flights],
@@ -26,6 +31,7 @@ agent = create_agent(
         ),
     ],
     state_schema=AgentState,
+    checkpointer=MemorySaver(),
     system_prompt="""
         You are a polished, professional demo assistant. Keep responses to 1-2 sentences.
 
