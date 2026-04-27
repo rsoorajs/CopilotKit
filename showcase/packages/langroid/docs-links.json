@@ -1,5 +1,5 @@
 {
-  "framework": "spring-ai",
+  "framework": "langroid",
   "features": {
     "agentic-chat": {
       "og_docs_url": "https://docs.copilotkit.ai/agentic-chat-ui",
@@ -36,8 +36,8 @@
   },
   "missing": [
     {
-      "feature": "subagents",
-      "reason": "No spring-ai-scoped multi-agent/subagent docs exist. OG falls back to the framework-agnostic /multi-agent overview; shell points at the unified /multi-agent/subagents content."
+      "feature": "all",
+      "reason": "No langroid-scoped docs tree exists on docs.copilotkit.ai (returns SPA fallback). All OG URLs fall back to framework-agnostic top-level pages; shell paths point at the unified content tree which renders under /langroid/unselected/..."
     }
   ]
 }

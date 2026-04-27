@@ -30,7 +30,7 @@
       "shell_docs_path": "/shared-state"
     },
     "subagents": {
-      "og_docs_url": null,
+      "og_docs_url": "https://docs.copilotkit.ai/llamaindex/multi-agent-flows",
       "shell_docs_path": "/multi-agent/subagents"
     }
   }

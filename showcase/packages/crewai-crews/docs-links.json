@@ -30,14 +30,8 @@
       "shell_docs_path": "/shared-state"
     },
     "subagents": {
-      "og_docs_url": null,
-      "shell_docs_path": null
+      "og_docs_url": "https://docs.copilotkit.ai/crewai-crews/multi-agent-flows",
+      "shell_docs_path": "/multi-agent/subagents"
     }
-  },
-  "missing": [
-    {
-      "feature": "subagents",
-      "reason": "No /crewai-crews/multi-agent-flows page on docs.copilotkit.ai (returns SPA fallback). Previous port used /crewai-flows/multi-agent-flows which is a different product."
-    }
-  ]
+  }
 }
