@@ -120,15 +120,13 @@ describe("d5-hitl-steps feature mapping", () => {
 });
 
 describe("d5-hitl-steps registry side-effect", () => {
-  it("populates the registry with the feature type after import", async () => {
+  it("registerD5Script populates the registry for hitl-steps", async () => {
     __clearD5RegistryForTesting();
     const mod = await import("./d5-hitl-steps.js");
-    if (!D5_REGISTRY.has("hitl-steps")) {
-      const { registerD5Script } = await import("../helpers/d5-registry.js");
-      registerD5Script(mod.__d5HitlStepsScript);
-    }
+    const { registerD5Script } = await import("../helpers/d5-registry.js");
+    registerD5Script(mod.__d5HitlStepsScript);
     expect(D5_REGISTRY.has("hitl-steps")).toBe(true);
     const entry = D5_REGISTRY.get("hitl-steps");
-    expect(entry?.fixtureFile).toBe("hitl-steps.json");
+    expect(entry).toBe(mod.__d5HitlStepsScript);
   });
 });

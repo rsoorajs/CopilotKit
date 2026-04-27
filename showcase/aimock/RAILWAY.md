@@ -103,7 +103,7 @@ query {
 Three fixtures are served, fetched remotely at container boot:
 
 - D5 fixture bundle: <https://raw.githubusercontent.com/CopilotKit/CopilotKit/main/showcase/aimock/d5-all.json>
-  — 23 fixtures covering the 9 D5 (e2e-deep) probe feature types. Bundled
+  — 22 fixtures across 9 fixture files covering all 11 D5 feature types. Bundled
   from `showcase/ops/fixtures/d5/*.json`. Must load BEFORE feature-parity
   to win match precedence (D5 uses specific prompts that overlap with
   feature-parity's broader substring matches).

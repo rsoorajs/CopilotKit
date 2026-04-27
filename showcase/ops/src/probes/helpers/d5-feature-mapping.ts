@@ -40,7 +40,7 @@ import type { D5FeatureType } from "./d5-registry.js";
  * Entries are grouped by D5 destination to make the many-to-one shape
  * obvious at a glance:
  *   - `agentic-chat`           : 1 demo
- *   - `tool-rendering`         : 4 demos (all the tool-rendering variants)
+ *   - `tool-rendering`         : 3 demos (all the tool-rendering variants)
  *   - `gen-ui-headless`        : 2 demos (headless chat surfaces)
  *   - `gen-ui-custom`          : 1 demo
  *   - `hitl-text-input`        : 3 demos (in-chat HITL variants)
