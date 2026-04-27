@@ -11,10 +11,10 @@
  *
  * Why a single turn: the recorded fixture
  * (`showcase/ops/fixtures/d5/tool-rendering.json`) contains one
- * userMessage match — `"weather in Tokyo"` — which fans out into TWO
- * tool calls (`get_weather` + `search_flights`) on the LGP backend per
- * its system prompt. The `toolCallId`-routed fixtures handle the second
- * leg of each tool's request/response. From the conversation runner's
+ * userMessage match — `"weather in Tokyo"` — which emits a single tool
+ * call (`get_weather`) on the LGP backend per its system prompt. The
+ * `toolCallId`-routed fixture handles the second leg of the tool's
+ * request/response. From the conversation runner's
  * perspective this is still ONE user turn — the runner sends one
  * message, waits for the assistant to settle, and runs the assertion
  * once on the resulting DOM.
