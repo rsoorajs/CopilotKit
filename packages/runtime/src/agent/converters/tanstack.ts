@@ -290,6 +290,19 @@ export async function* convertTanStackStream(
         yield stateSnapshotEvent;
       }
 
+      if (
+        toolName === "AGUISendStateDelta" &&
+        parsedContent &&
+        typeof parsedContent === "object" &&
+        "delta" in parsedContent
+      ) {
+        const stateDeltaEvent: StateDeltaEvent = {
+          type: EventType.STATE_DELTA,
+          delta: (parsedContent as Record<string, unknown>).delta as never,
+        };
+        yield stateDeltaEvent;
+      }
+
       let serializedContent: string;
       if (typeof rawContent === "string") {
         serializedContent = rawContent;
@@ -312,10 +325,9 @@ export async function* convertTanStackStream(
       toolNamesById.delete(toolCallId);
     }
     // Unhandled chunk types are silently ignored.
-    // Known gaps: STATE_DELTA and REASONING events are not yet converted from
-    // TanStack streams. Shared state (STATE_SNAPSHOT) is now supported.
+    // Known gap: REASONING events are not yet converted from TanStack streams.
     // Reasoning will not surface when using the TanStack backend.
-    // Use the AI SDK backend if these features are required.
+    // Use the AI SDK backend if reasoning is required.
   }
 }
 

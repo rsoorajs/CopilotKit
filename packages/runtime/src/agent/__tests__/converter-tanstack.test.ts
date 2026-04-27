@@ -340,4 +340,25 @@ describe("TanStack AI converter — state tools", () => {
       snapshot,
     );
   });
+
+  it("emits STATE_DELTA before TOOL_CALL_RESULT for AGUISendStateDelta", async () => {
+    const delta = [{ op: "replace", path: "/counter", value: 7 }];
+    const agent = createAgent("tanstack", [
+      tanstackToolCallStart("call1", "AGUISendStateDelta"),
+      tanstackToolCallEnd("call1"),
+      tanstackToolCallResult("call1", { success: true, delta }),
+    ]);
+    const events = await collectEvents(agent.run(createDefaultInput()));
+
+    expectLifecycleWrapped(events);
+
+    const deltaIdx = events.findIndex((e) => e.type === EventType.STATE_DELTA);
+    const resultIdx = events.findIndex(
+      (e) => e.type === EventType.TOOL_CALL_RESULT,
+    );
+
+    expect(deltaIdx).toBeGreaterThanOrEqual(0);
+    expect(deltaIdx).toBeLessThan(resultIdx);
+    expect(eventField<unknown>(events[deltaIdx], "delta")).toEqual(delta);
+  });
 });
