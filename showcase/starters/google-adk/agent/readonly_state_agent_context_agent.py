@@ -107,7 +107,7 @@ def _inject_context(
             )
 
     if block:
-        new_text = block + "\n\n" + original_text if original_text else block
+        new_text = (block + "\n\n" + original_text) if original_text else block
     else:
         new_text = original_text
 
