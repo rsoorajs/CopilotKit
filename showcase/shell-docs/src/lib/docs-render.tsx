@@ -182,12 +182,25 @@ export function buildNavTree(dir: string, prefix: string = ""): NavNode[] {
         if (subMeta?.root) continue;
         const subChildren = buildNavTree(subDir, subPrefix);
         if (subChildren.length > 0) {
-          const groupTitle =
+          const rawGroupTitle =
             subMeta?.title ||
             spreadMatch[1].replace(/[()-]/g, " ").replace(/\s+/g, " ").trim();
+          const groupTitle =
+            rawGroupTitle.charAt(0).toUpperCase() + rawGroupTitle.slice(1);
+          // If the previous emitted node is a section header with the
+          // same title as this group's title, the section header
+          // already labels this content. Suppress the group title
+          // (empty string) so the renderer skips rendering it — the
+          // group still wraps its children for indentation/nesting.
+          // Without this dedup the sidebar shows "BUILD GENERATIVE UI"
+          // (section, uppercase) followed immediately by "Build
+          // Generative UI" (group, regular case) — same text, doubled.
+          const prev = nodes[nodes.length - 1];
+          const isDuplicateOfSection =
+            prev?.type === "section" && prev.title === groupTitle;
           nodes.push({
             type: "group",
-            title: groupTitle.charAt(0).toUpperCase() + groupTitle.slice(1),
+            title: isDuplicateOfSection ? "" : groupTitle,
             slug: subPrefix,
             children: subChildren,
           });

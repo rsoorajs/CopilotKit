@@ -283,12 +283,14 @@ function OverviewNavItem({
   }
   return (
     <div className="mt-1">
-      <div
-        className="py-[5px] text-[13px] font-medium text-[var(--text-secondary)]"
-        style={{ paddingLeft: `${indent}px` }}
-      >
-        {node.title}
-      </div>
+      {node.title && (
+        <div
+          className="py-[5px] text-[13px] font-medium text-[var(--text-secondary)]"
+          style={{ paddingLeft: `${indent}px` }}
+        >
+          {node.title}
+        </div>
+      )}
       {node.children.map((child) => (
         <OverviewNavItem key={nodeKey(child)} node={child} depth={depth + 1} />
       ))}
