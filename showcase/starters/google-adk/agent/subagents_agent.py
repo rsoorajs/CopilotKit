@@ -81,7 +81,10 @@ def _invoke_sub_agent(system_prompt: str, task: str) -> str:
     # dotting through directly, otherwise we hit `AttributeError: 'NoneType'
     # object has no attribute 'parts'` on the inner access.
     content = getattr(candidates[0], "content", None)
-    parts = getattr(content, "parts", None) or [] if content is not None else []
+    # `getattr(None, "parts", None)` already returns `None`, so the `or []`
+    # tail covers both the missing-content and missing-parts cases without
+    # the redundant ternary that read like a precedence bug.
+    parts = getattr(content, "parts", None) or []
     text = "".join(getattr(p, "text", "") or "" for p in parts).strip()
     if not text:
         raise _SubAgentError("sub-agent returned empty text")
@@ -122,8 +125,13 @@ def _update_delegation(
     Pure read-modify-write (the LLM is instructed to delegate sequentially,
     so concurrent updates within a single turn are not expected). If the
     entry has gone missing — e.g., another part of the system replaced
-    `state["delegations"]` — we log a warning and append a fresh entry so
-    the UI still sees the final outcome rather than silently losing it.
+    `state["delegations"]` — we log loudly and skip rather than appending
+    a synthetic entry. The frontend's `Delegation.sub_agent` type union is
+    `"research_agent"|"writing_agent"|"critique_agent"`; falling back to a
+    `"unknown"` value would slip past Python's untyped state writes and
+    render as undefined badge text + className in `delegation-log.tsx`.
+    Skipping is the honest signal: the in-flight delegation row is gone,
+    and no row is more useful than a malformed row.
     """
     delegations = list(tool_context.state.get("delegations") or [])
     for entry in delegations:
@@ -133,19 +141,13 @@ def _update_delegation(
             tool_context.state["delegations"] = delegations
             return
     logger.warning(
-        "subagent: delegation entry %s missing on update; appending replacement",
+        "subagent: delegation entry %s missing on update — final %s state "
+        "(result_length=%d) will not be rendered; this means another part "
+        "of the system replaced state['delegations'] mid-turn",
         entry_id,
+        status,
+        len(result),
     )
-    delegations.append(
-        {
-            "id": entry_id,
-            "sub_agent": "unknown",
-            "task": "",
-            "status": status,
-            "result": result,
-        }
-    )
-    tool_context.state["delegations"] = delegations
 
 def _delegate(
     tool_context: ToolContext, *, sub_agent: str, system_prompt: str, task: str

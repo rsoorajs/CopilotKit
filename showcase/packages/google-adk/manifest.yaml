@@ -334,7 +334,7 @@ demos:
       - src/app/demos/declarative-gen-ui/a2ui/catalog.ts
       - src/app/demos/declarative-gen-ui/a2ui/definitions.ts
       - src/app/demos/declarative-gen-ui/a2ui/renderers.tsx
-      - src/app/api/copilotkit/route.ts
+      - src/app/api/copilotkit-declarative-gen-ui/route.ts
   - id: a2ui-fixed-schema
     name: Declarative Generative UI (A2UI — Fixed Schema)
     description: A2UI rendering against a known client-side schema
@@ -349,7 +349,7 @@ demos:
       - src/app/demos/a2ui-fixed-schema/page.tsx
       - src/app/demos/a2ui-fixed-schema/a2ui/catalog.ts
       - src/app/demos/a2ui-fixed-schema/a2ui/renderers.tsx
-      - src/app/api/copilotkit/route.ts
+      - src/app/api/copilotkit-a2ui-fixed-schema/route.ts
   - id: readonly-state-agent-context
     name: Readonly State (Agent Context)
     description: Frontend provides read-only context to the agent via useAgentContext
@@ -384,7 +384,7 @@ demos:
       - src/agents/byoc_agents.py
       - src/app/demos/byoc-json-render/page.tsx
       - src/app/demos/byoc-json-render/json-render-renderer.tsx
-      - src/app/api/copilotkit/route.ts
+      - src/app/api/copilotkit-byoc-json-render/route.ts
   - id: beautiful-chat
     name: Beautiful Chat
     description: Canonical polished starter chat — brand fonts, theme tokens, suggestion pills
@@ -417,7 +417,8 @@ demos:
     highlight:
       - src/app/demos/auth/page.tsx
       - src/app/demos/auth/auth-banner.tsx
-      - src/app/api/copilotkit/route.ts
+      - src/app/demos/auth/demo-token.ts
+      - src/app/api/copilotkit-auth/route.ts
   - id: byoc-hashbrown
     name: BYOC Hashbrown
     description: Streaming structured output via @hashbrownai/react, rendering a sales dashboard catalog (MetricCard + PieChart + BarChart)
@@ -428,7 +429,7 @@ demos:
     highlight:
       - src/agents/byoc_agents.py
       - src/app/demos/byoc-hashbrown/page.tsx
-      - src/app/api/copilotkit/route.ts
+      - src/app/api/copilotkit-byoc-hashbrown/route.ts
   - id: open-gen-ui
     name: Fully Open-Ended Generative UI
     description: Agent generates UI from an arbitrary component library
@@ -439,7 +440,7 @@ demos:
     highlight:
       - src/agents/open_gen_ui_agents.py
       - src/app/demos/open-gen-ui/page.tsx
-      - src/app/api/copilotkit/route.ts
+      - src/app/api/copilotkit-ogui/route.ts
   - id: open-gen-ui-advanced
     name: "Open-Ended Gen UI (Advanced: with frontend function calling)"
     description: Agent-authored UI that can invoke frontend sandbox functions from inside the iframe
@@ -450,7 +451,7 @@ demos:
     highlight:
       - src/agents/open_gen_ui_agents.py
       - src/app/demos/open-gen-ui-advanced/page.tsx
-      - src/app/api/copilotkit/route.ts
+      - src/app/api/copilotkit-ogui/route.ts
   - id: voice
     name: Voice Input
     description: Speech-to-text via @copilotkit/voice with a bundled sample audio button

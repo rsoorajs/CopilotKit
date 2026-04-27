@@ -2,11 +2,18 @@
 
 import React from "react";
 
+// Narrow union to match what the runtime + page actually emit. The v2
+// `DefaultRenderProps` runtime status enum is `"inProgress" | "executing"
+// | "complete"` and the page collapses both pre-completion variants to
+// `"executing"`. There is no `"incomplete"` state today; including it
+// here would create a dead branch that hides the lack of UX for
+// truly-failed tool calls (which would surface via a different
+// mechanism, not this status enum).
 interface CustomCatchallRendererProps {
   name: string;
   args: Record<string, unknown>;
   result: unknown;
-  status: "executing" | "complete" | "incomplete";
+  status: "executing" | "complete";
 }
 
 const FALLBACK_RESULT_LABEL = "tool returned no payload";
@@ -36,9 +43,7 @@ export function CustomCatchallRenderer({
           className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${
             status === "complete"
               ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-              : status === "executing"
-                ? "bg-amber-50 text-amber-700 border border-amber-200"
-                : "bg-gray-50 text-gray-700 border border-gray-200"
+              : "bg-amber-50 text-amber-700 border border-amber-200"
           }`}
         >
           {status}

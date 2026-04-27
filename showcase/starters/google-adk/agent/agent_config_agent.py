@@ -49,6 +49,13 @@ def _format_config(config: dict | None) -> str | None:
         lines.append(f"- Response length: {config['response_length']}")
     if config.get("language"):
         lines.append(f"- Language: {config['language']}")
+    if len(lines) == 1:
+        # Truthy dict but no recognized keys (schema drift or
+        # future-extension forwardedProps). Avoid emitting a meaningless
+        # [SIG, END_MARKER] block that tells the LLM to "Honour every
+        # directive above" with no actual directives. Mirrors the same
+        # guard in readonly_state_agent_context_agent._format_context.
+        return None
     lines.append(CONFIG_END_MARKER)
     return "\n".join(lines)
 

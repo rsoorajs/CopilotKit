@@ -22,6 +22,24 @@ const SUB_AGENT_LABEL: Record<Delegation["sub_agent"], string> = {
   critique_agent: "Critique",
 };
 
+const STATUS_BADGE_CLASS: Record<Delegation["status"], string> = {
+  running: "bg-amber-50 text-amber-700 border-amber-200",
+  completed: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  failed: "bg-red-50 text-red-700 border-red-200",
+};
+
+const STATUS_LABEL: Record<Delegation["status"], string> = {
+  running: "running…",
+  completed: "completed",
+  failed: "failed",
+};
+
+const ENTRY_BORDER_BY_STATUS: Record<Delegation["status"], string> = {
+  running: "border-amber-200 bg-amber-50/40",
+  completed: "border-[#E9E9EF] bg-[#FAFAFC]",
+  failed: "border-red-200 bg-red-50/40",
+};
+
 export function DelegationLog({ delegations }: { delegations: Delegation[] }) {
   return (
     <div
@@ -44,7 +62,8 @@ export function DelegationLog({ delegations }: { delegations: Delegation[] }) {
             <article
               key={d.id}
               data-testid="delegation-entry"
-              className="rounded-xl border border-[#E9E9EF] bg-[#FAFAFC] p-3"
+              data-status={d.status}
+              className={`rounded-xl border p-3 ${ENTRY_BORDER_BY_STATUS[d.status]}`}
             >
               <div className="flex items-center gap-2 mb-2">
                 <span
@@ -52,16 +71,32 @@ export function DelegationLog({ delegations }: { delegations: Delegation[] }) {
                 >
                   {SUB_AGENT_LABEL[d.sub_agent]}
                 </span>
-                <span className="text-[11px] uppercase tracking-wider text-[#838389]">
-                  {d.status}
+                <span
+                  className={`text-[11px] font-medium px-2 py-0.5 rounded-full border ${STATUS_BADGE_CLASS[d.status]}`}
+                >
+                  {STATUS_LABEL[d.status]}
                 </span>
               </div>
               <div className="text-xs text-[#57575B] mb-2">
                 <strong className="text-[#010507]">Task:</strong> {d.task}
               </div>
-              <div className="text-xs text-[#010507] whitespace-pre-wrap">
-                {d.result}
-              </div>
+              {d.status === "running" ? (
+                <div className="flex items-center gap-2 text-xs text-amber-700">
+                  <span
+                    className="inline-block w-3 h-3 rounded-full border-2 border-amber-500 border-t-transparent animate-spin"
+                    aria-hidden
+                  />
+                  Sub-agent is working…
+                </div>
+              ) : (
+                <div
+                  className={`text-xs whitespace-pre-wrap ${
+                    d.status === "failed" ? "text-red-700" : "text-[#010507]"
+                  }`}
+                >
+                  {d.result}
+                </div>
+              )}
             </article>
           ))
         )}

@@ -13,7 +13,7 @@ each agent name to the matching backend path.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Iterable, Optional
+from typing import Optional, Sequence
 
 from ag_ui_adk.config import PredictStateMapping
 from google.adk.agents import LlmAgent
@@ -65,7 +65,10 @@ class AgentSpec:
     """Backend wiring for a single demo agent."""
 
     llm_agent: LlmAgent
-    predict_state: Optional[Iterable[PredictStateMapping]] = field(default=None)
+    # Sequence (not Iterable) so a one-shot generator passed by mistake
+    # doesn't silently empty after the first request consumes it. The
+    # registry currently uses module-level lists, which satisfy Sequence.
+    predict_state: Optional[Sequence[PredictStateMapping]] = field(default=None)
     emit_messages_snapshot: bool = False
     # `streaming_function_call_arguments=True` opts the ADKAgent middleware
     # into per-token TOOL_CALL_ARGS events (requires google-adk >= 1.24.0
