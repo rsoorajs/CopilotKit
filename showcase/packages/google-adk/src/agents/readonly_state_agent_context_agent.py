@@ -111,7 +111,11 @@ def _inject_context(
     else:
         new_text = original_text
 
-    if not new_text and original is None:
+    if not new_text:
+        # Nothing to inject. Leave system_instruction as-is — writing
+        # Content(text="") would clobber the LlmAgent's static
+        # `instruction=` if `original` is a non-None empty Content (e.g.
+        # after stripping a prior block that was the entire Content).
         return None
 
     llm_request.config.system_instruction = types.Content(

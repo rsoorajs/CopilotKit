@@ -105,12 +105,15 @@ def _inject_config(
     else:
         new_text = original_text
 
-    if not new_text and original is None:
-        # Nothing to inject AND nothing was there originally. Don't
-        # overwrite system_instruction with an empty Content — leave
-        # whatever the LlmAgent's `instruction=` field provided to ADK
-        # untouched. Writing an empty Content here previously stomped
-        # the agent's static instruction on subsequent turns.
+    if not new_text:
+        # Nothing to inject. Leave system_instruction as-is — writing an
+        # empty Content here would stomp whatever the LlmAgent's
+        # `instruction=` field provided to ADK. The earlier guard also
+        # required `original is None`, but that missed the case where
+        # `original` is a non-None Content with empty text (which can
+        # happen after stripping a prior block that was the entire
+        # Content); in that branch we'd still write Content(text="") and
+        # clobber the static instruction on subsequent turns.
         return None
 
     llm_request.config.system_instruction = types.Content(

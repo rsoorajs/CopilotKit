@@ -9,7 +9,8 @@ import {
   useConfigureSuggestions,
 } from "@copilotkit/react-core/v2";
 
-import { PreferencesCard, Preferences } from "./preferences-card";
+import type { Preferences } from "./preferences-card";
+import { PreferencesCard } from "./preferences-card";
 import { NotesCard } from "./notes-card";
 
 const INITIAL_PREFERENCES: Preferences = {
@@ -71,11 +72,13 @@ function DemoContent() {
       // Spread the observed state so any keys the runtime owns
       // (`copilotkit` slot, future framework additions) survive the
       // seed write — `agent.setState` replaces the whole state object
-      // rather than merging.
+      // rather than merging. `notes` falls back to the observed value
+      // (or `[]` if absent) so an existing notes list isn't wiped just
+      // because the user landed without persisted preferences.
       agent.setState({
         ...((agentState as object | undefined) ?? {}),
         preferences: INITIAL_PREFERENCES,
-        notes: [],
+        notes: agentState?.notes ?? [],
       } as RWAgentState);
     }
   }, [agent, agentState]);
