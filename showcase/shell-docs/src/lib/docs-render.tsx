@@ -344,7 +344,22 @@ export function buildFrameworkOverridesNav(folder: string): NavNode[] {
     // up the visual hierarchy — the override block is already wrapped
     // in a single `{frameworkName}` section by mergeFrameworkNav.
   }
-  return filtered;
+
+  // Flatten empty-title wrapper groups. buildNavTree clears the title on
+  // a spread-derived group when the preceding section header has the
+  // same name (so the renderer doesn't double-print "Generative UI").
+  // After we drop section headers above, those wrappers are left as
+  // titleless containers that only add an extra indent step around
+  // their children. Inline the children at the wrapper's level instead.
+  const flattened: NavNode[] = [];
+  for (const node of filtered) {
+    if (node.type === "group" && node.title === "") {
+      flattened.push(...node.children);
+    } else {
+      flattened.push(node);
+    }
+  }
+  return flattened;
 }
 
 /**
