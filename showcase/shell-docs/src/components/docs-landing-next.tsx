@@ -94,16 +94,23 @@ function FrameworkPicker({
 }
 
 export function DocsLandingNext() {
-  const { storedFramework, setStoredFramework } = useFramework();
+  const { framework, storedFramework, setStoredFramework } = useFramework();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  if (!mounted) return null;
+  // Prefer the URL-active framework, then fall back to the stored
+  // preference. On `/<framework>`, framework is set in SSR and we can
+  // render the "Continue with X" branch immediately. On `/`, framework
+  // is null and we wait for mount to read storedFramework — same shape
+  // as the previous mount-then-stored flow.
+  const activeFramework = framework ?? (mounted ? storedFramework : null);
 
-  if (!storedFramework) {
+  if (!framework && !mounted) return null;
+
+  if (!activeFramework) {
     return (
       <FrameworkPicker
         heading="Pick your agent framework"
@@ -112,7 +119,7 @@ export function DocsLandingNext() {
     );
   }
 
-  const integration = getIntegration(storedFramework);
+  const integration = getIntegration(activeFramework);
   if (!integration) {
     // Stored slug doesn't match any current integration (renamed,
     // removed, or stale localStorage). Fall back to the picker.

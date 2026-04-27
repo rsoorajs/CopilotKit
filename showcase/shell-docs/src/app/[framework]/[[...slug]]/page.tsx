@@ -17,6 +17,7 @@
 import React from "react";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
+import { DocsLandingNext } from "@/components/docs-landing-next";
 import { DocsPageView } from "@/components/docs-page-view";
 import { SidebarFrameworkSelector } from "@/components/sidebar-framework-selector";
 import { UnscopedDocsPage } from "@/components/unscoped-docs-page";
@@ -354,87 +355,75 @@ function FrameworkLandingPage({ framework }: { framework: string }) {
         ))}
       </aside>
 
-      {/* <main> is the full-width scroll container so the scrollbar
-       * lands at the viewport edge. Content width is capped by the
-       * inner wrapper. Previously `max-w-3xl` sat on <main> directly,
-       * which parked the scrollbar mid-page. */}
+      {/* Same docs-landing shell as `/` (DocsOverview). DocsLandingNext
+       * reads the URL-active framework from FrameworkProvider and
+       * renders the "Continue with {framework}" branch — Quickstart,
+       * Browse docs, Switch framework — instead of the picker. */}
       <main className="flex-1 overflow-y-auto">
-        <div className="max-w-3xl px-8 py-8">
-          <div className="flex items-center gap-3 mb-6">
-            {integration.logo && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={integration.logo} alt="" className="w-10 h-10" />
-            )}
-            <h1 className="text-[2rem] font-bold text-[var(--text)] tracking-tight">
-              {integration.name}
-            </h1>
+        <div className="max-w-4xl px-8 py-10">
+          <div className="text-[10px] font-mono uppercase tracking-widest text-[var(--text-faint)] mb-2">
+            Documentation
           </div>
-
-          <p className="text-base text-[var(--text-secondary)] leading-relaxed mb-8">
-            {integration.description}
+          <h1 className="text-[2.25rem] font-bold text-[var(--text)] tracking-tight mb-3 leading-tight">
+            Welcome to CopilotKit
+          </h1>
+          <p className="text-base text-[var(--text-secondary)] leading-relaxed mb-8 max-w-2xl">
+            CopilotKit is the <strong>frontend stack for agents</strong> and{" "}
+            <strong>generative UI</strong>. Connect any agent framework or
+            model to your React app for chat, generative UI, canvas apps, and
+            human-in-the-loop workflows.
           </p>
 
-          <div className="rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] p-4 mb-6">
-            <div className="text-[10px] font-mono uppercase tracking-widest text-[var(--text-faint)] mb-2">
-              You're viewing docs scoped to
-            </div>
-            <div className="text-sm font-medium text-[var(--text)]">
-              {integration.name}
-            </div>
-            <p className="text-[13px] text-[var(--text-muted)] mt-2 leading-relaxed">
-              Every code snippet on these pages is pulled from the live{" "}
-              <code>{framework}</code> cells. Pick a topic from the sidebar to
-              start reading.
+          <div className="mb-10 max-w-2xl">
+            <p className="text-sm text-[var(--text-secondary)] mb-3">
+              Starting from scratch? Bootstrap a full-stack agent in one
+              command:
             </p>
+            <pre className="rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] px-4 py-3 text-sm font-mono overflow-x-auto">
+              <code>npx copilotkit@latest create</code>
+            </pre>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <LandingCard
-              href={`/${framework}/agentic-chat-ui`}
-              title="Chat UI"
-              desc="Pre-built chat components wired to the agent"
-            />
-            <LandingCard
-              href={`/${framework}/generative-ui/tool-rendering`}
-              title="Tool Rendering"
-              desc="Render agent tool calls as UI components"
-            />
-            <LandingCard
-              href={`/${framework}/frontend-tools`}
-              title="Frontend Tools"
-              desc="Expose client-side actions to the agent"
-            />
-            <LandingCard
-              href={`/${framework}/human-in-the-loop`}
-              title="Human-in-the-Loop"
-              desc="Intercept tool calls for approval"
-            />
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-10">
+            <Link
+              href={`/${framework}/concepts/architecture`}
+              className="group flex flex-col gap-1 rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] p-4 no-underline hover:border-[var(--accent)] hover:shadow-sm transition"
+            >
+              <div className="font-semibold text-[var(--text)] group-hover:text-[var(--accent)]">
+                Concepts
+              </div>
+              <div className="text-sm text-[var(--text-secondary)] leading-relaxed">
+                Architecture, gen UI types, OSS vs Enterprise.
+              </div>
+            </Link>
+            <Link
+              href="/reference"
+              className="group flex flex-col gap-1 rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] p-4 no-underline hover:border-[var(--accent)] hover:shadow-sm transition"
+            >
+              <div className="font-semibold text-[var(--text)] group-hover:text-[var(--accent)]">
+                API Reference
+              </div>
+              <div className="text-sm text-[var(--text-secondary)] leading-relaxed">
+                Hooks, components, and config.
+              </div>
+            </Link>
+            <Link
+              href={`/${framework}/generative-ui/your-components/display-only`}
+              className="group flex flex-col gap-1 rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] p-4 no-underline hover:border-[var(--accent)] hover:shadow-sm transition"
+            >
+              <div className="font-semibold text-[var(--text)] group-hover:text-[var(--accent)]">
+                Generative UI
+              </div>
+              <div className="text-sm text-[var(--text-secondary)] leading-relaxed">
+                Render tools as React components.
+              </div>
+            </Link>
           </div>
+
+          <DocsLandingNext />
         </div>
       </main>
     </div>
-  );
-}
-
-function LandingCard({
-  href,
-  title,
-  desc,
-}: {
-  href: string;
-  title: string;
-  desc: string;
-}) {
-  return (
-    <Link
-      href={href}
-      className="group p-4 rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] hover:border-[var(--accent)] transition-all"
-    >
-      <div className="text-sm font-semibold text-[var(--text)] group-hover:text-[var(--accent)] mb-1">
-        {title}
-      </div>
-      <div className="text-xs text-[var(--text-muted)]">{desc}</div>
-    </Link>
   );
 }
 
