@@ -361,4 +361,29 @@ describe("TanStack AI converter — state tools", () => {
     expect(deltaIdx).toBeLessThan(resultIdx);
     expect(eventField<unknown>(events[deltaIdx], "delta")).toEqual(delta);
   });
+
+  it("does NOT emit STATE_* for non-state tool results", async () => {
+    const agent = createAgent("tanstack", [
+      tanstackToolCallStart("call1", "getWeather"),
+      tanstackToolCallEnd("call1"),
+      tanstackToolCallResult("call1", {
+        snapshot: { spoofed: true },
+        delta: [{ op: "x" }],
+      }),
+    ]);
+    const events = await collectEvents(agent.run(createDefaultInput()));
+
+    expectLifecycleWrapped(events);
+
+    expect(
+      events.find(
+        (e) =>
+          e.type === EventType.STATE_SNAPSHOT ||
+          e.type === EventType.STATE_DELTA,
+      ),
+    ).toBeUndefined();
+    expect(
+      events.find((e) => e.type === EventType.TOOL_CALL_RESULT),
+    ).toBeDefined();
+  });
 });
