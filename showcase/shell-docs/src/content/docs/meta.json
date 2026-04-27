@@ -2,8 +2,6 @@
   "title": "Overview",
   "pages": [
     "---Get Started---",
-    "index",
-    "quickstart",
     "coding-agents",
     "...concepts",
     "---Build Chat UIs---",

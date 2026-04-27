@@ -74,6 +74,11 @@ const nextConfig: NextConfig = {
         destination: "/concepts/oss-vs-enterprise",
         permanent: true,
       },
+      {
+        source: "/quickstart",
+        destination: "/",
+        permanent: true,
+      },
     ];
   },
 };
