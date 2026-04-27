@@ -9,7 +9,7 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
 WORKDIR /app
 
 # Copy agent source and install deps the same way users do (uv sync)
-COPY pyproject.toml uv.lock langgraph.json ./
+COPY pyproject.toml uv.lock ./
 COPY src/ ./src/
 COPY main.py ./
 
