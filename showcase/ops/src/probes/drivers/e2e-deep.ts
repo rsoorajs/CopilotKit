@@ -539,7 +539,7 @@ export function createE2eDeepDriver(
       // chromium so we don't pay for a launch per slug when Wave 2b
       // hasn't landed yet.
       const skipped: string[] = [];
-      const runnable: D5FeatureType[] = [];
+      let runnable: D5FeatureType[] = [];
       for (const ft of requestedFeatures) {
         if (D5_REGISTRY.has(ft)) {
           runnable.push(ft);
@@ -547,6 +547,33 @@ export function createE2eDeepDriver(
           skipped.push(ft);
         }
       }
+
+      // B2: apply feature-type filter from the trigger layer. When the
+      // operator triggers with `featureTypes: ["hitl-steps"]`, only
+      // those feature types execute — the rest are recorded as skipped
+      // with a distinct "filtered-by-trigger" reason so dashboards can
+      // distinguish "no script" from "filtered out by trigger request".
+      const filteredByTrigger: string[] = [];
+      if (ctx.featureTypes?.length) {
+        const allowed = new Set(ctx.featureTypes);
+        const kept: D5FeatureType[] = [];
+        for (const ft of runnable) {
+          if (allowed.has(ft)) {
+            kept.push(ft);
+          } else {
+            filteredByTrigger.push(ft);
+            skipped.push(ft);
+          }
+        }
+        if (filteredByTrigger.length > 0) {
+          ctx.logger.info("probe.e2e-deep.feature-type-filter-applied", {
+            featureTypes: ctx.featureTypes,
+            filteredOut: filteredByTrigger.length,
+          });
+        }
+        runnable = kept;
+      }
+      const filteredSet = new Set(filteredByTrigger);
 
       // Skipped-only short-circuit. Aggregate green (no failure), but
       // emit one side row per skipped feature so the dashboard cell
@@ -560,7 +587,9 @@ export function createE2eDeepDriver(
               slug,
               featureType: ft,
               backendUrl,
-              note: "no script registered for featureType",
+              note: filteredSet.has(ft)
+                ? "filtered-by-trigger"
+                : "no script registered for featureType",
             },
             observedAt: ctx.now().toISOString(),
           });
@@ -576,7 +605,10 @@ export function createE2eDeepDriver(
             passed: 0,
             failed: [],
             skipped,
-            note: "no scripts registered for any declared feature",
+            note:
+              filteredByTrigger.length > 0
+                ? "all runnable features filtered by trigger"
+                : "no scripts registered for any declared feature",
           },
           observedAt,
         };
@@ -638,7 +670,9 @@ export function createE2eDeepDriver(
               slug,
               featureType: ft,
               backendUrl,
-              note: "no script registered for featureType",
+              note: filteredSet.has(ft)
+                ? "filtered-by-trigger"
+                : "no script registered for featureType",
             },
             observedAt: ctx.now().toISOString(),
           });
