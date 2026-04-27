@@ -466,4 +466,34 @@ describe("TanStack AI converter — reasoning", () => {
     expect(types).toContain(EventType.REASONING_MESSAGE_END);
     expect(types).toContain(EventType.REASONING_END);
   });
+
+  it("does NOT duplicate REASONING_MESSAGE_END when upstream emits it explicitly before text", async () => {
+    // Regression: a single isInReasoning flag conflated message-open with
+    // run-open, so closeReasoningIfOpen on TEXT_MESSAGE_CONTENT emitted a
+    // second REASONING_MESSAGE_END after upstream's own. Track message-open
+    // and run-open separately so closeReasoningIfOpen owes only what's still
+    // open.
+    const agent = createAgent("tanstack", [
+      tanstackReasoningStart("r1"),
+      tanstackReasoningMessageStart("r1"),
+      tanstackReasoningMessageContent("r1", "thinking"),
+      tanstackReasoningMessageEnd("r1"),
+      // No explicit REASONING_END before text — closeReasoningIfOpen should
+      // emit REASONING_END but NOT a second REASONING_MESSAGE_END.
+      tanstackTextChunk("Hi"),
+    ]);
+    const events = await collectEvents(agent.run(createDefaultInput()));
+    const types = events.map((e) => e.type);
+
+    const msgEndCount = types.filter(
+      (t) => t === EventType.REASONING_MESSAGE_END,
+    ).length;
+    const endCount = types.filter((t) => t === EventType.REASONING_END).length;
+
+    expect(msgEndCount).toBe(1);
+    expect(endCount).toBe(1);
+    expect(types.indexOf(EventType.REASONING_END)).toBeLessThan(
+      types.indexOf(EventType.TEXT_MESSAGE_CHUNK),
+    );
+  });
 });

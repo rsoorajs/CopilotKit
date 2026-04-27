@@ -237,22 +237,33 @@ export async function* convertTanStackStream(
 ): AsyncGenerator<BaseEvent> {
   const messageId = randomUUID();
   const toolNamesById = new Map<string, string>();
-  let isInReasoning = false;
+  // Track the reasoning lifecycle at two granularities so closeReasoningIfOpen
+  // emits exactly the events still owed. A single boolean conflates the run
+  // (REASONING_START → REASONING_END) with the message
+  // (REASONING_MESSAGE_START → REASONING_MESSAGE_END) and produces a duplicate
+  // REASONING_MESSAGE_END when upstream emits MSG_END but not END before
+  // text/tools resume.
+  let reasoningRunOpen = false;
+  let reasoningMessageOpen = false;
   let reasoningMessageId = randomUUID();
 
   function* closeReasoningIfOpen(): Generator<BaseEvent> {
-    if (!isInReasoning) return;
-    isInReasoning = false;
-    const msgEnd: ReasoningMessageEndEvent = {
-      type: EventType.REASONING_MESSAGE_END,
-      messageId: reasoningMessageId,
-    };
-    yield msgEnd;
-    const end: ReasoningEndEvent = {
-      type: EventType.REASONING_END,
-      messageId: reasoningMessageId,
-    };
-    yield end;
+    if (reasoningMessageOpen) {
+      reasoningMessageOpen = false;
+      const msgEnd: ReasoningMessageEndEvent = {
+        type: EventType.REASONING_MESSAGE_END,
+        messageId: reasoningMessageId,
+      };
+      yield msgEnd;
+    }
+    if (reasoningRunOpen) {
+      reasoningRunOpen = false;
+      const end: ReasoningEndEvent = {
+        type: EventType.REASONING_END,
+        messageId: reasoningMessageId,
+      };
+      yield end;
+    }
   }
 
   for await (const chunk of stream) {
@@ -351,7 +362,7 @@ export async function* convertTanStackStream(
       yield resultEvent;
       toolNamesById.delete(toolCallId);
     } else if (type === "REASONING_START") {
-      isInReasoning = true;
+      reasoningRunOpen = true;
       reasoningMessageId = (raw.messageId as string) ?? randomUUID();
       const startEvt: ReasoningStartEvent = {
         type: EventType.REASONING_START,
@@ -359,6 +370,7 @@ export async function* convertTanStackStream(
       };
       yield startEvt;
     } else if (type === "REASONING_MESSAGE_START") {
+      reasoningMessageOpen = true;
       const evt: ReasoningMessageStartEvent = {
         type: EventType.REASONING_MESSAGE_START,
         messageId: reasoningMessageId,
@@ -373,13 +385,14 @@ export async function* convertTanStackStream(
       };
       yield evt;
     } else if (type === "REASONING_MESSAGE_END") {
+      reasoningMessageOpen = false;
       const evt: ReasoningMessageEndEvent = {
         type: EventType.REASONING_MESSAGE_END,
         messageId: reasoningMessageId,
       };
       yield evt;
     } else if (type === "REASONING_END") {
-      isInReasoning = false;
+      reasoningRunOpen = false;
       const evt: ReasoningEndEvent = {
         type: EventType.REASONING_END,
         messageId: reasoningMessageId,
