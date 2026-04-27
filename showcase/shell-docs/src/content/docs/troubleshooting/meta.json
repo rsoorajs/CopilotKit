@@ -1,13 +1,11 @@
 {
+  "title": "Troubleshooting",
   "pages": [
     "common-issues",
     "error-debugging",
     "debug-mode",
     "event-inspector",
     "hook-explorer",
-    "observability-connectors",
-    "migrate-to-v2",
-    "migrate-to-1.10.X",
-    "migrate-to-1.8.2"
+    "observability-connectors"
   ]
 }

@@ -15,28 +15,12 @@ import { resolveWithinDir } from "./safe-fs";
 export const CONTENT_DIR = path.join(process.cwd(), "src/content/docs");
 export const SNIPPETS_DIR = path.join(CONTENT_DIR, "..", "snippets");
 
-/**
- * Canonical category ordering for the framework picker / integrations
- * grid / sidebar framework selector. Defined here so every consumer
- * imports the same source of truth.
- *
- * Consumer files (sidebar-framework-selector.tsx, [[...slug]]/page.tsx)
- * previously defined this constant independently — any drift between
- * the copies would show up as divergent category ordering across the
- * UI. Follow-up: once all consumers import from here, remove their
- * local duplicates (owned by later blitz agents / registry refactor).
- */
-export const FRAMEWORK_CATEGORY_ORDER = [
-  "popular",
-  "agent-framework",
-  "provider-sdk",
-  "enterprise-platform",
-  "protocol",
-  "emerging",
-  "starter",
-] as const;
-
-export type FrameworkCategory = (typeof FRAMEWORK_CATEGORY_ORDER)[number];
+// Re-exported from lib/framework-categories so client components can
+// pull the constant without dragging fs through the bundle.
+export {
+  FRAMEWORK_CATEGORY_ORDER,
+  type FrameworkCategory,
+} from "./framework-categories";
 
 // ---------------------------------------------------------------------------
 // Nav tree types
@@ -182,12 +166,25 @@ export function buildNavTree(dir: string, prefix: string = ""): NavNode[] {
         if (subMeta?.root) continue;
         const subChildren = buildNavTree(subDir, subPrefix);
         if (subChildren.length > 0) {
-          const groupTitle =
+          const rawGroupTitle =
             subMeta?.title ||
             spreadMatch[1].replace(/[()-]/g, " ").replace(/\s+/g, " ").trim();
+          const groupTitle =
+            rawGroupTitle.charAt(0).toUpperCase() + rawGroupTitle.slice(1);
+          // If the previous emitted node is a section header with the
+          // same title as this group's title, the section header
+          // already labels this content. Suppress the group title
+          // (empty string) so the renderer skips rendering it — the
+          // group still wraps its children for indentation/nesting.
+          // Without this dedup the sidebar shows "BUILD GENERATIVE UI"
+          // (section, uppercase) followed immediately by "Build
+          // Generative UI" (group, regular case) — same text, doubled.
+          const prev = nodes[nodes.length - 1];
+          const isDuplicateOfSection =
+            prev?.type === "section" && prev.title === groupTitle;
           nodes.push({
             type: "group",
-            title: groupTitle.charAt(0).toUpperCase() + groupTitle.slice(1),
+            title: isDuplicateOfSection ? "" : groupTitle,
             slug: subPrefix,
             children: subChildren,
           });
@@ -347,7 +344,22 @@ export function buildFrameworkOverridesNav(folder: string): NavNode[] {
     // up the visual hierarchy — the override block is already wrapped
     // in a single `{frameworkName}` section by mergeFrameworkNav.
   }
-  return filtered;
+
+  // Flatten empty-title wrapper groups. buildNavTree clears the title on
+  // a spread-derived group when the preceding section header has the
+  // same name (so the renderer doesn't double-print "Generative UI").
+  // After we drop section headers above, those wrappers are left as
+  // titleless containers that only add an extra indent step around
+  // their children. Inline the children at the wrapper's level instead.
+  const flattened: NavNode[] = [];
+  for (const node of filtered) {
+    if (node.type === "group" && node.title === "") {
+      flattened.push(...node.children);
+    } else {
+      flattened.push(node);
+    }
+  }
+  return flattened;
 }
 
 /**

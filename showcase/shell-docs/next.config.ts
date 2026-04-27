@@ -47,22 +47,36 @@ if (!process.env.NEXT_PUBLIC_SHELL_URL) {
 }
 
 const nextConfig: NextConfig = {
-  // Permanent redirects for legacy URL slugs that have been renamed or
-  // collapsed into a canonical page. Each entry exists because at least
-  // one external link (search-engine result, blog post, customer doc)
-  // is known to point at the old slug; we'd rather 301 cleanly than
-  // 404 the visitor.
   async redirects() {
     return [
-      // /frontend-actions was the original name for this page; the
-      // feature is now exposed exclusively as `useFrontendTool`, the
-      // page is titled "Frontend Tools" and lives at /frontend-tools.
-      // The old MDX file at content/docs/frontend-actions.mdx was a
-      // stub orphan unreachable from the sidebar; it's been deleted
-      // alongside this redirect.
       {
         source: "/frontend-actions",
         destination: "/frontend-tools",
+        permanent: true,
+      },
+      {
+        source: "/troubleshooting/migrate-to-v2",
+        destination: "/migrate/v2",
+        permanent: true,
+      },
+      {
+        source: "/troubleshooting/migrate-to-1.10.X",
+        destination: "/migrate/1.10.X",
+        permanent: true,
+      },
+      {
+        source: "/troubleshooting/migrate-to-1.8.2",
+        destination: "/migrate/1.8.2",
+        permanent: true,
+      },
+      {
+        source: "/concepts/oss-vs-cloud",
+        destination: "/concepts/oss-vs-enterprise",
+        permanent: true,
+      },
+      {
+        source: "/quickstart",
+        destination: "/",
         permanent: true,
       },
     ];
