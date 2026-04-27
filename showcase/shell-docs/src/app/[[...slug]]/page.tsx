@@ -13,11 +13,8 @@ import { SidebarFrameworkSelector } from "@/components/sidebar-framework-selecto
 import { SidebarLink } from "@/components/sidebar-link";
 import { SidebarNav } from "@/components/sidebar-nav";
 import { UnscopedDocsPage } from "@/components/unscoped-docs-page";
-import {
-  CONTENT_DIR,
-  buildNavTree,
-  type NavNode,
-} from "@/lib/docs-render";
+import { CONTENT_DIR, buildNavTree } from "@/lib/docs-render";
+import type { NavNode } from "@/lib/docs-render";
 
 function DocsOverview() {
   const navTree = buildNavTree(CONTENT_DIR);
@@ -50,8 +47,8 @@ function DocsOverview() {
           </h1>
           <p className="text-base text-[var(--text-secondary)] leading-relaxed mb-8 max-w-2xl">
             CopilotKit is the <strong>frontend stack for agents</strong> and{" "}
-            <strong>generative UI</strong>. Connect any agent framework or
-            model to your React app for chat, generative UI, canvas apps, and
+            <strong>generative UI</strong>. Connect any agent framework or model
+            to your React app for chat, generative UI, canvas apps, and
             human-in-the-loop workflows.
           </p>
 
