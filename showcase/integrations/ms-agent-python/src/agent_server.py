@@ -33,6 +33,10 @@ from agents.multimodal_agent import create_multimodal_agent
 from agents.open_gen_ui_advanced_agent import create_open_gen_ui_advanced_agent
 from agents.open_gen_ui_agent import create_open_gen_ui_agent
 from agents.reasoning_agent import create_reasoning_agent
+from agents.shared_state_read_write_agent import (
+    create_shared_state_read_write_agent,
+)
+from agents.subagents_agent import create_subagents_agent
 from agents.tool_rendering_reasoning_chain_agent import (
     create_tool_rendering_reasoning_chain_agent,
 )
@@ -72,6 +76,8 @@ byoc_json_render_agent = create_byoc_json_render_agent(chat_client)
 mcp_apps_agent = create_mcp_apps_agent(chat_client)
 hitl_in_app_agent = create_hitl_in_app_agent(chat_client)
 interrupt_agent = create_interrupt_agent(chat_client)
+shared_state_read_write_agent = create_shared_state_read_write_agent(chat_client)
+subagents_agent = create_subagents_agent(chat_client)
 
 # Multimodal: vision-capable; gpt-4o-mini natively handles `image` parts.
 # Scoped to its own endpoint so other demos don't silently upgrade to vision.
@@ -127,6 +133,10 @@ add_agent_framework_fastapi_endpoint(app=app, agent=byoc_json_render_agent, path
 add_agent_framework_fastapi_endpoint(app=app, agent=mcp_apps_agent, path="/mcp-apps")
 add_agent_framework_fastapi_endpoint(app=app, agent=hitl_in_app_agent, path="/hitl-in-app")
 add_agent_framework_fastapi_endpoint(app=app, agent=interrupt_agent, path="/interrupt-adapted")
+add_agent_framework_fastapi_endpoint(
+    app=app, agent=shared_state_read_write_agent, path="/shared-state-read-write"
+)
+add_agent_framework_fastapi_endpoint(app=app, agent=subagents_agent, path="/subagents")
 
 # Shared agent for the rest of the demos (must be last: `/` is a catch-all).
 add_agent_framework_fastapi_endpoint(app=app, agent=my_agent, path="/")

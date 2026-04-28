@@ -33,6 +33,8 @@ features:
   - declarative-gen-ui
   - gen-ui-agent
   - shared-state-streaming
+  - shared-state-read-write
+  - subagents
   - readonly-state-agent-context
   - open-gen-ui
   - open-gen-ui-advanced
@@ -199,6 +201,33 @@ demos:
       - src/agent_server.ts
       - src/app/demos/shared-state-streaming/page.tsx
       - src/app/api/copilotkit/route.ts
+  - id: shared-state-read-write
+    name: Shared State (Read + Write)
+    description: Bidirectional shared state — UI writes preferences via agent.setState, agent reads them every turn and writes notes back via a set_notes tool
+    tags:
+      - agent-state
+    route: /demos/shared-state-read-write
+    animated_preview_url:
+    highlight:
+      - src/agent_server.ts
+      - src/agent/shared-state-read-write-prompt.ts
+      - src/app/demos/shared-state-read-write/page.tsx
+      - src/app/demos/shared-state-read-write/preferences-card.tsx
+      - src/app/demos/shared-state-read-write/notes-card.tsx
+      - src/app/api/copilotkit-shared-state-read-write/route.ts
+  - id: subagents
+    name: Sub-Agents
+    description: Supervisor delegates to research / writing / critique sub-agents (each a single secondary Anthropic Messages call); every delegation appears in a live log via shared state
+    tags:
+      - agent-capabilities
+    route: /demos/subagents
+    animated_preview_url:
+    highlight:
+      - src/agent_server.ts
+      - src/agent/subagents-prompts.ts
+      - src/app/demos/subagents/page.tsx
+      - src/app/demos/subagents/delegation-log.tsx
+      - src/app/api/copilotkit-subagents/route.ts
   - id: readonly-state-agent-context
     name: Readonly State (Agent Context)
     description: Frontend provides read-only context to the agent via useAgentContext

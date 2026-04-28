@@ -1,6 +1,11 @@
 """
-Agent implementation for Shared State (Writing)
+Agent implementation for Shared State (Read + Write).
 
-Uses the main FastAPI agent graph with SalesTodo state — the demo page
-both reads and writes agent state via useAgent() and SalesDashboard.
+Implementation lives in:
+  src/agents/src/shared_state_read_write.py
+
+Registered in `langgraph.json` as `shared_state_read_write`. The Next.js
+runtime route (`src/app/api/copilotkit/route.ts`) maps the agent id
+`shared-state-read-write` to the `shared_state_read_write` graph on the
+FastAPI deployment.
 """

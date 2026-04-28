@@ -196,6 +196,15 @@ def _stub_agent_server_deps():
         "add_crewai_crew_fastapi_endpoint",
         _add_crewai_crew_fastapi_endpoint,
     )
+    # Mirror crew-endpoint stub for raw `Flow` mounts. The shared-state-rw and
+    # subagents demos use `add_crewai_flow_fastapi_endpoint` to register CrewAI
+    # `Flow`s directly instead of `Crew`s; the test stub treats both the same
+    # since neither needs a real LLM round-trip.
+    setattr(
+        ag_ui_crewai_endpoint,
+        "add_crewai_flow_fastapi_endpoint",
+        _add_crewai_crew_fastapi_endpoint,
+    )
     sys.modules["ag_ui_crewai"] = ag_ui_crewai
     sys.modules["ag_ui_crewai.endpoint"] = ag_ui_crewai_endpoint
 
@@ -211,6 +220,8 @@ def _stub_agent_server_deps():
         "byoc_hashbrown_agent",
         "byoc_json_render_agent",
         "declarative_gen_ui",
+        "shared_state_read_write",
+        "subagents",
     ):
         sys.modules[f"agents.{name}"] = types.ModuleType(f"agents.{name}")
     setattr(sys.modules["agents.crew"], "LatestAiDevelopment", lambda: object())
@@ -219,6 +230,13 @@ def _stub_agent_server_deps():
     setattr(sys.modules["agents.byoc_hashbrown_agent"], "ByocHashbrown", lambda: object())
     setattr(sys.modules["agents.byoc_json_render_agent"], "ByocJsonRender", lambda: object())
     setattr(sys.modules["agents.declarative_gen_ui"], "DeclarativeGenUI", lambda: object())
+    # Sentinel `Flow` instances for the raw-Flow endpoints (set_notes,
+    # subagents). Real flows are CrewAI `Flow` subclasses; the stub only
+    # needs to be a non-`None` value `add_crewai_flow_fastapi_endpoint`
+    # accepts as its `flow` argument. `object()` works because the stub
+    # endpoint mounter ignores the flow entirely.
+    setattr(sys.modules["agents.shared_state_read_write"], "shared_state_read_write_flow", object())
+    setattr(sys.modules["agents.subagents"], "subagents_flow", object())
 
     # Drop any stale agent_server import — we want the next `import agent_server`
     # to re-run module-init against OUR stubs.

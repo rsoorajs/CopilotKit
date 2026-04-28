@@ -21,6 +21,18 @@ function createReasoningAgent() {
   return new HttpAgent({ url: `${AGENT_URL}/reasoning/agui` });
 }
 
+// State-aware agents are served by a custom AGUI handler in agent_server.py
+// that emits StateSnapshotEvent after every run. Stock Agno AGUI does NOT
+// emit state events, so demos that depend on agent-side state writes
+// (set_notes, delegations) must point at these dedicated routes.
+function createSharedStateRWAgent() {
+  return new HttpAgent({ url: `${AGENT_URL}/shared-state-rw/agui` });
+}
+
+function createSubagentsAgent() {
+  return new HttpAgent({ url: `${AGENT_URL}/subagents/agui` });
+}
+
 // Main agent backs most demos. The Next.js runtime aliases the single
 // Agno `main` agent under every demo cell name so per-cell frontend
 // tool/component registrations scope correctly.
@@ -36,9 +48,7 @@ const mainAgentNames = [
   "gen-ui-agent",
   "shared-state-read",
   "shared-state-write",
-  "shared-state-read-write",
   "shared-state-streaming",
-  "subagents",
   // Neutral / chrome demos reusing the default agent.
   "prebuilt-sidebar",
   "prebuilt-popup",
@@ -68,6 +78,14 @@ for (const name of mainAgentNames) {
 for (const name of reasoningAgentNames) {
   agents[name] = createReasoningAgent();
 }
+// Bidirectional shared-state agent — UI writes preferences, agent writes
+// notes back via set_notes and the custom AGUI router emits a
+// StateSnapshotEvent that the frontend's useAgent picks up.
+agents["shared-state-read-write"] = createSharedStateRWAgent();
+// Sub-agents supervisor — appends to state["delegations"] every time a
+// research / writing / critique sub-agent is delegated to. Same custom
+// AGUI router emits the StateSnapshotEvent needed for the live log.
+agents["subagents"] = createSubagentsAgent();
 agents["default"] = createMainAgent();
 
 console.log(

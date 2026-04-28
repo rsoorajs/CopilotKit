@@ -13,6 +13,15 @@ import {
   buildA2uiOperationsFromToolCall,
 } from "@copilotkit/showcase-shared-tools";
 
+// Re-export the dedicated tool sets defined in their own modules so the
+// barrel keeps a single import surface for callers under `@/mastra/tools`.
+export { setNotesTool } from "./shared-state-read-write";
+export {
+  researchAgentTool,
+  writingAgentTool,
+  critiqueAgentTool,
+} from "./subagents";
+
 // @region[weather-tool-backend]
 export const weatherTool = createTool({
   id: "get-weather",

@@ -33,8 +33,6 @@ const sharedAgentNames = [
   "shared-state-read",
   "shared-state-write",
   "shared-state-streaming",
-  "shared-state-read-write",
-  "subagents",
   "frontend_tools",
   "frontend_tools_async",
   "hitl_in_app",
@@ -55,6 +53,8 @@ const specializedAgents: Record<string, string> = {
   "agentic-chat-reasoning": "/reasoning",
   "reasoning-default-render": "/reasoning",
   "tool-rendering-reasoning-chain": "/tool-rendering-reasoning-chain",
+  "shared-state-read-write": "/shared-state-read-write",
+  subagents: "/subagents",
 };
 
 const agents: Record<string, AbstractAgent> = {};

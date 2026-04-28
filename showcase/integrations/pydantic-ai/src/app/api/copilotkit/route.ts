@@ -5,6 +5,7 @@ import {
   copilotRuntimeNextJSAppRouterEndpoint,
 } from "@copilotkit/runtime";
 import { AbstractAgent, HttpAgent } from "@ag-ui/client";
+import crypto from "node:crypto";
 
 // The agent backend runs as a separate process on port 8000.
 // This runtime proxies CopilotKit requests to it via AG-UI protocol.
@@ -26,6 +27,7 @@ const agentNames = [
   "gen-ui-agent",
   "shared-state-read",
   "shared-state-write",
+  "shared-state-read-write",
   "shared-state-streaming",
   "subagents",
   // Prebuilt chat UI demos
@@ -65,6 +67,12 @@ agents["default"] = createAgent();
 agents["headless-complete"] = new HttpAgent({
   url: `${AGENT_URL}/headless_complete/`,
 });
+agents["shared-state-read-write"] = new HttpAgent({
+  url: `${AGENT_URL}/shared_state_read_write/`,
+});
+agents["subagents"] = new HttpAgent({
+  url: `${AGENT_URL}/subagents/`,
+});
 
 console.log(
   `[copilotkit/route] Registered ${Object.keys(agents).length} agent names: ${Object.keys(agents).join(", ")}`,
@@ -89,11 +97,24 @@ export const POST = async (req: NextRequest) => {
     console.log(`[copilotkit/route] Response status: ${response.status}`);
     return response;
   } catch (error: unknown) {
-    const err = error as Error;
-    console.error(`[copilotkit/route] ERROR: ${err.message}`);
-    console.error(`[copilotkit/route] Stack: ${err.stack}`);
+    const err = error instanceof Error ? error : new Error(String(error));
+    // Log the full error server-side (including stack) but return only a
+    // generic message + correlation id to the client. Returning err.message
+    // and err.stack to the client leaks internal paths, dependency names,
+    // and stack frames — useful for debugging, but unsafe to surface in a
+    // production response. Operators correlate via `errorId`.
+    const errorId = crypto.randomUUID();
+    console.error(
+      JSON.stringify({
+        at: new Date().toISOString(),
+        level: "error",
+        errorId,
+        message: err.message,
+        stack: err.stack,
+      }),
+    );
     return NextResponse.json(
-      { error: err.message, stack: err.stack },
+      { error: "internal runtime error", errorId },
       { status: 500 },
     );
   }

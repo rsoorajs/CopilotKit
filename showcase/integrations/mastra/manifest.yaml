@@ -56,6 +56,8 @@ features:
   - a2ui-fixed-schema
   - headless-complete
   - auth
+  - shared-state-read-write
+  - subagents
 demos:
   - id: cli-start
     name: CLI Start Command
@@ -334,3 +336,30 @@ demos:
       - src/app/demos/auth/auth-banner.tsx
       - src/app/demos/auth/demo-token.ts
       - src/app/api/copilotkit-auth/[[...slug]]/route.ts
+  - id: shared-state-read-write
+    name: Shared State (Read + Write)
+    description: Bidirectional shared state — UI writes preferences via agent.setState; backend reads them every turn and writes notes back via the set_notes tool
+    tags:
+      - agent-state
+    route: /demos/shared-state-read-write
+    animated_preview_url:
+    highlight:
+      - src/mastra/agents/index.ts
+      - src/mastra/tools/shared-state-read-write.ts
+      - src/app/demos/shared-state-read-write/page.tsx
+      - src/app/demos/shared-state-read-write/preferences-card.tsx
+      - src/app/demos/shared-state-read-write/notes-card.tsx
+      - src/app/api/copilotkit/route.ts
+  - id: subagents
+    name: Sub-Agents
+    description: Supervisor Mastra Agent delegates to research / writing / critique sub-agents; every delegation appended to a live UI log via shared state
+    tags:
+      - agent-capabilities
+    route: /demos/subagents
+    animated_preview_url:
+    highlight:
+      - src/mastra/agents/index.ts
+      - src/mastra/tools/subagents.ts
+      - src/app/demos/subagents/page.tsx
+      - src/app/demos/subagents/delegation-log.tsx
+      - src/app/api/copilotkit/route.ts

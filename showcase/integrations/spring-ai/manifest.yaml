@@ -44,6 +44,8 @@ features:
   - headless-complete
   - beautiful-chat
   - readonly-state-agent-context
+  - shared-state-read-write
+  - subagents
   - auth
   - voice
   - multimodal
@@ -303,6 +305,31 @@ demos:
       - src/app/demos/declarative-gen-ui/a2ui/renderers.tsx
       - src/app/demos/declarative-gen-ui/a2ui/catalog.ts
       - src/app/api/copilotkit-declarative-gen-ui/route.ts
+  - id: shared-state-read-write
+    name: Shared State (Read + Write)
+    description: Bidirectional shared state — UI writes preferences into agent state; the agent's set_notes tool mutates state.notes and emits a STATE_SNAPSHOT back to the UI
+    tags:
+      - agent-state
+    route: /demos/shared-state-read-write
+    animated_preview_url:
+    highlight:
+      - src/main/java/com/copilotkit/showcase/springai/SharedStateReadWriteController.java
+      - src/app/demos/shared-state-read-write/page.tsx
+      - src/app/demos/shared-state-read-write/preferences-card.tsx
+      - src/app/demos/shared-state-read-write/notes-card.tsx
+      - src/app/api/copilotkit-shared-state-read-write/route.ts
+  - id: subagents
+    name: Sub-Agents
+    description: Supervisor delegates to research / writing / critique sub-agents (each its own ChatClient call). Every delegation appends a Delegation entry to state.delegations and emits a STATE_SNAPSHOT for a live UI log
+    tags:
+      - agent-capabilities
+    route: /demos/subagents
+    animated_preview_url:
+    highlight:
+      - src/main/java/com/copilotkit/showcase/springai/SubagentsController.java
+      - src/app/demos/subagents/page.tsx
+      - src/app/demos/subagents/delegation-log.tsx
+      - src/app/api/copilotkit-subagents/route.ts
   - id: multimodal
     name: Multimodal Attachments
     description: CopilotChat AttachmentsConfig for images + PDFs; sample files inject through the same pipeline as the paperclip upload

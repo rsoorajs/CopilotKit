@@ -37,6 +37,8 @@ features:
   - reasoning-default-render
   - frontend-tools
   - frontend-tools-async
+  - shared-state-read-write
+  - subagents
 demos:
   - id: agentic-chat
     name: Agentic Chat
@@ -218,6 +220,31 @@ demos:
       - src/agents/agent.py
       - src/app/demos/frontend-tools-async/page.tsx
       - src/app/demos/frontend-tools-async/notes-card.tsx
+      - src/app/api/copilotkit/route.ts
+  - id: shared-state-read-write
+    name: Shared State (Read + Write)
+    description: Bidirectional agent state — UI writes preferences, agent writes notes back via AG2 ContextVariables
+    tags:
+      - agent-state
+    route: /demos/shared-state-read-write
+    animated_preview_url:
+    highlight:
+      - src/agents/shared_state_read_write.py
+      - src/app/demos/shared-state-read-write/page.tsx
+      - src/app/demos/shared-state-read-write/preferences-card.tsx
+      - src/app/demos/shared-state-read-write/notes-card.tsx
+      - src/app/api/copilotkit/route.ts
+  - id: subagents
+    name: Sub-Agents
+    description: Supervisor delegates tasks to research, writing, and critique sub-agents with a live delegation log
+    tags:
+      - multi-agent
+    route: /demos/subagents
+    animated_preview_url:
+    highlight:
+      - src/agents/subagents.py
+      - src/app/demos/subagents/page.tsx
+      - src/app/demos/subagents/delegation-log.tsx
       - src/app/api/copilotkit/route.ts
 starter:
   path: showcase/integrations/ag2

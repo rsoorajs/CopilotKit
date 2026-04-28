@@ -46,47 +46,24 @@ type Equals<A, B> =
 type Assert<T extends true> = T;
 
 // 1. `DemoAgentName` must be the literal union of the entries in `demoAgentNames`,
-//    not just `string`. If someone drops `as const`, this breaks.
-//
-// IMPORTANT: This union must mirror `demoAgentNames` in route.ts. When you
-// add a new demo agent alias, append it here as well. Either:
-//   - the canonical 9 original demos, OR
-//   - the parity-with-langgraph-python demos (second block).
+//    not just `string`. If someone drops `as const`, this breaks. Derived
+//    directly from the runtime `demoAgentNames` constant so adding a new demo
+//    in route.ts requires no edit here — the only failure mode is that the
+//    constant loses `as const` (in which case this assertion breaks).
 type _DemoAgentNameIsLiteralUnion = Assert<
-  Equals<
-    DemoAgentName,
-    | "agentic_chat"
-    | "human_in_the_loop"
-    | "tool-rendering"
-    | "gen-ui-tool-based"
-    | "gen-ui-agent"
-    | "shared-state-read"
-    | "shared-state-write"
-    | "shared-state-streaming"
-    | "subagents"
-    | "prebuilt-sidebar"
-    | "prebuilt-popup"
-    | "chat-slots"
-    | "chat-customization-css"
-    | "headless-simple"
-    | "frontend_tools"
-    | "frontend-tools-async"
-    | "hitl-in-chat"
-    | "hitl-in-app"
-    | "tool-rendering-default-catchall"
-    | "tool-rendering-custom-catchall"
-    | "agentic-chat-reasoning"
-    | "reasoning-default-render"
-    | "readonly-state-agent-context"
-    | "agent-config"
-    | "declarative-gen-ui"
-    | "a2ui-fixed-schema"
-  >
+  Equals<DemoAgentName, (typeof demoAgentNames)[number]>
 >;
 
-// 2. `BuiltAgents` keys must be exactly `DemoAgentName | "weatherAgent"`.
+// 2. `BuiltAgents` keys must be exactly `DemoAgentName | LocalMastraAgentName`.
 type _BuiltAgentsKeys = Assert<
-  Equals<keyof BuiltAgents, DemoAgentName | "weatherAgent">
+  Equals<
+    keyof BuiltAgents,
+    | DemoAgentName
+    | "weatherAgent"
+    | "headlessCompleteAgent"
+    | "sharedStateReadWriteAgent"
+    | "subagentsSupervisorAgent"
+  >
 >;
 
 // 3. Unknown keys must NOT be allowed. We assert this with a ts-expect-error
@@ -99,7 +76,14 @@ const _badKey: BuiltAgents = {
   // will become "unused" and `tsc --noEmit` will error.
   // @ts-expect-error "totally-unknown-agent" is not a valid BuiltAgents key
   "totally-unknown-agent": {} as _AgentValue,
+  // Local Mastra agent keys (LocalMastraAgentName).
   weatherAgent: {} as _AgentValue,
+  headlessCompleteAgent: {} as _AgentValue,
+  sharedStateReadWriteAgent: {} as _AgentValue,
+  subagentsSupervisorAgent: {} as _AgentValue,
+  // Demo agent alias keys (DemoAgentName). Must enumerate every entry in
+  // `demoAgentNames` — `BuiltAgents` is `Record<DemoAgentName | LocalMastraAgentName, _>`,
+  // a non-partial Record where every key is required.
   agentic_chat: {} as _AgentValue,
   human_in_the_loop: {} as _AgentValue,
   "tool-rendering": {} as _AgentValue,
@@ -107,6 +91,7 @@ const _badKey: BuiltAgents = {
   "gen-ui-agent": {} as _AgentValue,
   "shared-state-read": {} as _AgentValue,
   "shared-state-write": {} as _AgentValue,
+  "shared-state-read-write": {} as _AgentValue,
   "shared-state-streaming": {} as _AgentValue,
   subagents: {} as _AgentValue,
   "prebuilt-sidebar": {} as _AgentValue,
@@ -126,6 +111,7 @@ const _badKey: BuiltAgents = {
   "agent-config": {} as _AgentValue,
   "declarative-gen-ui": {} as _AgentValue,
   "a2ui-fixed-schema": {} as _AgentValue,
+  "headless-complete": {} as _AgentValue,
 };
 
 describe("BuiltAgents type narrowing", () => {

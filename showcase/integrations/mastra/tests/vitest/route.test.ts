@@ -109,6 +109,18 @@ describe("buildAgents", () => {
   it("produces a unique resourceId for every demo name", async () => {
     mockedGetLocalAgents.mockReturnValue({
       weatherAgent: makeAgent("weather", "mastra-weatherAgent"),
+      headlessCompleteAgent: makeAgent(
+        "headless-complete",
+        "mastra-headlessCompleteAgent",
+      ),
+      sharedStateReadWriteAgent: makeAgent(
+        "shared-state-rw",
+        "mastra-sharedStateReadWriteAgent",
+      ),
+      subagentsSupervisorAgent: makeAgent(
+        "subagents-supervisor",
+        "mastra-subagentsSupervisorAgent",
+      ),
     });
     const seen: string[] = [];
     mockedGetLocalAgent.mockImplementation(({ resourceId }) => {
@@ -123,8 +135,16 @@ describe("buildAgents", () => {
     for (const name of demoAgentNames) {
       expect(agents).toHaveProperty(name);
     }
-    // Every resourceId we asked for is unique and matches the `mastra-<name>` convention.
-    const expected = demoAgentNames.map((n) => `mastra-${n}`);
+    // Every resourceId we asked for is unique and matches the
+    // `mastra-<name>` convention. Demo aliases use `mastra-<demoName>`;
+    // dedicated local agents (those re-bound via `getLocalAgent` outside
+    // the demo loop) use `mastra-<localAgentName>`. Both must show up.
+    const expected = [
+      ...demoAgentNames.map((n) => `mastra-${n}`),
+      "mastra-headlessCompleteAgent",
+      "mastra-sharedStateReadWriteAgent",
+      "mastra-subagentsSupervisorAgent",
+    ];
     expect(new Set(seen).size).toBe(seen.length);
     expect(seen.sort()).toEqual([...expected].sort());
   });
@@ -132,6 +152,18 @@ describe("buildAgents", () => {
   it("throws when getLocalAgent returns null for any demo alias", async () => {
     mockedGetLocalAgents.mockReturnValue({
       weatherAgent: makeAgent("weather", "mastra-weatherAgent"),
+      headlessCompleteAgent: makeAgent(
+        "headless-complete",
+        "mastra-headlessCompleteAgent",
+      ),
+      sharedStateReadWriteAgent: makeAgent(
+        "shared-state-rw",
+        "mastra-sharedStateReadWriteAgent",
+      ),
+      subagentsSupervisorAgent: makeAgent(
+        "subagents-supervisor",
+        "mastra-subagentsSupervisorAgent",
+      ),
     });
     mockedGetLocalAgent.mockImplementation(({ resourceId }) => {
       if (resourceId === "mastra-agentic_chat") {
@@ -149,6 +181,18 @@ describe("buildAgents", () => {
   it("fails loudly when a local agent name collides with a demo alias", async () => {
     mockedGetLocalAgents.mockReturnValue({
       weatherAgent: makeAgent("weather", "mastra-weatherAgent"),
+      headlessCompleteAgent: makeAgent(
+        "headless-complete",
+        "mastra-headlessCompleteAgent",
+      ),
+      sharedStateReadWriteAgent: makeAgent(
+        "shared-state-rw",
+        "mastra-sharedStateReadWriteAgent",
+      ),
+      subagentsSupervisorAgent: makeAgent(
+        "subagents-supervisor",
+        "mastra-subagentsSupervisorAgent",
+      ),
       // Simulated future drift: Mastra adds a local agent named `agentic_chat`.
       agentic_chat: makeAgent("rogue", "some-other-id"),
     });
@@ -162,9 +206,21 @@ describe("buildAgents", () => {
     );
   });
 
-  it("does not collide on a clean Mastra config with only weatherAgent", async () => {
+  it("does not collide on a clean Mastra config with the registered local agents", async () => {
     mockedGetLocalAgents.mockReturnValue({
       weatherAgent: makeAgent("weather", "mastra-weatherAgent"),
+      headlessCompleteAgent: makeAgent(
+        "headless-complete",
+        "mastra-headlessCompleteAgent",
+      ),
+      sharedStateReadWriteAgent: makeAgent(
+        "shared-state-rw",
+        "mastra-sharedStateReadWriteAgent",
+      ),
+      subagentsSupervisorAgent: makeAgent(
+        "subagents-supervisor",
+        "mastra-subagentsSupervisorAgent",
+      ),
     });
     mockedGetLocalAgent.mockImplementation(({ resourceId }) =>
       makeAgent("demo", resourceId),
@@ -179,6 +235,18 @@ describe("agent cache memoization", () => {
   it("getAgents (via POST) only calls buildAgents once across requests", async () => {
     mockedGetLocalAgents.mockReturnValue({
       weatherAgent: makeAgent("weather", "mastra-weatherAgent"),
+      headlessCompleteAgent: makeAgent(
+        "headless-complete",
+        "mastra-headlessCompleteAgent",
+      ),
+      sharedStateReadWriteAgent: makeAgent(
+        "shared-state-rw",
+        "mastra-sharedStateReadWriteAgent",
+      ),
+      subagentsSupervisorAgent: makeAgent(
+        "subagents-supervisor",
+        "mastra-subagentsSupervisorAgent",
+      ),
     });
     mockedGetLocalAgent.mockImplementation(({ resourceId }) =>
       makeAgent("demo", resourceId),
@@ -199,6 +267,18 @@ describe("agent cache memoization", () => {
   it("re-builds after __resetAgentsCacheForTests()", async () => {
     mockedGetLocalAgents.mockReturnValue({
       weatherAgent: makeAgent("weather", "mastra-weatherAgent"),
+      headlessCompleteAgent: makeAgent(
+        "headless-complete",
+        "mastra-headlessCompleteAgent",
+      ),
+      sharedStateReadWriteAgent: makeAgent(
+        "shared-state-rw",
+        "mastra-sharedStateReadWriteAgent",
+      ),
+      subagentsSupervisorAgent: makeAgent(
+        "subagents-supervisor",
+        "mastra-subagentsSupervisorAgent",
+      ),
     });
     mockedGetLocalAgent.mockImplementation(({ resourceId }) =>
       makeAgent("demo", resourceId),
@@ -224,6 +304,18 @@ describe("agent cache memoization", () => {
   it("keeps resourceId stable across __resetAgentsCacheForTests() rebuilds", async () => {
     mockedGetLocalAgents.mockReturnValue({
       weatherAgent: makeAgent("weather", "mastra-weatherAgent"),
+      headlessCompleteAgent: makeAgent(
+        "headless-complete",
+        "mastra-headlessCompleteAgent",
+      ),
+      sharedStateReadWriteAgent: makeAgent(
+        "shared-state-rw",
+        "mastra-sharedStateReadWriteAgent",
+      ),
+      subagentsSupervisorAgent: makeAgent(
+        "subagents-supervisor",
+        "mastra-subagentsSupervisorAgent",
+      ),
     });
     mockedGetLocalAgent.mockImplementation(({ resourceId }) =>
       makeAgent("demo", resourceId),
@@ -255,6 +347,18 @@ describe("POST happy path", () => {
   it("instantiates CopilotRuntime with every demo agent and weatherAgent present", async () => {
     mockedGetLocalAgents.mockReturnValue({
       weatherAgent: makeAgent("weather", "mastra-weatherAgent"),
+      headlessCompleteAgent: makeAgent(
+        "headless-complete",
+        "mastra-headlessCompleteAgent",
+      ),
+      sharedStateReadWriteAgent: makeAgent(
+        "shared-state-rw",
+        "mastra-sharedStateReadWriteAgent",
+      ),
+      subagentsSupervisorAgent: makeAgent(
+        "subagents-supervisor",
+        "mastra-subagentsSupervisorAgent",
+      ),
     });
     mockedGetLocalAgent.mockImplementation(({ resourceId }) =>
       makeAgent("demo", resourceId),
@@ -349,6 +453,18 @@ describe("POST error handling", () => {
   it("cancels the upstream body and returns 500 when wrapStreamingResponse throws", async () => {
     mockedGetLocalAgents.mockReturnValue({
       weatherAgent: makeAgent("weather", "mastra-weatherAgent"),
+      headlessCompleteAgent: makeAgent(
+        "headless-complete",
+        "mastra-headlessCompleteAgent",
+      ),
+      sharedStateReadWriteAgent: makeAgent(
+        "shared-state-rw",
+        "mastra-sharedStateReadWriteAgent",
+      ),
+      subagentsSupervisorAgent: makeAgent(
+        "subagents-supervisor",
+        "mastra-subagentsSupervisorAgent",
+      ),
     });
     mockedGetLocalAgent.mockImplementation(({ resourceId }) =>
       makeAgent("demo", resourceId),
@@ -426,6 +542,18 @@ describe("POST error handling", () => {
   it("logs mid-stream handleRequest errors with an errorId (SSE/AG-UI failure path)", async () => {
     mockedGetLocalAgents.mockReturnValue({
       weatherAgent: makeAgent("weather", "mastra-weatherAgent"),
+      headlessCompleteAgent: makeAgent(
+        "headless-complete",
+        "mastra-headlessCompleteAgent",
+      ),
+      sharedStateReadWriteAgent: makeAgent(
+        "shared-state-rw",
+        "mastra-sharedStateReadWriteAgent",
+      ),
+      subagentsSupervisorAgent: makeAgent(
+        "subagents-supervisor",
+        "mastra-subagentsSupervisorAgent",
+      ),
     });
     mockedGetLocalAgent.mockImplementation(({ resourceId }) =>
       makeAgent("demo", resourceId),

@@ -36,22 +36,16 @@ const LANGGRAPH_URL =
   process.env.LANGGRAPH_DEPLOYMENT_URL || "http://localhost:8123";
 
 // Keys on `forwardedProps` that the ag-ui LangGraphAgent treats as reserved
-// stream-payload fields. These must NOT be repacked into `context` — they
-// are structural fields the LangGraph SDK understands directly. Anything
-// else on `forwardedProps` is user-supplied frontend state that needs to
-// reach the graph node.
-//
-// `context` itself is reserved: LangGraph 1.x exposes it as the run-scoped
-// context channel, and we want any explicit `forwardedProps.context` from a
-// caller to pass through verbatim (and merge with user-supplied props
-// rather than be wrapped a level deeper).
+// stream-payload fields (e.g. `config`, `command`, `streamMode`). These must
+// NOT be repacked under `configurable.properties` — they are structural fields
+// the LangGraph SDK understands directly. Anything else on `forwardedProps`
+// is user-supplied frontend state that needs to reach the graph node.
 //
 // Keep this list in sync with ag-ui/langgraph/typescript/src/agent.ts
 // `RunAgentExtendedInput["forwardedProps"]`.
 const RESERVED_FORWARDED_PROPS_KEYS = new Set<string>([
   "config",
   "command",
-  "context",
   "streamMode",
   "streamSubgraphs",
   "nodeName",
@@ -73,40 +67,34 @@ const RESERVED_FORWARDED_PROPS_KEYS = new Set<string>([
 /**
  * Wrapper around `LangGraphAgent` that repacks the CopilotKit provider's
  * `properties` (which arrive as top-level keys on `forwardedProps`) into
- * `forwardedProps.context` so the Python LangGraph graph receives them as
- * its run-scoped `Runtime[ContextSchema].context`.
+ * `forwardedProps.config.configurable.properties` so the Python LangGraph
+ * graph can read them from `RunnableConfig["configurable"]["properties"]`.
  *
- * Why this bridge exists: LangGraph 1.x rejects requests that send
- * `configurable` with the error "Cannot specify both configurable and
- * context. Prefer setting context alone." Any frontend-derived state has
- * to ride the new `context` channel — `configurable.properties` is no
- * longer accepted.
- *
- * The CopilotKit runtime forwards `CopilotKitCore.properties` as
- * `forwardedProps` (see core's run-handler). The ag-ui LangGraphAgent
- * spreads `forwardedProps` directly onto the LangGraph stream payload, so
- * placing the merged values under `forwardedProps.context` makes them
- * arrive at the graph's `Runtime.context`.
+ * Why this bridge exists: the CopilotKit runtime forwards
+ * `CopilotKitCore.properties` as `forwardedProps` (see core's run-handler).
+ * The ag-ui LangGraphAgent spreads unknown forwardedProps keys into the
+ * top-level LangGraph stream payload, where they are ignored by the server.
+ * Only `forwardedProps.config.configurable.*` actually reaches the graph's
+ * `RunnableConfig`. This class closes that gap for this demo.
  */
 class AgentConfigLangGraphAgent extends LangGraphAgent {
-  // Intercept each run() to move provider `properties` (which land as
-  // top-level keys on `forwardedProps`) onto `forwardedProps.context` —
-  // the LangGraph 1.x channel for run-scoped configuration. AG-UI then
-  // spreads `forwardedProps` into the SDK call, so `context` arrives at
-  // the graph node's `Runtime[ContextSchema].context`.
+  // Intercept each run() to repack provider `properties` (which land on
+  // `forwardedProps`) into `forwardedProps.config.configurable.properties`,
+  // the only place the LangGraph SDK will surface them to the Python graph's
+  // `RunnableConfig["configurable"]["properties"]`.
   run(
     input: Parameters<LangGraphAgent["run"]>[0],
   ): ReturnType<LangGraphAgent["run"]> {
-    const repacked = repackForwardedPropsIntoContext(
+    const repacked = repackForwardedPropsIntoConfigurable(
       input as RunInputWithForwardedProps,
     );
     return super.run(repacked as Parameters<LangGraphAgent["run"]>[0]);
   }
 }
 
-function repackForwardedPropsIntoContext<T extends RunInputWithForwardedProps>(
-  input: T,
-): T {
+function repackForwardedPropsIntoConfigurable<
+  T extends RunInputWithForwardedProps,
+>(input: T): T {
   const fp = (input.forwardedProps ?? {}) as Record<string, unknown>;
   if (!fp || typeof fp !== "object") return input;
 
@@ -123,21 +111,32 @@ function repackForwardedPropsIntoContext<T extends RunInputWithForwardedProps>(
 
   if (Object.keys(userProps).length === 0) return input;
 
-  // Merge user-supplied props into any pre-existing `forwardedProps.context`
-  // so an explicit context object from a caller is preserved alongside the
-  // provider's `properties`.
-  const existingContext =
-    (structural.context as Record<string, unknown> | undefined) ?? {};
-  const mergedContext = {
-    ...existingContext,
-    ...userProps,
+  const existingConfig = (structural.config ?? {}) as {
+    configurable?: Record<string, unknown>;
+    [k: string]: unknown;
+  };
+  const existingConfigurable =
+    (existingConfig.configurable as Record<string, unknown> | undefined) ?? {};
+  const existingProperties =
+    (existingConfigurable.properties as Record<string, unknown> | undefined) ??
+    {};
+
+  const mergedConfig = {
+    ...existingConfig,
+    configurable: {
+      ...existingConfigurable,
+      properties: {
+        ...existingProperties,
+        ...userProps,
+      },
+    },
   };
 
   return {
     ...input,
     forwardedProps: {
       ...structural,
-      context: mergedContext,
+      config: mergedConfig,
     },
   } as T;
 }
