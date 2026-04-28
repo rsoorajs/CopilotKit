@@ -17,8 +17,6 @@ Together this gives bidirectional shared state: frontend writes,
 backend reads AND writes, frontend re-renders.
 """
 
-from __future__ import annotations
-
 import logging
 from textwrap import dedent
 from typing import List, Optional
