@@ -189,7 +189,7 @@ export function ComposedCell({
       {hasLinks && <LinksLayer ctx={ctx} />}
       {hasDepth && <DepthLayer ctx={ctx} catalogCell={catalogCell} />}
       {hasHealth && <HealthLayer ctx={ctx} />}
-      {hasDocs && <DocsLayer ctx={ctx} />}
+      {hasDocs && !hasHealth && <DocsLayer ctx={ctx} />}
     </div>
   );
 }
