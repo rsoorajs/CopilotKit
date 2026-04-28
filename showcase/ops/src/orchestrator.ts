@@ -1180,9 +1180,11 @@ export async function hydrateProbeLastRuns(deps: {
   );
 
   let seeded = 0;
-  for (const result of results) {
+  for (let i = 0; i < results.length; i++) {
+    const result = results[i];
     if (result.status === "rejected") {
       log.warn("orchestrator.hydrate-lastrun-failed", {
+        probeId: probeIds[i],
         err: String(result.reason),
       });
       continue;
@@ -1191,9 +1193,12 @@ export async function hydrateProbeLastRuns(deps: {
     if (runs.length === 0) continue;
     const run = runs[0];
     if (!run.finishedAt || run.durationMs === null) continue;
+    const startedMs = Date.parse(run.startedAt);
+    const finishedMs = Date.parse(run.finishedAt);
+    if (!Number.isFinite(startedMs) || !Number.isFinite(finishedMs)) continue;
     scheduler.seedEntryLastRun(schedulerId, {
-      startedAt: Date.parse(run.startedAt),
-      finishedAt: Date.parse(run.finishedAt),
+      startedAt: startedMs,
+      finishedAt: finishedMs,
       durationMs: run.durationMs,
       summary: run.summary ?? null,
     });

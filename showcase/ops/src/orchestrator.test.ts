@@ -2004,6 +2004,55 @@ describe("hydrateProbeLastRuns", () => {
     expect(scheduler.seedEntryLastRun).not.toHaveBeenCalled();
   });
 
+  it("skips runs with malformed date strings (NaN guard)", async () => {
+    const scheduler = makeStubScheduler();
+    scheduler.register({ id: "probe:bad-dates", cron: "0 * * * *" });
+    const runWriter = makeStubRunWriter();
+    runWriter.recent.mockResolvedValue([
+      {
+        id: "run-bad",
+        probeId: "bad-dates",
+        startedAt: "not-a-date",
+        finishedAt: "also-bad",
+        durationMs: 1000,
+        triggered: false,
+        state: "completed",
+        summary: null,
+      },
+    ]);
+    const log = makeStubLogger();
+
+    await hydrateProbeLastRuns({
+      scheduler: scheduler as any,
+      runWriter: runWriter as any,
+      logger: log as any,
+    });
+
+    expect(scheduler.seedEntryLastRun).not.toHaveBeenCalled();
+  });
+
+  it("includes probeId in warn log when runWriter.recent() rejects", async () => {
+    const scheduler = makeStubScheduler();
+    scheduler.register({ id: "probe:broken", cron: "0 * * * *" });
+    const runWriter = makeStubRunWriter();
+    runWriter.recent.mockRejectedValue(new Error("PB is down"));
+    const log = makeStubLogger();
+
+    await hydrateProbeLastRuns({
+      scheduler: scheduler as any,
+      runWriter: runWriter as any,
+      logger: log as any,
+    });
+
+    expect(log.warn).toHaveBeenCalledWith(
+      "orchestrator.hydrate-lastrun-failed",
+      expect.objectContaining({
+        probeId: "probe:broken",
+        err: expect.stringContaining("PB is down"),
+      }),
+    );
+  });
+
   it("skips runs with finishedAt=null (incomplete)", async () => {
     const scheduler = makeStubScheduler();
     scheduler.register({ id: "probe:in-progress", cron: "0 * * * *" });
