@@ -8,7 +8,7 @@ import {
 
 export default function GenUiToolBased() {
   return (
-    <CopilotKitProvider runtimeUrl="/api/copilotkit">
+    <CopilotKitProvider runtimeUrl="/api/copilotkit" useSingleEndpoint>
       <Demo />
     </CopilotKitProvider>
   );

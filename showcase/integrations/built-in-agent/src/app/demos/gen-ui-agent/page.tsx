@@ -14,7 +14,7 @@ type Step = {
 
 export default function GenUiAgent() {
   return (
-    <CopilotKitProvider runtimeUrl="/api/copilotkit">
+    <CopilotKitProvider runtimeUrl="/api/copilotkit" useSingleEndpoint>
       <Demo />
     </CopilotKitProvider>
   );
