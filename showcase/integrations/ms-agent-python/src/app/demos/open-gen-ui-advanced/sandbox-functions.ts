@@ -12,6 +12,7 @@ import { z } from "zod";
  * Keep the surface small and obvious — these are the demo's "app-side
  * tools" that the sandbox-generated UI can call.
  */
+// @region[sandbox-function-registration]
 export const openGenUiSandboxFunctions = [
   {
     name: "evaluateExpression",
@@ -67,3 +68,4 @@ export const openGenUiSandboxFunctions = [
     },
   },
 ];
+// @endregion[sandbox-function-registration]

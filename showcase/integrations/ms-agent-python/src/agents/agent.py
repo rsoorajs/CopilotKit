@@ -89,6 +89,7 @@ def get_sales_todos() -> str:
     return json.dumps(result)
 
 
+# @region[weather-tool-backend]
 @tool(
     name="get_weather",
     description="Get the current weather for a location. Use this to render the frontend weather card.",
@@ -99,6 +100,7 @@ def get_weather(
     """Return weather data as JSON for UI rendering."""
     result = get_weather_impl(location)
     return json.dumps(result)
+# @endregion[weather-tool-backend]
 
 
 @tool(

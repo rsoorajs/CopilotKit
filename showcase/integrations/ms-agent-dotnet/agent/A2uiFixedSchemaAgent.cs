@@ -122,6 +122,7 @@ string like ""$289"". Keep any chat reply to one short sentence.",
         new { id = "bookButtonLabel", component = "Text", text = "Book flight" },
     };
 
+    // @region[backend-render-operations]
     [Description("Show a flight card for the given trip. Use short airport codes (e.g. SFO, JFK) for origin/destination and a price string like $289.")]
     private string SearchFlights(
         [Description("Origin airport code (e.g. SFO)")] string origin,
@@ -151,4 +152,5 @@ string like ""$289"". Keep any chat reply to one short sentence.",
 
         return JsonSerializer.Serialize(new { a2ui_operations = operations });
     }
+    // @endregion[backend-render-operations]
 }

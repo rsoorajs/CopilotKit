@@ -475,6 +475,7 @@ public class SalesAgentFactory
         return JsonSerializer.Serialize(results);
     }
 
+    // @region[weather-tool-backend]
     [Description("Get the weather for a given location. Ensure location is fully spelled out.")]
     private WeatherInfo GetWeather([Description("The location to get the weather for")] string location)
     {
@@ -489,6 +490,7 @@ public class SalesAgentFactory
             FeelsLike = 25
         };
     }
+    // @endregion[weather-tool-backend]
 
     [Description("Search for available flights between two cities. Returns flight data with A2UI rendering.")]
     private string SearchFlights(

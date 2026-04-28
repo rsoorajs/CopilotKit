@@ -26,6 +26,7 @@ const AGENT_URL = process.env.AGENT_URL || "http://localhost:8000";
 console.log("[copilotkit-mcp-apps/route] Initializing CopilotKit runtime");
 console.log(`[copilotkit-mcp-apps/route] AGENT_URL: ${AGENT_URL}`);
 
+// @region[runtime-mcpapps-config]
 // The `mcpApps.servers` config is all you need server-side. The runtime
 // auto-applies the MCP Apps middleware to every registered agent: on each
 // MCP tool call it fetches the associated UI resource and emits an
@@ -49,6 +50,7 @@ const runtime = new CopilotRuntime({
     ],
   },
 });
+// @endregion[runtime-mcpapps-config]
 
 export const POST = async (req: NextRequest) => {
   const contentType = req.headers.get("content-type");
