@@ -43,7 +43,8 @@ export function SampleAudioButton({
       const blob = await audioRes.blob();
       const formData = new FormData();
       formData.append("audio", blob, "sample.wav");
-      const transcribeRes = await fetch(`${runtimeUrl}/transcribe`, {
+      const base = runtimeUrl.replace(/\/$/, "");
+      const transcribeRes = await fetch(`${base}/transcribe`, {
         method: "POST",
         body: formData,
       });
