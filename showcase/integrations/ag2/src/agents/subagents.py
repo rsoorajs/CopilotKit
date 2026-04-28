@@ -17,8 +17,6 @@ adapted to surface delegation events to the frontend via AG-UI's
 shared-state channel.
 """
 
-from __future__ import annotations
-
 import asyncio
 import logging
 import uuid
