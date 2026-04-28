@@ -77,7 +77,12 @@ const script: D5Script = {
           );
         }
         const baselineCount = await readAssistantCount(hitlPage);
-        await selectorCascade(hitlPage, STEPS_CARD_SELECTORS, "steps card", HITL_CARD_TIMEOUT_MS);
+        await selectorCascade(
+          hitlPage,
+          STEPS_CARD_SELECTORS,
+          "steps card",
+          HITL_CARD_TIMEOUT_MS,
+        );
         const confirmSelector = await selectorCascade(
           hitlPage,
           CONFIRM_BUTTON_SELECTORS,
