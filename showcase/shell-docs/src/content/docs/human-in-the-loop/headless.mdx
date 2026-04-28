@@ -1,7 +1,7 @@
 ---
 title: Headless interrupts
 icon: "lucide/SquareDashedBottomCode"
-description: Resolve LangGraph interrupts from any UI, without a useInterrupt render slot.
+description: Resolve agent interrupts from any UI, without a useInterrupt render slot.
 hideTOC: true
 snippet_cell: interrupt-headless
 ---
@@ -12,12 +12,31 @@ snippet_cell: interrupt-headless
 glued to a `<CopilotChat>` transcript and handles "when to show the
 picker" logic for you. This page covers the escape hatch: a
 **render-less** interrupt resolver you assemble from the same
-primitives `useInterrupt` uses internally.
-
-The result is a pattern that lives anywhere in your React tree, takes
-any shape you like (plain button grid, form, modal, keyboard shortcut,
-anything), and resolves `langgraph.interrupt(...)` without
+primitives `useInterrupt` uses internally — a pattern that lives
+anywhere in your React tree, takes any shape you like (button grid,
+form, modal, keyboard shortcut), and resolves the interrupt without
 mounting a chat at all.
+
+<WhenFrameworkHas flag="interrupt_pattern" equals="native">
+
+On LangGraph the underlying primitive is the framework's
+`interrupt()` call, surfaced to the client as an `on_interrupt`
+custom event. The headless variant subscribes to that event directly
+and resumes the run by calling `copilotkit.runAgent({...})` with the
+matching `resume` payload — no chat surface required.
+
+</WhenFrameworkHas>
+
+<WhenFrameworkHas flag="interrupt_pattern" equals="promise-based">
+
+On Microsoft Agent Framework there's no native interrupt primitive,
+so the headless variant uses `useFrontendTool` with a Promise-based
+handler. The handler exposes its pending payload via React state — so
+a separate "app surface" can render the picker outside the chat — and
+resolves the Promise once the user interacts. Same UX, different
+mechanism.
+
+</WhenFrameworkHas>
 
 <InlineDemo demo="interrupt-headless" />
 
@@ -72,15 +91,7 @@ A few things this hook is careful about:
 
 <WhenFrameworkHas flag="interrupt_pattern" equals="promise-based">
 
-## The primitives (Promise-based shim)
-
-On Microsoft Agent Framework there's no native interrupt primitive —
-the runtime can't pause a run and surface a custom event for the
-client to subscribe to. Instead, the headless variant uses
-`useFrontendTool` with an async handler that returns a Promise: the
-handler exposes its pending payload via React state (so a separate
-"app surface" can render the picker outside the chat) and resolves
-the Promise once the user interacts. Same UX, different mechanism.
+## The primitives
 
 The render callback intentionally returns `null` — the picker UI lives
 in the app surface, not in the chat transcript. The handler's pending
@@ -138,6 +149,7 @@ function HeadlessInterruptPanel() {
 ## Going further
 
 - [Tool-based HITL with `useHumanInTheLoop`](../human-in-the-loop) — for
-  LLM-initiated pauses that don't involve a LangGraph `interrupt()`.
+  LLM-initiated pauses where the model decides on the fly to ask the
+  user, rather than the runtime forcing the pause itself.
 - [`useInterrupt`](./useInterrupt) — the render-prop version of this
   page, with `enabled` gating and `handler` preprocessing.
