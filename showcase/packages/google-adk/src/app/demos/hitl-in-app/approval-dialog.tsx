@@ -12,10 +12,15 @@ export interface ApprovalRequest {
 export function ApprovalDialog({ request }: { request: ApprovalRequest }) {
   return (
     <div
-      data-testid="approval-dialog"
+      data-testid="approval-dialog-overlay"
       className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm"
     >
-      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl border border-slate-200">
+      <div
+        data-testid="approval-dialog"
+        role="dialog"
+        aria-modal="true"
+        className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl border border-slate-200"
+      >
         <header className="mb-3">
           <h3 className="text-lg font-semibold text-slate-900">
             Action requires approval
@@ -40,7 +45,7 @@ export function ApprovalDialog({ request }: { request: ApprovalRequest }) {
         </div>
         <div className="flex gap-2">
           <button
-            data-testid="approval-reject"
+            data-testid="approval-dialog-reject"
             type="button"
             className="flex-1 rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-slate-50"
             onClick={() => request.resolve({ accepted: false })}
@@ -48,7 +53,7 @@ export function ApprovalDialog({ request }: { request: ApprovalRequest }) {
             Reject
           </button>
           <button
-            data-testid="approval-approve"
+            data-testid="approval-dialog-approve"
             type="button"
             className="flex-1 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-700"
             onClick={() => request.resolve({ accepted: true })}

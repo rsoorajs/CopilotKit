@@ -23,14 +23,14 @@ import type {
  *   2. `buildTurns` returns the expected user message (mirrors the
  *      recorded fixture in `fixtures/d5/gen-ui-headless.json`).
  *   3. The turn's assertion FAILS when no gen-UI component renders
- *      (cascade times out → throw → conversation-runner records it
+ *      (cascade times out -> throw -> conversation-runner records it
  *      as `failure_turn`).
  *   4. The turn's assertion FAILS when the matched component is an
  *      empty wrapper (zero children).
  *   5. The turn's assertion FAILS when the assistant follow-up
- *      narration is missing the expected tokens.
+ *      narration is missing ALL expected tokens.
  *   6. The turn's assertion PASSES on a healthy DOM (component
- *      rendered with children + narration mentions card + Ada).
+ *      rendered with children + narration mentions card OR Ada).
  */
 
 interface FreshRegistry {
@@ -152,7 +152,7 @@ describe("d5-gen-ui-headless script", () => {
     //            (the cascade accepts SVG as a leaf even with 0
     //            children — only non-SVG empty wrappers are filtered
     //            in the cascade itself).
-    //   call 2 — re-read childCount: returns 0 → script's secondary
+    //   call 2 — re-read childCount: returns 0 -> script's secondary
     //            structural check throws with "0 children".
     let evalCount = 0;
     const page = makeAssertionPage({
@@ -166,7 +166,7 @@ describe("d5-gen-ui-headless script", () => {
     await expect(turn.assertions!(page)).rejects.toThrow(/0 children/);
   });
 
-  it("assertion FAILS when assistant follow-up is missing expected tokens", async () => {
+  it("assertion FAILS when assistant follow-up is missing ALL expected tokens", async () => {
     const { script } = await loadFreshRegistry();
     const turn = script.buildTurns({
       integrationSlug: "langgraph-python",
@@ -186,6 +186,48 @@ describe("d5-gen-ui-headless script", () => {
     });
 
     await expect(turn.assertions!(page)).rejects.toThrow(/missing tokens/);
+  });
+
+  it("assertion PASSES when narration mentions 'card' but not 'ada'", async () => {
+    const { script } = await loadFreshRegistry();
+    const turn = script.buildTurns({
+      integrationSlug: "langgraph-python",
+      featureType: "gen-ui-headless",
+      baseUrl: "https://example.com",
+    })[0]!;
+
+    let evalCount = 0;
+    const page = makeAssertionPage({
+      evaluateImpl: () => {
+        evalCount++;
+        if (evalCount === 1) return { selector: '[data-testid="gen-ui-card"]' };
+        if (evalCount === 2) return 2; // childCount
+        return "Here is the card you asked for — let me know if you want another.";
+      },
+    });
+
+    await expect(turn.assertions!(page)).resolves.toBeUndefined();
+  });
+
+  it("assertion PASSES when narration mentions 'ada' but not 'card'", async () => {
+    const { script } = await loadFreshRegistry();
+    const turn = script.buildTurns({
+      integrationSlug: "langgraph-python",
+      featureType: "gen-ui-headless",
+      baseUrl: "https://example.com",
+    })[0]!;
+
+    let evalCount = 0;
+    const page = makeAssertionPage({
+      evaluateImpl: () => {
+        evalCount++;
+        if (evalCount === 1) return { selector: '[data-testid="gen-ui-card"]' };
+        if (evalCount === 2) return 2; // childCount
+        return "Ada Lovelace was an English mathematician born in 1815.";
+      },
+    });
+
+    await expect(turn.assertions!(page)).resolves.toBeUndefined();
   });
 
   it("childCount lookup interpolates the resolved cascade selector (no in-page re-cascade)", async () => {

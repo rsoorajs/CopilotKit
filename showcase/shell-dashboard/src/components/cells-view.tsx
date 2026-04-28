@@ -16,6 +16,7 @@ import {
   type FeatureInfo,
 } from "./cell-matrix";
 import { deriveDepth } from "./depth-utils";
+import { resolveCell } from "@/lib/live-status";
 import type { LiveStatusMap, ConnectionStatus } from "@/lib/live-status";
 import type { FeatureCategory } from "@/lib/registry";
 import type { CatalogData } from "@/data/catalog-types";
@@ -121,16 +122,28 @@ export function CellsView({ catalog, liveStatus, connection }: CellsViewProps) {
       (c) => c.status === "unshipped",
     ).length;
 
-    // Max achieved depth across all cells
+    // Max achieved depth + regression count + failure count across all cells
     let maxDepth = 0;
+    let regressions = 0;
+    let failures = 0;
     for (const cell of catalog.cells) {
       if (cell.status !== "unshipped") {
         const d = deriveDepth(cell, liveStatus);
         if (d.achieved > maxDepth) maxDepth = d.achieved;
+        if (d.isRegression) regressions++;
+        // Count cells with red rollup as failures
+        if (cell.feature !== null) {
+          const cellState = resolveCell(
+            liveStatus,
+            cell.integration,
+            cell.feature,
+          );
+          if (cellState.rollup === "red") failures++;
+        }
       }
     }
 
-    return { wired, stub, unshipped, maxDepth, regressions: 0 };
+    return { wired, stub, unshipped, maxDepth, regressions, failures };
   }, [catalog.cells, liveStatus]);
 
   const defaultOpenCategories = useMemo(
@@ -147,6 +160,7 @@ export function CellsView({ catalog, liveStatus, connection }: CellsViewProps) {
         unshipped={stats.unshipped}
         maxDepth={stats.maxDepth}
         regressions={stats.regressions}
+        failures={stats.failures}
       />
       <div className="my-4 px-4">
         <CoverageBar
@@ -175,6 +189,7 @@ export function CellsView({ catalog, liveStatus, connection }: CellsViewProps) {
         defaultOpenCategories={defaultOpenCategories}
         filter={filter}
         referenceSlug={referenceSlug}
+        connection={connection}
       />
     </div>
   );

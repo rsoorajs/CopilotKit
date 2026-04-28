@@ -17,19 +17,19 @@
  *     matches the fixture's `userMessage` matcher; the matcher is
  *     prefix-loose so the question form is fine)
  *
- * Why both feature types in one script: the showcase splits the demo
- * into `/demos/shared-state-read` and `/demos/shared-state-write` but
- * the underlying LangGraph agent and fixture are shared. Running the
- * same conversation against each route covers the read+write contract
- * end-to-end without duplicating fixture wiring. The registry's
+ * Why both feature types in one script: the D5 registry fans out one
+ * probe per feature type, but the underlying demo page, LangGraph
+ * agent, and aimock fixture are shared. Both `shared-state-read` and
+ * `shared-state-write` navigate to `/demos/shared-state-read-write`
+ * where the bidirectional `set_notes` agent lives. The registry's
  * single-script / multi-feature-type shape exists for exactly this case.
  *
- * Route override: split by feature type. Read demo lives under
- * `/demos/shared-state-read`; write demo under `/demos/shared-state-write`.
- * Defaulting to `/demos/<featureType>` would already produce the right
- * paths today, but we set `preNavigateRoute` explicitly so this script
- * is the single source of truth for its route map and a future rename
- * of the demo folders won't silently mis-route via the driver default.
+ * Route override: both feature types map to `/demos/shared-state-read-write`.
+ * The legacy split paths `/demos/shared-state-read` (a recipe-editor
+ * page with a different agent) and `/demos/shared-state-write` (a TODO
+ * stub in most packages) do not match the D5 fixture's conversation
+ * shape. `preNavigateRoute` is set explicitly so this script is the
+ * single source of truth for its route map.
  */
 
 import {
@@ -64,10 +64,23 @@ export const TURN_1_INPUT = "remember that my favorite color is blue";
  */
 export const TURN_2_INPUT = "What is my favorite color?";
 
-/** Route map. Centralised so the unit test can verify it directly. */
+/**
+ * Route map. Centralised so the unit test can verify it directly.
+ *
+ * Both feature types navigate to `/demos/shared-state-read-write`
+ * because the working demo page (with bidirectional agent state and
+ * the `set_notes` tool the fixture exercises) lives there. The legacy
+ * split paths `/demos/shared-state-read` and `/demos/shared-state-write`
+ * are either recipe-editor pages (wrong agent, wrong conversation
+ * shape) or TODO stubs — neither matches the D5 fixture.
+ */
 export function preNavigateRoute(featureType: D5FeatureType): string {
-  if (featureType === "shared-state-read") return "/demos/shared-state-read";
-  if (featureType === "shared-state-write") return "/demos/shared-state-write";
+  if (
+    featureType === "shared-state-read" ||
+    featureType === "shared-state-write"
+  ) {
+    return "/demos/shared-state-read-write";
+  }
   // Defensive: registry is closed-typed so callers can't reach this
   // branch through public API, but a future feature-type rename that
   // dropped one of the two would land here. Surface it loudly.
@@ -122,6 +135,41 @@ async function readLatestAssistantText(page: Page): Promise<string> {
 }
 
 /**
+ * Poll the DOM for non-empty assistant text. Tool-call-only responses
+ * (where the LLM calls a tool before producing visible text) cause the
+ * conversation runner's settle to fire on the tool-call message whose
+ * `textContent` is empty or contains only tool-call metadata. The
+ * follow-up text leg (matched by aimock's `toolCallId` fixture) lands
+ * shortly after — this helper bridges that gap by re-reading until
+ * non-empty text appears.
+ *
+ * If the first read already returns non-empty text, returns immediately
+ * (no polling overhead on the happy path). Polling only kicks in when
+ * the initial read is empty — the tool-call-only scenario.
+ *
+ * Returns the text (lowercased, may be empty if timeout elapses).
+ */
+const TEXT_POLL_TIMEOUT_MS = 3_000;
+const TEXT_POLL_INTERVAL_MS = 200;
+
+async function waitForNonEmptyAssistantText(page: Page): Promise<string> {
+  // Fast path: text is already available (no tool-call-only lag).
+  const initial = (await readLatestAssistantText(page)) ?? "";
+  if (initial.length > 0) return initial;
+
+  // Slow path: tool-call-only message rendered — poll until the text
+  // leg arrives and populates the assistant bubble.
+  const deadline = Date.now() + TEXT_POLL_TIMEOUT_MS;
+  let lastText = "";
+  while (Date.now() < deadline) {
+    await new Promise<void>((r) => setTimeout(r, TEXT_POLL_INTERVAL_MS));
+    lastText = (await readLatestAssistantText(page)) ?? "";
+    if (lastText.length > 0) return lastText;
+  }
+  return lastText;
+}
+
+/**
  * Build the two-turn conversation.
  *
  * Turn 1 assertion (relevance): the assistant response must mention
@@ -143,7 +191,12 @@ export function buildTurns(_ctx: D5BuildContext): ConversationTurn[] {
     {
       input: TURN_1_INPUT,
       assertions: async (page: Page) => {
-        const text = (await readLatestAssistantText(page)) ?? "";
+        // The fixture's turn 1 response is a tool call (`set_notes`)
+        // followed by a text leg (matched via `toolCallId`). The
+        // conversation runner may settle on the tool-call message before
+        // the text leg arrives — use waitForNonEmptyAssistantText to
+        // bridge the gap when the initial message has no visible text.
+        const text = await waitForNonEmptyAssistantText(page);
         if (text.length === 0) {
           throw new Error(
             "turn 1: no assistant message text found after settle",
@@ -163,7 +216,10 @@ export function buildTurns(_ctx: D5BuildContext): ConversationTurn[] {
     {
       input: TURN_2_INPUT,
       assertions: async (page: Page) => {
-        const text = (await readLatestAssistantText(page)) ?? "";
+        // Turn 2 is a plain text response (no tool call), but poll
+        // defensively in case the DOM snapshot is briefly empty while
+        // streaming starts.
+        const text = await waitForNonEmptyAssistantText(page);
         if (text.length === 0) {
           throw new Error(
             "turn 2: no assistant message text found after settle",

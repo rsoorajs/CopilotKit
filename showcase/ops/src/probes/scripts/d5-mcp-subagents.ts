@@ -28,7 +28,13 @@ import {
   type D5BuildContext,
   type D5FeatureType,
 } from "../helpers/d5-registry.js";
-import type { ConversationTurn, Page } from "../helpers/conversation-runner.js";
+import {
+  ASSISTANT_MESSAGE_FALLBACK_SELECTOR,
+  ASSISTANT_MESSAGE_HEADLESS_SELECTOR,
+  ASSISTANT_MESSAGE_PRIMARY_SELECTOR,
+  type ConversationTurn,
+  type Page,
+} from "../helpers/conversation-runner.js";
 
 /**
  * Phrases the final assistant reply MUST contain to prove the entire
@@ -78,23 +84,117 @@ export function buildTurns(_ctx: D5BuildContext): ConversationTurn[] {
 }
 
 /**
- * Per-turn assertion. After the assistant settles, scrape the rendered
- * conversation text and verify every chain fragment is present. We pull
- * the visible text via `page.evaluate` rather than Playwright's
- * `textContent(selector)` because the runner's `Page` surface (a
- * structural minimal subset of `playwright.Page`) only exposes
- * `evaluate` — keeps unit-test fakes thin.
+ * Maximum time (ms) the assertion polls for the expected fragments to
+ * appear. The sub-agent tool-call chain involves 3 sequential LLM
+ * round-trips (research → writing → critique) before the final text
+ * lands. With aimock the round-trips are near-instant, but the CopilotKit
+ * runtime still needs to process each tool result and re-invoke the
+ * supervisor — plus React needs to render the streamed text. With real
+ * LLMs proxied through aimock (inner sub-agent calls that don't match
+ * fixtures fall through to the real API), each round-trip can take
+ * several seconds.
  *
- * The assertion intentionally checks the FINAL reply text (not DOM
- * cards for sub-agent invocations) because the fixture already proves
- * the chain executed: if any sub-agent had been skipped, its fact
- * fragment would not have made it into the critique's draft, and this
- * check would fail. Optional DOM inspection of `[data-testid="delegation-entry"]`
- * is left as a follow-up — the fixture-driven text check is the load-
- * bearing signal.
+ * The conversation-runner's settle window (1500ms of stable message
+ * count) may fire before the full chain completes because the assistant
+ * message element appears early (when the first tool-call event arrives)
+ * and its count stays at 1 throughout the chain. So the assertion must
+ * poll independently rather than assuming the text is already final.
  */
-export async function assertChainedReply(page: Page): Promise<void> {
-  const visibleText = await page.evaluate(() => {
+const CHAIN_POLL_TIMEOUT_MS = 30_000;
+const CHAIN_POLL_INTERVAL_MS = 500;
+
+/**
+ * Read all visible assistant-message text from the page. Mirrors the
+ * conversation-runner's selector cascade — canonical CopilotKit testid
+ * first, generic `[role="article"]` fallback for custom composers.
+ *
+ * Returns a single concatenated lowercase string so callers can do a
+ * substring check without worrying about message boundaries.
+ */
+async function readAssistantTranscript(page: Page): Promise<string> {
+  const code = `
+    (() => {
+      const doc = globalThis.document;
+      const canonical = doc.querySelectorAll(${JSON.stringify(
+        ASSISTANT_MESSAGE_PRIMARY_SELECTOR,
+      )});
+      let nodes = canonical;
+      if (canonical.length === 0) {
+        const fallback = doc.querySelectorAll(${JSON.stringify(
+          ASSISTANT_MESSAGE_FALLBACK_SELECTOR,
+        )});
+        nodes = fallback.length > 0
+          ? fallback
+          : doc.querySelectorAll(${JSON.stringify(
+            ASSISTANT_MESSAGE_HEADLESS_SELECTOR,
+          )});
+      }
+      let out = "";
+      for (let i = 0; i < nodes.length; i++) {
+        const text = (nodes[i] && nodes[i].textContent) ? nodes[i].textContent : "";
+        out += " " + text;
+      }
+      return out.toLowerCase();
+    })()
+  `;
+  const fn = new Function(`return ${code.trim()};`) as () => string;
+  return page.evaluate(fn);
+}
+
+/**
+ * Per-turn assertion. Polls the rendered assistant-message transcript
+ * until every chain fragment is found, or until the polling timeout
+ * expires.
+ *
+ * Why poll instead of a one-shot read: the conversation-runner's settle
+ * window may fire before the full tool-call chain completes (the
+ * assistant message count stabilizes at 1 early in the chain while the
+ * final text is still streaming in). The assertion must therefore wait
+ * for the text to finish arriving.
+ *
+ * The assertion reads from assistant-message DOM elements (matching the
+ * canonical CopilotKit selectors) rather than `document.body.innerText`
+ * to avoid false positives from navigation chrome, error boundaries, or
+ * the DelegationLog panel. Falls back to `document.body.innerText` if
+ * no assistant message elements are found (e.g. custom-composer demos).
+ */
+export async function assertChainedReply(
+  page: Page,
+  timeoutMs: number = CHAIN_POLL_TIMEOUT_MS,
+): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  let lastMissing: string[] = [...EXPECTED_REPLY_FRAGMENTS];
+
+  while (Date.now() < deadline) {
+    // Try assistant-message elements first; fall back to full page text.
+    let text = await readAssistantTranscript(page);
+    if (text.trim().length === 0) {
+      text = await readFullPageText(page);
+    }
+
+    const lower = text.toLowerCase();
+    lastMissing = EXPECTED_REPLY_FRAGMENTS.filter(
+      (fragment) => !lower.includes(fragment.toLowerCase()),
+    );
+
+    if (lastMissing.length === 0) {
+      return; // All fragments found.
+    }
+
+    await sleep(CHAIN_POLL_INTERVAL_MS);
+  }
+
+  throw new Error(
+    `mcp-subagents: chained reply missing fragments after ${timeoutMs}ms: ${lastMissing.join(", ")}`,
+  );
+}
+
+/**
+ * Fallback: read the full page body text. Used when no assistant-message
+ * elements are found (custom-composer demos that don't tag their bubbles).
+ */
+async function readFullPageText(page: Page): Promise<string> {
+  return page.evaluate(() => {
     const win = globalThis as unknown as {
       document: {
         body: { innerText?: string; textContent?: string };
@@ -102,16 +202,10 @@ export async function assertChainedReply(page: Page): Promise<void> {
     };
     return win.document.body.innerText ?? win.document.body.textContent ?? "";
   });
+}
 
-  const lower = visibleText.toLowerCase();
-  const missing = EXPECTED_REPLY_FRAGMENTS.filter(
-    (fragment) => !lower.includes(fragment.toLowerCase()),
-  );
-  if (missing.length > 0) {
-    throw new Error(
-      `mcp-subagents: chained reply missing fragments: ${missing.join(", ")}`,
-    );
-  }
+function sleep(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
 }
 
 /**

@@ -47,7 +47,7 @@ features:
   - frontend-tools
   - frontend-tools-async
   - gen-ui-tool-based
-  - hitl-in-chat
+  - hitl
   - hitl-in-app
   - declarative-gen-ui
   - a2ui-fixed-schema
@@ -146,9 +146,9 @@ demos:
       - src/app/demos/frontend-tools-async/page.tsx
       - src/app/demos/frontend-tools-async/notes-card.tsx
       - src/app/api/copilotkit/route.ts
-  - id: hitl-in-chat
-    name: In-Chat HITL (useHumanInTheLoop)
-    description: Interactive approval/decision surface rendered inline in the chat via the high-level useHumanInTheLoop hook
+  - id: hitl
+    name: Human in the Loop (Step Selection)
+    description: Agent proposes steps and the user selects which to execute, rendered inline in the chat
     tags:
       - interactivity
     route: /demos/hitl

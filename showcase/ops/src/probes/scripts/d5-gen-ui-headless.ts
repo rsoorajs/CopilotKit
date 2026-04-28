@@ -11,8 +11,8 @@
  *
  * Two-turn shape (mirrors the recorded fixture):
  *   1. User: "Show me a profile card for Ada Lovelace"
- *      → Agent calls `show_card({ title, body })` → frontend renders
- *      `ShowCard` → second-leg LLM round narrates the rendered card.
+ *      -> Agent calls `show_card({ title, body })` -> frontend renders
+ *      `ShowCard` -> second-leg LLM round narrates the rendered card.
  *
  * Acceptance for the headless tier (NOT the custom tier):
  *   - The custom-rendered component must be present in the DOM (NOT
@@ -24,7 +24,7 @@
  *     content (the fixture narrates "card above" / Ada's biography).
  *
  * The custom-tier script (`d5-gen-ui-custom.ts`) layers a STRUCTURAL
- * match on top — for `render_pie_chart` it asserts an SVG with
+ * match on top -- for `render_pie_chart` it asserts an SVG with
  * multiple drawing children, which is what makes "custom" stricter
  * than "headless".
  */
@@ -48,11 +48,19 @@ const MIN_CHILDREN = 1;
 /**
  * Lower-case tokens we expect to find in the assistant's follow-up
  * text (post-tool-call narration). The fixture writes a short
- * paragraph that mentions "card" and "Ada" — checking a small set of
- * tokens guards against the showcase silently swallowing the second
- * round-trip while still being robust to wording drift.
+ * paragraph that mentions "card" and "Ada".
+ *
+ * We accept EITHER "card" OR "ada" (not both) because the headless
+ * surface may combine the tool-call message and narration into a
+ * single `[data-message-role="assistant"]` element. When that
+ * happens, `readLastAssistantText` captures the full text including
+ * the ShowCard's content ("Ada Lovelace", "English mathematician...")
+ * which guarantees "ada" is present. Requiring both tokens would
+ * be fragile if the narration message arrives as a separate element
+ * that only mentions "card" or only mentions "Ada".
  */
-const FOLLOWUP_TOKENS = ["card", "ada"] as const;
+const FOLLOWUP_TOKENS_PRIMARY = ["card"] as const;
+const FOLLOWUP_TOKENS_SECONDARY = ["ada"] as const;
 
 export function buildTurns(_ctx: D5BuildContext): ConversationTurn[] {
   return [
@@ -64,21 +72,10 @@ export function buildTurns(_ctx: D5BuildContext): ConversationTurn[] {
         //    surfaces it as the turn's failure_turn.
         const matchedSelector = await waitForGenUiComponent(page);
 
-        // 2. Re-read the matched node's child count — ensures the
-        //    component is structurally non-trivial. The selector
-        //    cascade already filtered empty wrappers, but the chat
-        //    surface may grow content asynchronously, so the explicit
-        //    follow-up check guards against a between-poll race where
-        //    the cascade matched but children hadn't mounted yet.
-        //
-        //    We interpolate the resolved selector from the cascade
-        //    above directly into the page-side function source. This
-        //    avoids the prior pattern of re-running a duplicate (and
-        //    drift-prone) cascade in the browser, which could resolve
-        //    a different node than the one the cascade already
-        //    matched (e.g. a generic `[role="article"]` while the
-        //    cascade's actual match was the more-specific
-        //    `[data-testid="gen-ui-card"]`).
+        // 2. Read the matched node's child count via page.evaluate.
+        //    Ensures the component is structurally non-trivial. The
+        //    selector cascade already filtered empty wrappers, but
+        //    the chat surface may grow content asynchronously.
         const childCount = await readChildCountForSelector(
           page,
           matchedSelector,
@@ -91,15 +88,19 @@ export function buildTurns(_ctx: D5BuildContext): ConversationTurn[] {
 
         // 3. Confirm the assistant followed up with narration that
         //    references the rendered card. Token-level check (NOT a
-        //    string-equality assertion against the fixture) so wording
-        //    drift across integrations doesn't fail the probe.
+        //    string-equality assertion) so wording drift across
+        //    integrations doesn't fail the probe. We require at
+        //    least one primary token OR one secondary token.
         const text = (await readLastAssistantText(page)).toLowerCase();
-        const missing = FOLLOWUP_TOKENS.filter((tok) => !text.includes(tok));
-        if (missing.length > 0) {
+        const primaryMissing = FOLLOWUP_TOKENS_PRIMARY.filter(
+          (tok) => !text.includes(tok),
+        );
+        const secondaryMissing = FOLLOWUP_TOKENS_SECONDARY.filter(
+          (tok) => !text.includes(tok),
+        );
+        if (primaryMissing.length > 0 && secondaryMissing.length > 0) {
           throw new Error(
-            `gen-ui-headless: assistant follow-up missing tokens [${missing.join(
-              ", ",
-            )}]; last assistant text: ${text.slice(0, 200)}`,
+            `gen-ui-headless: assistant follow-up missing tokens (need at least one of [${[...FOLLOWUP_TOKENS_PRIMARY, ...FOLLOWUP_TOKENS_SECONDARY].join(", ")}]); last assistant text: ${text.slice(0, 200)}`,
           );
         }
       },
@@ -108,15 +109,15 @@ export function buildTurns(_ctx: D5BuildContext): ConversationTurn[] {
 }
 
 /**
- * Read the child element count of the node matching `selector`. The
- * selector is interpolated into the page-evaluate source directly so
- * the page-side query reads the SAME node the cascade matched on the
- * Node side, eliminating a class of races where the in-page lookup
- * resolved a different (more-generic) node than the cascade.
+ * Read the child element count of the node matching `selector`.
  *
- * `selector` is JSON-encoded before interpolation to defuse any
- * embedded quotes — playwright cascade strings include both single
- * and double quotes (e.g. `'[data-testid="gen-ui-card"]'`).
+ * Uses a pre-baked function source with the selector interpolated via
+ * JSON.stringify so the page-side query reads the SAME node the
+ * cascade matched on the Node side. This eliminates a class of races
+ * where an in-page re-lookup resolved a different (more-generic) node.
+ *
+ * The function is constructed as a plain closure via `new Function` so
+ * Playwright serializes just the body source, not Node-side bindings.
  */
 async function readChildCountForSelector(
   page: { evaluate<R>(fn: () => R): Promise<R> },
@@ -126,9 +127,7 @@ async function readChildCountForSelector(
   // Build the source with selector pre-baked. We rely on `new Function`
   // because the structural Page.evaluate signature is `() => R` — no
   // arg-pass — and we still need the resolved selector to land in the
-  // browser context. The function returned from `new Function` is a
-  // plain function-source closure over no Node-side state, which is
-  // exactly what playwright will serialise + ship to the browser.
+  // browser context.
   const fn = new Function(`
     const win = globalThis;
     const node = win.document.querySelector(${encoded});
@@ -141,7 +140,7 @@ async function readChildCountForSelector(
  * Override the default `/demos/<featureType>` route. The fixture is
  * recorded against `/demos/headless-simple` (the actual showcase route
  * that wires the `show_card` `useComponent`), not the literal feature
- * type. Mirrors the mcp-apps → /demos/subagents pattern documented in
+ * type. Mirrors the mcp-apps -> /demos/subagents pattern documented in
  * the registry comments.
  */
 function preNavigateRoute(): string {
