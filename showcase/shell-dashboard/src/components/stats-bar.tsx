@@ -1,7 +1,7 @@
 "use client";
 /**
  * StatsBar — large numbers: wired/stub/unshipped counts + max achieved
- * depth + regression count.
+ * depth + regression count + failure count.
  */
 
 export interface StatsBarProps {
@@ -10,6 +10,7 @@ export interface StatsBarProps {
   unshipped: number;
   maxDepth: number;
   regressions: number;
+  failures: number;
 }
 
 function Stat({
@@ -44,6 +45,7 @@ export function StatsBar({
   unshipped,
   maxDepth,
   regressions,
+  failures,
 }: StatsBarProps) {
   return (
     <div data-testid="stats-bar" className="flex items-center gap-8 px-4 py-3">
@@ -64,6 +66,13 @@ export function StatsBar({
         label="Regressions"
         colorClass={
           regressions > 0 ? "text-[var(--danger)]" : "text-[var(--text-muted)]"
+        }
+      />
+      <Stat
+        value={failures}
+        label="Failures"
+        colorClass={
+          failures > 0 ? "text-[var(--danger)]" : "text-[var(--text-muted)]"
         }
       />
     </div>

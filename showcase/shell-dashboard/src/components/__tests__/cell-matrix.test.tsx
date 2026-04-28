@@ -393,4 +393,101 @@ describe("CellMatrix", () => {
       "integration-header-lgp",
     );
   });
+
+  it("gaps filter includes rows where a cell has red probes (functional gap)", () => {
+    // lgp/agentic-chat is wired with health=red → functional gap
+    // lgp/auth is wired with health=green → not a gap
+    const gapCells: CatalogCell[] = [
+      {
+        id: "lgp/agentic-chat",
+        integration: "lgp",
+        integration_name: "LangGraph Python",
+        feature: "agentic-chat",
+        feature_name: "Agentic Chat",
+        status: "wired",
+        max_depth: 0,
+        category: "chat-ui",
+        category_name: "Chat & UI",
+      },
+      {
+        id: "lgp/auth",
+        integration: "lgp",
+        integration_name: "LangGraph Python",
+        feature: "auth",
+        feature_name: "Authentication",
+        status: "wired",
+        max_depth: 0,
+        category: "platform",
+        category_name: "Platform",
+      },
+    ];
+    const live = mapOf([
+      row("health:lgp", "health", "red"),
+      row("e2e:lgp/agentic-chat", "e2e", "red"),
+    ]);
+    const oneIntegration = [
+      { slug: "lgp", name: "LangGraph Python", tier: "reference" as const },
+    ];
+    const { queryByText } = render(
+      <CellMatrix
+        cells={gapCells}
+        categories={categories}
+        features={features}
+        integrations={oneIntegration}
+        liveStatus={live}
+        defaultOpenCategories={new Set(["chat-ui", "platform"])}
+        filter="gaps"
+        referenceSlug="lgp"
+      />,
+    );
+    // agentic-chat has red rollup → visible as functional gap
+    expect(queryByText("Agentic Chat")).not.toBeNull();
+    // auth also visible because health:lgp is red → rollup is red for it too
+    expect(queryByText("Authentication")).not.toBeNull();
+  });
+
+  it("clicking a cell opens the drilldown panel", () => {
+    const live = mapOf([
+      row("health:lgp", "health", "green"),
+      row("agent:lgp", "agent", "green"),
+    ]);
+    const { getByTestId, queryByTestId } = render(
+      <CellMatrix
+        cells={cells}
+        categories={categories}
+        features={features}
+        integrations={integrations}
+        liveStatus={live}
+        defaultOpenCategories={new Set(["chat-ui"])}
+        filter="all"
+        referenceSlug="lgp"
+      />,
+    );
+    // Initially no drilldown
+    expect(queryByTestId("cell-drilldown")).toBeNull();
+    // Click the lgp/agentic-chat cell button
+    fireEvent.click(getByTestId("cell-btn-lgp-agentic-chat"));
+    // Drilldown should now be visible
+    expect(queryByTestId("cell-drilldown")).not.toBeNull();
+  });
+
+  it("clicking the same cell again closes the drilldown", () => {
+    const { getByTestId, queryByTestId } = render(
+      <CellMatrix
+        cells={cells}
+        categories={categories}
+        features={features}
+        integrations={integrations}
+        liveStatus={new Map()}
+        defaultOpenCategories={new Set(["chat-ui"])}
+        filter="all"
+        referenceSlug="lgp"
+      />,
+    );
+    fireEvent.click(getByTestId("cell-btn-lgp-agentic-chat"));
+    expect(queryByTestId("cell-drilldown")).not.toBeNull();
+    // Click same cell again to toggle off
+    fireEvent.click(getByTestId("cell-btn-lgp-agentic-chat"));
+    expect(queryByTestId("cell-drilldown")).toBeNull();
+  });
 });

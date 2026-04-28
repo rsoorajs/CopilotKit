@@ -10,16 +10,26 @@
  * Uses a single flat <table> — category headers and feature rows are
  * sibling <tr> elements sharing the same column structure.
  */
-import { useMemo } from "react";
+import { useMemo, useState, useCallback, useRef, useEffect } from "react";
 import { DepthChip } from "./depth-chip";
+import { CellDrilldown } from "./cell-drilldown";
 import { IntegrationHeader } from "./integration-header";
 import { useCollapsible, CategoryHeaderRow } from "./collapsible-category";
 import { deriveDepth } from "./depth-utils";
 import type { CatalogCell, DepthResult } from "./depth-utils";
 import type { ParityTier } from "./parity-badge";
 import type { FilterMode } from "./filter-chips";
-import type { LiveStatusMap } from "@/lib/live-status";
+import { resolveCell } from "@/lib/live-status";
+import type { LiveStatusMap, ConnectionStatus } from "@/lib/live-status";
 import type { FeatureCategory } from "@/lib/registry";
+
+/** Identifies a selected cell for drilldown. */
+export interface SelectedCell {
+  slug: string;
+  featureId: string;
+  integrationName: string;
+  featureName: string;
+}
 
 export interface IntegrationInfo {
   slug: string;
@@ -42,6 +52,7 @@ export interface CellMatrixProps {
   defaultOpenCategories: Set<string>;
   filter: FilterMode;
   referenceSlug: string;
+  connection?: ConnectionStatus;
 }
 
 /** Tier sort order — reference first. */
@@ -73,6 +84,9 @@ interface CategorySectionProps {
   defaultOpen: boolean;
   filter: FilterMode;
   filterFeatureRow: (featureId: string) => boolean;
+  selectedCell: SelectedCell | null;
+  onCellClick: (cell: SelectedCell | null) => void;
+  connection: ConnectionStatus;
 }
 
 function CategorySection({
@@ -83,6 +97,9 @@ function CategorySection({
   defaultOpen,
   filter,
   filterFeatureRow,
+  selectedCell,
+  onCellClick,
+  connection,
 }: CategorySectionProps) {
   const { isOpen, toggle } = useCollapsible({
     name: cat.name,
@@ -131,16 +148,47 @@ function CategorySection({
                 ? deriveDepth(cell, liveStatus)
                 : { achieved: 0, isRegression: false };
 
+              const isSelected =
+                selectedCell?.slug === int.slug &&
+                selectedCell?.featureId === feature.id;
+
               return (
                 <td
                   key={int.slug}
-                  className="border-l border-[var(--border)] px-3 py-1.5 align-middle text-center"
+                  className="border-l border-[var(--border)] px-3 py-1.5 align-middle text-center relative"
                 >
-                  <DepthChip
-                    depth={depth.achieved}
-                    status={cellStatus}
-                    regression={depth.isRegression}
-                  />
+                  <button
+                    type="button"
+                    data-testid={`cell-btn-${int.slug}-${feature.id}`}
+                    className="cursor-pointer bg-transparent border-none p-0"
+                    onClick={() =>
+                      isSelected
+                        ? onCellClick(null)
+                        : onCellClick({
+                            slug: int.slug,
+                            featureId: feature.id,
+                            integrationName: int.name,
+                            featureName: feature.name,
+                          })
+                    }
+                  >
+                    <DepthChip
+                      depth={depth.achieved}
+                      status={cellStatus}
+                      regression={depth.isRegression}
+                    />
+                  </button>
+                  {isSelected && (
+                    <CellDrilldown
+                      slug={int.slug}
+                      featureId={feature.id}
+                      integrationName={int.name}
+                      featureName={feature.name}
+                      liveStatus={liveStatus}
+                      connection={connection}
+                      onClose={() => onCellClick(null)}
+                    />
+                  )}
                 </td>
               );
             })}
@@ -163,7 +211,28 @@ export function CellMatrix({
   defaultOpenCategories,
   filter,
   referenceSlug,
+  connection = "live",
 }: CellMatrixProps) {
+  const [selectedCell, setSelectedCell] = useState<SelectedCell | null>(null);
+  const matrixRef = useRef<HTMLDivElement>(null);
+
+  // Close drilldown on click-outside
+  useEffect(() => {
+    if (!selectedCell) return;
+    function handleClickOutside(e: MouseEvent) {
+      const drilldown = document.querySelector("[data-testid='cell-drilldown']");
+      if (drilldown && !drilldown.contains(e.target as Node)) {
+        setSelectedCell(null);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [selectedCell]);
+
+  const handleCellClick = useCallback((cell: SelectedCell | null) => {
+    setSelectedCell(cell);
+  }, []);
+
   const sortedIntegrations = useMemo(
     () => sortIntegrations(integrations),
     [integrations],
@@ -211,7 +280,14 @@ export function CellMatrix({
     if (filter === "gaps") {
       return visibleIntegrations.some((int) => {
         const cell = cellIndex.get(`${int.slug}/${featureId}`);
-        return cell && cell.status === "unshipped";
+        // Unshipped = structural gap
+        if (!cell || cell.status === "unshipped") return true;
+        // Red probes = functional gap (cell exists but failing)
+        if (cell.feature !== null) {
+          const cellState = resolveCell(liveStatus, int.slug, cell.feature);
+          if (cellState.rollup === "red") return true;
+        }
+        return false;
       });
     }
     if (filter === "regressions") {
@@ -227,6 +303,7 @@ export function CellMatrix({
 
   return (
     <div
+      ref={matrixRef}
       data-testid="cell-matrix"
       className="overflow-auto rounded-lg border border-[var(--border)] bg-[var(--bg-surface)]"
     >
@@ -269,6 +346,9 @@ export function CellMatrix({
                 defaultOpen={defaultOpenCategories.has(cat.id)}
                 filter={filter}
                 filterFeatureRow={filterFeatureRow}
+                selectedCell={selectedCell}
+                onCellClick={handleCellClick}
+                connection={connection}
               />
             );
           })}
