@@ -72,8 +72,13 @@ export function FrameworkSelector({
 }: FrameworkSelectorProps) {
   const router = useRouter();
   const pathname = usePathname() ?? "";
-  const { framework, storedFramework, knownFrameworks, setStoredFramework } =
-    useFramework();
+  const {
+    framework,
+    storedFramework,
+    effectiveFramework,
+    knownFrameworks,
+    setStoredFramework,
+  } = useFramework();
   const [open, setOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -107,13 +112,11 @@ export function FrameworkSelector({
     };
   }, [open]);
 
-  // Display the URL-derived framework when present; fall back to the
-  // stored choice so unscoped pages (/, /quickstart, etc.) still show
-  // the user's last pick instead of resetting to the placeholder. Same
-  // precedence used by the Clear-Selection button below (line ~262).
-  const current = options.find(
-    (o) => o.slug === (framework ?? storedFramework),
-  );
+  // Display whatever the page is currently rendering as: URL framework
+  // when present, then stored choice, then the soft-default
+  // (Built-in Agent). The selector should never read "Pick a backend"
+  // when the docs are actually rendering BIA code — that's misleading.
+  const current = options.find((o) => o.slug === effectiveFramework);
   const label = current?.name ?? "Pick an agentic backend";
 
   // Compute the target href for a given framework option given the current
@@ -265,18 +268,16 @@ export function FrameworkSelector({
               : "absolute top-full left-0 mt-1 w-[340px] max-h-[70vh] overflow-y-auto rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] shadow-lg z-50 p-2"
           }
         >
-          {(framework || storedFramework) && (
+          {storedFramework && (
             <button
               type="button"
               className="w-full text-left px-2 py-1.5 text-[11px] text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer"
               onClick={() => {
                 setStoredFramework(null);
-                // If we're on a framework-scoped route, flip back to the
-                // equivalent `/docs/<feature>` page. On `/docs/*` and
-                // other non-scoped routes, clearing a stale stored pick
-                // is purely a preference change — no navigation needed,
-                // which is why the escape hatch is reachable even when
-                // `framework` is null.
+                // If we're on a framework-scoped route, flip back to
+                // the unscoped equivalent so the soft-default takes
+                // over. On already-unscoped pages, clearing is just a
+                // preference change with no navigation needed.
                 const frameworkTail = stripFrameworkPrefix(
                   pathname,
                   knownFrameworks,
@@ -287,7 +288,7 @@ export function FrameworkSelector({
                 setOpen(false);
               }}
             >
-              Clear selection
+              Reset to default (Built-in Agent)
             </button>
           )}
 
@@ -302,7 +303,7 @@ export function FrameworkSelector({
                   {catLabel}
                 </div>
                 {opts.map((opt) => {
-                  const isActive = opt.slug === framework;
+                  const isActive = opt.slug === effectiveFramework;
                   return (
                     <button
                       key={opt.slug}
