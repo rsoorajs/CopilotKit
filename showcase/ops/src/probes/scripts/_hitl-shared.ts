@@ -69,7 +69,7 @@ const SELECTOR_PROBE_TIMEOUT_MS = 3_000;
  * after the full aimock→CopilotKit→frontend-tool→React-render chain
  * completes. On Railway this chain regularly exceeds the default 3s.
  */
-const HITL_CARD_TIMEOUT_MS = 15_000;
+export const HITL_CARD_TIMEOUT_MS = 15_000;
 const ASSISTANT_FOLLOWUP_TIMEOUT_MS = 30_000;
 const POLL_INTERVAL_MS = 100;
 /**

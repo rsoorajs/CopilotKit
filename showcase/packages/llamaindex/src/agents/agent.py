@@ -154,8 +154,12 @@ async def generate_a2ui(
     return json.dumps(result)
 
 
+_openai_kwargs = {}
+if os.environ.get("OPENAI_BASE_URL"):
+    _openai_kwargs["api_base"] = os.environ["OPENAI_BASE_URL"]
+
 agent_router = get_ag_ui_workflow_router(
-    llm=OpenAI(model="gpt-4.1"),
+    llm=OpenAI(model="gpt-4.1", **_openai_kwargs),
     frontend_tools=[change_background, generate_haiku, generate_task_steps],
     backend_tools=[get_weather, query_data, manage_sales_todos, get_sales_todos_tool, schedule_meeting, search_flights, generate_a2ui],
     system_prompt=(

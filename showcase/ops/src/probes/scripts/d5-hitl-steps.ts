@@ -28,6 +28,7 @@ import {
   selectorCascade,
   readAssistantCount,
   waitForNextAssistantMessage,
+  HITL_CARD_TIMEOUT_MS,
 } from "./_hitl-shared.js";
 import type { Page as HitlPage } from "./_hitl-shared.js";
 import type { Page as ConversationPage } from "../helpers/conversation-runner.js";
@@ -76,11 +77,12 @@ const script: D5Script = {
           );
         }
         const baselineCount = await readAssistantCount(hitlPage);
-        await selectorCascade(hitlPage, STEPS_CARD_SELECTORS, "steps card");
+        await selectorCascade(hitlPage, STEPS_CARD_SELECTORS, "steps card", HITL_CARD_TIMEOUT_MS);
         const confirmSelector = await selectorCascade(
           hitlPage,
           CONFIRM_BUTTON_SELECTORS,
           "confirm button",
+          HITL_CARD_TIMEOUT_MS,
         );
         await hitlPage.click(confirmSelector);
         const followup = await waitForNextAssistantMessage(
