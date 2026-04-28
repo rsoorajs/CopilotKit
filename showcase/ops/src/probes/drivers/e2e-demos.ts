@@ -476,50 +476,52 @@ export function createE2eDemosDriver(
       const demosResolver =
         deps.demosResolver ?? createDefaultDemosResolver(ctx.env, ctx.logger);
 
-      // Demos resolution: (1) in-band `input.demos`, (2) registry lookup.
-      // In-band ids synthesise a canonical `/demos/<id>` route so existing
-      // static-YAML callers and tests keep their current behaviour without
-      // having to restate the route. Registry-backed lookups carry the
-      // real `route:` field verbatim so informational cells (no route)
-      // can be distinguished from navigable demos.
+      // Demos resolution: always use the registry resolver as the primary
+      // source of truth — it carries accurate `route:` fields so IDs like
+      // "hitl" correctly map to "/demos/hitl-in-chat" and informational
+      // cells (no route) are distinguished from navigable demos. Fall back
+      // to in-band `input.demos` synthesis ONLY when the resolver returns
+      // an empty list AND the caller provided demos (test injection path).
       let demos: E2eDemoEntry[];
-      if (Array.isArray(input.demos)) {
-        demos = input.demos.map((id) => ({ id, route: `/demos/${id}` }));
-      } else {
-        try {
-          demos = await demosResolver(slug);
-        } catch (err) {
-          // C12: a custom resolver throw (or default-resolver bug not
-          // already caught at the read/parse/shape layer) used to fall
-          // through to demos: [] which masquerades as a green aggregate
-          // — operators saw "all green" while the resolver was wedged.
-          // Surface a synthetic `__resolver` side row keyed
-          // `e2e:<slug>/__resolver` with errorClass="resolver-error" so
-          // the dashboard renders a red dot for the configuration
-          // mistake distinctly from an empty registry.
-          const errName = err instanceof Error ? err.name : "Error";
-          const msg = err instanceof Error ? err.message : String(err);
-          const stack = err instanceof Error ? err.stack : undefined;
-          ctx.logger.warn("probe.e2e-demos.demos-resolve-failed", {
+      try {
+        demos = await demosResolver(slug);
+      } catch (err) {
+        // C12: a custom resolver throw (or default-resolver bug not
+        // already caught at the read/parse/shape layer) used to fall
+        // through to demos: [] which masquerades as a green aggregate
+        // — operators saw "all green" while the resolver was wedged.
+        // Surface a synthetic `__resolver` side row keyed
+        // `e2e:<slug>/__resolver` with errorClass="resolver-error" so
+        // the dashboard renders a red dot for the configuration
+        // mistake distinctly from an empty registry.
+        const errName = err instanceof Error ? err.name : "Error";
+        const msg = err instanceof Error ? err.message : String(err);
+        const stack = err instanceof Error ? err.stack : undefined;
+        ctx.logger.warn("probe.e2e-demos.demos-resolve-failed", {
+          slug,
+          errName,
+          err: msg,
+          stack,
+        });
+        await sideEmit({
+          key: `e2e:${slug}/__resolver`,
+          state: "red",
+          signal: {
             slug,
-            errName,
-            err: msg,
-            stack,
-          });
-          await sideEmit({
-            key: `e2e:${slug}/__resolver`,
-            state: "red",
-            signal: {
-              slug,
-              featureId: "__resolver",
-              backendUrl,
-              errorClass: "resolver-error",
-              errorDesc: truncateUtf8(msg, 1200),
-            },
-            observedAt: ctx.now().toISOString(),
-          });
-          demos = [];
-        }
+            featureId: "__resolver",
+            backendUrl,
+            errorClass: "resolver-error",
+            errorDesc: truncateUtf8(msg, 1200),
+          },
+          observedAt: ctx.now().toISOString(),
+        });
+        demos = [];
+      }
+      // Fall back to in-band demos ONLY when the registry has no entries
+      // for this slug (test injection path). Production always goes through
+      // the registry which carries accurate route info.
+      if (demos.length === 0 && Array.isArray(input.demos)) {
+        demos = input.demos.map((id) => ({ id, route: `/demos/${id}` }));
       }
 
       // Empty demos set → nothing to check, aggregate green, chromium NOT
