@@ -975,10 +975,11 @@ async function runFeature(opts: {
     return { ok: true, conversation };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
+    const isAbort = err instanceof Error && err.name === "AbortError";
     const diagnostics = page ? await captureDiagnostics(page) : undefined;
     return {
       ok: false,
-      errorClass: abortSignal.aborted ? "abort" : "driver-error",
+      errorClass: isAbort ? "abort" : "driver-error",
       errorDesc: truncateUtf8(msg, 1200),
       diagnostics,
     };

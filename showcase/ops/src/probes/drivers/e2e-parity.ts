@@ -1266,9 +1266,10 @@ async function runFeatureCapture(
     return { ok: true, captured };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
+    const isAbort = err instanceof Error && err.name === "AbortError";
     return {
       ok: false,
-      errorClass: abortSignal.aborted ? "abort" : "driver-error",
+      errorClass: isAbort ? "abort" : "driver-error",
       errorDesc: truncateUtf8(msg, 1200),
     };
   } finally {
