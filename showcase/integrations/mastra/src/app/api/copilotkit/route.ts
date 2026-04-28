@@ -46,6 +46,7 @@ export const demoAgentNames = [
   "gen-ui-agent",
   "shared-state-read",
   "shared-state-write",
+  "shared-state-read-write",
   "shared-state-streaming",
   "subagents",
   // Parity-with-langgraph-python demos — all currently map to the same
@@ -78,6 +79,8 @@ export const demoAgentNames = [
 // demo uses a prompt that routes weather/stock/highlight requests).
 const demoAgentIdOverrides: Partial<Record<DemoAgentName, string>> = {
   "headless-complete": "headlessCompleteAgent",
+  "shared-state-read-write": "sharedStateReadWriteAgent",
+  subagents: "subagentsSupervisorAgent",
 };
 
 export type DemoAgentName = (typeof demoAgentNames)[number];
@@ -91,7 +94,11 @@ export type DemoAgentName = (typeof demoAgentNames)[number];
 // handed back from `MastraAgent.getLocalAgents({ mastra })`. Keep this
 // narrowed alongside `mastra.agents` in `src/mastra/index.ts`; any agent
 // added there must be added here too.
-export type LocalMastraAgentName = "weatherAgent" | "headlessCompleteAgent";
+export type LocalMastraAgentName =
+  | "weatherAgent"
+  | "headlessCompleteAgent"
+  | "sharedStateReadWriteAgent"
+  | "subagentsSupervisorAgent";
 
 export type BuiltAgents = Record<
   DemoAgentName | LocalMastraAgentName,
@@ -134,6 +141,16 @@ export function buildAgents(
       "headlessCompleteAgent missing from Mastra config — required for headless-complete demo alias",
     );
   }
+  if (!baseLocalAgents.sharedStateReadWriteAgent) {
+    throw new Error(
+      "sharedStateReadWriteAgent missing from Mastra config — required for shared-state-read-write demo alias",
+    );
+  }
+  if (!baseLocalAgents.subagentsSupervisorAgent) {
+    throw new Error(
+      "subagentsSupervisorAgent missing from Mastra config — required for subagents demo alias",
+    );
+  }
   const headlessCompleteAgentInstance = getLocalAgent({
     mastra: mastraInstance,
     agentId: "headlessCompleteAgent",
@@ -142,16 +159,47 @@ export function buildAgents(
   if (!headlessCompleteAgentInstance) {
     throw new Error("getLocalAgent returned null for headlessCompleteAgent");
   }
+  const sharedStateRWAgentInstance = getLocalAgent({
+    mastra: mastraInstance,
+    agentId: "sharedStateReadWriteAgent",
+    resourceId: "mastra-sharedStateReadWriteAgent",
+  });
+  if (!sharedStateRWAgentInstance) {
+    throw new Error(
+      "getLocalAgent returned null for sharedStateReadWriteAgent",
+    );
+  }
+  const subagentsSupervisorAgentInstance = getLocalAgent({
+    mastra: mastraInstance,
+    agentId: "subagentsSupervisorAgent",
+    resourceId: "mastra-subagentsSupervisorAgent",
+  });
+  if (!subagentsSupervisorAgentInstance) {
+    throw new Error(
+      "getLocalAgent returned null for subagentsSupervisorAgent",
+    );
+  }
   const localAgents = {
     weatherAgent: baseLocalAgents.weatherAgent,
     headlessCompleteAgent: headlessCompleteAgentInstance,
+    sharedStateReadWriteAgent: sharedStateRWAgentInstance,
+    subagentsSupervisorAgent: subagentsSupervisorAgentInstance,
   };
 
   // Guard against silent shadowing: if Mastra ever registers a local agent
   // whose key collides with a demo alias, the spread order below would
-  // silently overwrite it (or vice versa). Fail loudly instead.
-  const localAgentKeys = new Set(Object.keys(localAgents));
-  const collisions = demoAgentNames.filter((name) => localAgentKeys.has(name));
+  // silently overwrite it (or vice versa). Fail loudly instead. We check
+  // both the curated `localAgents` map AND the full set of keys returned
+  // by `MastraAgent.getLocalAgents` — the latter catches rogue agents we
+  // don't know about yet (e.g. someone registers a new Mastra agent whose
+  // name happens to match a demo alias).
+  const knownLocalAgentKeys = new Set([
+    ...Object.keys(localAgents),
+    ...Object.keys(baseLocalAgents),
+  ]);
+  const collisions = demoAgentNames.filter((name) =>
+    knownLocalAgentKeys.has(name),
+  );
   if (collisions.length > 0) {
     throw new Error(
       `demoAgentNames collide with existing Mastra local agents: ${collisions.join(", ")}`,
@@ -170,6 +218,14 @@ export function buildAgents(
   resourceIdByAgent.set(
     "headlessCompleteAgent",
     "mastra-headlessCompleteAgent",
+  );
+  resourceIdByAgent.set(
+    "sharedStateReadWriteAgent",
+    "mastra-sharedStateReadWriteAgent",
+  );
+  resourceIdByAgent.set(
+    "subagentsSupervisorAgent",
+    "mastra-subagentsSupervisorAgent",
   );
 
   const demoAliases: Record<

@@ -20,6 +20,8 @@
     "byoc_hashbrown": "./src/agents/src/byoc_hashbrown_agent.py:graph",
     "byoc_json_render": "./src/agents/src/byoc_json_render_agent.py:graph",
     "open_gen_ui": "./src/agents/src/open_gen_ui_agent.py:graph",
-    "open_gen_ui_advanced": "./src/agents/src/open_gen_ui_advanced_agent.py:graph"
+    "open_gen_ui_advanced": "./src/agents/src/open_gen_ui_advanced_agent.py:graph",
+    "shared_state_read_write": "./src/agents/src/shared_state_read_write.py:graph",
+    "subagents": "./src/agents/src/subagents.py:graph"
   }
 }

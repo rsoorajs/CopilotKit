@@ -5,6 +5,27 @@ import {
   copilotRuntimeNextJSAppRouterEndpoint,
 } from "@copilotkit/runtime";
 import { LangGraphAgent } from "@copilotkit/runtime/langgraph";
+import crypto from "node:crypto";
+
+// Emit a structured server-side error log with a correlation id so the
+// 500 we return to the client carries no stack/message details (which
+// can leak internal config, prompts, or upstream URLs) while operators
+// can still grep logs for the same `errorId` to find the full failure.
+function logRouteError(err: unknown): string {
+  const error = err instanceof Error ? err : new Error(String(err));
+  const errorId = crypto.randomUUID();
+  console.error(
+    JSON.stringify({
+      at: new Date().toISOString(),
+      level: "error",
+      phase: "setup",
+      errorId,
+      message: error.message,
+      stack: error.stack,
+    }),
+  );
+  return errorId;
+}
 
 const AGENT_URL = process.env.AGENT_URL || "http://localhost:8123";
 
@@ -26,7 +47,6 @@ const agentNames = [
   "shared-state-read",
   "shared-state-write",
   "shared-state-streaming",
-  "subagents",
   "prebuilt-sidebar",
   "prebuilt-popup",
   "chat-slots",
@@ -63,6 +83,16 @@ agents["readonly-state-agent-context"] = createAgent(
   "readonly_state_agent_context",
 );
 
+// Shared State (Read + Write) — bidirectional shared state between UI and
+// agent. UI writes `preferences` via agent.setState; middleware reads them
+// into the system prompt; agent writes `notes` back via the `set_notes` tool.
+agents["shared-state-read-write"] = createAgent("shared_state_read_write");
+
+// Sub-Agents — supervisor delegates to research_agent / writing_agent /
+// critique_agent (each a full create_agent under the hood). Every delegation
+// is appended to `state.delegations` for live UI rendering.
+agents["subagents"] = createAgent("subagents");
+
 agents["default"] = createAgent();
 
 console.log(
@@ -84,9 +114,14 @@ export const POST = async (req: NextRequest) => {
     console.log(`[copilotkit/route] Response status: ${response.status}`);
     return response;
   } catch (error: unknown) {
-    const err = error as Error;
-    console.error(`[copilotkit/route] ERROR: ${err.message}`);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    // Log full message + stack server-side under a correlation id; return
+    // only the id to the client so we don't leak internal details (upstream
+    // URLs, env-driven config, prompts, etc.) into HTTP responses.
+    const errorId = logRouteError(error);
+    return NextResponse.json(
+      { error: "internal runtime error", errorId },
+      { status: 500 },
+    );
   }
 };
 

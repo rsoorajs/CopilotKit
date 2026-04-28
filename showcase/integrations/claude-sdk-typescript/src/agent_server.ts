@@ -25,6 +25,17 @@ import {
   AGENT_CONFIG_DEFAULT_SYSTEM_PROMPT,
   buildAgentConfigSystemPrompt,
 } from "./agent/agent-config-prompt";
+import {
+  SET_NOTES_TOOL_SCHEMA,
+  buildSharedStateReadWriteSystemPrompt,
+  coercePreferences,
+} from "./agent/shared-state-read-write-prompt";
+import {
+  SUBAGENT_SYSTEM_BY_NAME,
+  SUBAGENT_TOOL_SCHEMAS,
+  SUPERVISOR_SYSTEM_PROMPT,
+  type SubAgentName,
+} from "./agent/subagents-prompts";
 
 dotenv.config({ path: ".env.local" });
 dotenv.config();
@@ -166,8 +177,17 @@ function buildAnthropicMessages(messages: Message[]): Anthropic.MessageParam[] {
           let input: Record<string, unknown> = {};
           try {
             input = JSON.parse(tc.function.arguments);
-          } catch {
-            // leave empty
+          } catch (parseErr) {
+            // Surface the failure so we don't silently rewind tool args to
+            // {}. For tools like `set_notes` that take an array, an empty
+            // dict translates to an empty list and clears the user's notes.
+            // Skip the tool_use block so we don't replay corrupted state.
+            const message =
+              parseErr instanceof Error ? parseErr.message : String(parseErr);
+            console.warn(
+              `[agent_server] failed to parse tool_use arguments for ${tc.function.name} (id=${tc.id}); skipping replay. error=${message}`,
+            );
+            continue;
           }
           content.push({
             type: "tool_use",
@@ -221,8 +241,16 @@ function buildTools(tools: RunAgentInput["tools"]): Anthropic.Tool[] {
             ? JSON.parse(tool.parameters)
             : tool.parameters;
         inputSchema = parsed as Anthropic.Tool.InputSchema;
-      } catch {
-        // use empty schema
+      } catch (parseErr) {
+        // Don't silently swap in an empty schema — Claude will then accept
+        // any input shape, which compounds whatever caller bug produced
+        // the malformed JSON. Warn loudly so the tool definition gets
+        // fixed instead of being papered over.
+        const message =
+          parseErr instanceof Error ? parseErr.message : String(parseErr);
+        console.warn(
+          `[agent_server] failed to parse tool.parameters for ${tool.name}; using empty schema. error=${message}`,
+        );
       }
     }
     return {
@@ -329,68 +357,84 @@ function makeAgentHandler(config: DemoConfig = {}) {
         ...(tools.length > 0 ? { tools } : {}),
       };
 
-      const stream = await anthropic.messages.stream(claudeRequest);
-
       let toolCallId: string | null = null;
       let toolCallName: string | null = null;
       let toolCallArgs = "";
       let textMessageStarted = false;
+      let textMessageEnded = false;
 
-      for await (const event of stream) {
-        if (event.type === "message_start") {
-          // wait for text_delta to emit TEXT_MESSAGE_START
-        } else if (event.type === "content_block_start") {
-          if (event.content_block.type === "tool_use") {
-            toolCallId = event.content_block.id;
-            toolCallName = event.content_block.name;
-            toolCallArgs = "";
-            emit({
-              type: EventType.TOOL_CALL_START,
-              toolCallId,
-              toolCallName,
-              parentMessageId: msgId,
-            });
-          }
-        } else if (event.type === "content_block_delta") {
-          if (event.delta.type === "text_delta") {
-            if (!textMessageStarted) {
+      try {
+        const stream = await anthropic.messages.stream(claudeRequest);
+
+        for await (const event of stream) {
+          if (event.type === "message_start") {
+            // wait for text_delta to emit TEXT_MESSAGE_START
+          } else if (event.type === "content_block_start") {
+            if (event.content_block.type === "tool_use") {
+              toolCallId = event.content_block.id;
+              toolCallName = event.content_block.name;
+              toolCallArgs = "";
               emit({
-                type: EventType.TEXT_MESSAGE_START,
-                messageId: msgId,
-                role: "assistant",
+                type: EventType.TOOL_CALL_START,
+                toolCallId,
+                toolCallName,
+                parentMessageId: msgId,
               });
-              textMessageStarted = true;
             }
-            emit({
-              type: EventType.TEXT_MESSAGE_CONTENT,
-              messageId: msgId,
-              delta: event.delta.text,
-            });
-          } else if (event.delta.type === "input_json_delta") {
-            toolCallArgs += event.delta.partial_json;
-            emit({
-              type: EventType.TOOL_CALL_ARGS,
-              toolCallId,
-              delta: event.delta.partial_json,
-            });
+          } else if (event.type === "content_block_delta") {
+            if (event.delta.type === "text_delta") {
+              if (!textMessageStarted) {
+                emit({
+                  type: EventType.TEXT_MESSAGE_START,
+                  messageId: msgId,
+                  role: "assistant",
+                });
+                textMessageStarted = true;
+              }
+              emit({
+                type: EventType.TEXT_MESSAGE_CONTENT,
+                messageId: msgId,
+                delta: event.delta.text,
+              });
+            } else if (event.delta.type === "input_json_delta") {
+              toolCallArgs += event.delta.partial_json;
+              emit({
+                type: EventType.TOOL_CALL_ARGS,
+                toolCallId,
+                delta: event.delta.partial_json,
+              });
+            }
+          } else if (event.type === "content_block_stop") {
+            if (toolCallId) {
+              emit({
+                type: EventType.TOOL_CALL_END,
+                toolCallId,
+              });
+              toolCallId = null;
+              toolCallName = null;
+              toolCallArgs = "";
+            }
+          } else if (event.type === "message_stop") {
+            if (textMessageStarted && !textMessageEnded) {
+              emit({
+                type: EventType.TEXT_MESSAGE_END,
+                messageId: msgId,
+              });
+              textMessageEnded = true;
+            }
           }
-        } else if (event.type === "content_block_stop") {
-          if (toolCallId) {
-            emit({
-              type: EventType.TOOL_CALL_END,
-              toolCallId,
-            });
-            toolCallId = null;
-            toolCallName = null;
-            toolCallArgs = "";
-          }
-        } else if (event.type === "message_stop") {
-          if (textMessageStarted) {
-            emit({
-              type: EventType.TEXT_MESSAGE_END,
-              messageId: msgId,
-            });
-          }
+        }
+      } finally {
+        // Lifecycle guarantee: if we ever emitted TEXT_MESSAGE_START we MUST
+        // emit a matching TEXT_MESSAGE_END, even when the stream throws
+        // mid-token. Without this, AG-UI clients tracking message-id
+        // lifecycle render a permanently in-flight assistant bubble.
+        if (textMessageStarted && !textMessageEnded) {
+          emit({
+            type: EventType.TEXT_MESSAGE_END,
+            messageId: msgId,
+          });
+          textMessageEnded = true;
         }
       }
 
@@ -409,6 +453,468 @@ function makeAgentHandler(config: DemoConfig = {}) {
 
     res.end();
   };
+}
+
+// ---------------------------------------------------------------------------
+// State-aware demos (Shared State Read+Write, Sub-Agents)
+// ---------------------------------------------------------------------------
+
+// Sub-agent model is overridable so ops can swap a faster/cheaper model
+// for the secondary calls without bumping the supervisor's model. See
+// the showcase parity-notes for why we don't pin a single global model
+// here.
+//
+// Precedence: `CLAUDE_SUBAGENT_MODEL` first to match the supervisor's
+// `CLAUDE_MODEL` prefix (a deployment that sets `CLAUDE_*` everywhere
+// shouldn't have to also set the legacy `ANTHROPIC_*` form). The
+// `ANTHROPIC_SUBAGENT_MODEL` form is kept as a legacy fallback so we
+// don't break existing deployments.
+const SUBAGENT_MODEL =
+  process.env.CLAUDE_SUBAGENT_MODEL ||
+  process.env.ANTHROPIC_SUBAGENT_MODEL ||
+  CLAUDE_MODEL;
+
+interface Delegation {
+  id: string;
+  sub_agent: SubAgentName;
+  task: string;
+  status: "running" | "completed" | "failed";
+  result: string;
+}
+
+/**
+ * Run a single Anthropic Messages API call for a sub-agent. No tools,
+ * no streaming — we just want the final text back so the supervisor can
+ * read it on its next step. Mirrors `_invoke_sub_agent` in
+ * `google-adk/src/agents/subagents_agent.py`.
+ */
+async function invokeSubAgent(
+  systemPrompt: string,
+  task: string,
+): Promise<string> {
+  const response = await anthropic.messages.create({
+    model: SUBAGENT_MODEL,
+    max_tokens: 1024,
+    system: systemPrompt,
+    messages: [{ role: "user", content: task }],
+  });
+  const parts = response.content
+    .filter((c): c is Anthropic.TextBlock => c.type === "text")
+    .map((c) => c.text);
+  const text = parts.join("").trim();
+  if (!text) {
+    throw new Error("sub-agent returned empty text");
+  }
+  return text;
+}
+
+interface ExecuteToolResult {
+  resultText: string;
+  state: Record<string, unknown> | null;
+}
+
+/**
+ * Execute a backend-implemented tool. Returns the JSON-encoded result
+ * the supervisor will receive AND the new state snapshot to emit to
+ * the UI (or `null` if state is unchanged).
+ *
+ * For sub-agent delegations we update `state.delegations` twice:
+ *   - once with `status: "running"` BEFORE the secondary Anthropic call
+ *   - once with `status: "completed"` (or `"failed"`) AFTER it returns
+ *
+ * The first STATE_SNAPSHOT is emitted by the caller via `onRunningEntry`;
+ * we return the final state from this function.
+ */
+async function executeBackendTool(
+  toolName: string,
+  toolInput: Record<string, unknown>,
+  state: Record<string, unknown>,
+  emit: (event: object) => void,
+): Promise<ExecuteToolResult> {
+  if (toolName === "set_notes") {
+    const notes = Array.isArray(toolInput.notes)
+      ? (toolInput.notes as unknown[]).filter(
+          (n): n is string => typeof n === "string",
+        )
+      : [];
+    const next = { ...state, notes };
+    return {
+      resultText: JSON.stringify({ status: "ok", count: notes.length }),
+      state: next,
+    };
+  }
+
+  if (
+    toolName === "research_agent" ||
+    toolName === "writing_agent" ||
+    toolName === "critique_agent"
+  ) {
+    const subAgentName = toolName as SubAgentName;
+    const task =
+      typeof toolInput.task === "string" ? toolInput.task : "";
+    const id = randomUUID();
+    const existing = Array.isArray(state.delegations)
+      ? (state.delegations as Delegation[])
+      : [];
+    const runningEntry: Delegation = {
+      id,
+      sub_agent: subAgentName,
+      task,
+      status: "running",
+      result: "",
+    };
+    const stateWithRunning = {
+      ...state,
+      delegations: [...existing, runningEntry],
+    };
+    // Emit the in-flight state so the UI's delegation log shows a
+    // "running" row immediately, before we await the secondary call.
+    emit({ type: EventType.STATE_SNAPSHOT, snapshot: stateWithRunning });
+
+    try {
+      const result = await invokeSubAgent(
+        SUBAGENT_SYSTEM_BY_NAME[subAgentName],
+        task,
+      );
+      const finalEntry: Delegation = {
+        ...runningEntry,
+        status: "completed",
+        result,
+      };
+      const nextState = {
+        ...state,
+        delegations: [...existing, finalEntry],
+      };
+      return {
+        resultText: JSON.stringify({ status: "completed", result }),
+        state: nextState,
+      };
+    } catch (err) {
+      const errorClass =
+        err instanceof Error ? err.constructor.name : typeof err;
+      const fullMessage = err instanceof Error ? err.message : String(err);
+      // Scrub raw error.message from anything that crosses the wire to the
+      // UI or back to the supervisor LLM. Anthropic SDK errors can contain
+      // request ids, partial prompt text, and rate-limit detail an end user
+      // shouldn't see (and that the supervisor doesn't need either —
+      // matching the cohort, we surface only the error class). Full
+      // message + stack still go to server logs below for ops.
+      const scrubbed = `sub-agent call failed: ${errorClass} (see server logs)`;
+      const failedEntry: Delegation = {
+        ...runningEntry,
+        status: "failed",
+        result: scrubbed,
+      };
+      const nextState = {
+        ...state,
+        delegations: [...existing, failedEntry],
+      };
+      console.error(
+        `[agent_server] sub-agent ${subAgentName} failed: ${errorClass}: ${fullMessage}`,
+        err instanceof Error && err.stack ? err.stack : undefined,
+      );
+      return {
+        resultText: JSON.stringify({ status: "failed", error: scrubbed }),
+        state: nextState,
+      };
+    }
+  }
+
+  return {
+    resultText: JSON.stringify({ status: "error", error: "unknown_tool" }),
+    state: null,
+  };
+}
+
+interface AgenticLoopConfig {
+  systemPrompt: string;
+  toolSchemas: Anthropic.Tool[];
+  initialState: Record<string, unknown>;
+}
+
+/**
+ * Run a full agentic loop: stream Claude, execute backend tools when
+ * the model emits tool_use blocks, push tool_result back into the
+ * conversation, and continue until Claude stops calling tools.
+ *
+ * Used by the Shared State (Read + Write) and Sub-Agents demos, which
+ * own their tools server-side. The default pass-through handler stays
+ * unchanged — frontend-registered tools never reach this path.
+ */
+async function runAgenticLoop(
+  req: Request,
+  res: Response,
+  config: AgenticLoopConfig,
+): Promise<void> {
+  const input = req.body as RunAgentInput;
+  const accept = req.headers["accept"] ?? "";
+
+  const encoder = new EventEncoder({ accept });
+  res.setHeader("Content-Type", encoder.getContentType());
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+
+  const runId = input.runId ?? randomUUID();
+  const threadId = input.threadId ?? randomUUID();
+
+  const emit = (event: object) => {
+    res.write(encoder.encodeSSE(event as any));
+  };
+
+  let state = { ...config.initialState };
+
+  try {
+    emit({ type: EventType.RUN_STARTED, runId, threadId });
+
+    const messages = buildAnthropicMessages(input.messages ?? []);
+    // Merge runtime tools (frontend-registered via useFrontendTool /
+    // useRenderTool) with the demo's backend tools. The supervisor / RW
+    // agent therefore still works alongside any frontend tool the demo
+    // page chooses to register.
+    const runtimeTools = buildTools(input.tools);
+    const tools: Anthropic.Tool[] = [
+      ...config.toolSchemas,
+      ...runtimeTools,
+    ];
+    const backendToolNames = new Set(config.toolSchemas.map((t) => t.name));
+
+    // Maximum tool iterations per run. The supervisor demo can fan out
+    // to research -> write -> critique, but we cap turns to prevent a
+    // misbehaving model from running unbounded.
+    const MAX_TOOL_ITERATIONS = 10;
+
+    for (let iter = 0; iter < MAX_TOOL_ITERATIONS; iter++) {
+      const msgId = randomUUID();
+      let textMessageStarted = false;
+      const pendingToolCalls: Array<{
+        id: string;
+        name: string;
+        argsJson: string;
+      }> = [];
+      let activeToolCallId: string | null = null;
+      let activeToolCallName: string | null = null;
+      let activeToolArgs = "";
+      let assistantText = "";
+
+      let textMessageEnded = false;
+      try {
+        const stream = await anthropic.messages.stream({
+          model: CLAUDE_MODEL,
+          max_tokens: 4096,
+          system: config.systemPrompt,
+          messages,
+          stream: true,
+          ...(tools.length > 0 ? { tools } : {}),
+        });
+
+        for await (const event of stream) {
+          if (event.type === "content_block_start") {
+            if (event.content_block.type === "tool_use") {
+              activeToolCallId = event.content_block.id;
+              activeToolCallName = event.content_block.name;
+              activeToolArgs = "";
+              emit({
+                type: EventType.TOOL_CALL_START,
+                toolCallId: activeToolCallId,
+                toolCallName: activeToolCallName,
+                parentMessageId: msgId,
+              });
+            }
+          } else if (event.type === "content_block_delta") {
+            if (event.delta.type === "text_delta") {
+              if (!textMessageStarted) {
+                emit({
+                  type: EventType.TEXT_MESSAGE_START,
+                  messageId: msgId,
+                  role: "assistant",
+                });
+                textMessageStarted = true;
+              }
+              assistantText += event.delta.text;
+              emit({
+                type: EventType.TEXT_MESSAGE_CONTENT,
+                messageId: msgId,
+                delta: event.delta.text,
+              });
+            } else if (event.delta.type === "input_json_delta") {
+              if (activeToolCallId) {
+                activeToolArgs += event.delta.partial_json;
+                emit({
+                  type: EventType.TOOL_CALL_ARGS,
+                  toolCallId: activeToolCallId,
+                  delta: event.delta.partial_json,
+                });
+              }
+            }
+          } else if (event.type === "content_block_stop") {
+            if (activeToolCallId && activeToolCallName) {
+              emit({
+                type: EventType.TOOL_CALL_END,
+                toolCallId: activeToolCallId,
+              });
+              pendingToolCalls.push({
+                id: activeToolCallId,
+                name: activeToolCallName,
+                argsJson: activeToolArgs,
+              });
+              activeToolCallId = null;
+              activeToolCallName = null;
+              activeToolArgs = "";
+            }
+          }
+        }
+
+        if (textMessageStarted && !textMessageEnded) {
+          emit({
+            type: EventType.TEXT_MESSAGE_END,
+            messageId: msgId,
+          });
+          textMessageEnded = true;
+        }
+      } finally {
+        // Lifecycle guarantee: every TEXT_MESSAGE_START must be paired with
+        // a TEXT_MESSAGE_END, even if anthropic.messages.stream throws
+        // mid-token. Without this, the AG-UI client renders a permanently
+        // in-flight assistant bubble. The outer try/catch still emits
+        // RUN_ERROR for the caller to surface the failure.
+        if (textMessageStarted && !textMessageEnded) {
+          emit({
+            type: EventType.TEXT_MESSAGE_END,
+            messageId: msgId,
+          });
+          textMessageEnded = true;
+        }
+      }
+
+      // No tool calls — we're done.
+      if (pendingToolCalls.length === 0) {
+        break;
+      }
+
+      // Append the assistant turn (text + tool_use blocks) to the
+      // conversation so the next call sees the supervisor's plan.
+      const assistantContent: Anthropic.ContentBlockParam[] = [];
+      if (assistantText) {
+        assistantContent.push({ type: "text", text: assistantText });
+      }
+      for (const tc of pendingToolCalls) {
+        let parsed: Record<string, unknown> = {};
+        try {
+          parsed = tc.argsJson ? JSON.parse(tc.argsJson) : {};
+        } catch (parseErr) {
+          // The streamed input_json_delta concatenated into invalid JSON.
+          // Logging is essential — without it, the next iteration sees
+          // empty args and the model is told its tool call succeeded with
+          // no parameters, which is silently wrong. We still replay the
+          // tool_use (Anthropic requires every tool_use to be followed by
+          // a tool_result of the same id), but with empty input. The
+          // matching execute branch below also skips with a clear error.
+          const message =
+            parseErr instanceof Error ? parseErr.message : String(parseErr);
+          console.warn(
+            `[agent_server] failed to parse streamed tool args for ${tc.name} (id=${tc.id}); replaying with empty input. error=${message}`,
+          );
+        }
+        assistantContent.push({
+          type: "tool_use",
+          id: tc.id,
+          name: tc.name,
+          input: parsed,
+        });
+      }
+      messages.push({ role: "assistant", content: assistantContent });
+
+      // Execute backend tools and push their tool_result blocks. Frontend
+      // tools (anything not in `backendToolNames`) are NOT executed here
+      // — they're meant to be handled by the AG-UI client. In practice
+      // these two demos don't expose any extra frontend tools, but we
+      // keep the merging behaviour defensive so a future demo page can
+      // add `useFrontendTool` without breaking things.
+      const toolResults: Anthropic.ContentBlockParam[] = [];
+      let sawFrontendTool = false;
+      for (const tc of pendingToolCalls) {
+        if (!backendToolNames.has(tc.name)) {
+          sawFrontendTool = true;
+          continue;
+        }
+        let parsed: Record<string, unknown> = {};
+        try {
+          parsed = tc.argsJson ? JSON.parse(tc.argsJson) : {};
+        } catch (parseErr) {
+          // CRITICAL: do NOT fall through to `{}` here. For tools like
+          // `set_notes` that take an array of notes, an empty dict is
+          // coerced to an empty list and silently clears the user's
+          // notes. Surface a tool_result with an explicit error so the
+          // model sees its call failed and the supervisor can retry,
+          // rather than seeing a "successful" no-op.
+          const message =
+            parseErr instanceof Error ? parseErr.message : String(parseErr);
+          console.warn(
+            `[agent_server] failed to parse streamed tool args for backend tool ${tc.name} (id=${tc.id}); skipping execution. error=${message}`,
+          );
+          const errorResult = JSON.stringify({
+            status: "error",
+            error: "invalid_tool_arguments",
+            detail:
+              "Tool arguments failed to parse as JSON; tool was not executed. " +
+              "Re-issue the call with valid JSON.",
+          });
+          emit({
+            type: EventType.TOOL_CALL_RESULT,
+            toolCallId: tc.id,
+            content: errorResult,
+            messageId: randomUUID(),
+          });
+          toolResults.push({
+            type: "tool_result",
+            tool_use_id: tc.id,
+            content: errorResult,
+          });
+          continue;
+        }
+        const exec = await executeBackendTool(tc.name, parsed, state, emit);
+        if (exec.state) {
+          state = exec.state;
+          emit({ type: EventType.STATE_SNAPSHOT, snapshot: state });
+        }
+        emit({
+          type: EventType.TOOL_CALL_RESULT,
+          toolCallId: tc.id,
+          content: exec.resultText,
+          messageId: randomUUID(),
+        });
+        toolResults.push({
+          type: "tool_result",
+          tool_use_id: tc.id,
+          content: exec.resultText,
+        });
+      }
+
+      if (toolResults.length > 0) {
+        messages.push({ role: "user", content: toolResults });
+      }
+
+      // If Claude called a frontend tool, stop the loop and let the
+      // AG-UI client handle execution + re-invocation.
+      if (sawFrontendTool) {
+        break;
+      }
+    }
+
+    emit({ type: EventType.RUN_FINISHED, runId, threadId });
+  } catch (error: unknown) {
+    const err = error as Error;
+    console.error(`[agent_server] ERROR (agentic loop): ${err.message}`);
+    emit({
+      type: EventType.RUN_ERROR,
+      runId,
+      threadId,
+      message: err.message,
+      code: "AGENT_ERROR",
+    });
+  }
+
+  res.end();
 }
 
 // ---------------------------------------------------------------------------
@@ -453,6 +959,51 @@ app.post(
 
 // Auth and voice reuse the default pass-through — the gate / transcription
 // service lives on the Next.js route, not the agent itself.
+
+// Shared State (Read + Write) — UI writes preferences via agent.setState,
+// the agent reads them out of input.state every turn and prepends them to
+// the system prompt; the backend `set_notes` tool writes notes back into
+// shared state, emitted via STATE_SNAPSHOT.
+app.post(
+  "/shared-state-read-write",
+  async (req: Request, res: Response): Promise<void> => {
+    const input = req.body as RunAgentInput;
+    const incomingState =
+      ((input as any).state as Record<string, unknown> | undefined) ?? {};
+    const prefs = coercePreferences(incomingState.preferences);
+    const notes = Array.isArray(incomingState.notes)
+      ? (incomingState.notes as unknown[]).filter(
+          (n): n is string => typeof n === "string",
+        )
+      : [];
+    await runAgenticLoop(req, res, {
+      systemPrompt: buildSharedStateReadWriteSystemPrompt(prefs),
+      toolSchemas: [SET_NOTES_TOOL_SCHEMA] as Anthropic.Tool[],
+      initialState: { preferences: prefs, notes },
+    });
+  },
+);
+
+// Sub-Agents — supervisor with three sub-agent-as-tool delegations,
+// each a single secondary Anthropic Messages call. Every delegation is
+// recorded in state.delegations (running -> completed/failed) and
+// streamed to the UI via STATE_SNAPSHOT.
+app.post(
+  "/subagents",
+  async (req: Request, res: Response): Promise<void> => {
+    const input = req.body as RunAgentInput;
+    const incomingState =
+      ((input as any).state as Record<string, unknown> | undefined) ?? {};
+    const delegations = Array.isArray(incomingState.delegations)
+      ? incomingState.delegations
+      : [];
+    await runAgenticLoop(req, res, {
+      systemPrompt: SUPERVISOR_SYSTEM_PROMPT,
+      toolSchemas: SUBAGENT_TOOL_SCHEMAS as Anthropic.Tool[],
+      initialState: { delegations },
+    });
+  },
+);
 
 // ---------------------------------------------------------------------------
 // Health check

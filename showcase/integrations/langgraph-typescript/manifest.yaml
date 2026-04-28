@@ -34,6 +34,8 @@ starter:
 features:
   - agentic-chat
   - hitl
+  - shared-state-read-write
+  - subagents
   - tool-rendering
   - tool-rendering-default-catchall
   - tool-rendering-custom-catchall
@@ -101,6 +103,31 @@ demos:
       - agent-state
     route: /demos/shared-state-streaming
     animated_preview_url:
+  - id: shared-state-read-write
+    name: Shared State (Read + Write)
+    description: Bidirectional shared state — UI writes preferences via agent.setState; agent writes notes via a Command-returning tool
+    tags:
+      - agent-state
+    route: /demos/shared-state-read-write
+    animated_preview_url:
+    highlight:
+      - src/agent/shared-state-read-write.ts
+      - src/app/demos/shared-state-read-write/page.tsx
+      - src/app/demos/shared-state-read-write/preferences-card.tsx
+      - src/app/demos/shared-state-read-write/notes-card.tsx
+      - src/app/api/copilotkit/route.ts
+  - id: subagents
+    name: Sub-Agents
+    description: Supervisor delegates to research / writing / critique sub-agents exposed as tools — each delegation appended to a live log in shared state
+    tags:
+      - agent-capabilities
+    route: /demos/subagents
+    animated_preview_url:
+    highlight:
+      - src/agent/subagents.ts
+      - src/app/demos/subagents/page.tsx
+      - src/app/demos/subagents/delegation-log.tsx
+      - src/app/api/copilotkit/route.ts
   - id: beautiful-chat
     name: Beautiful Chat
     description: Canonical polished starter chat — brand fonts, theme tokens, suggestion pills

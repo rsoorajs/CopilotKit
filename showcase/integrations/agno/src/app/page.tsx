@@ -57,6 +57,17 @@ export default function Home() {
           <h3>State Streaming</h3>
           <p>Per-token state delta streaming from agent to UI</p>
         </a>
+        <a
+          key="shared-state-read-write"
+          href="/demos/shared-state-read-write"
+          className="demo-card"
+        >
+          <h3>Shared State (Read + Write)</h3>
+          <p>
+            Bidirectional agent state — UI writes preferences, agent writes
+            notes back
+          </p>
+        </a>
         <a key="subagents" href="/demos/subagents" className="demo-card">
           <h3>Sub-Agents</h3>
           <p>Multiple agents with visible task delegation</p>

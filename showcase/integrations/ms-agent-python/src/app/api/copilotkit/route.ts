@@ -31,7 +31,6 @@ const agentNames = [
   "shared-state-read",
   "shared-state-write",
   "shared-state-streaming",
-  "subagents",
   "prebuilt-sidebar",
   "prebuilt-popup",
   "chat-slots",
@@ -58,6 +57,18 @@ for (const name of agentNames) {
 // FastAPI backend; the agent has tools=[] and a system prompt tailored to
 // the frontend-provided `request_user_approval` tool.
 agents["hitl-in-app"] = new HttpAgent({ url: `${AGENT_URL}/hitl-in-app/` });
+
+// Shared State (Read + Write) — bidirectional state via state_schema +
+// state_update. Backend exposes a dedicated agent at /shared-state-read-write
+// with `preferences` + `notes` slots; UI writes preferences via setState,
+// agent writes notes via the `set_notes` tool.
+agents["shared-state-read-write"] = createAgent("/shared-state-read-write");
+
+// Sub-Agents — supervisor agent at /subagents that delegates to research /
+// writing / critique sub-agents and surfaces a live `delegations` log to the
+// UI via shared state.
+agents["subagents"] = createAgent("/subagents");
+
 agents["default"] = createAgent();
 
 // Tool-rendering demos — share the dedicated reasoning-chain agent

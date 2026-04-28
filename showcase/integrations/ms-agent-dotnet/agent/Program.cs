@@ -78,6 +78,18 @@ app.MapAGUI("/mcp-apps", mcpAppsFactory.CreateMcpAppsAgent());
 var hitlInAppFactory = new HitlInAppAgentFactory(builder.Configuration, loggerFactory);
 app.MapAGUI("/hitl-in-app", hitlInAppFactory.CreateHitlInAppAgent());
 
+// Shared State (Read + Write) demo. UI owns `preferences`, agent owns
+// `notes` via a `set_notes` tool. See agent/SharedStateReadWriteAgent.cs
+// for the pattern.
+var sharedStateReadWriteFactory = new SharedStateReadWriteAgentFactory(builder.Configuration, loggerFactory, jsonOptions.Value.SerializerOptions);
+app.MapAGUI("/shared-state-read-write", sharedStateReadWriteFactory.CreateAgent());
+
+// Sub-Agents demo. Supervisor delegates to research / writing / critique
+// sub-agents via tools, recording each delegation in shared state for the
+// UI's live delegation log. See agent/SubagentsAgent.cs.
+var subagentsFactory = new SubagentsAgentFactory(builder.Configuration, loggerFactory, jsonOptions.Value.SerializerOptions);
+app.MapAGUI("/subagents", subagentsFactory.CreateAgent());
+
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 
 await app.RunAsync();

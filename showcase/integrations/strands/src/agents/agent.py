@@ -12,6 +12,7 @@ import json
 import logging
 import os
 import threading
+import uuid
 from collections.abc import Mapping
 from typing import Optional, TypedDict
 
@@ -287,18 +288,431 @@ def set_theme_color(theme_color: str):
     return None
 
 
+# ---- Shared State (Read + Write) demo ----------------------------------
+#
+# The frontend's `shared-state-read-write` page writes a `preferences`
+# object into agent state via `agent.setState()`. ``build_state_prompt``
+# reads it from ``input_data.state`` and prepends a system-style line so
+# the LLM sees the user's preferred name / tone / language / interests on
+# every turn. The agent in turn uses ``set_notes`` to mutate
+# ``state["notes"]``; ``notes_state_from_args`` emits a ``StateSnapshotEvent``
+# so the UI re-renders the notes panel as soon as the tool fires.
+
+
+@tool
+def set_notes(notes: list[str]):
+    """Replace the notes array in shared state with the full updated list.
+
+    Use this whenever the user asks you to remember something, or when
+    you have an observation about the user worth surfacing in the UI's
+    notes panel. ALWAYS pass the FULL notes list (existing notes + any
+    new ones), not a diff. Keep each note short (< 120 chars).
+
+    Args:
+        notes: The complete updated list of short note strings.
+
+    Returns:
+        Confirmation string for the LLM to summarise back to the user.
+    """
+    return f"Notes updated. Tracking {len(notes)} note(s)."
+
+
+async def notes_state_from_args(context):
+    """Emit a StateSnapshotEvent for the ``notes`` slot when ``set_notes`` fires.
+
+    Mirrors ``sales_state_from_args`` shape — accept str-or-dict tool
+    input, validate, return a snapshot dict for ag_ui_strands to publish.
+    """
+    raw_input = getattr(context, "tool_input", None)
+    if raw_input is None:
+        logger.warning("notes_state_from_args: context has no tool_input")
+        return None
+
+    tool_input = raw_input
+    if isinstance(tool_input, str):
+        try:
+            tool_input = json.loads(tool_input)
+        except json.JSONDecodeError as exc:
+            logger.warning(
+                "notes_state_from_args: malformed JSON tool input (%s); input excerpt: %s",
+                exc,
+                repr(raw_input)[:200],
+            )
+            return None
+
+    if isinstance(tool_input, dict):
+        notes_data = tool_input.get("notes")
+    elif isinstance(tool_input, list):
+        notes_data = tool_input
+    else:
+        logger.warning(
+            "notes_state_from_args: unsupported tool_input type %s",
+            type(tool_input).__name__,
+        )
+        return None
+
+    if not isinstance(notes_data, list):
+        return None
+
+    cleaned: list[str] = []
+    for n in notes_data:
+        if isinstance(n, str):
+            cleaned.append(n)
+        else:
+            cleaned.append(str(n))
+    return {"notes": cleaned}
+
+
+# ---- Sub-Agents demo ----------------------------------------------------
+#
+# A supervisor LLM (this top-level Strands Agent) delegates to three
+# specialised sub-agents — research / writing / critique — exposed as
+# ordinary @tool functions. Each sub-agent is a single-shot OpenAI call
+# with its own system prompt; this mirrors the ``google-adk`` reference
+# implementation (``subagents_agent.py``) rather than spinning up a full
+# secondary Strands ``Agent`` per delegation, which is heavier than the
+# demo needs.
+#
+# Every delegation appends a ``Delegation`` record to the per-thread
+# scratchpad below, then ``subagent_state_from_result`` emits a
+# ``StateSnapshotEvent`` so the UI's <DelegationLog/> reflects the new
+# entry the moment the tool returns.
+
+
+_SUBAGENT_SYSTEM_PROMPTS: dict[str, str] = {
+    "research_agent": (
+        "You are a research sub-agent. Given a topic, produce a concise "
+        "bulleted list of 3-5 key facts. No preamble, no closing."
+    ),
+    "writing_agent": (
+        "You are a writing sub-agent. Given a brief and optional source "
+        "facts, produce a polished 1-paragraph draft. Be clear and "
+        "concrete. No preamble."
+    ),
+    "critique_agent": (
+        "You are an editorial critique sub-agent. Given a draft, give "
+        "2-3 crisp, actionable critiques. No preamble."
+    ),
+}
+
+
+# Per-thread scratchpad of delegations. Keyed by ``thread_id``; the entry
+# is the FULL ordered list of Delegation dicts the supervisor has produced
+# so far in this run. ``state_from_result`` reads/writes this so it can
+# return the full updated list to the UI on every delegation.
+#
+# Concurrency: ag_ui_strands runs one request per thread_id at a time, so
+# no within-thread races. We still hold a lock so cross-thread access
+# (which Python's GIL makes safe but PyPy / future GIL-removed CPython
+# would not) is explicit.
+_delegations_by_thread: dict[str, list[dict]] = {}
+_delegations_lock = threading.Lock()
+
+
+def _seed_delegations_from_state(thread_id: str, state) -> list[dict]:
+    """Initialise the per-thread scratchpad from the inbound state.
+
+    Called lazily from each delegation tool. The frontend persists
+    ``state["delegations"]`` across runs via ``useAgent``, so a multi-turn
+    conversation should APPEND to the prior list rather than overwriting
+    it.
+    """
+    with _delegations_lock:
+        if thread_id in _delegations_by_thread:
+            return _delegations_by_thread[thread_id]
+        seeded: list[dict] = []
+        if isinstance(state, dict):
+            existing = state.get("delegations")
+            if isinstance(existing, list):
+                seeded = [dict(d) for d in existing if isinstance(d, dict)]
+        _delegations_by_thread[thread_id] = seeded
+        return seeded
+
+
+# Internal marker prepended to a sub-agent tool result when the underlying
+# call failed. ``_make_subagent_state_from_result`` detects this prefix and
+# records the Delegation entry with ``status: "failed"`` instead of
+# "completed".
+#
+# Why a sentinel rather than `result_text.startswith("Error:")`?
+#  - Strands wraps tool exceptions into a result whose first content item
+#    text *does* start with "Error: " (see strands/tools/decorator.py and
+#    strands/tools/executors/_executor.py), but ag_ui_strands' result
+#    extraction (agent.py around line 654) only forwards the inner text /
+#    parsed-JSON to ``state_from_result`` — the canonical
+#    ``tool_result["status"] == "error"`` signal is dropped before our hook
+#    sees it. That makes a string-prefix check fragile (e.g. cancellation
+#    text "Tool cancelled by user", "Unknown tool: ..." don't start with
+#    "Error:") and couples our success/failure classification to Strands'
+#    error-text formatting, which is internal API.
+#  - Catching the failure inside ``_run_subagent`` lets us classify before
+#    Strands' wrapper ever runs, so the surface is fully under our control.
+#  - Class-name-only message avoids leaking ``repr(exc)`` (which can
+#    contain provider-specific error bodies, request IDs, etc.) into the UI.
+_SUBAGENT_FAILURE_MARKER = "__SUBAGENT_FAILED__:"
+# Sentinel for the legitimately-empty completion case. The sub-agent
+# returned successfully but produced no content; we still want a
+# "completed" Delegation entry rather than a confusing failure row, so we
+# substitute a human-readable placeholder instead of raising.
+_SUBAGENT_EMPTY_RESULT_TEXT = "(sub-agent returned no content)"
+
+
+def _invoke_subagent_llm(system_prompt: str, task: str) -> str:
+    """Run a single-shot OpenAI completion as a sub-agent.
+
+    Raises ``RuntimeError`` only on transport / API failures. A successful
+    call that legitimately returns empty content is logged at INFO and
+    surfaced as a placeholder string rather than an exception, so the
+    Delegation entry shows as "completed" with a clear message instead of
+    the misleading "failed" status the previous "empty text" raise produced.
+    """
+    import openai as _openai_mod
+    import httpx as _httpx_mod
+
+    try:
+        client = _openai_mod.OpenAI()
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": task},
+            ],
+        )
+    except (_openai_mod.OpenAIError, _httpx_mod.HTTPError) as exc:
+        logger.exception("sub-agent: OpenAI call failed")
+        raise RuntimeError(
+            f"sub-agent call failed: {exc.__class__.__name__}"
+        ) from exc
+
+    if not response.choices:
+        raise RuntimeError("sub-agent returned no choices")
+    content = response.choices[0].message.content or ""
+    text = content.strip()
+    if not text:
+        logger.info(
+            "sub-agent: OpenAI completion returned empty content; "
+            "surfacing placeholder rather than failure"
+        )
+        return _SUBAGENT_EMPTY_RESULT_TEXT
+    return text
+
+
+def _run_subagent(name: str, task: str) -> str:
+    """Tool body shared by all three subagent tools.
+
+    Catches ``RuntimeError`` from ``_invoke_subagent_llm`` and converts the
+    failure into a sentinel-prefixed string carrying only the exception
+    class name. ``_make_subagent_state_from_result`` recognizes the
+    sentinel and records ``status: "failed"`` on the Delegation entry.
+
+    This intercepts the exception *before* Strands' tool-decorator wraps
+    it into a generic ``status: "error"`` ToolResult — that wrapper format
+    is internal API and is flattened by ag_ui_strands before reaching our
+    state hook, so we cannot reliably read it from ``result_data`` alone.
+    Doing the classification here keeps the failure signal end-to-end
+    explicit.
+    """
+    system_prompt = _SUBAGENT_SYSTEM_PROMPTS[name]
+    try:
+        return _invoke_subagent_llm(system_prompt, task)
+    except RuntimeError as exc:
+        # Class-name only — never the message — to avoid leaking provider
+        # error bodies, request IDs, or stack traces into the UI.
+        return f"{_SUBAGENT_FAILURE_MARKER}{exc.__class__.__name__}"
+
+
+@tool
+def research_agent(task: str) -> str:
+    """Delegate a research task to the research sub-agent.
+
+    Use for: gathering facts, background, definitions, statistics.
+    Returns a bulleted list of key facts as plain text.
+
+    Args:
+        task: The research brief to hand off.
+    """
+    return _run_subagent("research_agent", task)
+
+
+@tool
+def writing_agent(task: str) -> str:
+    """Delegate a drafting task to the writing sub-agent.
+
+    Use for: producing a polished paragraph, draft, or summary. Pass
+    relevant facts from prior research inside ``task``.
+
+    Args:
+        task: The writing brief to hand off.
+    """
+    return _run_subagent("writing_agent", task)
+
+
+@tool
+def critique_agent(task: str) -> str:
+    """Delegate a critique task to the critique sub-agent.
+
+    Use for: reviewing a draft and suggesting concrete improvements.
+
+    Args:
+        task: The draft to critique.
+    """
+    return _run_subagent("critique_agent", task)
+
+
+def _make_subagent_state_from_result(sub_agent_name: str):
+    """Factory for a ``state_from_result`` hook bound to a sub-agent name.
+
+    Returns a coroutine function suitable for ``ToolBehavior.state_from_result``.
+    On every successful delegation it appends a completed ``Delegation``
+    entry to the per-thread scratchpad and returns the full updated list
+    so ag_ui_strands emits a ``StateSnapshotEvent`` to the UI.
+    """
+
+    async def _hook(context):
+        thread_id = getattr(getattr(context, "input_data", None), "thread_id", None) or "default"
+        existing = _seed_delegations_from_state(thread_id, getattr(context.input_data, "state", None))
+
+        # Pull the task argument out of tool_input.
+        raw_input = getattr(context, "tool_input", None)
+        tool_input = raw_input
+        if isinstance(tool_input, str):
+            try:
+                tool_input = json.loads(tool_input)
+            except json.JSONDecodeError:
+                tool_input = {}
+        task = ""
+        if isinstance(tool_input, dict):
+            task = str(tool_input.get("task") or "")
+
+        # Result body — strands wraps the @tool return value as the result.
+        # ``result_data`` is whatever Strands gave us; flatten common shapes.
+        result_data = getattr(context, "result_data", None)
+        result_text = _flatten_tool_result(result_data)
+
+        # Failure detection: ``_run_subagent`` catches ``RuntimeError`` and
+        # returns ``_SUBAGENT_FAILURE_MARKER`` + class name as the tool
+        # result string. Any other path (success, empty-content placeholder)
+        # is "completed". We deliberately do NOT fall back to a string-
+        # prefix check on Strands' own error wrapping ("Error: ...") because
+        # ag_ui_strands strips the canonical ``status`` field before our
+        # hook sees the result, making any prefix check brittle. See the
+        # ``_SUBAGENT_FAILURE_MARKER`` block above for the full rationale.
+        if result_text.startswith(_SUBAGENT_FAILURE_MARKER):
+            status = "failed"
+            failure_class = result_text[len(_SUBAGENT_FAILURE_MARKER):].strip() or "RuntimeError"
+            display_result = f"Sub-agent call failed ({failure_class})."
+        else:
+            status = "completed"
+            display_result = result_text
+
+        entry = {
+            "id": str(uuid.uuid4()),
+            "sub_agent": sub_agent_name,
+            "task": task,
+            "status": status,
+            "result": display_result,
+        }
+
+        with _delegations_lock:
+            updated = list(existing) + [entry]
+            _delegations_by_thread[thread_id] = updated
+            # Return a defensive copy so downstream merges can't mutate scratch.
+            return {"delegations": [dict(d) for d in updated]}
+
+    return _hook
+
+
+def _flatten_tool_result(result_data) -> str:
+    """Best-effort coercion of a Strands tool result to plain text."""
+    if result_data is None:
+        return ""
+    if isinstance(result_data, str):
+        return result_data
+    if isinstance(result_data, list):
+        # Strands often wraps results as ``[{"text": "..."}]``.
+        parts: list[str] = []
+        for item in result_data:
+            if isinstance(item, dict):
+                if "text" in item and isinstance(item["text"], str):
+                    parts.append(item["text"])
+            elif isinstance(item, str):
+                parts.append(item)
+        if parts:
+            return "\n".join(parts)
+    if isinstance(result_data, dict):
+        if "text" in result_data and isinstance(result_data["text"], str):
+            return result_data["text"]
+        return json.dumps(result_data)
+    return str(result_data)
+
+
 # ---- State management ---------------------------------------------------
 
 
-def build_sales_prompt(input_data, user_message: str) -> str:
-    """Inject the current sales pipeline state into the prompt."""
+def _format_preferences_block(prefs: dict) -> Optional[str]:
+    """Render the UI-supplied preferences as a system-style block.
+
+    Returns ``None`` when the dict is empty so the caller can skip
+    injection entirely. Mirrors ``langgraph-python``'s
+    ``PreferencesInjectorMiddleware._build_prefs_message`` shape.
+    """
+    if not isinstance(prefs, dict) or not prefs:
+        return None
+    lines: list[str] = []
+    if prefs.get("name"):
+        lines.append(f"- Name: {prefs['name']}")
+    if prefs.get("tone"):
+        lines.append(f"- Preferred tone: {prefs['tone']}")
+    if prefs.get("language"):
+        lines.append(f"- Preferred language: {prefs['language']}")
+    interests = prefs.get("interests") or []
+    if isinstance(interests, list) and interests:
+        lines.append(f"- Interests: {', '.join(str(i) for i in interests)}")
+    if not lines:
+        return None
+    return (
+        "The user has shared these preferences with you:\n"
+        + "\n".join(lines)
+        + "\nTailor every response to these preferences. Address the user "
+        "by name when appropriate."
+    )
+
+
+def build_state_prompt(input_data, user_message: str) -> str:
+    """Inject UI-owned shared state slots into the outgoing prompt.
+
+    Handles every demo whose backend reads from ``state``:
+
+    * ``shared-state-read-write`` — preferences (name, tone, language,
+      interests) written by the UI via ``agent.setState``.
+    * sales pipeline (legacy ``manage_sales_todos`` flow) — todos seeded
+      by the agent and re-rendered in cards.
+
+    All branches degrade to the original ``user_message`` when the
+    relevant slot is missing.
+    """
     state_dict = getattr(input_data, "state", None)
-    if isinstance(state_dict, dict) and "todos" in state_dict:
+    if not isinstance(state_dict, dict):
+        return user_message
+
+    blocks: list[str] = []
+
+    prefs_block = _format_preferences_block(state_dict.get("preferences") or {})
+    if prefs_block:
+        blocks.append(prefs_block)
+
+    if "todos" in state_dict:
         todos_json = json.dumps(state_dict["todos"], indent=2)
-        return (
-            f"Current sales pipeline:\n{todos_json}\n\nUser request: {user_message}"
-        )
-    return user_message
+        blocks.append(f"Current sales pipeline:\n{todos_json}")
+
+    if not blocks:
+        return user_message
+
+    return "\n\n".join(blocks) + f"\n\nUser request: {user_message}"
+
+
+# Back-compat alias: tests / scripts may import the old name.
+build_sales_prompt = build_state_prompt
 
 
 async def sales_state_from_args(context):
@@ -643,8 +1057,19 @@ SYSTEM_PROMPT = (
     "- Search flights and display rich A2UI cards (via search_flights tool)\n"
     "- Generate dynamic A2UI dashboards from conversation context (via generate_a2ui tool)\n"
     "- Generate step-by-step plans for user review (human-in-the-loop)\n"
+    "- Remember things the user tells you by calling `set_notes` with the FULL "
+    "updated list of short note strings (existing notes + new). The UI "
+    "renders these in a notes panel.\n"
+    "- Delegate work to specialised sub-agents when the user asks for "
+    "research, drafting, or critique. Tools: `research_agent`, "
+    "`writing_agent`, `critique_agent`. For non-trivial deliverables "
+    "delegate in sequence research -> write -> critique. Pass relevant "
+    "facts/draft through the `task` argument. The UI renders a live log "
+    "of every delegation.\n"
     "When discussing the sales pipeline, ALWAYS use the get_sales_todos tool to see the current list before "
-    "mentioning, updating, or discussing todos with the user."
+    "mentioning, updating, or discussing todos with the user.\n"
+    "When the user shares preferences (name, tone, language, interests), they will be "
+    "supplied in a system-style block at the top of every turn — respect them."
 )
 
 
@@ -661,7 +1086,7 @@ def build_showcase_agent(
     resolved_model = model if model is not None else _build_model()
 
     shared_state_config = StrandsAgentConfig(
-        state_context_builder=build_sales_prompt,
+        state_context_builder=build_state_prompt,
         tool_behaviors={
             "manage_sales_todos": ToolBehavior(
                 skip_messages_snapshot=True,
@@ -678,6 +1103,27 @@ def build_showcase_agent(
             "get_weather": ToolBehavior(
                 stop_streaming_after_result=True,
             ),
+            # Shared State (Read + Write) — the agent writes notes to
+            # `state["notes"]` via the `set_notes` tool. Emit a snapshot
+            # the moment the tool fires so the UI's NotesCard re-renders
+            # without waiting for the full text-response to stream.
+            "set_notes": ToolBehavior(
+                state_from_args=notes_state_from_args,
+            ),
+            # Sub-Agents — every delegation appends to
+            # `state["delegations"]`. Use `state_from_result` rather than
+            # `state_from_args` so the entry carries the sub-agent's
+            # actual output (final, "completed") rather than a stub
+            # "running" row that needs a follow-up update.
+            "research_agent": ToolBehavior(
+                state_from_result=_make_subagent_state_from_result("research_agent"),
+            ),
+            "writing_agent": ToolBehavior(
+                state_from_result=_make_subagent_state_from_result("writing_agent"),
+            ),
+            "critique_agent": ToolBehavior(
+                state_from_result=_make_subagent_state_from_result("critique_agent"),
+            ),
         },
     )
 
@@ -693,6 +1139,10 @@ def build_showcase_agent(
             search_flights,
             generate_a2ui,
             set_theme_color,
+            set_notes,
+            research_agent,
+            writing_agent,
+            critique_agent,
         ],
     )
 

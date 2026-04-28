@@ -1,8 +1,13 @@
 """
 Agent Server for AG2
 
-FastAPI server that hosts the AG2 agent backend.
+FastAPI server that hosts the AG2 agent backends.
 The Next.js CopilotKit runtime proxies requests here via AG-UI protocol.
+
+Most demos share a single ConversableAgent at the root path. Demos that
+require dedicated state mechanics or multi-agent topologies are mounted
+as their own sub-apps at distinct paths so each demo gets its own
+ContextVariables-backed state slot.
 """
 
 import os
@@ -13,7 +18,11 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 from dotenv import load_dotenv
 
-from agents.agent import stream
+from agents.agent import stream as default_stream
+from agents.shared_state_read_write import (
+    shared_state_read_write_app,
+)
+from agents.subagents import subagents_app
 
 load_dotenv()
 
@@ -43,11 +52,18 @@ app.add_middleware(
 )
 
 
-# Mount the AG2 AG-UI endpoint at the root.
+# Mount per-demo sub-apps FIRST. Starlette's router resolves mounts in
+# registration order; the catch-all `/` mount below shadows everything
+# under it, so the named mounts must come first.
+app.mount("/shared-state-read-write", shared_state_read_write_app)
+app.mount("/subagents", subagents_app)
+
+
+# Mount the default AG2 AG-UI endpoint at the root.
 # `app.mount("/", ...)` is a catch-all Mount that shadows any later route
 # decorators, which is why /health is served by HealthMiddleware above
 # rather than a `@app.get("/health")` handler registered here.
-app.mount("/", stream.build_asgi())
+app.mount("/", default_stream.build_asgi())
 
 
 def main():

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { randomUUID } from "node:crypto";
 import {
   CopilotRuntime,
   ExperimentalEmptyAdapter,
@@ -33,7 +34,6 @@ const starterAgentNames = [
   "shared-state-read",
   "shared-state-write",
   "shared-state-streaming",
-  "subagents",
   // Chat-UI demos — all reuse the default starterAgent.
   "prebuilt-sidebar",
   "prebuilt-popup",
@@ -64,6 +64,8 @@ const demoAgents: Record<string, string> = {
   "frontend-tools-async": "frontend_tools_async",
   "hitl-in-app": "hitl_in_app",
   "readonly-state-agent-context": "readonly_state_agent_context",
+  "shared-state-read-write": "shared_state_read_write",
+  subagents: "subagents",
 };
 for (const [agentName, graphId] of Object.entries(demoAgents)) {
   agents[agentName] = createAgent(graphId);
@@ -91,11 +93,25 @@ export const POST = async (req: NextRequest) => {
     console.log(`[copilotkit/route] Response status: ${response.status}`);
     return response;
   } catch (error: unknown) {
-    const err = error as Error;
-    console.error(`[copilotkit/route] ERROR: ${err.message}`);
-    console.error(`[copilotkit/route] Stack: ${err.stack}`);
+    // Log full error details server-side with a correlation id, but only
+    // return the id (not the message or stack) to the client. Returning
+    // raw `err.message` / `err.stack` over the wire leaks internals
+    // (file paths, library versions, sometimes secrets in nested error
+    // messages) to anyone who can hit /api/copilotkit.
+    const err = error instanceof Error ? error : new Error(String(error));
+    const errorId = randomUUID();
+    console.error(
+      JSON.stringify({
+        at: new Date().toISOString(),
+        level: "error",
+        route: "/api/copilotkit",
+        errorId,
+        message: err.message,
+        stack: err.stack,
+      }),
+    );
     return NextResponse.json(
-      { error: err.message, stack: err.stack },
+      { error: "internal runtime error", errorId },
       { status: 500 },
     );
   }

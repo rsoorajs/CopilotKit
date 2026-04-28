@@ -5,6 +5,7 @@ import {
   copilotRuntimeNextJSAppRouterEndpoint,
 } from "@copilotkit/runtime";
 import { AbstractAgent, HttpAgent } from "@ag-ui/client";
+import crypto from "node:crypto";
 
 // The agent backend runs as a separate process on port 8000.
 // This runtime proxies CopilotKit requests to it via AG-UI protocol.
@@ -13,8 +14,8 @@ const AGENT_URL = process.env.AGENT_URL || "http://localhost:8000";
 console.log("[copilotkit/route] Initializing CopilotKit runtime");
 console.log(`[copilotkit/route] AGENT_URL: ${AGENT_URL}`);
 
-function createAgent() {
-  return new HttpAgent({ url: `${AGENT_URL}/` });
+function createAgent(path = "/") {
+  return new HttpAgent({ url: `${AGENT_URL}${path}` });
 }
 
 // Register the same agent under all names used by demo pages.
@@ -29,7 +30,6 @@ const agentNames = [
   "shared-state-read",
   "shared-state-write",
   "shared-state-streaming",
-  "subagents",
   "prebuilt-sidebar",
   "prebuilt-popup",
   "chat-slots",
@@ -42,9 +42,20 @@ const agentNames = [
   "headless-complete",
 ];
 
+// Demos with dedicated FastAPI endpoints (their own state schema, tool
+// set, or prompt). The Python backend mounts each at /<name>; mapping
+// the agent name to that path keeps the runtime config flat.
+const dedicatedAgentPaths: Record<string, string> = {
+  "shared-state-read-write": "/shared-state-read-write",
+  subagents: "/subagents",
+};
+
 const agents: Record<string, AbstractAgent> = {};
 for (const name of agentNames) {
   agents[name] = createAgent();
+}
+for (const [name, path] of Object.entries(dedicatedAgentPaths)) {
+  agents[name] = createAgent(path);
 }
 agents["default"] = createAgent();
 
@@ -71,11 +82,24 @@ export const POST = async (req: NextRequest) => {
     console.log(`[copilotkit/route] Response status: ${response.status}`);
     return response;
   } catch (error: unknown) {
-    const err = error as Error;
-    console.error(`[copilotkit/route] ERROR: ${err.message}`);
-    console.error(`[copilotkit/route] Stack: ${err.stack}`);
+    // Log the full error server-side with a correlation id, but only return
+    // a generic message + errorId to the client so we don't leak stack
+    // traces or internal error messages to untrusted callers. Mirrors the
+    // pattern used in `mastra/src/app/api/copilotkit/route.ts`.
+    const err = error instanceof Error ? error : new Error(String(error));
+    const errorId = crypto.randomUUID();
+    console.error(
+      JSON.stringify({
+        at: new Date().toISOString(),
+        level: "error",
+        route: "/api/copilotkit",
+        errorId,
+        message: err.message,
+        stack: err.stack,
+      }),
+    );
     return NextResponse.json(
-      { error: err.message, stack: err.stack },
+      { error: "internal runtime error", errorId },
       { status: 500 },
     );
   }

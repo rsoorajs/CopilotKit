@@ -18,6 +18,10 @@ from starlette.responses import JSONResponse
 from dotenv import load_dotenv
 
 from agents.agui_adapter import handle_run
+from agents.shared_state_read_write import (
+    handle_run as handle_shared_state_read_write,
+)
+from agents.subagents import handle_run as handle_subagents
 
 load_dotenv()
 
@@ -48,6 +52,39 @@ app.add_middleware(
 async def run_agent(request: Request):
     """AG-UI /run endpoint — streams SSE events."""
     return await handle_run(request)
+
+
+# Per-demo endpoints for cells that need state-aware behavior the unified
+# agent does not provide. Each handler implements its own AG-UI SSE
+# pipeline (RUN_STARTED / STATE_SNAPSHOT / TEXT_* / TOOL_CALL_* / RUN_FINISHED)
+# so it can read RunAgentInput.state and emit fresh snapshots when its
+# tools mutate shared state. The Next.js runtime routes the demo's
+# CopilotKit calls to /api/copilotkit-<slug>, which proxies to these
+# endpoints via per-demo HttpAgent instances.
+
+
+@app.post("/shared-state-read-write")
+async def run_shared_state_read_write(request: Request):
+    """Shared State (Read + Write) demo endpoint.
+
+    The UI writes ``preferences`` into agent state via ``agent.setState``;
+    the handler injects them into the system prompt every turn. The agent
+    writes ``notes`` via the ``set_notes`` tool; the handler emits a
+    STATE_SNAPSHOT so the UI re-renders.
+    """
+    return await handle_shared_state_read_write(request)
+
+
+@app.post("/subagents")
+async def run_subagents(request: Request):
+    """Sub-Agents demo endpoint.
+
+    A supervisor LLM delegates to research / writing / critique sub-agents
+    via tool calls. Each delegation appends a Delegation entry to
+    ``state["delegations"]`` (running -> completed/failed) and emits a
+    STATE_SNAPSHOT so the UI's live delegation log updates.
+    """
+    return await handle_subagents(request)
 
 
 def main():

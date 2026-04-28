@@ -16,6 +16,8 @@ Layout:
 - `/byoc_hashbrown`            BYOC hashbrown demo
 - `/multimodal`                Multimodal attachments (image/PDF)
 - `/agent_config`              Agent-config forwarded-props demo
+- `/shared_state_read_write`   Shared State (Read + Write) — bidirectional state
+- `/subagents`                 Sub-Agents — supervisor + 3 specialists
 
 Sub-paths are mounted BEFORE the root catch-all so Starlette resolves
 them first. The existing single-agent behaviour at `/` is preserved for
@@ -46,6 +48,10 @@ from agents.byoc_hashbrown_agent import agent as byoc_hashbrown_agent
 from agents.multimodal_agent import agent as multimodal_agent
 from agents.agent_config_agent import AgentConfigState
 from agents.agent_config_agent import agent as agent_config_agent
+from agents.shared_state_read_write import SharedStateRWState
+from agents.shared_state_read_write import agent as shared_state_read_write_agent
+from agents.subagents import SubagentsState
+from agents.subagents import agent as subagents_agent
 
 load_dotenv()
 
@@ -103,6 +109,18 @@ app.mount("/multimodal", multimodal_agent.to_ag_ui())
 app.mount(
     "/agent_config",
     agent_config_agent.to_ag_ui(deps=StateDeps(AgentConfigState())),
+)
+
+# ── Shared state (read + write) and sub-agents ───────────────────────
+app.mount(
+    "/shared_state_read_write",
+    shared_state_read_write_agent.to_ag_ui(
+        deps=StateDeps(SharedStateRWState()),
+    ),
+)
+app.mount(
+    "/subagents",
+    subagents_agent.to_ag_ui(deps=StateDeps(SubagentsState())),
 )
 
 # ── Main sales agent — mounted at root (catch-all) ───────────────────

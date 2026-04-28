@@ -41,6 +41,29 @@ See `manifest.yaml` for the authoritative list.
   `onRequest` hook that rejects requests lacking a static Bearer token.
   Authenticated target is the Agno main agent at `/agui`.
 
+### Third pass (state + multi-agent recovery)
+
+- `shared-state-read-write` — bidirectional shared state with the UI
+  writing `preferences` via `agent.setState(...)` and the agno agent
+  writing `notes` back via a `set_notes` tool that mutates
+  `run_context.session_state["notes"]`. Backed by a new
+  `shared_state_read_write` agent module + a custom AGUI handler in
+  `agent_server.py` mounted at `/shared-state-rw/agui`. The custom
+  handler is a thin shim around `agno.os.interfaces.agui.utils`'s
+  stream mapper that additionally emits a `StateSnapshotEvent` with the
+  final `session_state` immediately before `RunFinishedEvent` — Agno's
+  stock AGUI router does not emit state events, so without this shim
+  agent-side state writes are invisible to a frontend subscribed via
+  `useAgent({ updates: [OnStateChanged] })`.
+- `subagents` — supervisor agno agent delegating to three specialized
+  sub-agents (research / writing / critique). Each sub-agent is itself
+  an Agno `Agent(...)` with its own system prompt, invoked via the
+  delegation tools' `_invoke_sub_agent` helper. Every delegation
+  appends an entry to `session_state["delegations"]` (with `running`
+  status pre-flight, then flipped to `completed`/`failed` post-flight).
+  Reuses the same `/subagents/agui` state-aware AGUI handler so the
+  delegation log re-renders live.
+
 ## Skipped
 
 The following demos from the canonical LangGraph-Python reference are intentionally
