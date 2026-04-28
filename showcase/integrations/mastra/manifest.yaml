@@ -24,13 +24,6 @@ interaction_modalities:
 managed_platform:
   name: Mastra Cloud
   url: https://mastra.ai/cloud
-starter:
-  path: showcase/integrations/mastra
-  name: Sales Dashboard
-  description: Full-featured sales pipeline with 4 GenUI rendering strategies
-  github_url: https://github.com/CopilotKit/CopilotKit/tree/main/showcase/integrations/mastra
-  demo_url: https://showcase-starter-mastra-production-3a00.up.railway.app
-  clone_command: npx degit CopilotKit/CopilotKit/showcase/integrations/mastra my-copilotkit-app
 features:
   - cli-start
   - agentic-chat
