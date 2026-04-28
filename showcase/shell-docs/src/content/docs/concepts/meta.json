@@ -2,14 +2,7 @@
   "title": "Concepts",
   "pages": [
     "architecture",
-    "intelligence-platform",
-    "three-types-of-gen-ui",
     "generative-ui-overview",
-    "agentic-protocols",
-    "ag-ui-protocol",
-    "mcp-servers",
-    "a2a-protocol",
-    "threads",
     "oss-vs-enterprise"
   ]
 }

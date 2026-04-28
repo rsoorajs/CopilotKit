@@ -202,32 +202,32 @@ const nextConfig: NextConfig = {
       },
       {
         source: "/learn/threads",
-        destination: "/concepts/threads",
+        destination: "/premium/threads-explained",
         permanent: true,
       },
       {
         source: "/learn/intelligence-platform",
-        destination: "/concepts/intelligence-platform",
+        destination: "/premium/intelligence-platform",
         permanent: true,
       },
       {
         source: "/learn/agentic-protocols",
-        destination: "/concepts/agentic-protocols",
+        destination: "/agentic-protocols",
         permanent: true,
       },
       {
         source: "/learn/ag-ui-protocol",
-        destination: "/concepts/ag-ui-protocol",
+        destination: "/agentic-protocols/ag-ui",
         permanent: true,
       },
       {
         source: "/learn/a2a-protocol",
-        destination: "/concepts/a2a-protocol",
+        destination: "/agentic-protocols/a2a",
         permanent: true,
       },
       {
         source: "/learn/connect-mcp-servers",
-        destination: "/concepts/mcp-servers",
+        destination: "/agentic-protocols/mcp",
         permanent: true,
       },
       {
@@ -268,6 +268,49 @@ const nextConfig: NextConfig = {
       {
         source: "/learn/whats-new",
         destination: "/whats-new",
+        permanent: true,
+      },
+
+      // Concepts subgroup tightened: protocol pages moved into a new
+      // /agentic-protocols/ section under Get Started, the
+      // Intelligence Platform + Threads explanation pages moved to
+      // Enterprise (/premium/), and three-types-of-gen-ui merged into
+      // /concepts/generative-ui-overview. Per-path redirects below
+      // catch URLs that were live in the brief window between the
+      // first /learn/ consolidation pass and this restructure.
+      {
+        source: "/concepts/agentic-protocols",
+        destination: "/agentic-protocols",
+        permanent: true,
+      },
+      {
+        source: "/concepts/ag-ui-protocol",
+        destination: "/agentic-protocols/ag-ui",
+        permanent: true,
+      },
+      {
+        source: "/concepts/mcp-servers",
+        destination: "/agentic-protocols/mcp",
+        permanent: true,
+      },
+      {
+        source: "/concepts/a2a-protocol",
+        destination: "/agentic-protocols/a2a",
+        permanent: true,
+      },
+      {
+        source: "/concepts/intelligence-platform",
+        destination: "/premium/intelligence-platform",
+        permanent: true,
+      },
+      {
+        source: "/concepts/threads",
+        destination: "/premium/threads-explained",
+        permanent: true,
+      },
+      {
+        source: "/concepts/three-types-of-gen-ui",
+        destination: "/concepts/generative-ui-overview",
         permanent: true,
       },
     ];
