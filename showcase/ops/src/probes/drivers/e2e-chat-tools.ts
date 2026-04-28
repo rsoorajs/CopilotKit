@@ -59,17 +59,10 @@ const inputSchema = z
     // registry.
     demos: z.array(z.string()).optional(),
     /**
-     * Deployment shape tag from the discovery source. Starters are
-     * single-app integrations with NO `/demos/*` routing, so L3/L4 is
-     * skipped entirely on `shape === "starter"` — they would otherwise
-     * produce one false-red `chat:<slug>` and one false-red
-     * `tools:<slug>` row per starter per tick. Package shape keeps the
-     * Playwright-against-/demos/* behaviour.
+     * Deployment shape tag from the discovery source. Only `"package"`
+     * shape exists.
      *
-     * Optional in the schema so static-YAML callers can pre-pin shape
-     * explicitly; when absent in discovery-mode input the driver
-     * reclassifies from `input.name` at run() entry. Explicit values
-     * that disagree with the classifier cause run() to throw.
+     * Optional — when absent the driver defaults to `"package"`.
      */
     shape: showcaseShapeSchema.optional(),
   })
@@ -83,52 +76,14 @@ type E2eSmokeDriverInput = z.infer<typeof inputSchema>;
 
 /**
  * Aggregate signal shape for the primary `e2e-smoke:<slug>` result.
- * Discriminated on `shape` so downstream consumers can exhaustively
- * switch without guessing which field combinations mean what.
- *
- *   - `shape: "starter"` — the driver short-circuited before launching
- *     chromium; `l3` and `l4` are both literally `"skipped"` and a
- *     `note` field carries the human-readable reason. Rows are always
- *     `state: "green"` for this variant, so the signal MUST NOT carry
- *     an `errorDesc` — alert templates render `errorDesc` as the
- *     failure reason and surfacing one on a green row would flap red
- *     in downstream views.
- *
- *   - `shape: "package"` — the driver ran Playwright against
- *     `/demos/*`. `l3` is `green` or `red`; `l4` can also be `skipped`
- *     when the registry entry has no `tool-rendering` demo. A red row
- *     may carry an `errorDesc` keyed to the failure class
- *     (`launcher-error`, `timeout`, `driver-error`, or absent when the
- *     failure lives in `failureSummary`).
+ * All services are `shape: "package"` — the driver runs Playwright
+ * against `/demos/*`. `l3` is `green` or `red`; `l4` can also be
+ * `skipped` when the registry entry has no `tool-rendering` demo. A
+ * red row may carry an `errorDesc` keyed to the failure class
+ * (`launcher-error`, `timeout`, `driver-error`, or absent when the
+ * failure lives in `failureSummary`).
  */
-export type E2eSmokeSignal = E2eSmokeStarterSignal | E2eSmokePackageSignal;
-
-export interface E2eSmokeStarterSignal {
-  shape: "starter";
-  slug: string;
-  backendUrl: string;
-  l3: "skipped";
-  l4: "skipped";
-  failureSummary: "";
-  /**
-   * Enum literal pinning the structural reason the level was skipped.
-   * Separate from `note` so downstream consumers can branch on a stable
-   * discriminator instead of parsing prose. Extend when a new skip
-   * reason lands.
-   */
-  skipReason: "starter-shape";
-  /** Human-readable explanation of WHY the level was skipped. Never rendered as a failure reason. */
-  note: string;
-  /**
-   * Starter rows MUST NOT carry a failure reason — alert templates
-   * render `errorDesc` as the red-tick summary and surfacing one on a
-   * skipped-green row would flap red in downstream views. `?: never`
-   * turns that invariant into a compile error, so a future path that
-   * sets errorDesc on a starter fails tsc rather than slipping into
-   * prod silently.
-   */
-  errorDesc?: never;
-}
+export type E2eSmokeSignal = E2eSmokePackageSignal;
 
 export interface E2eSmokePackageSignal {
   shape: "package";
@@ -370,28 +325,6 @@ export function createE2eSmokeDriver(
         { name: input.name, shape: input.shape },
         { logger: ctx.logger },
       );
-
-      // Starter short-circuit — runs BEFORE chromium launch AND BEFORE
-      // demos resolution so a broken registry / missing chromium image
-      // never contributes a false-red row for a starter. The ordering
-      // here is load-bearing; the test suite locks it in.
-      if (shape === "starter") {
-        return {
-          key: input.key,
-          state: "green",
-          signal: {
-            shape: "starter",
-            slug,
-            backendUrl,
-            l3: "skipped",
-            l4: "skipped",
-            failureSummary: "",
-            skipReason: "starter-shape",
-            note: "starter: no /demos/* routing",
-          },
-          observedAt,
-        };
-      }
 
       // Demos resolution: (1) in-band `input.demos`, (2) registry lookup
       // via the injected resolver. A slug with no demos entry gets
