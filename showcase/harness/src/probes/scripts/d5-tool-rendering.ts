@@ -75,7 +75,6 @@ export const TOOL_CARD_SELECTORS = [
   '[data-tool-name="get_weather"]',
   ".copilotkit-tool-render",
   '[data-testid="copilot-tool-render"]',
-  '[data-testid="copilot-assistant-message"]',
 ] as const;
 
 /** Per-selector probe timeout (ms). The runner has already waited for
@@ -150,7 +149,6 @@ export async function probeToolCard(page: Page): Promise<ToolCardProbeResult> {
       '[data-tool-name="get_weather"]',
       ".copilotkit-tool-render",
       '[data-testid="copilot-tool-render"]',
-      '[data-testid="copilot-assistant-message"]',
     ];
     for (const sel of selectors) {
       const el = win.document.querySelector(sel);

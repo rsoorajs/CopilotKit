@@ -98,20 +98,6 @@ export const ASSISTANT_MESSAGE_FALLBACK_SELECTOR =
 export const ASSISTANT_MESSAGE_HEADLESS_SELECTOR =
   '[data-message-role="assistant"]';
 
-/**
- * User-message selector cascade for the send-verification retry loop.
- * Mirrors the assistant-message cascade pattern: try the most specific
- * CopilotKit testid first, fall back to generic ARIA / data-attribute
- * selectors. The runner uses these to detect whether a user message
- * actually appeared in the DOM after pressing Enter — if it didn't,
- * the hydration race likely ate the keypress.
- */
-const USER_MESSAGE_SELECTORS = [
-  '[data-testid="copilot-user-message"]',
-  '[role="article"][data-message-role="user"]',
-  '[data-message-role="user"]',
-] as const;
-
 /** Max attempts for the fill+press verify-and-retry loop. */
 const SEND_VERIFY_MAX_ATTEMPTS = 3;
 /** How long to wait after pressing Enter before checking for a user message. */
