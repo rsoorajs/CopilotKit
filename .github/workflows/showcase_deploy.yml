@@ -825,10 +825,8 @@ jobs:
             # "build (<dispatch_name>, <context>, <image>, ...)" — the
             # dispatch_name is the first serialized matrix-object field.
             # We match with a token-bounded prefix ("build (<svc>,") rather
-            # than substring contains() to avoid service/starter collisions
-            # (e.g. `agno` would otherwise match `build (starter-agno,...)`,
-            # same for `ag2`/`starter-ag2`, `mastra`/`starter-mastra`, and
-            # every langgraph-*/starter-langgraph-* pair).
+            # than substring contains() to avoid partial-name collisions
+            # (e.g. a slug that is a prefix of another slug).
             JOBS_JSON=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}/jobs" --paginate 2>/dev/null \
               | jq -cs '[.[].jobs[]?]' 2>/dev/null || echo '[]')
             BUILD_JOBS=$(echo "$JOBS_JSON" | jq -c '[.[] | select((.name // "") | startswith("build"))]' 2>/dev/null || echo '[]')
