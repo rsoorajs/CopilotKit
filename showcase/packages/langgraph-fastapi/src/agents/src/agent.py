@@ -1,7 +1,10 @@
 """
 LangGraph agent for the CopilotKit Showcase (FastAPI variant).
 
-Uses langgraph.prebuilt.create_react_agent with langgraph>=1.1.0.
+Uses copilotkit's create_agent (wrapping langgraph) with CopilotKitMiddleware
+so frontend-registered tools (useHumanInTheLoop, useFrontendTool) are properly
+injected into the LLM's tool list and executed on the frontend rather than
+locally.
 """
 
 import sys
@@ -28,14 +31,14 @@ import json
 import time
 from typing import Any
 
-from langgraph.prebuilt import create_react_agent
 from langchain_openai import ChatOpenAI
 from langchain_core.tools import tool as lc_tool
 from langchain_core.messages import SystemMessage
-from langchain.agents import AgentState as BaseAgentState
+from langchain.agents import AgentState as BaseAgentState, create_agent
 from langchain.tools import ToolRuntime, tool
 from langchain.messages import ToolMessage
 from langgraph.types import Command
+from copilotkit import CopilotKitMiddleware
 
 
 class AgentState(BaseAgentState):
@@ -163,7 +166,7 @@ You can:
 - Generate step-by-step plans for user review (human-in-the-loop)
 """
 
-graph = create_react_agent(
+graph = create_agent(
     model=model,
     tools=[
         get_weather,
@@ -174,5 +177,7 @@ graph = create_react_agent(
         manage_sales_todos,
         get_sales_todos,
     ],
-    prompt=SYSTEM_PROMPT,
+    middleware=[CopilotKitMiddleware()],
+    state_schema=AgentState,
+    system_prompt=SYSTEM_PROMPT,
 )
