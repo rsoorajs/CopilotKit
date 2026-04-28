@@ -1,9 +1,10 @@
 {
-  "_comment": "D5 fixture for /demos/gen-ui-tool-based. Two integration families: (1) langgraph-python registers render_pie_chart via useComponent (PieChart SVG donut); (2) all other integrations register generate_haiku via useFrontendTool (HaikuCard div). The fixture carries BOTH tool patterns keyed by different user messages so the probe script can branch on integrationSlug. ORDER: toolCallId fixtures above userMessage fixtures to avoid infinite-loop re-matching.",
+  "_comment": "D5 fixture for /demos/gen-ui-tool-based. Two integration families: (1) langgraph-python registers render_pie_chart via useComponent (PieChart SVG donut); (2) all other integrations register generate_haiku via useFrontendTool (HaikuCard div). The fixture carries BOTH tool patterns keyed by different user messages so the probe script can branch on integrationSlug. Uses sequenceIndex matching instead of toolCallId because Gemini's functionResponse does not preserve tool call IDs. ORDER: sequenceIndex:1 fixtures above sequenceIndex:0 fixtures to avoid infinite-loop re-matching.",
   "fixtures": [
     {
       "match": {
-        "toolCallId": "call_d5_render_pie_chart_001"
+        "userMessage": "Show me a pie chart of revenue by category",
+        "sequenceIndex": 1
       },
       "response": {
         "content": "Pie chart rendered above — Electronics is the largest slice, followed by Clothing, Food, and Books."
@@ -11,7 +12,8 @@
     },
     {
       "match": {
-        "userMessage": "Show me a pie chart of revenue by category"
+        "userMessage": "Show me a pie chart of revenue by category",
+        "sequenceIndex": 0
       },
       "response": {
         "toolCalls": [
@@ -25,7 +27,8 @@
     },
     {
       "match": {
-        "toolCallId": "call_d5_generate_haiku_001"
+        "userMessage": "Write me a haiku about nature",
+        "sequenceIndex": 1
       },
       "response": {
         "content": "Haiku generated above — a beautiful verse about nature with an accompanying image."
@@ -33,7 +36,8 @@
     },
     {
       "match": {
-        "userMessage": "Write me a haiku about nature"
+        "userMessage": "Write me a haiku about nature",
+        "sequenceIndex": 0
       },
       "response": {
         "toolCalls": [
