@@ -33,24 +33,36 @@ export function Card({
   className?: string;
   children?: React.ReactNode;
 }) {
-  // Render `icon`, `className`, and `children` instead of silently
-  // dropping them — matches MDX author expectations (Mintlify-style
-  // Cards accept all three).
+  // Match the docs-landing pointer-card style:
+  // - bordered surface, accent border on hover, subtle shadow on hover
+  // - title flips to accent color on hover via `group-hover` so the link
+  //   feels active without using a default underline (prose CSS would
+  //   otherwise add one to the wrapping <a>)
+  // - linked variant suppresses the prose underline with `no-underline`
   const mergedClassName = [
-    "rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] p-4 hover:bg-[var(--bg-elevated)] transition-colors",
+    "block group rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] p-4",
+    href
+      ? "no-underline hover:border-[var(--accent)] hover:shadow-sm transition"
+      : "transition-colors",
     className,
   ]
     .filter(Boolean)
     .join(" ");
 
   const content = (
-    <div className={mergedClassName}>
+    <>
       {icon && (
         <div className="mb-2 text-[var(--text-muted)]" aria-hidden>
           {icon}
         </div>
       )}
-      <div className="font-semibold text-[var(--text)] text-sm">{title}</div>
+      <div
+        className={`font-semibold text-[var(--text)] text-sm${
+          href ? " group-hover:text-[var(--accent)]" : ""
+        }`}
+      >
+        {title}
+      </div>
       {description && (
         <div className="text-xs text-[var(--text-muted)] mt-1">
           {description}
@@ -61,16 +73,20 @@ export function Card({
           {children}
         </div>
       )}
-    </div>
+    </>
   );
 
   if (href) {
     // Rewrite /reference/v2/... paths to /reference/...
     const resolvedHref = href.replace(/^\/reference\/v2\//, "/reference/");
-    return <Link href={resolvedHref}>{content}</Link>;
+    return (
+      <Link href={resolvedHref} className={mergedClassName}>
+        {content}
+      </Link>
+    );
   }
 
-  return content;
+  return <div className={mergedClassName}>{content}</div>;
 }
 
 export function Accordions({ children }: { children: React.ReactNode }) {
