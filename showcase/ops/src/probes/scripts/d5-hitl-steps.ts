@@ -39,10 +39,25 @@ const STEPS_CARD_SELECTORS = [
   '[role="form"]:has([data-testid="step-item"])',
 ] as const;
 
+/**
+ * Confirm-button cascade. The reference `StepsFeedback` component (via
+ * `useHumanInTheLoop`) disables the Confirm/Reject buttons with
+ * `disabled={status !== "executing"}` until the tool call is ready for
+ * user input. The `:not([disabled])` suffix on each entry ensures the
+ * cascade waits for the button to become enabled (status transitions to
+ * "executing") before resolving — without it, `waitForSelector` would
+ * resolve on a visible-but-disabled button and the subsequent click
+ * would silently no-op (browsers do not dispatch click events on
+ * disabled buttons).
+ *
+ * The `StepSelector` component (via `useLangGraphInterrupt`) uses
+ * "Perform Steps" with no disabled attribute — it resolves immediately
+ * if that path renders.
+ */
 const CONFIRM_BUTTON_SELECTORS = [
-  'button:has-text("Confirm")',
-  'button:has-text("Perform Steps")',
-  '[data-testid="select-steps"] button:not(:has-text("Reject"))',
+  'button:has-text("Confirm"):not([disabled])',
+  'button:has-text("Perform Steps"):not([disabled])',
+  '[data-testid="select-steps"] button:not(:has-text("Reject")):not([disabled])',
 ] as const;
 
 const script: D5Script = {
