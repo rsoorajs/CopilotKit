@@ -1,7 +1,10 @@
 import { promises as fs } from "node:fs";
 import { z } from "zod";
 import { truncateUtf8 } from "../../render/filters.js";
-import { showcaseShapeSchema } from "../discovery/railway-services.js";
+import {
+  resolveShape,
+  showcaseShapeSchema,
+} from "../discovery/railway-services.js";
 import type { ProbeDriver } from "../types.js";
 import type { Logger, ProbeContext, ProbeResult } from "../../types/index.js";
 
@@ -434,7 +437,11 @@ export function createE2eDemosDriver(
       // would 404 and flap red. The ordering lock (shape check before
       // resolver) mirrors e2e-smoke so a broken registry / missing
       // chromium image never contributes a false-red row on a starter.
-      if (input.shape === "starter") {
+      const shape = resolveShape(
+        { name: input.name, shape: input.shape },
+        { logger: ctx.logger },
+      );
+      if (shape === "starter") {
         return {
           key: input.key,
           state: "green",

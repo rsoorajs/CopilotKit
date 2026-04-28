@@ -1,7 +1,10 @@
 import { promises as fs } from "node:fs";
 import { z } from "zod";
 import { truncateUtf8 } from "../../render/filters.js";
-import { showcaseShapeSchema } from "../discovery/railway-services.js";
+import {
+  resolveShape,
+  showcaseShapeSchema,
+} from "../discovery/railway-services.js";
 import {
   D5_REGISTRY,
   type D5BuildContext,
@@ -630,7 +633,11 @@ export function createE2eParityDriver(
       // Starter short-circuit. Same rule as e2e-deep — no /demos
       // routing, so D6 has nothing to compare against. Aggregate
       // green, no chromium launched.
-      if (input.shape === "starter") {
+      const shape = resolveShape(
+        { name: input.name, shape: input.shape },
+        { logger: ctx.logger },
+      );
+      if (shape === "starter") {
         return {
           key: input.key,
           state: "green",
