@@ -1,7 +1,7 @@
 ---
-title: useInterrupt
+title: Pausing the Agent for Input
 icon: "lucide/CirclePause"
-description: Pause an agent run for user input, then resume with their answer.
+description: Pause an agent run mid-tool, hand control to a custom React component, and resume with the user's answer.
 hideTOC: true
 snippet_cell: gen-ui-interrupt
 ---
@@ -113,6 +113,8 @@ the Promise-returning handler takes over:
 
 </WhenFrameworkHas>
 
+<WhenFrameworkHas flag="interrupt_pattern" equals="native">
+
 ### Key props
 
 - **`agentId`** — must match a runtime-registered agent. If omitted, the
@@ -175,6 +177,8 @@ useInterrupt({
   ),
 });
 ```
+
+</WhenFrameworkHas>
 
 ## Going further
 

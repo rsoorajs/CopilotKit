@@ -16,8 +16,6 @@
     "frontend-tools",
     "shared-state",
     "human-in-the-loop",
-    "human-in-the-loop/useInterrupt",
-    "human-in-the-loop/headless",
     "multi-agent/subagents",
     "programmatic-control",
     "---Agents & Backends---",
