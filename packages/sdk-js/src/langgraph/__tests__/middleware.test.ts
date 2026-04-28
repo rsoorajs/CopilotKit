@@ -18,7 +18,11 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { AIMessage, HumanMessage, SystemMessage } from "@langchain/core/messages";
+import {
+  AIMessage,
+  HumanMessage,
+  SystemMessage,
+} from "@langchain/core/messages";
 
 import {
   copilotkitMiddleware,
@@ -466,9 +470,7 @@ describe("afterAgent", () => {
   });
 
   it("restores intercepted tool calls onto the original AIMessage", () => {
-    const intercepted = [
-      { id: "2", name: "navigate", args: { path: "/x" } },
-    ];
+    const intercepted = [{ id: "2", name: "navigate", args: { path: "/x" } }];
     const state = {
       messages: [
         new HumanMessage("hi"),
