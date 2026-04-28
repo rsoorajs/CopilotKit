@@ -163,7 +163,7 @@ describe("Catalog Generator", () => {
     }
   });
 
-  it("parity tier: crewai-crews (34 wired) = partial (intersection >= 3 with reference)", () => {
+  it("parity tier: crewai-crews (28 wired) = partial (intersection >= 3 with reference)", () => {
     runGenerator();
     const catalog = readCatalog();
 
@@ -188,10 +188,11 @@ describe("Catalog Generator", () => {
     expect(catalog.metadata.total_cells).toBe(737);
 
     // 18 integrations x 40 features + 17 starters = 737 total cells
-    // Wired = 460, Stub = 8, Unshipped = 269
-    expect(catalog.metadata.wired).toBe(460);
-    expect(catalog.metadata.stub).toBe(8);
-    expect(catalog.metadata.unshipped).toBe(269);
+    // Wired = 484, Stub = 9, Unshipped = 244 (post built-in-agent column + D5-all-green
+    // manifest cleanup that removed architecturally unsupported HITL features)
+    expect(catalog.metadata.wired).toBe(484);
+    expect(catalog.metadata.stub).toBe(9);
+    expect(catalog.metadata.unshipped).toBe(244);
   });
 
   it("max_depth: D4 for wired/stub cells, D0 for unshipped", () => {

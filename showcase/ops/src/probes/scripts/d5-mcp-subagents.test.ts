@@ -167,18 +167,24 @@ describe("D5 mcp-subagents assertChainedReply", () => {
     // agent's signature framing. If those are missing we KNOW the
     // chain didn't reach critique_agent, even if research + writing
     // both fired.
+    //
+    // Short timeout (50ms) so the polling loop exits quickly — the
+    // fake's text is static, so more polling won't help.
     const mod = await import("./d5-mcp-subagents.js");
     const page = makePageWithText(
       "Remote work returns roughly ten hours a week. Surveys cite remote workers and a wider talent pool.",
     );
 
-    await expect(mod.assertChainedReply(page)).rejects.toThrow(/mentorship/);
+    await expect(mod.assertChainedReply(page, 50)).rejects.toThrow(
+      /mentorship/,
+    );
   });
 
   it("throws when the reply is empty", async () => {
+    // Short timeout (50ms) — empty text won't gain fragments over time.
     const mod = await import("./d5-mcp-subagents.js");
     const page = makePageWithText("");
-    await expect(mod.assertChainedReply(page)).rejects.toThrow(
+    await expect(mod.assertChainedReply(page, 50)).rejects.toThrow(
       /missing fragments/,
     );
   });

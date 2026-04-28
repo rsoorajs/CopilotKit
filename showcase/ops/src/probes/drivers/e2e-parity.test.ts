@@ -963,9 +963,9 @@ describe("e2e-parity driver", () => {
     });
 
     const result = await driver.run(mkCtx(), {
-      key: "e2e-parity:showcase-langgraph-python-starter",
+      key: "e2e-parity:showcase-starter-langgraph-python",
       publicUrl: "https://x.example.com",
-      name: "showcase-langgraph-python-starter",
+      name: "showcase-starter-langgraph-python",
       features: ["agentic-chat"],
       shape: "starter",
     });

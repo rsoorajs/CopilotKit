@@ -3,11 +3,11 @@
   "features": {
     "agentic-chat": {
       "og_docs_url": "https://docs.copilotkit.ai/mastra",
-      "shell_docs_path": null
+      "shell_docs_path": "/prebuilt-components"
     },
     "hitl-in-chat": {
       "og_docs_url": "https://docs.copilotkit.ai/mastra/human-in-the-loop/tool-based",
-      "shell_docs_path": null
+      "shell_docs_path": "/generative-ui/your-components/interactive"
     },
     "tool-rendering": {
       "og_docs_url": "https://docs.copilotkit.ai/mastra/generative-ui/tool-rendering",
@@ -19,7 +19,7 @@
     },
     "gen-ui-agent": {
       "og_docs_url": "https://docs.copilotkit.ai/mastra/generative-ui/state-rendering",
-      "shell_docs_path": null
+      "shell_docs_path": "/generative-ui/state-rendering"
     },
     "shared-state-read-write": {
       "og_docs_url": "https://docs.copilotkit.ai/mastra/shared-state",
@@ -31,13 +31,7 @@
     },
     "subagents": {
       "og_docs_url": "https://docs.copilotkit.ai/mastra",
-      "shell_docs_path": null
+      "shell_docs_path": "/multi-agent/subagents"
     }
-  },
-  "missing": [
-    {
-      "feature": "all",
-      "reason": "Previous port used wrong `shell_docs_url` field with absolute http://localhost:3000 URLs (old dev port, also not the correct field — the shell expects `shell_docs_path` relative to the framework root). Normalized to `shell_docs_path` format."
-    }
-  ]
+  }
 }

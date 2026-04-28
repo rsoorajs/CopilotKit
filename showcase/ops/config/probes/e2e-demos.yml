@@ -128,7 +128,7 @@
 # new infra service added there lands here too during review.
 kind: e2e_demos
 id: e2e-demos
-schedule: "0 */6 * * *"
+schedule: "10 */6 * * *"
 timeout_ms: 1200000
 max_concurrency: 6
 discovery:

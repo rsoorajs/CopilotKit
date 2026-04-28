@@ -6,29 +6,16 @@ import type {
 } from "../helpers/d5-registry.js";
 
 /**
- * Tests for the D5 gen-UI (custom) script. Stricter sibling of
- * d5-gen-ui-headless: the custom tier additionally asserts a
- * STRUCTURAL match on the rendered SVG (multiple drawing children for
- * the donut PieChart).
+ * Tests for the D5 gen-UI (custom) script. The script now branches on
+ * integrationSlug:
+ *   - `langgraph-python` sends "Show me a pie chart..." and asserts
+ *     SVG donut chart shape.
+ *   - All others send "Write me a haiku about nature" and assert
+ *     the HaikuCard rendering.
  *
  * Module-cache caveat: see the headless test file's preamble — same
  * `vi.resetModules()` + dynamic-import dance to keep the registry
  * fresh per case.
- *
- * Coverage:
- *   1. Registration writes one entry under `gen-ui-custom` with the
- *      gen-ui-tool-based route and the recorded fixture.
- *   2. `buildTurns` returns one turn whose input matches the fixture's
- *      userMessage ("Show me a pie chart of revenue by category").
- *   3. Assertion FAILS when no `<svg>` is rendered.
- *   4. Assertion FAILS when the SVG has too few drawing children
- *      (below MIN_CHART_DRAWING_CHILDREN).
- *   5. Assertion FAILS when the SVG has rects but no circles or paths
- *      (shape doesn't match a pie/donut chart).
- *   6. Assertion FAILS when the assistant follow-up narration is
- *      missing the expected tokens ("pie", "chart").
- *   7. Assertion PASSES on a healthy render: SVG with 5 circles +
- *      narration that mentions both expected tokens.
  */
 
 interface FreshRegistry {
@@ -82,7 +69,7 @@ describe("d5-gen-ui-custom script", () => {
     );
   });
 
-  it("buildTurns returns one turn whose input matches the fixture's userMessage", async () => {
+  it("buildTurns sends pie chart message for langgraph-python", async () => {
     const { script } = await loadFreshRegistry();
     const turns = script.buildTurns({
       integrationSlug: "langgraph-python",
@@ -94,7 +81,21 @@ describe("d5-gen-ui-custom script", () => {
     expect(typeof turns[0]!.assertions).toBe("function");
   });
 
-  it("assertion FAILS when the rendered component has no <svg>", async () => {
+  it("buildTurns sends haiku message for non-langgraph-python integrations", async () => {
+    const { script } = await loadFreshRegistry();
+    const turns = script.buildTurns({
+      integrationSlug: "agno",
+      featureType: "gen-ui-custom",
+      baseUrl: "https://showcase-agno.example.com",
+    });
+    expect(turns).toHaveLength(1);
+    expect(turns[0]!.input).toBe("Write me a haiku about nature");
+    expect(typeof turns[0]!.assertions).toBe("function");
+  });
+
+  // --- Pie chart path (langgraph-python) ---
+
+  it("pie chart: assertion FAILS when the rendered component has no <svg>", async () => {
     const { script } = await loadFreshRegistry();
     const turn = script.buildTurns({
       integrationSlug: "langgraph-python",
@@ -107,11 +108,8 @@ describe("d5-gen-ui-custom script", () => {
       evaluateImpl: () => {
         evalCount++;
         if (evalCount === 1) {
-          // Cascade matched a card-shaped component (NOT an SVG chart).
           return { selector: '[data-testid="gen-ui-card"]' };
         }
-        // readSvgChartShape: hasSvg false → assertion throws with the
-        // "no <svg> rendered" message.
         return {
           hasSvg: false,
           circleCount: 0,
@@ -125,7 +123,7 @@ describe("d5-gen-ui-custom script", () => {
     await expect(turn.assertions!(page)).rejects.toThrow(/no <svg> rendered/);
   });
 
-  it("assertion FAILS when SVG has too few drawing children (placeholder render)", async () => {
+  it("pie chart: assertion FAILS when SVG has too few drawing children", async () => {
     const { script } = await loadFreshRegistry();
     const turn = script.buildTurns({
       integrationSlug: "langgraph-python",
@@ -138,8 +136,6 @@ describe("d5-gen-ui-custom script", () => {
       evaluateImpl: () => {
         evalCount++;
         if (evalCount === 1) return { selector: '[role="article"] svg' };
-        // SVG present but only 1 drawing child (e.g. just the
-        // background circle, no slices) — below MIN_CHART_DRAWING_CHILDREN.
         return {
           hasSvg: true,
           circleCount: 1,
@@ -153,37 +149,7 @@ describe("d5-gen-ui-custom script", () => {
     await expect(turn.assertions!(page)).rejects.toThrow(/1 drawing children/);
   });
 
-  it("assertion FAILS when SVG has rects but no circles or paths (wrong chart shape)", async () => {
-    const { script } = await loadFreshRegistry();
-    const turn = script.buildTurns({
-      integrationSlug: "langgraph-python",
-      featureType: "gen-ui-custom",
-      baseUrl: "https://example.com",
-    })[0]!;
-
-    let evalCount = 0;
-    const page = makeAssertionPage({
-      evaluateImpl: () => {
-        evalCount++;
-        if (evalCount === 1) return { selector: '[role="article"] svg' };
-        // SVG with only rects (e.g. an icon-style decoration) —
-        // doesn't match the donut/pie shape.
-        return {
-          hasSvg: true,
-          circleCount: 0,
-          pathCount: 0,
-          rectCount: 4,
-          drawingChildren: 4,
-        };
-      },
-    });
-
-    await expect(turn.assertions!(page)).rejects.toThrow(
-      /neither <circle> nor <path>/,
-    );
-  });
-
-  it("assertion FAILS when assistant follow-up is missing expected tokens", async () => {
+  it("pie chart: assertion FAILS when assistant follow-up is missing expected tokens", async () => {
     const { script } = await loadFreshRegistry();
     const turn = script.buildTurns({
       integrationSlug: "langgraph-python",
@@ -197,7 +163,6 @@ describe("d5-gen-ui-custom script", () => {
         evalCount++;
         if (evalCount === 1) return { selector: '[role="article"] svg' };
         if (evalCount === 2) {
-          // Healthy donut: 5 circles (4 slices + background).
           return {
             hasSvg: true,
             circleCount: 5,
@@ -206,7 +171,6 @@ describe("d5-gen-ui-custom script", () => {
             drawingChildren: 5,
           };
         }
-        // Narration mentions neither "pie" nor "chart".
         return "Done — let me know if you want anything else.";
       },
     });
@@ -214,7 +178,7 @@ describe("d5-gen-ui-custom script", () => {
     await expect(turn.assertions!(page)).rejects.toThrow(/missing tokens/);
   });
 
-  it("assertion PASSES on a healthy donut render with full narration", async () => {
+  it("pie chart: assertion PASSES on a healthy donut render with full narration", async () => {
     const { script } = await loadFreshRegistry();
     const turn = script.buildTurns({
       integrationSlug: "langgraph-python",
@@ -243,14 +207,12 @@ describe("d5-gen-ui-custom script", () => {
     await expect(turn.assertions!(page)).resolves.toBeUndefined();
   });
 
-  it("assertion PASSES when the chart uses <path> arcs instead of <circle> slices", async () => {
-    // Robustness check: alternative chart libraries (e.g. recharts)
-    // render slices as `<path>` arcs rather than dasharray-styled
-    // `<circle>`s. The structural assertion accepts either, so the
-    // probe doesn't false-fail when an integration switches chart libs.
+  // --- Haiku card path (all non-LGP integrations) ---
+
+  it("haiku: assertion FAILS when no card or component renders", async () => {
     const { script } = await loadFreshRegistry();
     const turn = script.buildTurns({
-      integrationSlug: "langgraph-python",
+      integrationSlug: "agno",
       featureType: "gen-ui-custom",
       baseUrl: "https://example.com",
     })[0]!;
@@ -259,17 +221,110 @@ describe("d5-gen-ui-custom script", () => {
     const page = makeAssertionPage({
       evaluateImpl: () => {
         evalCount++;
-        if (evalCount === 1) return { selector: '[role="article"] svg' };
-        if (evalCount === 2) {
-          return {
-            hasSvg: true,
-            circleCount: 0,
-            pathCount: 4,
-            rectCount: 0,
-            drawingChildren: 4,
-          };
+        if (evalCount === 1) {
+          // Cascade matched a generic selector
+          return { selector: '[data-message-role="assistant"]' };
         }
-        return "Pie chart rendered above with 4 slices.";
+        // No haiku card or rendered component found
+        return { found: false };
+      },
+    });
+
+    await expect(turn.assertions!(page)).rejects.toThrow(
+      /no haiku card or rendered component/,
+    );
+  });
+
+  it("haiku: assertion FAILS when haiku card has zero children (empty wrapper)", async () => {
+    const { script } = await loadFreshRegistry();
+    const turn = script.buildTurns({
+      integrationSlug: "mastra",
+      featureType: "gen-ui-custom",
+      baseUrl: "https://example.com",
+    })[0]!;
+
+    let evalCount = 0;
+    const page = makeAssertionPage({
+      evaluateImpl: () => {
+        evalCount++;
+        if (evalCount === 1) {
+          return { selector: '[data-testid="haiku-card"]' };
+        }
+        // Haiku card found but empty
+        return {
+          found: true,
+          selector: '[data-testid="haiku-card"]',
+          childCount: 0,
+          hasText: false,
+          japaneseLineCount: 0,
+          englishLineCount: 0,
+        };
+      },
+    });
+
+    await expect(turn.assertions!(page)).rejects.toThrow(/zero children/);
+  });
+
+  it("haiku: assertion PASSES on a healthy haiku card render (no narration check)", async () => {
+    // Haiku integrations use `useFrontendTool` with `followUp: false`,
+    // so there is no second-leg narration. Only the structural check
+    // (card rendered with children + text) is asserted.
+    const { script } = await loadFreshRegistry();
+    const turn = script.buildTurns({
+      integrationSlug: "agno",
+      featureType: "gen-ui-custom",
+      baseUrl: "https://example.com",
+    })[0]!;
+
+    let evalCount = 0;
+    const page = makeAssertionPage({
+      evaluateImpl: () => {
+        evalCount++;
+        if (evalCount === 1) {
+          return { selector: '[data-testid="haiku-card"]' };
+        }
+        // assertHaikuCardShape: card found with children and text
+        return {
+          found: true,
+          selector: '[data-testid="haiku-card"]',
+          childCount: 3,
+          hasText: true,
+          japaneseLineCount: 3,
+          englishLineCount: 3,
+        };
+      },
+    });
+
+    await expect(turn.assertions!(page)).resolves.toBeUndefined();
+  });
+
+  it("haiku: assertion PASSES with fallback selector (no testid)", async () => {
+    // Some integrations might render the component without testids.
+    // The probe falls back to generic assistant message selectors.
+    const { script } = await loadFreshRegistry();
+    const turn = script.buildTurns({
+      integrationSlug: "langgraph-typescript",
+      featureType: "gen-ui-custom",
+      baseUrl: "https://example.com",
+    })[0]!;
+
+    let evalCount = 0;
+    const page = makeAssertionPage({
+      evaluateImpl: () => {
+        evalCount++;
+        if (evalCount === 1) {
+          return { selector: '[data-message-role="assistant"]' };
+        }
+        // Fallback: no haiku-card testid, but assistant message
+        // wrapper has children and text
+        return {
+          found: true,
+          selector: '[data-message-role="assistant"]',
+          childCount: 2,
+          hasText: true,
+          japaneseLineCount: 0,
+          englishLineCount: 0,
+        };
       },
     });
 

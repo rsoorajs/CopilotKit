@@ -124,6 +124,15 @@ export interface ProbeContext {
    * continue to compile; drivers opt in over time.
    */
   abortSignal?: AbortSignal;
+  /**
+   * Optional feature-type filter threaded from the trigger layer. When
+   * set, drivers that support per-feature-type filtering (e.g. e2e-deep)
+   * SHOULD restrict their run to only the listed feature types. Drivers
+   * that don't understand feature types ignore this field — it's purely
+   * advisory. Kept optional so existing ProbeContext construction sites
+   * (tests, legacy drivers) continue to compile without changes.
+   */
+  featureTypes?: string[];
 }
 
 /**

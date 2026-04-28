@@ -20,6 +20,7 @@ from google.genai import types
 
 import os
 
+from .shared_chat import get_model
 from .tools import (
     get_weather_impl,
     query_data_impl,
@@ -61,7 +62,16 @@ def _get_genai_client():
     Cache bookkeeping is thread-safe via `functools.lru_cache`; see the
     module-level comment above for the cold-cache race caveat. Call
     `.cache_clear()` in tests that need to reset the memoized instance.
+
+    When `GOOGLE_GEMINI_BASE_URL` is set (Railway aimock proxy), the client
+    is configured to send requests to that endpoint instead of the default
+    Gemini API.
     """
+    base_url = os.environ.get("GOOGLE_GEMINI_BASE_URL")
+    if base_url:
+        return genai.Client(
+            http_options={"api_endpoint": base_url},
+        )
     return genai.Client()
 
 class _A2uiError(TypedDict):
@@ -582,7 +592,7 @@ def simple_after_model_modifier(
 
 sales_pipeline_agent = LlmAgent(
     name="SalesPipelineAgent",
-    model="gemini-2.5-flash",
+    model=get_model(),
     instruction="""
         You are a helpful assistant.
 

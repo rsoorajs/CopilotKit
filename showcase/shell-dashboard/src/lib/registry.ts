@@ -10,7 +10,7 @@ export interface Feature {
   description: string;
   kind?: FeatureKind;
   og_docs_url?: string;
-  shell_docs_url?: string;
+  shell_docs_path?: string;
 }
 
 export interface FeatureCategory {

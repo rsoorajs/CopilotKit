@@ -575,11 +575,12 @@ describe("e2e-demos driver", () => {
     expect(chatSig?.note).toBeUndefined();
   });
 
-  it("matches custom composer via textarea fallback selector", async () => {
-    // Simulate a custom-composer demo: the CopilotKit testid selector
-    // and the default placeholder selector both time out, but a generic
-    // `textarea` does match. The driver must walk the selector chain
-    // and emit green on the third selector without failing.
+  it("matches custom composer via compound CSS selector", async () => {
+    // The driver now uses a single compound CSS selector instead of
+    // walking selectors sequentially. A single waitForSelector call
+    // receives the compound string; Playwright matches whichever
+    // sub-selector hits first. The fake page accepts the compound
+    // selector to simulate a match.
     const selectorsTried: string[] = [];
     const page: E2eDemosPage = {
       async goto() {
@@ -587,7 +588,8 @@ describe("e2e-demos driver", () => {
       },
       async waitForSelector(sel: string) {
         selectorsTried.push(sel);
-        if (sel === "textarea") return; // match
+        // Compound selector contains "textarea" — simulate a match.
+        if (sel.includes("textarea")) return;
         throw new Error(`Timeout waiting for ${sel}`);
       },
       async close() {
@@ -628,23 +630,18 @@ describe("e2e-demos driver", () => {
     expect(sig.passed).toBe(1);
     expect(sig.failed).toEqual([]);
 
-    // The chain was walked in order: V2 textarea testid → scoped
-    // textarea descendant → bare `textarea` (match). Stronger fallbacks
-    // past the match are not attempted.
-    expect(selectorsTried).toEqual([
-      '[data-testid="copilot-chat-textarea"]',
-      '[data-testid="copilot-chat-input"] textarea',
-      "textarea",
-    ]);
+    // A single compound selector is tried (all selectors at once).
+    expect(selectorsTried).toHaveLength(1);
+    expect(selectorsTried[0]).toContain("textarea");
+    expect(selectorsTried[0]).toContain('[data-testid="copilot-chat-textarea"]');
 
     expect(writes).toHaveLength(1);
     expect(writes[0]?.state).toBe("green");
   });
 
-  it("fails red only when all 6 fallback selectors miss", async () => {
-    // Harden the expanded selector chain: if every selector misses the
-    // row must still red out as a selector-error (not swallowed as green
-    // by the additional fallbacks).
+  it("fails red when compound selector misses", async () => {
+    // With the compound selector approach, a single waitForSelector call
+    // is made. If it throws, the demo is red with selector-error.
     const selectorsTried: string[] = [];
     const page: E2eDemosPage = {
       async goto() {
@@ -686,14 +683,10 @@ describe("e2e-demos driver", () => {
     });
 
     expect(result.state).toBe("red");
-    expect(selectorsTried).toEqual([
-      '[data-testid="copilot-chat-textarea"]',
-      '[data-testid="copilot-chat-input"] textarea',
-      "textarea",
-      'input[placeholder="Type a message"]',
-      'input[type="text"]',
-      '[role="textbox"]',
-    ]);
+    // Single compound selector tried (not 6 individual ones).
+    expect(selectorsTried).toHaveLength(1);
+    expect(selectorsTried[0]).toContain('[data-testid="copilot-chat-textarea"]');
+    expect(selectorsTried[0]).toContain('[role="textbox"]');
     expect(writes).toHaveLength(1);
     expect(writes[0]?.state).toBe("red");
     const rowSig = writes[0]?.signal as { errorClass?: string };

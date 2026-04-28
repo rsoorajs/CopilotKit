@@ -1,12 +1,16 @@
 import { promises as fs } from "node:fs";
 import { z } from "zod";
 import { truncateUtf8 } from "../../render/filters.js";
-import { showcaseShapeSchema } from "../discovery/railway-services.js";
+import {
+  resolveShape,
+  showcaseShapeSchema,
+} from "../discovery/railway-services.js";
 import {
   D5_REGISTRY,
   type D5BuildContext,
   type D5FeatureType,
   type D5Script,
+  isD5FeatureType,
 } from "../helpers/d5-registry.js";
 import {
   runConversation,
@@ -289,22 +293,13 @@ function defaultRoute(featureType: D5FeatureType, _ctx?: unknown): string {
   return `/demos/${featureType}`;
 }
 
-const ALL_KNOWN_FEATURES: readonly D5FeatureType[] = [
-  "agentic-chat",
-  "tool-rendering",
-  "shared-state-read",
-  "shared-state-write",
-  "hitl-approve-deny",
-  "hitl-text-input",
-  "gen-ui-headless",
-  "gen-ui-custom",
-  "mcp-apps",
-  "subagents",
-] as const;
-
-function isKnownFeatureType(value: string): value is D5FeatureType {
-  return (ALL_KNOWN_FEATURES as readonly string[]).includes(value);
-}
+/**
+ * Re-use the canonical `isD5FeatureType` from `d5-registry.ts` as
+ * `isKnownFeatureType` so the driver's filter stays in sync with
+ * the closed enum without maintaining a redundant list.
+ */
+const isKnownFeatureType: (value: string) => value is D5FeatureType =
+  isD5FeatureType;
 
 /**
  * Default reference-snapshot directory. Resolves to
@@ -638,7 +633,11 @@ export function createE2eParityDriver(
       // Starter short-circuit. Same rule as e2e-deep — no /demos
       // routing, so D6 has nothing to compare against. Aggregate
       // green, no chromium launched.
-      if (input.shape === "starter") {
+      const shape = resolveShape(
+        { name: input.name, shape: input.shape },
+        { logger: ctx.logger },
+      );
+      if (shape === "starter") {
         return {
           key: input.key,
           state: "green",
@@ -660,6 +659,8 @@ export function createE2eParityDriver(
           observedAt,
         };
       }
+
+      const sideEmit = makeSideEmit(ctx);
 
       // Not picked by the scoping logic — sit out this tick. Aggregate
       // green so the dashboard doesn't flap red on every non-target
@@ -691,7 +692,7 @@ export function createE2eParityDriver(
             demos: input.demos,
           });
           const url = `${backendUrl}${route}`;
-          await sideEmit(ctx, {
+          await sideEmit({
             key: `d6:${slug}/${ft}`,
             state: "green",
             signal: {
@@ -798,7 +799,7 @@ export function createE2eParityDriver(
       // launch outcomes — the dashboard sees a definite per-cell
       // verdict whether or not the runnable features even start.
       for (const ft of skippedScript) {
-        await sideEmit(ctx, {
+        await sideEmit({
           key: `d6:${slug}/${ft}`,
           state: "green",
           signal: {
@@ -811,7 +812,7 @@ export function createE2eParityDriver(
         });
       }
       for (const { ft, refPath } of skippedRef) {
-        await sideEmit(ctx, {
+        await sideEmit({
           key: `d6:${slug}/${ft}`,
           state: "green",
           signal: {
@@ -825,7 +826,7 @@ export function createE2eParityDriver(
         });
       }
       for (const { ft, refPath, reason } of invalidRef) {
-        await sideEmit(ctx, {
+        await sideEmit({
           key: `d6:${slug}/${ft}`,
           state: "red",
           signal: {
@@ -924,7 +925,7 @@ export function createE2eParityDriver(
               demos: input.demos,
             });
             const url = `${backendUrl}${route}`;
-            await sideEmit(ctx, {
+            await sideEmit({
               key: sideKey,
               state: "red",
               signal: {
@@ -975,7 +976,7 @@ export function createE2eParityDriver(
 
           if (abort.signal.aborted) {
             red += 1;
-            await sideEmit(ctx, {
+            await sideEmit({
               key: sideKey,
               state: "red",
               signal: {
@@ -1013,7 +1014,7 @@ export function createE2eParityDriver(
 
           if (!featureResult.ok) {
             red += 1;
-            await sideEmit(ctx, {
+            await sideEmit({
               key: sideKey,
               state: "red",
               signal: {
@@ -1050,7 +1051,7 @@ export function createE2eParityDriver(
             red += 1;
           }
 
-          await sideEmit(ctx, {
+          await sideEmit({
             key: sideKey,
             state,
             signal: {
@@ -1274,9 +1275,10 @@ async function runFeatureCapture(
     return { ok: true, captured };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
+    const isAbort = err instanceof Error && err.name === "AbortError";
     return {
       ok: false,
-      errorClass: abortSignal.aborted ? "abort" : "driver-error",
+      errorClass: isAbort ? "abort" : "driver-error",
       errorDesc: truncateUtf8(msg, 1200),
     };
   } finally {
@@ -1315,22 +1317,29 @@ function severityFromFailureCount(n: number): "green" | "amber" | "red" {
   return "red";
 }
 
-async function sideEmit(
+function makeSideEmit(
   ctx: ProbeContext,
-  result: ProbeResult<E2eParityFeatureSignal>,
-): Promise<void> {
-  if (!ctx.writer) {
-    ctx.logger.warn("probe.e2e-parity.writer-missing", { key: result.key });
-    return;
-  }
-  try {
-    await ctx.writer.write(result);
-  } catch (err) {
-    ctx.logger.error("probe.e2e-parity.side-emit-writer-failed", {
-      key: result.key,
-      err: err instanceof Error ? err.message : String(err),
-    });
-  }
+): (result: ProbeResult<E2eParityFeatureSignal>) => Promise<void> {
+  let warnedNoWriter = false;
+  return async (result) => {
+    if (!ctx.writer) {
+      if (!warnedNoWriter) {
+        warnedNoWriter = true;
+        ctx.logger.warn("probe.e2e-parity.writer-missing", {
+          key: result.key,
+        });
+      }
+      return;
+    }
+    try {
+      await ctx.writer.write(result);
+    } catch (err) {
+      ctx.logger.error("probe.e2e-parity.side-emit-writer-failed", {
+        key: result.key,
+        err: err instanceof Error ? err.message : String(err),
+      });
+    }
+  };
 }
 
 function deriveSlug(key: string, name?: string): string {

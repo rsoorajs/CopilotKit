@@ -32,7 +32,6 @@ features:
   - chat-customization-css
   - frontend-tools
   - frontend-tools-async
-  - hitl-in-chat
   - gen-ui-agent
   - open-gen-ui
   - open-gen-ui-advanced
@@ -93,17 +92,6 @@ demos:
     highlight:
       - src/app/demos/frontend-tools-async/page.tsx
       - src/app/demos/frontend-tools-async/notes-card.tsx
-      - src/app/api/copilotkit/route.ts
-  - id: hitl-in-chat
-    name: In-Chat HITL (useHumanInTheLoop)
-    description: Interactive approval surface rendered inline in the chat via the high-level `useHumanInTheLoop` hook
-    tags:
-      - interactivity
-    route: /demos/hitl-in-chat
-    animated_preview_url:
-    highlight:
-      - src/app/demos/hitl-in-chat/page.tsx
-      - src/app/demos/hitl-in-chat/time-picker-card.tsx
       - src/app/api/copilotkit/route.ts
   - id: gen-ui-agent
     name: Agentic Generative UI

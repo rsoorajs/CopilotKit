@@ -43,16 +43,25 @@ const LANGCHAIN_EXCLUSIONS = [
  * Path patterns that should never be synced from upstream into shell-docs,
  * applied to relative paths (e.g. `docs/content/docs/integrations/mastra/(other)/...`).
  *
- * Each per-framework `integrations/<fw>/(other)/` subtree in upstream ships
- * byte-duplicate `contributing/` + `telemetry/` content across every
- * framework. Shell-docs owns the canonical copy at root `(other)/`; the
- * per-framework copies are stale sync artifacts that cluttered the
- * merged sidebar nav with a duplicate "Other" section. They were deleted
- * from shell-docs and must stay deleted — this filter stops future sync
- * runs from resurrecting them when upstream edits any file in the tree.
+ * Per-framework files that exist only as one-line snippet stubs (`<Threads />`,
+ * `<SelfHosting />`, etc.) are excluded here. Shell-docs renders the real
+ * content at the root path via the same shared-snippet component, and the
+ * framework-scoped router falls back to root MDX when no per-framework
+ * override exists, so the stubs add nothing — they only cluttered the disk
+ * and reappeared on every sync.
+ *
+ * Per-framework `(other)/` subtrees ship byte-duplicate `contributing/` +
+ * `telemetry/` content across every framework; shell-docs owns the
+ * canonical copy at root `(other)/`.
+ *
+ * Upstream keeps all of these copies — removing them there means touching
+ * every parallel framework tree, which is upstream-IA work outside this
+ * branch's scope. The exclusion is the durable shell-docs-only fix.
  */
 const PATH_EXCLUSIONS: RegExp[] = [
   /^docs\/content\/docs\/integrations\/[^/]+\/\(other\)\//,
+  /^docs\/content\/docs\/integrations\/[^/]+\/threads\.mdx$/,
+  /^docs\/content\/docs\/integrations\/[^/]+\/premium\/self-hosting\.mdx$/,
 ];
 
 function isExcludedPath(relPath: string): boolean {

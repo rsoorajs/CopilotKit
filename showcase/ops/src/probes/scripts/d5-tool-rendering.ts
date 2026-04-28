@@ -11,10 +11,10 @@
  *
  * Why a single turn: the recorded fixture
  * (`showcase/ops/fixtures/d5/tool-rendering.json`) contains one
- * userMessage match — `"weather in Tokyo"` — which fans out into TWO
- * tool calls (`get_weather` + `search_flights`) on the LGP backend per
- * its system prompt. The `toolCallId`-routed fixtures handle the second
- * leg of each tool's request/response. From the conversation runner's
+ * userMessage match — `"weather in Tokyo"` — which emits a single tool
+ * call (`get_weather`) on the LGP backend per its system prompt. The
+ * `toolCallId`-routed fixture handles the second leg of the tool's
+ * request/response. From the conversation runner's
  * perspective this is still ONE user turn — the runner sends one
  * message, waits for the assistant to settle, and runs the assertion
  * once on the resulting DOM.
@@ -79,6 +79,22 @@ export const TOOL_CARD_SELECTORS = [
  * the budget covers integrations where the renderer mounts asynchronously
  * after the assistant message lands. */
 const SELECTOR_PROBE_TIMEOUT_MS = 5_000;
+
+/**
+ * Maximum time (ms) to poll `probeToolCard` for a structurally complete
+ * card after the conversation runner declares the turn settled. The
+ * runner settles on assistant-message count stability, but the tool
+ * render lifecycle (`inProgress` → `executing` → `complete`) runs
+ * independently — the tool result arrives as a separate AG-UI event
+ * (`TOOL_CALL_RESULT`) that may land slightly after the final text
+ * message that triggered the runner's settle. Without polling, the
+ * probe would snapshot the DOM once and catch the card in a loading
+ * state even though the result is about to arrive.
+ */
+const PROBE_POLL_TIMEOUT_MS = 10_000;
+
+/** Interval between `probeToolCard` retries. */
+const PROBE_POLL_INTERVAL_MS = 200;
 
 /**
  * Result of probing the DOM for a tool card. Returned by `probeToolCard`
@@ -150,6 +166,28 @@ export async function probeToolCard(page: Page): Promise<ToolCardProbeResult> {
 }
 
 /**
+ * Check whether a probe result satisfies all structural sub-assertions:
+ * numeric temperature, "Tokyo" city label, and childCount >= 1. Returns
+ * `null` when all checks pass, or a human-readable error string on the
+ * first failing check. Used by both the one-shot and polling code paths.
+ */
+export function validateProbe(probe: ToolCardProbeResult): string | null {
+  if (probe.selector === null) {
+    return "tool-rendering: expected card for `get_weather` but selector cascade matched 0 elements";
+  }
+  if (!/\d/.test(probe.text)) {
+    return `tool-rendering: card matched ${probe.selector} but no numeric temperature found in "${probe.text.slice(0, 200)}"`;
+  }
+  if (!probe.text.includes("tokyo")) {
+    return `tool-rendering: card matched ${probe.selector} but missing city label "Tokyo" in "${probe.text.slice(0, 200)}"`;
+  }
+  if (probe.childCount < 1) {
+    return `tool-rendering: card matched ${probe.selector} has no inner elements (childCount=0) — expected an icon / labelled block`;
+  }
+  return null;
+}
+
+/**
  * Build the assertion callback for a per-turn `ConversationTurn`. Exported
  * so unit tests can invoke the assertion directly against a scripted
  * Page fake without going through the runner.
@@ -159,15 +197,27 @@ export async function probeToolCard(page: Page): Promise<ToolCardProbeResult> {
  *      in the cascade to become visible. This gives the runner's
  *      page-load auto-wait one final settle window for the renderer to
  *      mount.
- *   2. Run an in-browser cascade probe (`probeToolCard`) to find any
- *      matching selector and read its text + childCount in one round
- *      trip.
- *   3. If no selector matched, throw with the canonical "selector
- *      cascade matched 0 elements" message.
- *   4. Otherwise assert numeric temperature, "Tokyo" label, and
- *      childCount >= 1.
+ *   2. Poll `probeToolCard` up to `PROBE_POLL_TIMEOUT_MS`, checking
+ *      after each probe whether the card satisfies all structural
+ *      sub-assertions (numeric temperature, "Tokyo" label,
+ *      childCount >= 1). The poll loop exists because the tool
+ *      render lifecycle (`inProgress` → `executing` → `complete`)
+ *      is driven by the `TOOL_CALL_RESULT` AG-UI event which may
+ *      arrive slightly after the text message that caused the
+ *      conversation runner to declare "settled". Without polling,
+ *      the probe snapshots the DOM once and catches the card in a
+ *      loading state — the exact failure mode seen in the 6
+ *      affected integrations.
+ *   3. If the poll deadline passes without a passing probe, throw
+ *      with the last validation error so the operator sees whether
+ *      the failure was "no card" vs "card present but still loading".
  */
-export function buildToolRenderingAssertion(): (page: Page) => Promise<void> {
+export function buildToolRenderingAssertion(opts?: {
+  /** Override the poll timeout — only used by unit tests to avoid
+   *  10 s waits when the fake page always returns a failing probe. */
+  pollTimeoutMs?: number;
+}): (page: Page) => Promise<void> {
+  const pollTimeout = opts?.pollTimeoutMs ?? PROBE_POLL_TIMEOUT_MS;
   return async (page: Page): Promise<void> => {
     // Best-effort wait for the canonical selector. We don't fail here
     // if it times out — the cascade probe below covers integrations
@@ -185,41 +235,24 @@ export function buildToolRenderingAssertion(): (page: Page) => Promise<void> {
       // through the probe result below.
     }
 
-    const probe = await probeToolCard(page);
+    // Poll probeToolCard until the card is structurally complete or
+    // the deadline passes. First probe is immediate (no initial sleep).
+    const deadline = Date.now() + pollTimeout;
+    let lastError: string | null = null;
 
-    if (probe.selector === null) {
-      throw new Error(
-        "tool-rendering: expected card for `get_weather` but selector cascade matched 0 elements",
-      );
+    while (Date.now() < deadline) {
+      const probe = await probeToolCard(page);
+      lastError = validateProbe(probe);
+      if (lastError === null) {
+        // All checks passed — card is structurally complete.
+        return;
+      }
+      // Card not ready yet — sleep briefly and retry.
+      await new Promise<void>((r) => setTimeout(r, PROBE_POLL_INTERVAL_MS));
     }
 
-    // Numeric temperature — any standalone digit run. Allows formats
-    // like "22", "22.5", "22°", "22°F". Avoids over-fitting to a
-    // particular degree symbol or unit (Celsius vs Fahrenheit varies
-    // by integration).
-    if (!/\d/.test(probe.text)) {
-      throw new Error(
-        `tool-rendering: card matched ${probe.selector} but no numeric temperature found in "${probe.text.slice(0, 200)}"`,
-      );
-    }
-
-    // City label — case-insensitive substring on the request city.
-    // The fixture user message is "weather in Tokyo" so the response
-    // and rendered card MUST mention Tokyo somewhere.
-    if (!probe.text.includes("tokyo")) {
-      throw new Error(
-        `tool-rendering: card matched ${probe.selector} but missing city label "Tokyo" in "${probe.text.slice(0, 200)}"`,
-      );
-    }
-
-    // Structural sub-element check. A card with zero element children
-    // is a string-only render — failing the "structured" expectation
-    // even if it happens to mention Tokyo and a number.
-    if (probe.childCount < 1) {
-      throw new Error(
-        `tool-rendering: card matched ${probe.selector} has no inner elements (childCount=0) — expected an icon / labelled block`,
-      );
-    }
+    // Deadline elapsed — throw the last validation error.
+    throw new Error(lastError!);
   };
 }
 

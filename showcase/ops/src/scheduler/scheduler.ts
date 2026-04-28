@@ -84,7 +84,7 @@ export interface TriggerResult {
 }
 
 export interface TriggerOptions {
-  filter?: { slugs?: string[] };
+  filter?: { slugs?: string[]; featureTypes?: string[] };
 }
 
 export interface Scheduler {

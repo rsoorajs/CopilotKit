@@ -3,12 +3,16 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { z } from "zod";
 import { truncateUtf8 } from "../../render/filters.js";
-import { showcaseShapeSchema } from "../discovery/railway-services.js";
+import {
+  resolveShape,
+  showcaseShapeSchema,
+} from "../discovery/railway-services.js";
 import {
   D5_REGISTRY,
   type D5BuildContext,
   type D5FeatureType,
   type D5Script,
+  isD5FeatureType,
 } from "../helpers/d5-registry.js";
 import { demosToFeatureTypes } from "../helpers/d5-feature-mapping.js";
 import {
@@ -228,28 +232,60 @@ export interface E2eDeepDriverDeps {
 const DEFAULT_TIMEOUT_MS = 5 * 60 * 1000;
 const DEFAULT_PAGE_TIMEOUT_MS = 30 * 1000;
 
+/**
+ * Maximum number of features that run concurrently within a single service
+ * invocation. Each feature opens its own browser context so parallelism is
+ * safe — but too many contexts at once OOMs the container on Railway. A
+ * value of 1 degrades to the old sequential behaviour.
+ */
+export const FEATURE_CONCURRENCY = 2;
+
+/**
+ * Inline counting semaphore — gates concurrent access to a bounded
+ * resource (here: browser contexts). No npm dependency required.
+ *
+ * Exported for unit testing; not part of the public driver surface.
+ */
+export class Semaphore {
+  private queue: (() => void)[] = [];
+  private active = 0;
+  constructor(private readonly limit: number) {
+    if (!Number.isFinite(limit) || limit < 1) {
+      throw new Error(`Semaphore limit must be >= 1, got ${limit}`);
+    }
+  }
+  async acquire(): Promise<void> {
+    if (this.active < this.limit) {
+      this.active++;
+      return;
+    }
+    return new Promise<void>((resolve) => this.queue.push(resolve));
+  }
+  release(): void {
+    if (this.active <= 0) {
+      throw new Error("Semaphore.release() called without matching acquire()");
+    }
+    this.active--;
+    const next = this.queue.shift();
+    if (next) {
+      this.active++;
+      next();
+    }
+  }
+}
+
 /** Default route shape for a feature when the script doesn't override. */
 function defaultRoute(featureType: D5FeatureType, _ctx?: unknown): string {
   return `/demos/${featureType}`;
 }
 
-/** True when the registered featureType set still has wave-2b gaps. */
-const ALL_KNOWN_FEATURES: readonly D5FeatureType[] = [
-  "agentic-chat",
-  "tool-rendering",
-  "shared-state-read",
-  "shared-state-write",
-  "hitl-approve-deny",
-  "hitl-text-input",
-  "gen-ui-headless",
-  "gen-ui-custom",
-  "mcp-apps",
-  "subagents",
-] as const;
-
-function isKnownFeatureType(value: string): value is D5FeatureType {
-  return (ALL_KNOWN_FEATURES as readonly string[]).includes(value);
-}
+/**
+ * Re-use the canonical `isD5FeatureType` from `d5-registry.ts` as
+ * `isKnownFeatureType` so the driver's filter stays in sync with
+ * the closed enum without maintaining a redundant list.
+ */
+const isKnownFeatureType: (value: string) => value is D5FeatureType =
+  isD5FeatureType;
 
 /**
  * Default Playwright-backed launcher. Mirrors the e2e-demos driver
@@ -431,7 +467,11 @@ export function createE2eDeepDriver(
 
       // Starter short-circuit. Starters have no /demos routing → fan-
       // out would 404 every feature. Mirrors e2e-demos / e2e-smoke.
-      if (input.shape === "starter") {
+      const shape = resolveShape(
+        { name: input.name, shape: input.shape },
+        { logger: ctx.logger },
+      );
+      if (shape === "starter") {
         return {
           key: input.key,
           state: "green",
@@ -448,6 +488,8 @@ export function createE2eDeepDriver(
           observedAt,
         };
       }
+
+      const sideEmit = makeSideEmit(ctx);
 
       // Resolve the feature list. Explicit `features` (from tests or a
       // hand-authored YAML target) wins; otherwise translate the
@@ -506,7 +548,7 @@ export function createE2eDeepDriver(
       // chromium so we don't pay for a launch per slug when Wave 2b
       // hasn't landed yet.
       const skipped: string[] = [];
-      const runnable: D5FeatureType[] = [];
+      let runnable: D5FeatureType[] = [];
       for (const ft of requestedFeatures) {
         if (D5_REGISTRY.has(ft)) {
           runnable.push(ft);
@@ -515,19 +557,48 @@ export function createE2eDeepDriver(
         }
       }
 
+      // B2: apply feature-type filter from the trigger layer. When the
+      // operator triggers with `featureTypes: ["hitl-steps"]`, only
+      // those feature types execute — the rest are recorded as skipped
+      // with a distinct "filtered-by-trigger" reason so dashboards can
+      // distinguish "no script" from "filtered out by trigger request".
+      const filteredByTrigger: string[] = [];
+      if (ctx.featureTypes?.length) {
+        const allowed = new Set(ctx.featureTypes);
+        const kept: D5FeatureType[] = [];
+        for (const ft of runnable) {
+          if (allowed.has(ft)) {
+            kept.push(ft);
+          } else {
+            filteredByTrigger.push(ft);
+            skipped.push(ft);
+          }
+        }
+        if (filteredByTrigger.length > 0) {
+          ctx.logger.info("probe.e2e-deep.feature-type-filter-applied", {
+            featureTypes: ctx.featureTypes,
+            filteredOut: filteredByTrigger.length,
+          });
+        }
+        runnable = kept;
+      }
+      const filteredSet = new Set(filteredByTrigger);
+
       // Skipped-only short-circuit. Aggregate green (no failure), but
       // emit one side row per skipped feature so the dashboard cell
       // shows a definite "no-script-yet" badge instead of going gray.
       if (runnable.length === 0) {
         for (const ft of skipped) {
-          await sideEmit(ctx, {
+          await sideEmit({
             key: `d5:${slug}/${ft}`,
             state: "green",
             signal: {
               slug,
               featureType: ft,
               backendUrl,
-              note: "no script registered for featureType",
+              note: filteredSet.has(ft)
+                ? "filtered-by-trigger"
+                : "no script registered for featureType",
             },
             observedAt: ctx.now().toISOString(),
           });
@@ -543,7 +614,10 @@ export function createE2eDeepDriver(
             passed: 0,
             failed: [],
             skipped,
-            note: "no scripts registered for any declared feature",
+            note:
+              filteredByTrigger.length > 0
+                ? "all runnable features filtered by trigger"
+                : "no scripts registered for any declared feature",
           },
           observedAt,
         };
@@ -598,23 +672,32 @@ export function createE2eDeepDriver(
         // dashboards never see a missing badge between runnable
         // features executing.
         for (const ft of skipped) {
-          await sideEmit(ctx, {
+          await sideEmit({
             key: `d5:${slug}/${ft}`,
             state: "green",
             signal: {
               slug,
               featureType: ft,
               backendUrl,
-              note: "no script registered for featureType",
+              note: filteredSet.has(ft)
+                ? "filtered-by-trigger"
+                : "no script registered for featureType",
             },
             observedAt: ctx.now().toISOString(),
           });
         }
 
-        const failed: string[] = [];
-        let passed = 0;
+        // Run features with bounded parallelism. Each feature creates
+        // its own browser context so there is no shared mutable state
+        // between concurrent runs. FEATURE_CONCURRENCY = 1 degrades
+        // to sequential behaviour identical to the old for-loop.
+        const sem = new Semaphore(FEATURE_CONCURRENCY);
+        // Capture narrowed browser reference — TS can't narrow through
+        // the async closure boundary but we know browser is defined here
+        // (launcher() succeeded above, catch returned early).
+        const browserRef: E2eDeepBrowser = browser!;
 
-        for (const ft of runnable) {
+        const featurePromises = runnable.map(async (ft) => {
           const sideKey = `d5:${slug}/${ft}`;
           const script = D5_REGISTRY.get(ft)!;
           const route = (script.preNavigateRoute ?? defaultRoute)(ft, {
@@ -622,79 +705,133 @@ export function createE2eDeepDriver(
           });
           const url = `${backendUrl}${route}`;
 
-          if (abort.signal.aborted) {
-            failed.push(ft);
-            await sideEmit(ctx, {
-              key: sideKey,
-              state: "red",
-              signal: {
-                slug,
+          await sem.acquire();
+          try {
+            if (abort.signal.aborted) {
+              await sideEmit({
+                key: sideKey,
+                state: "red",
+                signal: {
+                  slug,
+                  featureType: ft,
+                  backendUrl,
+                  url,
+                  fixtureFile: script.fixtureFile,
+                  errorClass: "abort",
+                  errorDesc: timedOut
+                    ? `timeout after ${timeoutMs}ms`
+                    : "aborted",
+                },
+                observedAt: ctx.now().toISOString(),
+              });
+              return { ft, ok: false as const };
+            }
+
+            const featureResult = await runFeature({
+              browser: browserRef,
+              url,
+              pageTimeoutMs,
+              script,
+              buildCtx: {
+                integrationSlug: slug,
                 featureType: ft,
-                backendUrl,
-                url,
-                fixtureFile: script.fixtureFile,
-                errorClass: "abort",
-                errorDesc: timedOut
-                  ? `timeout after ${timeoutMs}ms`
-                  : "aborted",
+                baseUrl: backendUrl,
               },
-              observedAt: ctx.now().toISOString(),
+              abortSignal: abort.signal,
             });
-            continue;
+
+            if (featureResult.ok) {
+              await sideEmit({
+                key: sideKey,
+                state: "green",
+                signal: {
+                  slug,
+                  featureType: ft,
+                  backendUrl,
+                  url,
+                  fixtureFile: script.fixtureFile,
+                  turns_completed: featureResult.conversation.turns_completed,
+                  total_turns: featureResult.conversation.total_turns,
+                  turn_durations_ms:
+                    featureResult.conversation.turn_durations_ms,
+                },
+                observedAt: ctx.now().toISOString(),
+              });
+              return { ft, ok: true as const };
+            } else {
+              await sideEmit({
+                key: sideKey,
+                state: "red",
+                signal: {
+                  slug,
+                  featureType: ft,
+                  backendUrl,
+                  url,
+                  fixtureFile: script.fixtureFile,
+                  turns_completed: featureResult.conversation?.turns_completed,
+                  total_turns: featureResult.conversation?.total_turns,
+                  failure_turn: featureResult.conversation?.failure_turn,
+                  turn_durations_ms:
+                    featureResult.conversation?.turn_durations_ms,
+                  errorDesc: featureResult.errorDesc,
+                  errorClass: featureResult.errorClass,
+                  diagnostics: featureResult.diagnostics,
+                },
+                observedAt: ctx.now().toISOString(),
+              });
+              return { ft, ok: false as const };
+            }
+          } finally {
+            sem.release();
           }
+        });
 
-          const featureResult = await runFeature({
-            browser,
-            url,
-            pageTimeoutMs,
-            script,
-            buildCtx: {
-              integrationSlug: slug,
-              featureType: ft,
-              baseUrl: backendUrl,
-            },
-            abortSignal: abort.signal,
-          });
+        const settled = await Promise.allSettled(featurePromises);
 
-          if (featureResult.ok) {
-            passed++;
-            await sideEmit(ctx, {
-              key: sideKey,
-              state: "green",
-              signal: {
-                slug,
-                featureType: ft,
-                backendUrl,
-                url,
-                fixtureFile: script.fixtureFile,
-                turns_completed: featureResult.conversation.turns_completed,
-                total_turns: featureResult.conversation.total_turns,
-                turn_durations_ms: featureResult.conversation.turn_durations_ms,
-              },
-              observedAt: ctx.now().toISOString(),
-            });
+        // Aggregate results. Promise.allSettled preserves input order
+        // so `settled[i]` corresponds to `runnable[i]`.
+        let passed = 0;
+        const failed: string[] = [];
+        for (let i = 0; i < settled.length; i++) {
+          const outcome = settled[i]!;
+          if (outcome.status === "fulfilled") {
+            if (outcome.value.ok) {
+              passed++;
+            } else {
+              failed.push(outcome.value.ft);
+            }
           } else {
-            failed.push(ft);
-            await sideEmit(ctx, {
-              key: sideKey,
-              state: "red",
-              signal: {
-                slug,
-                featureType: ft,
-                backendUrl,
-                url,
-                fixtureFile: script.fixtureFile,
-                turns_completed: featureResult.conversation?.turns_completed,
-                total_turns: featureResult.conversation?.total_turns,
-                failure_turn: featureResult.conversation?.failure_turn,
-                turn_durations_ms:
-                  featureResult.conversation?.turn_durations_ms,
-                errorDesc: featureResult.errorDesc,
-                errorClass: featureResult.errorClass,
-                diagnostics: featureResult.diagnostics,
-              },
-              observedAt: ctx.now().toISOString(),
+            // Rejected promise — should not happen since runFeature
+            // catches internally, but guard defensively.
+            const ft = runnable[i]!;
+            ctx.logger.error("probe.e2e-deep.feature-promise-rejected", {
+              slug,
+              featureType: ft,
+              err:
+                outcome.reason instanceof Error
+                  ? outcome.reason.message
+                  : String(outcome.reason),
             });
+            failed.push(ft);
+            try {
+              await sideEmit({
+                key: `d5:${slug}/${ft}`,
+                state: "red",
+                signal: {
+                  slug,
+                  featureType: ft,
+                  backendUrl,
+                  errorClass: "promise-rejected",
+                  errorDesc:
+                    outcome.reason instanceof Error
+                      ? outcome.reason.message
+                      : String(outcome.reason),
+                },
+                observedAt: ctx.now().toISOString(),
+              });
+            } catch {
+              // Best-effort — sideEmit already logs internally.
+            }
           }
         }
 
@@ -847,10 +984,11 @@ async function runFeature(opts: {
     return { ok: true, conversation };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
+    const isAbort = err instanceof Error && err.name === "AbortError";
     const diagnostics = page ? await captureDiagnostics(page) : undefined;
     return {
       ok: false,
-      errorClass: abortSignal.aborted ? "abort" : "driver-error",
+      errorClass: isAbort ? "abort" : "driver-error",
       errorDesc: truncateUtf8(msg, 1200),
       diagnostics,
     };
@@ -978,22 +1116,29 @@ async function captureDiagnostics(
   return diagnostics;
 }
 
-async function sideEmit(
+function makeSideEmit(
   ctx: ProbeContext,
-  result: ProbeResult<E2eDeepFeatureSignal>,
-): Promise<void> {
-  if (!ctx.writer) {
-    ctx.logger.warn("probe.e2e-deep.writer-missing", { key: result.key });
-    return;
-  }
-  try {
-    await ctx.writer.write(result);
-  } catch (err) {
-    ctx.logger.error("probe.e2e-deep.side-emit-writer-failed", {
-      key: result.key,
-      err: err instanceof Error ? err.message : String(err),
-    });
-  }
+): (result: ProbeResult<E2eDeepFeatureSignal>) => Promise<void> {
+  let warnedNoWriter = false;
+  return async (result) => {
+    if (!ctx.writer) {
+      if (!warnedNoWriter) {
+        warnedNoWriter = true;
+        ctx.logger.warn("probe.e2e-deep.writer-missing", {
+          key: result.key,
+        });
+      }
+      return;
+    }
+    try {
+      await ctx.writer.write(result);
+    } catch (err) {
+      ctx.logger.error("probe.e2e-deep.side-emit-writer-failed", {
+        key: result.key,
+        err: err instanceof Error ? err.message : String(err),
+      });
+    }
+  };
 }
 
 /**

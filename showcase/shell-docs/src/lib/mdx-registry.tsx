@@ -21,6 +21,7 @@ import {
 import { FrameworkTabs } from "@/components/framework-tabs";
 import { PropertyReference } from "@/components/property-reference";
 import { IntegrationGrid } from "@/components/integration-grid";
+import { DocsLandingNext } from "@/components/docs-landing-next";
 import { getRegistry } from "@/lib/registry";
 
 const Callout = DocsCallout;
@@ -214,6 +215,7 @@ export const docsComponents = {
     </div>
   ),
   IntegrationGrid,
+  DocsLandingNext,
   FeatureGrid: ({ children }: { children?: React.ReactNode }) => (
     <div
       style={{

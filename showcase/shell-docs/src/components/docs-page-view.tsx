@@ -140,6 +140,7 @@ export async function DocsPageView({
             scope={scope}
             fallbackHref={`${slugHrefPrefix}/${node.slug}`}
             active={isActive}
+            hideWhenUnscoped={node.slug === "quickstart"}
             className={`block py-[5px] text-[13px] transition-colors ${
               isActive
                 ? "text-[var(--accent)] font-medium"
@@ -153,12 +154,14 @@ export async function DocsPageView({
     }
     return (
       <div key={`group-${node.slug}`} className="mt-1">
-        <div
-          className="py-[5px] text-[13px] font-medium text-[var(--text-secondary)]"
-          style={{ paddingLeft: `${indent}px` }}
-        >
-          {node.title}
-        </div>
+        {node.title && (
+          <div
+            className="py-[5px] text-[13px] font-medium text-[var(--text-secondary)]"
+            style={{ paddingLeft: `${indent}px` }}
+          >
+            {node.title}
+          </div>
+        )}
         {node.children.map((child) => renderNavItem(child, depth + 1))}
       </div>
     );

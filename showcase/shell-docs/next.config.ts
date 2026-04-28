@@ -46,6 +46,41 @@ if (!process.env.NEXT_PUBLIC_SHELL_URL) {
   );
 }
 
-const nextConfig: NextConfig = {};
+const nextConfig: NextConfig = {
+  async redirects() {
+    return [
+      {
+        source: "/frontend-actions",
+        destination: "/frontend-tools",
+        permanent: true,
+      },
+      {
+        source: "/troubleshooting/migrate-to-v2",
+        destination: "/migrate/v2",
+        permanent: true,
+      },
+      {
+        source: "/troubleshooting/migrate-to-1.10.X",
+        destination: "/migrate/1.10.X",
+        permanent: true,
+      },
+      {
+        source: "/troubleshooting/migrate-to-1.8.2",
+        destination: "/migrate/1.8.2",
+        permanent: true,
+      },
+      {
+        source: "/concepts/oss-vs-cloud",
+        destination: "/concepts/oss-vs-enterprise",
+        permanent: true,
+      },
+      {
+        source: "/quickstart",
+        destination: "/",
+        permanent: true,
+      },
+    ];
+  },
+};
 
 export default nextConfig;

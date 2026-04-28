@@ -17,6 +17,7 @@
 import React from "react";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
+import { DocsLandingNext } from "@/components/docs-landing-next";
 import { DocsPageView } from "@/components/docs-page-view";
 import { SidebarFrameworkSelector } from "@/components/sidebar-framework-selector";
 import { UnscopedDocsPage } from "@/components/unscoped-docs-page";
@@ -27,14 +28,10 @@ import {
   findFrameworksWithCell,
   findFrameworksWithPage,
   loadDoc,
-  type NavNode,
 } from "@/lib/docs-render";
-import {
-  getDocsFolder,
-  getIntegration,
-  getIntegrations,
-  type Integration,
-} from "@/lib/registry";
+import type { NavNode } from "@/lib/docs-render";
+import { getDocsFolder, getIntegration, getIntegrations } from "@/lib/registry";
+import type { Integration } from "@/lib/registry";
 import { RESERVED_ROUTE_SLUGS } from "@/app/layout";
 import demoContent from "@/data/demo-content.json";
 
@@ -64,13 +61,19 @@ function frameworkHasCellFor(framework: string, cell: string): boolean {
 
 /**
  * Merge per-framework overrides into the root nav tree. The override
- * block is inserted as a labeled section right after "App Control" in
- * the root ordering — this mirrors upstream's `integrations/built-in-agent/
- * meta.json`, which puts BIA-specific topics immediately after App
- * Control (before Backend / Premium / Troubleshooting). Implementation:
- * locate the "App Control" section and insert at the next section
- * boundary. Fallbacks in order: insert before "Threads", "Backend", or
- * append at the end.
+ * block is inserted as a labeled section right after the agent-control
+ * section in the root ordering — this mirrors upstream's
+ * `integrations/built-in-agent/meta.json`, which puts BIA-specific
+ * topics immediately after the App-Control / agent-behavior section.
+ *
+ * Anchor names are tried in priority order so the merge survives
+ * section renames (the JTBD reorg renamed "App Control" → "Give Your
+ * App Agent Powers"). Each candidate is matched as a section header;
+ * when found, the override block is inserted right before the *next*
+ * section, so the framework-unique pages end up sandwiched after the
+ * anchor section's own pages.
+ *
+ * Final fallback: append at the end of the nav.
  */
 function mergeFrameworkNav(
   rootNav: NavNode[],
@@ -84,24 +87,27 @@ function mergeFrameworkNav(
   };
   const isSection = (n: NavNode, title: string) =>
     n.type === "section" && n.title.toLowerCase() === title.toLowerCase();
-  const appControlIdx = rootNav.findIndex((n) => isSection(n, "app control"));
+  // Section names tried in priority order. The first match wins; the
+  // override block is inserted right before the *next* section header
+  // after the matched anchor. Update this list when the JTBD section
+  // names change in content/docs/meta.json.
+  const ANCHOR_CANDIDATES = [
+    "give your app agent powers",
+    "app control",
+    "agents & backends",
+    "backend",
+  ];
   let insertAt = -1;
-  if (appControlIdx !== -1) {
-    // Find the next section after App Control; insert right before it
-    // so the override block lands between App Control's pages and
-    // whatever comes next.
-    for (let i = appControlIdx + 1; i < rootNav.length; i++) {
+  for (const anchor of ANCHOR_CANDIDATES) {
+    const anchorIdx = rootNav.findIndex((n) => isSection(n, anchor));
+    if (anchorIdx === -1) continue;
+    for (let i = anchorIdx + 1; i < rootNav.length; i++) {
       if (rootNav[i].type === "section") {
         insertAt = i;
         break;
       }
     }
-  }
-  if (insertAt === -1) {
-    insertAt = rootNav.findIndex((n) => isSection(n, "threads"));
-  }
-  if (insertAt === -1) {
-    insertAt = rootNav.findIndex((n) => isSection(n, "backend"));
+    if (insertAt !== -1) break;
   }
   if (insertAt === -1) {
     return [...rootNav, sectionHeader, ...overrideNav];
@@ -180,11 +186,25 @@ export default async function FrameworkScopedDocsPage({
   const docsFolder = getDocsFolder(framework);
 
   let contentSlugPath: string = slugPath;
-  let doc = loadDoc(slugPath);
+  let doc: ReturnType<typeof loadDoc> = null;
+
+  // `/quickstart` at the root is a routing shim — it exists only so
+  // the sidebar's Quickstart entry has a backing page. Real quickstart
+  // content lives per-framework at `integrations/<framework>/quickstart.mdx`,
+  // so for framework-scoped URLs the override always wins over the shim.
+  if (slugPath === "quickstart") {
+    const overridePath = `integrations/${docsFolder}/${slugPath}`;
+    doc = loadDoc(overridePath);
+    if (doc) contentSlugPath = overridePath;
+  }
+
   if (!doc) {
-    const fallbackPath = `integrations/${docsFolder}/${slugPath}`;
-    doc = loadDoc(fallbackPath);
-    if (doc) contentSlugPath = fallbackPath;
+    doc = loadDoc(slugPath);
+    if (!doc) {
+      const fallbackPath = `integrations/${docsFolder}/${slugPath}`;
+      doc = loadDoc(fallbackPath);
+      if (doc) contentSlugPath = fallbackPath;
+    }
   }
 
   // Sidebar nav needs to render on both the happy path and the
@@ -287,7 +307,7 @@ export default async function FrameworkScopedDocsPage({
       contentSlugPath={contentSlugPath}
       slugHrefPrefix={`/${framework}`}
       frameworkOverride={framework}
-      sidebarTitle="CopilotKit Docs"
+      sidebarTitle={integration.name}
       backLink={backLink}
       navTree={navTree}
       bannerSlot={banner}
@@ -331,87 +351,75 @@ function FrameworkLandingPage({ framework }: { framework: string }) {
         ))}
       </aside>
 
-      {/* <main> is the full-width scroll container so the scrollbar
-       * lands at the viewport edge. Content width is capped by the
-       * inner wrapper. Previously `max-w-3xl` sat on <main> directly,
-       * which parked the scrollbar mid-page. */}
+      {/* Same docs-landing shell as `/` (DocsOverview). DocsLandingNext
+       * reads the URL-active framework from FrameworkProvider and
+       * renders the "Continue with {framework}" branch — Quickstart,
+       * Browse docs, Switch framework — instead of the picker. */}
       <main className="flex-1 overflow-y-auto">
-        <div className="max-w-3xl px-8 py-8">
-          <div className="flex items-center gap-3 mb-6">
-            {integration.logo && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={integration.logo} alt="" className="w-10 h-10" />
-            )}
-            <h1 className="text-[2rem] font-bold text-[var(--text)] tracking-tight">
-              {integration.name}
-            </h1>
+        <div className="max-w-4xl px-8 py-10">
+          <div className="text-[10px] font-mono uppercase tracking-widest text-[var(--text-faint)] mb-2">
+            Documentation
           </div>
-
-          <p className="text-base text-[var(--text-secondary)] leading-relaxed mb-8">
-            {integration.description}
+          <h1 className="text-[2.25rem] font-bold text-[var(--text)] tracking-tight mb-3 leading-tight">
+            Welcome to CopilotKit
+          </h1>
+          <p className="text-base text-[var(--text-secondary)] leading-relaxed mb-8 max-w-2xl">
+            CopilotKit is the <strong>frontend stack for agents</strong> and{" "}
+            <strong>generative UI</strong>. Connect any agent framework or model
+            to your React app for chat, generative UI, canvas apps, and
+            human-in-the-loop workflows.
           </p>
 
-          <div className="rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] p-4 mb-6">
-            <div className="text-[10px] font-mono uppercase tracking-widest text-[var(--text-faint)] mb-2">
-              You're viewing docs scoped to
-            </div>
-            <div className="text-sm font-medium text-[var(--text)]">
-              {integration.name}
-            </div>
-            <p className="text-[13px] text-[var(--text-muted)] mt-2 leading-relaxed">
-              Every code snippet on these pages is pulled from the live{" "}
-              <code>{framework}</code> cells. Pick a topic from the sidebar to
-              start reading.
+          <div className="mb-10 max-w-2xl">
+            <p className="text-sm text-[var(--text-secondary)] mb-3">
+              Starting from scratch? Bootstrap a full-stack agent in one
+              command:
             </p>
+            <pre className="rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] px-4 py-3 text-sm font-mono overflow-x-auto">
+              <code>npx copilotkit@latest create</code>
+            </pre>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <LandingCard
-              href={`/${framework}/agentic-chat-ui`}
-              title="Chat UI"
-              desc="Pre-built chat components wired to the agent"
-            />
-            <LandingCard
-              href={`/${framework}/generative-ui/tool-rendering`}
-              title="Tool Rendering"
-              desc="Render agent tool calls as UI components"
-            />
-            <LandingCard
-              href={`/${framework}/frontend-tools`}
-              title="Frontend Tools"
-              desc="Expose client-side actions to the agent"
-            />
-            <LandingCard
-              href={`/${framework}/human-in-the-loop`}
-              title="Human-in-the-Loop"
-              desc="Intercept tool calls for approval"
-            />
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-10">
+            <Link
+              href={`/${framework}/concepts/architecture`}
+              className="group flex flex-col gap-1 rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] p-4 no-underline hover:border-[var(--accent)] hover:shadow-sm transition"
+            >
+              <div className="font-semibold text-[var(--text)] group-hover:text-[var(--accent)]">
+                Concepts
+              </div>
+              <div className="text-sm text-[var(--text-secondary)] leading-relaxed">
+                Architecture, gen UI types, OSS vs Enterprise.
+              </div>
+            </Link>
+            <Link
+              href="/reference"
+              className="group flex flex-col gap-1 rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] p-4 no-underline hover:border-[var(--accent)] hover:shadow-sm transition"
+            >
+              <div className="font-semibold text-[var(--text)] group-hover:text-[var(--accent)]">
+                API Reference
+              </div>
+              <div className="text-sm text-[var(--text-secondary)] leading-relaxed">
+                Hooks, components, and config.
+              </div>
+            </Link>
+            <Link
+              href={`/${framework}/generative-ui/your-components/display-only`}
+              className="group flex flex-col gap-1 rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] p-4 no-underline hover:border-[var(--accent)] hover:shadow-sm transition"
+            >
+              <div className="font-semibold text-[var(--text)] group-hover:text-[var(--accent)]">
+                Generative UI
+              </div>
+              <div className="text-sm text-[var(--text-secondary)] leading-relaxed">
+                Render tools as React components.
+              </div>
+            </Link>
           </div>
+
+          <DocsLandingNext />
         </div>
       </main>
     </div>
-  );
-}
-
-function LandingCard({
-  href,
-  title,
-  desc,
-}: {
-  href: string;
-  title: string;
-  desc: string;
-}) {
-  return (
-    <Link
-      href={href}
-      className="group p-4 rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] hover:border-[var(--accent)] transition-all"
-    >
-      <div className="text-sm font-semibold text-[var(--text)] group-hover:text-[var(--accent)] mb-1">
-        {title}
-      </div>
-      <div className="text-xs text-[var(--text-muted)]">{desc}</div>
-    </Link>
   );
 }
 
@@ -548,12 +556,14 @@ function RenderNav({
   }
   return (
     <div className="mt-1">
-      <div
-        className="py-[5px] text-[13px] font-medium text-[var(--text-secondary)]"
-        style={{ paddingLeft: `${indent}px` }}
-      >
-        {node.title}
-      </div>
+      {node.title && (
+        <div
+          className="py-[5px] text-[13px] font-medium text-[var(--text-secondary)]"
+          style={{ paddingLeft: `${indent}px` }}
+        >
+          {node.title}
+        </div>
+      )}
       {node.children.map((child, i) => (
         <RenderNav
           key={i}

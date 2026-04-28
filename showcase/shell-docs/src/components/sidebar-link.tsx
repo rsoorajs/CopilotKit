@@ -34,6 +34,14 @@ export interface SidebarLinkProps {
    * interface for call-site compatibility.
    */
   fallbackHref?: string;
+  /**
+   * When true, the link does not render unless a framework is active
+   * (URL-scoped) or stored in localStorage. Used for sidebar entries
+   * whose root MDX is a routing shim — e.g. Quickstart, whose real
+   * content lives per-framework. Without this, the entry shows on `/`
+   * but clicks land on the shim page.
+   */
+  hideWhenUnscoped?: boolean;
 }
 
 export function SidebarLink({
@@ -43,6 +51,7 @@ export function SidebarLink({
   active,
   scope: _scope,
   fallbackHref: _fallbackHref,
+  hideWhenUnscoped,
 }: SidebarLinkProps) {
   const { framework, storedFramework } = useFramework();
 
@@ -52,6 +61,7 @@ export function SidebarLink({
   // avoiding the visible RouterPivot redirect that would otherwise flicker
   // in the URL bar.
   const activeFramework = framework ?? storedFramework;
+  if (hideWhenUnscoped && !activeFramework) return null;
   const href = activeFramework ? `/${activeFramework}/${slug}` : `/${slug}`;
 
   return (

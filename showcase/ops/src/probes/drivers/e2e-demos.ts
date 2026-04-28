@@ -1,7 +1,10 @@
 import { promises as fs } from "node:fs";
 import { z } from "zod";
 import { truncateUtf8 } from "../../render/filters.js";
-import { showcaseShapeSchema } from "../discovery/railway-services.js";
+import {
+  resolveShape,
+  showcaseShapeSchema,
+} from "../discovery/railway-services.js";
 import type { ProbeDriver } from "../types.js";
 import type { Logger, ProbeContext, ProbeResult } from "../../types/index.js";
 
@@ -239,11 +242,18 @@ const TIMEOUT_ENV_VAR = "E2E_DEMOS_TIMEOUT_MS";
 const READY_SELECTORS = [
   '[data-testid="copilot-chat-textarea"]',
   '[data-testid="copilot-chat-input"] textarea',
+  '[data-testid="copilot-chat-toggle"]',
   "textarea",
   'input[placeholder="Type a message"]',
   'input[type="text"]',
   '[role="textbox"]',
 ] as const;
+
+/** Compound CSS selector: Playwright matches ANY of the comma-separated
+ *  selectors simultaneously, so a single `waitForSelector` call replaces
+ *  the old sequential loop (which gave each selector the full remaining
+ *  budget, starving subsequent selectors of time). */
+const READY_SELECTOR_COMPOUND = READY_SELECTORS.join(", ");
 
 const defaultLauncher: E2eDemosBrowserLauncher =
   async (): Promise<E2eDemosBrowser> => {
@@ -434,7 +444,11 @@ export function createE2eDemosDriver(
       // would 404 and flap red. The ordering lock (shape check before
       // resolver) mirrors e2e-smoke so a broken registry / missing
       // chromium image never contributes a false-red row on a starter.
-      if (input.shape === "starter") {
+      const shape = resolveShape(
+        { name: input.name, shape: input.shape },
+        { logger: ctx.logger },
+      );
+      if (shape === "starter") {
         return {
           key: input.key,
           state: "green",
@@ -463,50 +477,52 @@ export function createE2eDemosDriver(
       const demosResolver =
         deps.demosResolver ?? createDefaultDemosResolver(ctx.env, ctx.logger);
 
-      // Demos resolution: (1) in-band `input.demos`, (2) registry lookup.
-      // In-band ids synthesise a canonical `/demos/<id>` route so existing
-      // static-YAML callers and tests keep their current behaviour without
-      // having to restate the route. Registry-backed lookups carry the
-      // real `route:` field verbatim so informational cells (no route)
-      // can be distinguished from navigable demos.
+      // Demos resolution: always use the registry resolver as the primary
+      // source of truth — it carries accurate `route:` fields so IDs like
+      // "hitl" correctly map to "/demos/hitl-in-chat" and informational
+      // cells (no route) are distinguished from navigable demos. Fall back
+      // to in-band `input.demos` synthesis ONLY when the resolver returns
+      // an empty list AND the caller provided demos (test injection path).
       let demos: E2eDemoEntry[];
-      if (Array.isArray(input.demos)) {
-        demos = input.demos.map((id) => ({ id, route: `/demos/${id}` }));
-      } else {
-        try {
-          demos = await demosResolver(slug);
-        } catch (err) {
-          // C12: a custom resolver throw (or default-resolver bug not
-          // already caught at the read/parse/shape layer) used to fall
-          // through to demos: [] which masquerades as a green aggregate
-          // — operators saw "all green" while the resolver was wedged.
-          // Surface a synthetic `__resolver` side row keyed
-          // `e2e:<slug>/__resolver` with errorClass="resolver-error" so
-          // the dashboard renders a red dot for the configuration
-          // mistake distinctly from an empty registry.
-          const errName = err instanceof Error ? err.name : "Error";
-          const msg = err instanceof Error ? err.message : String(err);
-          const stack = err instanceof Error ? err.stack : undefined;
-          ctx.logger.warn("probe.e2e-demos.demos-resolve-failed", {
+      try {
+        demos = await demosResolver(slug);
+      } catch (err) {
+        // C12: a custom resolver throw (or default-resolver bug not
+        // already caught at the read/parse/shape layer) used to fall
+        // through to demos: [] which masquerades as a green aggregate
+        // — operators saw "all green" while the resolver was wedged.
+        // Surface a synthetic `__resolver` side row keyed
+        // `e2e:<slug>/__resolver` with errorClass="resolver-error" so
+        // the dashboard renders a red dot for the configuration
+        // mistake distinctly from an empty registry.
+        const errName = err instanceof Error ? err.name : "Error";
+        const msg = err instanceof Error ? err.message : String(err);
+        const stack = err instanceof Error ? err.stack : undefined;
+        ctx.logger.warn("probe.e2e-demos.demos-resolve-failed", {
+          slug,
+          errName,
+          err: msg,
+          stack,
+        });
+        await sideEmit({
+          key: `e2e:${slug}/__resolver`,
+          state: "red",
+          signal: {
             slug,
-            errName,
-            err: msg,
-            stack,
-          });
-          await sideEmit({
-            key: `e2e:${slug}/__resolver`,
-            state: "red",
-            signal: {
-              slug,
-              featureId: "__resolver",
-              backendUrl,
-              errorClass: "resolver-error",
-              errorDesc: truncateUtf8(msg, 1200),
-            },
-            observedAt: ctx.now().toISOString(),
-          });
-          demos = [];
-        }
+            featureId: "__resolver",
+            backendUrl,
+            errorClass: "resolver-error",
+            errorDesc: truncateUtf8(msg, 1200),
+          },
+          observedAt: ctx.now().toISOString(),
+        });
+        demos = [];
+      }
+      // Fall back to in-band demos ONLY when the registry has no entries
+      // for this slug (test injection path). Production always goes through
+      // the registry which carries accurate route info.
+      if (demos.length === 0 && Array.isArray(input.demos)) {
+        demos = input.demos.map((id) => ({ id, route: `/demos/${id}` }));
       }
 
       // Empty demos set → nothing to check, aggregate green, chromium NOT
@@ -802,24 +818,21 @@ async function runDemo(opts: {
       };
     }
 
-    // Try each structural selector in order; first match wins. Neither
-    // matching is surfaced as a selector-error so operators can spot
-    // which demos need a testid added. Keeping the error taxonomy
-    // distinct from a navigation failure lets alert rules branch on
-    // `errorClass` without string-matching prose.
-    //
-    // Abort responsiveness (C7): check the signal at the top of every
-    // iteration so a cap that fires mid-loop bails promptly rather
-    // than walking all 6 selectors at `pageTimeoutMs` each.
-    //
-    // Deadline responsiveness (C11): break out as `selector-timeout`
-    // when the per-demo budget is exhausted instead of starting another
-    // selector wait that would extend the wall-clock past the bound.
-    let lastError: Error | undefined;
-    for (const sel of READY_SELECTORS) {
-      if (abortSignal.aborted) {
-        throw new DOMException("aborted", "AbortError");
-      }
+    // Try ALL structural selectors simultaneously via a compound CSS
+    // selector. Playwright's comma-separated selector returns as soon as
+    // ANY one matches. This replaces the old sequential loop that gave
+    // each selector the full remaining budget — starving later selectors
+    // when the first didn't match.
+    if (abortSignal.aborted) {
+      throw new DOMException("aborted", "AbortError");
+    }
+    try {
+      await page.waitForSelector(READY_SELECTOR_COMPOUND, {
+        state: "visible",
+        timeout: remaining(),
+      });
+      return { ok: true };
+    } catch (err) {
       const left = remaining();
       if (left <= 0) {
         return {
@@ -831,24 +844,15 @@ async function runDemo(opts: {
           ),
         };
       }
-      try {
-        await page.waitForSelector(sel, {
-          state: "visible",
-          timeout: left,
-        });
-        return { ok: true };
-      } catch (err) {
-        lastError = err instanceof Error ? err : new Error(String(err));
-      }
+      return {
+        ok: false,
+        errorClass: "selector-error",
+        errorDesc: truncateUtf8(
+          err instanceof Error ? err.message : "ready selectors not found",
+          1200,
+        ),
+      };
     }
-    return {
-      ok: false,
-      errorClass: "selector-error",
-      errorDesc: truncateUtf8(
-        lastError?.message ?? "ready selectors not found",
-        1200,
-      ),
-    };
   } catch (err) {
     // C5: classify via `err.name === "AbortError"` directly. The prior
     // implementation read `abortSignal.aborted` after the catch settled

@@ -19,7 +19,7 @@
     },
     "gen-ui-agent": {
       "og_docs_url": "https://docs.copilotkit.ai/generative-ui/state-rendering",
-      "shell_docs_path": null
+      "shell_docs_path": "/generative-ui/state-rendering"
     },
     "shared-state-read-write": {
       "og_docs_url": "https://docs.copilotkit.ai/shared-state",
@@ -31,7 +31,7 @@
     },
     "subagents": {
       "og_docs_url": null,
-      "shell_docs_path": null
+      "shell_docs_path": "/multi-agent/subagents"
     }
   },
   "missing": [
@@ -44,16 +44,12 @@
       "reason": "No framework-scoped docs. Root /human-in-the-loop exists and is used for og. Shell /unselected/human-in-the-loop.mdx is missing — using /generative-ui/your-components/interactive which is the closest match (interactive components HITL in chat)."
     },
     {
-      "feature": "gen-ui-agent",
-      "reason": "Root /generative-ui/state-rendering exists (og), but shell /unselected/generative-ui/state-rendering.mdx does not exist. No suitable shell fallback in /unselected; shell_docs_path is null."
-    },
-    {
       "feature": "shared-state-streaming",
       "reason": "No dedicated streaming doc; root /shared-state/streaming and /shared-state/predictive-state-updates both 404 (og and shell). Falling back to parent /shared-state for both og and shell."
     },
     {
       "feature": "subagents",
-      "reason": "No claude-sdk-python-scoped, claude-sdk-scoped, or root-scoped subagents/multi-agent docs exist. Checked: /claude-sdk-python/multi-agent/subagents, /claude-sdk/multi-agent/subagents, /multi-agent/subagents, /subagents, /multi-agent — all 404. Shell /unselected has no subagent content. Both og_docs_url and shell_docs_path are null."
+      "reason": "No claude-sdk-scoped or framework-agnostic indexable subagents/multi-agent overview page exists on docs.copilotkit.ai. OG left null (renders red) rather than pointing at a soft-404; shell points at the unified /multi-agent/subagents content."
     }
   ]
 }

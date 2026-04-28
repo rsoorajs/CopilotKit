@@ -21,6 +21,8 @@ export interface CatalogCell {
   feature: string | null;
   feature_name: string | null;
   status: "wired" | "stub" | "unshipped";
+  /** Historical high-water mark for this cell's depth. */
+  max_depth: number;
   category: string | null;
   category_name: string | null;
 }
@@ -31,7 +33,7 @@ export type AchievedDepth = 0 | 1 | 2 | 3 | 4;
 export interface DepthResult {
   /** Highest contiguous depth achieved (0-4). */
   achieved: AchievedDepth;
-  /** Whether depth has regressed from a previous high-water mark. Always false for now. */
+  /** Whether achieved depth is below the historical high-water mark (max_depth). */
   isRegression: boolean;
 }
 
@@ -60,23 +62,23 @@ export function deriveDepth(
 
   // D1: health:<slug> green
   if (!isGreen(live, keyFor("health", cell.integration))) {
-    return { achieved, isRegression: false };
+    return { achieved, isRegression: achieved < cell.max_depth };
   }
   achieved = 1;
 
   // D2: agent:<slug> green
   if (!isGreen(live, keyFor("agent", cell.integration))) {
-    return { achieved, isRegression: false };
+    return { achieved, isRegression: achieved < cell.max_depth };
   }
   achieved = 2;
 
   // D3: e2e:<slug>/<featureId> green (per-cell)
   // Starter cells have null feature — skip D3, cap at D2.
   if (cell.feature === null) {
-    return { achieved, isRegression: false };
+    return { achieved, isRegression: achieved < cell.max_depth };
   }
   if (!isGreen(live, keyFor("e2e", cell.integration, cell.feature))) {
-    return { achieved, isRegression: false };
+    return { achieved, isRegression: achieved < cell.max_depth };
   }
   achieved = 3;
 
@@ -87,5 +89,5 @@ export function deriveDepth(
     achieved = 4;
   }
 
-  return { achieved, isRegression: false };
+  return { achieved, isRegression: achieved < cell.max_depth };
 }

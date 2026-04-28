@@ -822,7 +822,10 @@ async function runLevel(opts: {
           backendUrl,
           level,
           failureSummary: truncateUtf8(msg, 1200),
-          errorDesc: abortSignal.aborted ? "abort" : "level-error",
+          errorDesc:
+            err instanceof Error && err.name === "AbortError"
+              ? "abort"
+              : "level-error",
         },
         observedAt: now().toISOString(),
       },
