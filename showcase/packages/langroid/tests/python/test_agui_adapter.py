@@ -1,11 +1,9 @@
 """Unit tests for the Langroid AG-UI SSE adapter.
 
 These tests exercise the event-emission logic of ``handle_run`` by driving
-it with fabricated ``Request``/``ChatAgent`` doubles. They deliberately
-avoid spinning up a real ``langroid.ChatAgent`` (network + OpenAI key
-required) — instead we replace ``agents.agui_adapter.create_agent`` with
-a stub that returns a fake agent whose ``llm_response_async`` yields the
-scenario under test.
+it with fabricated ``Request`` doubles. They mock ``_call_openai`` to return
+controlled OpenAI ChatCompletionMessage-shaped responses, avoiding the need
+for a real LLM or aimock.
 
 Run: ``pytest tests/python/ -v`` from the langroid package root.
 """
@@ -35,19 +33,6 @@ from agents.agent import ALL_TOOLS, FRONTEND_TOOL_NAMES
 # ---------------------------------------------------------------------------
 
 
-class _FakeAgent:
-    """Minimal stand-in for ``lr.ChatAgent`` — records the prompt and
-    returns a preconfigured response object."""
-
-    def __init__(self, response: Any):
-        self._response = response
-        self.calls: list[str] = []
-
-    async def llm_response_async(self, user_message: str) -> Any:
-        self.calls.append(user_message)
-        return self._response
-
-
 class _FakeRequest:
     """Stand-in for ``fastapi.Request`` — only ``.json()`` is used."""
 
@@ -58,10 +43,11 @@ class _FakeRequest:
         return self._body
 
 
-def _install_fake_agent(monkeypatch: pytest.MonkeyPatch, response: Any) -> _FakeAgent:
-    agent = _FakeAgent(response)
-    monkeypatch.setattr(agui_adapter, "create_agent", lambda **kwargs: agent)
-    return agent
+def _install_fake_openai(monkeypatch: pytest.MonkeyPatch, response: Any) -> None:
+    """Replace ``_call_openai`` with a coroutine that returns *response*."""
+    async def _fake_call_openai(messages, tools, model):
+        return response
+    monkeypatch.setattr(agui_adapter, "_call_openai", _fake_call_openai)
 
 
 def _minimal_run_input(thread_id: str = "") -> dict:
@@ -106,14 +92,16 @@ def _parse_events(lines: list[str]) -> list[dict]:
 
 
 # ---------------------------------------------------------------------------
-# Happy path: oai_tool_calls with valid JSON args
+# Happy path: tool_calls with valid JSON args
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
 async def test_oai_tool_calls_emit_start_args_end_in_order(monkeypatch):
-    """A single ``oai_tool_calls`` entry with valid JSON args should emit
-    TOOL_CALL_START -> TOOL_CALL_ARGS -> TOOL_CALL_END in that exact order."""
+    """A single ``tool_calls`` entry with valid JSON args should emit
+    TEXT_MESSAGE_START -> TOOL_CALL_START -> TOOL_CALL_ARGS ->
+    TOOL_CALL_END -> TEXT_MESSAGE_END in that exact order (tool calls
+    are wrapped in a parent TextMessage)."""
     tool_call = SimpleNamespace(
         id="call-1",
         function=SimpleNamespace(
@@ -121,8 +109,8 @@ async def test_oai_tool_calls_emit_start_args_end_in_order(monkeypatch):
             arguments='{"background": "linear-gradient(red, blue)"}',
         ),
     )
-    response = SimpleNamespace(content="", oai_tool_calls=[tool_call], function_call=None)
-    _install_fake_agent(monkeypatch, response)
+    response = SimpleNamespace(content="", tool_calls=[tool_call])
+    _install_fake_openai(monkeypatch, response)
 
     req = _FakeRequest(_minimal_run_input(thread_id="t-1"))
     resp = await handle_run(req)
@@ -131,15 +119,17 @@ async def test_oai_tool_calls_emit_start_args_end_in_order(monkeypatch):
     types = [e["type"] for e in events]
     assert types == [
         "RUN_STARTED",
+        "TEXT_MESSAGE_START",
         "TOOL_CALL_START",
         "TOOL_CALL_ARGS",
         "TOOL_CALL_END",
+        "TEXT_MESSAGE_END",
         "RUN_FINISHED",
     ]
 
-    start = events[1]
-    args = events[2]
-    end = events[3]
+    start = next(e for e in events if e["type"] == "TOOL_CALL_START")
+    args = next(e for e in events if e["type"] == "TOOL_CALL_ARGS")
+    end = next(e for e in events if e["type"] == "TOOL_CALL_END")
     assert start["toolCallId"] == "call-1"
     assert start["toolCallName"] == "change_background"
     assert args["toolCallId"] == "call-1"
@@ -148,7 +138,37 @@ async def test_oai_tool_calls_emit_start_args_end_in_order(monkeypatch):
 
 
 # ---------------------------------------------------------------------------
-# Malformed args → warning + {} args
+# parentMessageId is set on TOOL_CALL_START
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_tool_call_has_parent_message_id(monkeypatch):
+    """TOOL_CALL_START must carry parentMessageId matching the wrapping
+    TEXT_MESSAGE_START's messageId — the Runtime middleware-sse-parser
+    uses this to attach tool calls to their parent message."""
+    tool_call = SimpleNamespace(
+        id="call-pm",
+        function=SimpleNamespace(
+            name="change_background",
+            arguments='{"background": "teal"}',
+        ),
+    )
+    response = SimpleNamespace(content="", tool_calls=[tool_call])
+    _install_fake_openai(monkeypatch, response)
+
+    req = _FakeRequest(_minimal_run_input(thread_id="t-pm"))
+    resp = await handle_run(req)
+    events = _parse_events(await _collect(resp))
+
+    txt_start = next(e for e in events if e["type"] == "TEXT_MESSAGE_START")
+    tc_start = next(e for e in events if e["type"] == "TOOL_CALL_START")
+    assert "parentMessageId" in tc_start
+    assert tc_start["parentMessageId"] == txt_start["messageId"]
+
+
+# ---------------------------------------------------------------------------
+# Malformed args → warning + skip
 # ---------------------------------------------------------------------------
 
 
@@ -162,8 +182,8 @@ async def test_malformed_args_skip_tool_call_and_logs_warning(monkeypatch, caplo
         id="call-2",
         function=SimpleNamespace(name="change_background", arguments="not json {"),
     )
-    response = SimpleNamespace(content="", oai_tool_calls=[tool_call], function_call=None)
-    _install_fake_agent(monkeypatch, response)
+    response = SimpleNamespace(content="", tool_calls=[tool_call])
+    _install_fake_openai(monkeypatch, response)
 
     req = _FakeRequest(_minimal_run_input(thread_id="t-2"))
     with caplog.at_level(logging.WARNING, logger=agui_adapter.logger.name):
@@ -182,37 +202,6 @@ async def test_malformed_args_skip_tool_call_and_logs_warning(monkeypatch, caplo
 
 
 # ---------------------------------------------------------------------------
-# Legacy function_call path
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.asyncio
-async def test_legacy_function_call_path_emits_tool_events(monkeypatch):
-    """When the LLM returns ``function_call`` (legacy shape) rather than
-    ``oai_tool_calls``, the adapter should still synthesize tool events."""
-    function_call = SimpleNamespace(
-        name="change_background",
-        arguments='{"background": "teal"}',
-    )
-    response = SimpleNamespace(content="", oai_tool_calls=None, function_call=function_call)
-    _install_fake_agent(monkeypatch, response)
-
-    req = _FakeRequest(_minimal_run_input(thread_id="t-3"))
-    resp = await handle_run(req)
-    events = _parse_events(await _collect(resp))
-
-    types = [e["type"] for e in events]
-    assert "TOOL_CALL_START" in types
-    assert "TOOL_CALL_ARGS" in types
-    assert "TOOL_CALL_END" in types
-
-    start = next(e for e in events if e["type"] == "TOOL_CALL_START")
-    args = next(e for e in events if e["type"] == "TOOL_CALL_ARGS")
-    assert start["toolCallName"] == "change_background"
-    assert json.loads(args["delta"]) == {"background": "teal"}
-
-
-# ---------------------------------------------------------------------------
 # Empty-string content → no TEXT_MESSAGE_* events
 # ---------------------------------------------------------------------------
 
@@ -221,8 +210,8 @@ async def test_legacy_function_call_path_emits_tool_events(monkeypatch):
 async def test_empty_content_skips_text_message_events(monkeypatch):
     """A response with empty content and no tool calls must not emit
     any TEXT_MESSAGE_* events (AG-UI rejects empty deltas)."""
-    response = SimpleNamespace(content="", oai_tool_calls=None, function_call=None)
-    _install_fake_agent(monkeypatch, response)
+    response = SimpleNamespace(content="", tool_calls=None)
+    _install_fake_openai(monkeypatch, response)
 
     req = _FakeRequest(_minimal_run_input(thread_id="t-4"))
     resp = await handle_run(req)
@@ -243,8 +232,8 @@ async def test_thread_id_stable_when_caller_omits(monkeypatch):
     """Invariant: RUN_STARTED and RUN_FINISHED MUST share the same
     ``thread_id``. When the caller omits it, the adapter synthesizes one
     UUID and reuses it across every event emitted for the run."""
-    response = SimpleNamespace(content="hello", oai_tool_calls=None, function_call=None)
-    _install_fake_agent(monkeypatch, response)
+    response = SimpleNamespace(content="hello", tool_calls=None)
+    _install_fake_openai(monkeypatch, response)
 
     # Empty string triggers the ``run_input.thread_id or str(uuid.uuid4())``
     # fallback — exactly the same code path as a missing thread_id.
@@ -266,8 +255,8 @@ async def test_thread_id_from_caller_preserved(monkeypatch):
     """Invariant: when the caller supplies a thread_id, the adapter MUST
     preserve it verbatim — no new UUID is synthesized, and RUN_STARTED
     and RUN_FINISHED both carry the caller's value."""
-    response = SimpleNamespace(content="hello", oai_tool_calls=None, function_call=None)
-    _install_fake_agent(monkeypatch, response)
+    response = SimpleNamespace(content="hello", tool_calls=None)
+    _install_fake_openai(monkeypatch, response)
 
     req = _FakeRequest(_minimal_run_input(thread_id="abc"))
     resp = await handle_run(req)
@@ -419,23 +408,26 @@ async def test_backend_tool_execution_happy_path(monkeypatch):
             arguments='{"location": "SF"}',
         ),
     )
-    response = SimpleNamespace(content="", oai_tool_calls=[tool_call], function_call=None)
-    _install_fake_agent(monkeypatch, response)
+    response = SimpleNamespace(content="", tool_calls=[tool_call])
+    _install_fake_openai(monkeypatch, response)
 
     req = _FakeRequest(_minimal_run_input(thread_id="t-wx"))
     resp = await handle_run(req)
     events = _parse_events(await _collect(resp))
 
     types = [e["type"] for e in events]
-    # Backend tools emit TEXT_MESSAGE_* triple after TOOL_CALL_END.
+    # Backend tools emit TEXT_MESSAGE_* triple after TOOL_CALL_END,
+    # all wrapped in a parent TEXT_MESSAGE_START/END.
     assert types == [
         "RUN_STARTED",
+        "TEXT_MESSAGE_START",      # parent message wrapper
         "TOOL_CALL_START",
         "TOOL_CALL_ARGS",
         "TOOL_CALL_END",
-        "TEXT_MESSAGE_START",
+        "TEXT_MESSAGE_START",      # backend tool result
         "TEXT_MESSAGE_CONTENT",
         "TEXT_MESSAGE_END",
+        "TEXT_MESSAGE_END",        # parent message close
         "RUN_FINISHED",
     ], f"unexpected event sequence: {types}"
 
@@ -481,8 +473,8 @@ async def test_backend_tool_exception_returns_sanitized_error(monkeypatch, caplo
             arguments='{"location": "SF"}',
         ),
     )
-    response = SimpleNamespace(content="", oai_tool_calls=[tool_call], function_call=None)
-    _install_fake_agent(monkeypatch, response)
+    response = SimpleNamespace(content="", tool_calls=[tool_call])
+    _install_fake_openai(monkeypatch, response)
 
     req = _FakeRequest(_minimal_run_input(thread_id="t-err"))
     with caplog.at_level(logging.ERROR, logger=agui_adapter.logger.name):
@@ -533,8 +525,8 @@ async def test_str_exc_never_appears_in_sse_stream(monkeypatch, caplog):
             arguments='{"location": "SF"}',
         ),
     )
-    response = SimpleNamespace(content="", oai_tool_calls=[tool_call], function_call=None)
-    _install_fake_agent(monkeypatch, response)
+    response = SimpleNamespace(content="", tool_calls=[tool_call])
+    _install_fake_openai(monkeypatch, response)
 
     req = _FakeRequest(_minimal_run_input(thread_id="t-sse-sanit"))
     with caplog.at_level(logging.ERROR, logger=agui_adapter.logger.name):
@@ -620,7 +612,7 @@ def test_try_parse_tool_non_str_content_warns_and_returns_none(caplog):
     from agents.agui_adapter import _try_parse_tool
 
     with caplog.at_level(logging.WARNING, logger=agui_adapter.logger.name):
-        result = _try_parse_tool(12345, agent=None)  # type: ignore[arg-type]
+        result = _try_parse_tool(12345)  # type: ignore[arg-type]
 
     assert result is None
     assert any(
@@ -646,19 +638,7 @@ def test_try_parse_tool_function_call_bytes_arguments():
     # Use a real backend tool from ALL_TOOLS so this exercises the actual
     # dispatch loop rather than a synthetic stub.
     request_name = agent_module.GetWeatherTool.default_value("request")
-    # Patch the function_call payload to carry a bytes ``arguments`` at
-    # parse time. We construct the wrapper JSON as normal (str) but the
-    # inner ``arguments`` field is a str whose *decoded* value would be
-    # bytes in a real payload — so we exercise the guard by passing a
-    # dict directly into the adapter's internals.
-    #
-    # To exercise the bytes branch, call with a dict that mirrors the
-    # post-``json.loads`` shape:
     data = {"name": request_name, "arguments": b'{"location": "SF"}'}
-    # Feed via the content path: we serialize once so ``_try_parse_tool``
-    # re-parses. But ``json.dumps`` on bytes raises. Instead, mimic by
-    # directly invoking the inner logic: patch ``json.loads`` to return
-    # the dict with bytes ``arguments`` so we test the branch.
     import agents.agui_adapter as adapter_mod
 
     real_loads = adapter_mod.json.loads
@@ -675,7 +655,7 @@ def test_try_parse_tool_function_call_bytes_arguments():
     import unittest.mock as mock
 
     with mock.patch.object(adapter_mod.json, "loads", side_effect=_fake_loads):
-        result = _try_parse_tool("ignored-outer", agent=None)  # type: ignore[arg-type]
+        result = _try_parse_tool("ignored-outer")
 
     assert result is not None, (
         "bytes arguments should round-trip through the (str, bytes, bytearray) guard"
@@ -685,35 +665,30 @@ def test_try_parse_tool_function_call_bytes_arguments():
 
 
 # ---------------------------------------------------------------------------
-# mid-stream llm_response_async failure must not hang the UI
+# mid-stream _call_openai failure must not hang the UI
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
-async def test_llm_response_async_failure_emits_run_finished(monkeypatch, caplog):
-    """When ``agent.llm_response_async`` raises a narrowed runtime error
-    (``openai.APIError`` / ``httpx.HTTPError`` / ``asyncio.TimeoutError``
-    / ``pydantic.ValidationError``) *after* RUN_STARTED has been
-    emitted, the generator must emit a sanitized TEXT_MESSAGE triple +
-    RUN_FINISHED (never leave the frontend hanging).
+async def test_call_openai_failure_emits_run_finished(monkeypatch, caplog):
+    """When ``_call_openai`` raises a narrowed runtime error
+    (``openai.APIError`` / ``httpx.HTTPError`` / ``asyncio.TimeoutError``)
+    *after* RUN_STARTED has been emitted, the generator must emit a
+    sanitized TEXT_MESSAGE triple + RUN_FINISHED (never leave the
+    frontend hanging).
 
     Uses ``asyncio.TimeoutError`` as the representative covered
     exception — it's the simplest of the four to construct and
-    exercises the same code path as the others. The test message is
-    surfaced as ``str(exc)``-free (sanitized) regardless.
+    exercises the same code path as the others.
     """
     import asyncio as _asyncio
 
-    class _ExplodingAgent:
-        async def llm_response_async(self, user_message: str) -> Any:
-            # TimeoutError doesn't carry the sensitive message the way
-            # a ValueError would, but the sanitization contract is the
-            # same: only the class name leaks, never ``str(exc)``.
-            raise _asyncio.TimeoutError(
-                "secret: postgres://user:pass@host/db /opt/app/internal.py line 99"
-            )
+    async def _exploding_call_openai(messages, tools, model):
+        raise _asyncio.TimeoutError(
+            "secret: postgres://user:pass@host/db /opt/app/internal.py line 99"
+        )
 
-    monkeypatch.setattr(agui_adapter, "create_agent", lambda **kwargs: _ExplodingAgent())
+    monkeypatch.setattr(agui_adapter, "_call_openai", _exploding_call_openai)
 
     req = _FakeRequest(_minimal_run_input(thread_id="t-boom"))
     with caplog.at_level(logging.ERROR, logger=agui_adapter.logger.name):
@@ -742,35 +717,26 @@ async def test_llm_response_async_failure_emits_run_finished(monkeypatch, caplog
 
     # Full traceback preserved server-side.
     assert any(r.exc_info for r in caplog.records), (
-        "expected logger.exception to capture the llm_response_async failure"
+        "expected logger.exception to capture the _call_openai failure"
     )
 
 
 @pytest.mark.asyncio
-async def test_llm_response_async_programmer_bug_propagates(monkeypatch):
+async def test_call_openai_programmer_bug_propagates(monkeypatch):
     """Programmer bugs (``AttributeError``, ``NameError``, ``TypeError``)
-    from ``agent.llm_response_async`` must NOT be sanitized — they
-    indicate real bugs and must propagate so the outer framework can
-    log/flag them with a real traceback.
-
-    Regression guard for the over-broad ``except Exception`` that
-    previously swallowed every failure as "LLM error", making these
-    kinds of bugs invisible in production logs.
+    from ``_call_openai`` must NOT be sanitized — they indicate real
+    bugs and must propagate so the outer framework can log/flag them
+    with a real traceback.
     """
 
-    class _TypoAgent:
-        async def llm_response_async(self, user_message: str) -> Any:
-            # Simulate a programmer bug — e.g. a typo that references
-            # an attribute that doesn't exist on the response object.
-            raise AttributeError("typo")
+    async def _typo_call_openai(messages, tools, model):
+        raise AttributeError("typo")
 
-    monkeypatch.setattr(agui_adapter, "create_agent", lambda **kwargs: _TypoAgent())
+    monkeypatch.setattr(agui_adapter, "_call_openai", _typo_call_openai)
 
     req = _FakeRequest(_minimal_run_input(thread_id="t-bug"))
     resp = await handle_run(req)
     with pytest.raises(AttributeError, match="typo"):
-        # The exception propagates out of the event_stream generator
-        # when it's drained; the generator itself is lazy.
         await _collect(resp)
 
 
@@ -812,59 +778,6 @@ async def test_invalid_run_agent_input_returns_422():
 
 
 # ---------------------------------------------------------------------------
-# non-string role/content is skipped with a warning
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.asyncio
-async def test_non_string_role_or_content_skipped(monkeypatch, caplog):
-    """Messages whose ``role`` or ``content`` are not strings must be
-    skipped with a warning rather than silently f-stringified into
-    garbage like ``"None: {'foo': ...}"``.
-
-    Pydantic's ``RunAgentInput`` normally rejects these upstream, but
-    if a future schema change or a non-validating code path ever lands
-    a non-string field in ``run_input.messages``, the guard in
-    ``handle_run`` is the last line of defense against garbage prompts.
-    We bypass pydantic by substituting a stub ``RunAgentInput`` that
-    returns a hand-built object with mixed message types.
-    """
-    agent = _install_fake_agent(
-        monkeypatch,
-        SimpleNamespace(content="ok", oai_tool_calls=None, function_call=None),
-    )
-
-    class _StubRunInput:
-        def __init__(self, **_kwargs: Any) -> None:
-            self.thread_id = "t-msg"
-            self.run_id = "run-x"
-            self.forwarded_props = {}
-            self.messages = [
-                SimpleNamespace(role="user", content="hello"),
-                # non-string content
-                SimpleNamespace(role="user", content={"obj": 1}),
-                # non-string role
-                SimpleNamespace(role=None, content="huh"),
-            ]
-
-    monkeypatch.setattr(agui_adapter, "RunAgentInput", _StubRunInput)
-
-    req = _FakeRequest({"stub": True})  # content irrelevant — stub ignores
-    with caplog.at_level(logging.WARNING, logger=agui_adapter.logger.name):
-        resp = await handle_run(req)
-        await _collect(resp)
-
-    # Only the first message should have reached the agent.
-    assert agent.calls == ["user: hello"], (
-        f"non-string messages must be dropped; got prompt: {agent.calls!r}"
-    )
-    assert any(
-        "non-string role/content" in rec.getMessage()
-        for rec in caplog.records
-    ), "expected a warning log for dropped messages"
-
-
-# ---------------------------------------------------------------------------
 # tool-collision RuntimeError names the colliding classes
 # ---------------------------------------------------------------------------
 
@@ -873,10 +786,6 @@ def test_duplicate_tool_error_includes_class_identity():
     """When two tool classes collide on ``request`` name, the startup
     RuntimeError must include fully-qualified class identities so the
     developer can find the duplicate definitions without grepping."""
-    # Simulate the import-time guard on a synthetic ALL_TOOLS with a
-    # collision. Rebuild the same check directly — we can't re-import
-    # the module to re-trigger it, but the guard's logic is simple
-    # enough to exercise via a tiny fixture.
     from langroid.agent.tool_message import ToolMessage
 
     class ToolA(ToolMessage):
@@ -908,8 +817,8 @@ async def test_plain_text_turn_does_not_warn(monkeypatch, caplog):
     """A normal chat reply like "hello" is NOT JSON. The adapter's
     tool-parse fallback must fail silently — warning on every chat turn
     floods logs and drowns real signal."""
-    response = SimpleNamespace(content="hello", oai_tool_calls=None, function_call=None)
-    _install_fake_agent(monkeypatch, response)
+    response = SimpleNamespace(content="hello", tool_calls=None)
+    _install_fake_openai(monkeypatch, response)
 
     req = _FakeRequest(_minimal_run_input(thread_id="t-plain"))
     with caplog.at_level(logging.WARNING, logger=agui_adapter.logger.name):
@@ -929,3 +838,83 @@ async def test_plain_text_turn_does_not_warn(monkeypatch, caplog):
         "plain-text turn unexpectedly logged warnings: "
         f"{[r.getMessage() for r in adapter_warnings]}"
     )
+
+
+# ---------------------------------------------------------------------------
+# _agui_messages_to_openai: message conversion tests
+# ---------------------------------------------------------------------------
+
+
+def test_agui_messages_to_openai_user_message():
+    """Simple user message is preserved."""
+    from agents.agui_adapter import _agui_messages_to_openai
+
+    msgs = [SimpleNamespace(role="user", content="hello")]
+    result = _agui_messages_to_openai(msgs, "sys prompt")
+    assert result[0] == {"role": "system", "content": "sys prompt"}
+    assert result[1] == {"role": "user", "content": "hello"}
+
+
+def test_agui_messages_to_openai_tool_message():
+    """Tool result messages preserve tool_call_id."""
+    from agents.agui_adapter import _agui_messages_to_openai
+
+    msgs = [
+        SimpleNamespace(role="tool", content="result text", tool_call_id="tc-123"),
+    ]
+    result = _agui_messages_to_openai(msgs, "sys")
+    assert result[1] == {
+        "role": "tool",
+        "tool_call_id": "tc-123",
+        "content": "result text",
+    }
+
+
+def test_agui_messages_to_openai_assistant_with_tool_calls():
+    """Assistant messages with tool_calls preserve the full structure."""
+    from agents.agui_adapter import _agui_messages_to_openai
+
+    tc = SimpleNamespace(
+        id="call-1",
+        function=SimpleNamespace(name="show_card", arguments='{"title":"Ada"}'),
+    )
+    msgs = [
+        SimpleNamespace(role="assistant", content=None, tool_calls=[tc]),
+    ]
+    result = _agui_messages_to_openai(msgs, "sys")
+    assistant_msg = result[1]
+    assert assistant_msg["role"] == "assistant"
+    assert assistant_msg["content"] is None  # null, not missing
+    assert len(assistant_msg["tool_calls"]) == 1
+    assert assistant_msg["tool_calls"][0]["id"] == "call-1"
+    assert assistant_msg["tool_calls"][0]["function"]["name"] == "show_card"
+
+
+def test_agui_messages_to_openai_full_tool_roundtrip():
+    """Full multi-turn: user -> assistant+tool_call -> tool_result.
+    This is the exact sequence that gen-ui-headless needs for the
+    follow-up aimock match to work."""
+    from agents.agui_adapter import _agui_messages_to_openai
+
+    tc = SimpleNamespace(
+        id="call_d5_show_card_001",
+        function=SimpleNamespace(
+            name="show_card",
+            arguments='{"title":"Ada Lovelace","body":"mathematician"}',
+        ),
+    )
+    msgs = [
+        SimpleNamespace(role="user", content="Show me a profile card for Ada Lovelace"),
+        SimpleNamespace(role="assistant", content=None, tool_calls=[tc]),
+        SimpleNamespace(role="tool", content="", tool_call_id="call_d5_show_card_001"),
+    ]
+    result = _agui_messages_to_openai(msgs, "sys")
+
+    # System + user + assistant + tool = 4 messages
+    assert len(result) == 4
+    assert result[0]["role"] == "system"
+    assert result[1]["role"] == "user"
+    assert result[2]["role"] == "assistant"
+    assert result[2]["tool_calls"][0]["id"] == "call_d5_show_card_001"
+    assert result[3]["role"] == "tool"
+    assert result[3]["tool_call_id"] == "call_d5_show_card_001"
