@@ -550,8 +550,7 @@ async function executeBackendTool(
     toolName === "critique_agent"
   ) {
     const subAgentName = toolName as SubAgentName;
-    const task =
-      typeof toolInput.task === "string" ? toolInput.task : "";
+    const task = typeof toolInput.task === "string" ? toolInput.task : "";
     const id = randomUUID();
     const existing = Array.isArray(state.delegations)
       ? (state.delegations as Delegation[])
@@ -672,10 +671,7 @@ async function runAgenticLoop(
     // agent therefore still works alongside any frontend tool the demo
     // page chooses to register.
     const runtimeTools = buildTools(input.tools);
-    const tools: Anthropic.Tool[] = [
-      ...config.toolSchemas,
-      ...runtimeTools,
-    ];
+    const tools: Anthropic.Tool[] = [...config.toolSchemas, ...runtimeTools];
     const backendToolNames = new Set(config.toolSchemas.map((t) => t.name));
 
     // Maximum tool iterations per run. The supervisor demo can fan out
@@ -988,22 +984,19 @@ app.post(
 // each a single secondary Anthropic Messages call. Every delegation is
 // recorded in state.delegations (running -> completed/failed) and
 // streamed to the UI via STATE_SNAPSHOT.
-app.post(
-  "/subagents",
-  async (req: Request, res: Response): Promise<void> => {
-    const input = req.body as RunAgentInput;
-    const incomingState =
-      ((input as any).state as Record<string, unknown> | undefined) ?? {};
-    const delegations = Array.isArray(incomingState.delegations)
-      ? incomingState.delegations
-      : [];
-    await runAgenticLoop(req, res, {
-      systemPrompt: SUPERVISOR_SYSTEM_PROMPT,
-      toolSchemas: SUBAGENT_TOOL_SCHEMAS as Anthropic.Tool[],
-      initialState: { delegations },
-    });
-  },
-);
+app.post("/subagents", async (req: Request, res: Response): Promise<void> => {
+  const input = req.body as RunAgentInput;
+  const incomingState =
+    ((input as any).state as Record<string, unknown> | undefined) ?? {};
+  const delegations = Array.isArray(incomingState.delegations)
+    ? incomingState.delegations
+    : [];
+  await runAgenticLoop(req, res, {
+    systemPrompt: SUPERVISOR_SYSTEM_PROMPT,
+    toolSchemas: SUBAGENT_TOOL_SCHEMAS as Anthropic.Tool[],
+    initialState: { delegations },
+  });
+});
 
 // ---------------------------------------------------------------------------
 // Health check

@@ -192,7 +192,11 @@ describe("Catalog Generator", () => {
     // subagents demo additions across 16 packages (CR fix wave also
     // wired a handful of additional manifest entries — the +38 delta
     // includes those side-effects on top of the 32 base demos).
-    expect(catalog.metadata.wired + catalog.metadata.stub + catalog.metadata.unshipped).toBe(737);
+    expect(
+      catalog.metadata.wired +
+        catalog.metadata.stub +
+        catalog.metadata.unshipped,
+    ).toBe(737);
     expect(catalog.metadata.wired).toBeGreaterThanOrEqual(508);
   });
 

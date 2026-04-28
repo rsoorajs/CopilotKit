@@ -68,11 +68,7 @@ export function coercePreferences(value: unknown): Preferences {
   const v = value as Record<string, unknown>;
   const out: Preferences = {};
   if (typeof v.name === "string") out.name = v.name;
-  if (
-    v.tone === "formal" ||
-    v.tone === "casual" ||
-    v.tone === "playful"
-  ) {
+  if (v.tone === "formal" || v.tone === "casual" || v.tone === "playful") {
     out.tone = v.tone;
   }
   if (typeof v.language === "string") out.language = v.language;

@@ -43,8 +43,7 @@ export const POST = async (req: NextRequest) => {
     // contain internal paths, library internals, or transient secrets.
     // Operators correlate via `errorId` in logs.
     const errorId = crypto.randomUUID();
-    const e =
-      error instanceof Error ? error : new Error(String(error));
+    const e = error instanceof Error ? error : new Error(String(error));
     console.error(
       JSON.stringify({
         at: new Date().toISOString(),

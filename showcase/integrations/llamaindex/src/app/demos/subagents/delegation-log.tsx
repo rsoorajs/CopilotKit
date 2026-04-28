@@ -91,8 +91,8 @@ export function DelegationLog({ delegations, isRunning }: DelegationLogProps) {
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
         {delegations.length === 0 ? (
           <p className="text-[#838389] italic text-sm">
-            Ask the supervisor to complete a task. Every sub-agent it calls
-            will appear here.
+            Ask the supervisor to complete a task. Every sub-agent it calls will
+            appear here.
           </p>
         ) : (
           delegations.map((d, idx) => (

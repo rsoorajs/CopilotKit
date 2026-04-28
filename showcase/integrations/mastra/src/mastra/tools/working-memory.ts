@@ -84,8 +84,13 @@ function logWorkingMemoryFailure(
       component,
       message: `working-memory write failed: ${reason}`,
       errorClass:
-        err instanceof Error ? err.constructor.name : err ? "UnknownError" : undefined,
-      detail: err instanceof Error ? err.message : err ? String(err) : undefined,
+        err instanceof Error
+          ? err.constructor.name
+          : err
+            ? "UnknownError"
+            : undefined,
+      detail:
+        err instanceof Error ? err.message : err ? String(err) : undefined,
     }),
   );
 }

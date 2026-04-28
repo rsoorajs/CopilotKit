@@ -175,9 +175,7 @@ export function buildAgents(
     resourceId: "mastra-subagentsSupervisorAgent",
   });
   if (!subagentsSupervisorAgentInstance) {
-    throw new Error(
-      "getLocalAgent returned null for subagentsSupervisorAgent",
-    );
+    throw new Error("getLocalAgent returned null for subagentsSupervisorAgent");
   }
   const localAgents = {
     weatherAgent: baseLocalAgents.weatherAgent,

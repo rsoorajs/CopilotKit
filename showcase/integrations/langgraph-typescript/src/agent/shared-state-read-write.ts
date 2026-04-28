@@ -174,7 +174,9 @@ async function chatNode(state: AgentState, config: RunnableConfig) {
   const baseSystem = new SystemMessage({ content: BASE_SYSTEM_PROMPT });
   const prefsMessage = buildPreferencesMessage(state.preferences);
 
-  const systemMessages = prefsMessage ? [baseSystem, prefsMessage] : [baseSystem];
+  const systemMessages = prefsMessage
+    ? [baseSystem, prefsMessage]
+    : [baseSystem];
 
   const response = await modelWithTools.invoke(
     [...systemMessages, ...state.messages],

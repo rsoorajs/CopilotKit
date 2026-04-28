@@ -48,8 +48,8 @@ export function PreferencesCard({ value, onChange }: PreferencesCardProps) {
           Your preferences
         </h2>
         <p className="text-xs text-[#57575B] mt-1">
-          These are written into agent state. The agent reads them on every
-          turn and adapts its replies.
+          These are written into agent state. The agent reads them on every turn
+          and adapts its replies.
         </p>
       </div>
 

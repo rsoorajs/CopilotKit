@@ -49,9 +49,7 @@ const critiqueSubAgent = new Agent({
  * routinely leak api keys, file paths, and prompt contents. Mirror the
  * agno / claude-sdk-python pattern of redacting to the error class name.
  */
-type SubAgentResult =
-  | { ok: true; text: string }
-  | { ok: false; error: string };
+type SubAgentResult = { ok: true; text: string } | { ok: false; error: string };
 
 async function invokeSubAgent(
   agent: Agent,

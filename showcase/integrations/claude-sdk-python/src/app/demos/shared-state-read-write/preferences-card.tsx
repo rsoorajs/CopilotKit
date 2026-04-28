@@ -58,8 +58,8 @@ export function PreferencesCard({ value, onChange }: PreferencesCardProps) {
           Your preferences
         </h2>
         <p className="text-xs text-[#57575B] mt-1">
-          These are written into agent state. The Claude backend reads
-          them on every turn and tailors its response.
+          These are written into agent state. The Claude backend reads them on
+          every turn and tailors its response.
         </p>
       </div>
 

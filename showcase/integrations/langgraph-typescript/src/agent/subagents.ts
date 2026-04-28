@@ -180,12 +180,8 @@ async function runSubAgentSafely(
     const result = await invokeSubAgent(agent, task);
     return { ok: true, result };
   } catch (err) {
-    const errName =
-      err instanceof Error ? err.constructor.name : typeof err;
-    console.error(
-      `[subagents] ${agent} sub-agent invocation failed:`,
-      err,
-    );
+    const errName = err instanceof Error ? err.constructor.name : typeof err;
+    console.error(`[subagents] ${agent} sub-agent invocation failed:`, err);
     return {
       ok: false,
       result: `sub-agent call failed: ${errName} (see server logs)`,
@@ -291,7 +287,9 @@ const critiqueAgentTool = tool(
     schema: z.object({
       task: z
         .string()
-        .describe("The draft to critique. The sub-agent returns 2-3 critiques."),
+        .describe(
+          "The draft to critique. The sub-agent returns 2-3 critiques.",
+        ),
     }),
   },
 );
@@ -326,7 +324,10 @@ async function chatNode(state: AgentState, config: RunnableConfig) {
   ]);
 
   const response = await modelWithTools.invoke(
-    [new SystemMessage({ content: SUPERVISOR_SYSTEM_PROMPT }), ...state.messages],
+    [
+      new SystemMessage({ content: SUPERVISOR_SYSTEM_PROMPT }),
+      ...state.messages,
+    ],
     config,
   );
 

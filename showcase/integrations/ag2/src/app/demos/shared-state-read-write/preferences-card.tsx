@@ -57,8 +57,10 @@ export function PreferencesCard({ value, onChange }: PreferencesCardProps) {
           Your preferences
         </h2>
         <p className="text-xs text-[#57575B] mt-1">
-          These are written into agent state. The agent reads them on every
-          turn via <code className="font-mono text-[11px]">get_current_preferences</code>.
+          These are written into agent state. The agent reads them on every turn
+          via{" "}
+          <code className="font-mono text-[11px]">get_current_preferences</code>
+          .
         </p>
       </div>
 
