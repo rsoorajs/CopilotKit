@@ -34,10 +34,7 @@ import type { Logger, ProbeContext, ProbeResult } from "../../types/index.js";
  *     considered structurally green — better than false-red for services
  *     whose chat UI uses a different DOM shape but still loads cleanly.
  *
- * Shape handling: starters short-circuit green BEFORE chromium launch, same
- * as the e2e-smoke driver — starters have no `/demos/*` routing so running
- * a goto against `/demos/<x>` would 404 and flap every cell red. Empty
- * demos list also short-circuits without touching chromium.
+ * Empty demos list short-circuits without touching chromium.
  *
  * Pluggable launcher: production default dynamically imports `playwright`;
  * unit tests inject a fake launcher + fake page so no real browser is
@@ -64,15 +61,12 @@ type E2eDemosDriverInput = z.infer<typeof inputSchema>;
 /**
  * Aggregate signal carried on the primary `e2e-demos:<slug>` ProbeResult.
  *
- *   - `shape: "starter"` — driver short-circuited before launching
- *     chromium. `total` and `passed` are always 0, `failed` empty, `note`
- *     carries the human-readable reason. Green aggregate.
  *   - `shape: "package"` — normal fan-out. `failed` lists the demo ids
  *     that flipped red. `errorDesc` may be set on aggregate-level failures
  *     (e.g. chromium launch failure) where no per-demo rows were produced.
  */
 export interface E2eDemosAggregateSignal {
-  shape: "package" | "starter";
+  shape: "package";
   slug: string;
   backendUrl: string;
   total: number;
@@ -436,28 +430,6 @@ export function createE2eDemosDriver(
           ? envParsed
           : (depTimeoutMs ?? DEFAULT_TIMEOUT_MS);
 
-      // Starter short-circuit — runs BEFORE chromium launch AND BEFORE
-      // demos resolution. Starters have no /demos/* routing, so every row
-      // would 404 and flap red. The ordering lock (shape check before
-      // resolver) mirrors e2e-smoke so a broken registry / missing
-      // chromium image never contributes a false-red row on a starter.
-      if (input.shape === "starter") {
-        return {
-          key: input.key,
-          state: "green",
-          signal: {
-            shape: "starter",
-            slug,
-            backendUrl,
-            total: 0,
-            passed: 0,
-            failed: [],
-            note: "starter: no /demos/* routing",
-          },
-          observedAt,
-        };
-      }
-
       // Per-run side-emit closure. Captures ctx + a warnedNoWriter flag
       // so the writer-missing warn fires once per run instead of per
       // row (C10).
@@ -519,7 +491,7 @@ export function createE2eDemosDriver(
       }
 
       // Empty demos set → nothing to check, aggregate green, chromium NOT
-      // launched. Starter-only integrations or brand-new packages still
+      // launched. Brand-new packages still
       // being scaffolded land here.
       if (demos.length === 0) {
         return {

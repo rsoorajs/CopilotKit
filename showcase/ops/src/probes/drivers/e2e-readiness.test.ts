@@ -285,44 +285,6 @@ describe("e2e-demos driver", () => {
     expect(byKey.get("e2e:mastra/tool-rendering")?.state).toBe("green");
   });
 
-  it("skips shape=starter entirely: no side rows, aggregate green, no chromium", async () => {
-    const { browser, state } = makeBrowser([]);
-    // C2: track whether the driver invoked the launcher at all. The
-    // starter short-circuit must return BEFORE the launcher is awaited;
-    // `state.closed === false` was a weaker proxy that could pass even
-    // if the driver had launched but not closed (which would itself be
-    // a bug we wouldn't catch).
-    let launched = false;
-    const driver = createE2eDemosDriver({
-      launcher: async () => {
-        launched = true;
-        return browser;
-      },
-    });
-    const { writer, writes } = mkWriter();
-
-    const result = await driver.run(mkCtx(writer), {
-      key: "e2e-demos:starter-ag2",
-      name: "showcase-starter-ag2",
-      publicUrl: "https://showcase-starter-ag2.example.com",
-      shape: "starter",
-      // Even if operator passes demos in YAML for a starter, shape wins.
-      demos: ["agentic-chat"],
-    });
-
-    expect(result.state).toBe("green");
-    const sig = result.signal as E2eDemosAggregateSignal;
-    expect(sig.shape).toBe("starter");
-    expect(sig.total).toBe(0);
-    expect(sig.passed).toBe(0);
-    expect(writes).toHaveLength(0);
-    // Chromium must not have been touched: launcher never invoked AND
-    // no contexts ever opened. Both assertions hold together as the
-    // starter short-circuit's semantic contract.
-    expect(launched).toBe(false);
-    expect(state.contextsOpened).toBe(0);
-  });
-
   it("resolves demos from registry when input lacks demos field", async () => {
     const { browser } = makeBrowser([{}, {}]);
     const resolverCalls: string[] = [];

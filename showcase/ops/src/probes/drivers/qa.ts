@@ -22,12 +22,6 @@ import type { ProbeContext, ProbeResult } from "../../types/index.js";
  * slot so rule YAMLs keyed on `qa` validate at load time (see `DIMENSIONS`
  * in `../../types/index.ts`).
  *
- * Starter shape: starters are single-app integrations with no `/demos/*`
- * routing, so the driver short-circuits before hitting the manifest —
- * returns a green aggregate and emits zero side rows. Matches the
- * e2e-smoke driver's starter short-circuit, avoids false-red QA rows
- * under the starter key.
- *
  * Repo-root resolution:
  *   1. `deps.repoRoot` (constructor injection, preferred for tests).
  *   2. `ctx.env.QA_REPO_ROOT` (operator override for ad-hoc checkouts).
@@ -43,11 +37,6 @@ const qaInputSchema = z
     name: z.string().optional(),
     /** Explicit slug. Wins over `name` when both are present. */
     slug: z.string().optional(),
-    /**
-     * Optional deployment shape. When `shape === "starter"` the driver
-     * short-circuits: no manifest read, no side rows, green aggregate.
-     * Package shape (or absent) proceeds with the QA file-presence check.
-     */
     shape: showcaseShapeSchema.optional(),
   })
   .passthrough();
@@ -64,7 +53,7 @@ export interface QaAggregateSignal {
   total: number;
   covered: number;
   missing: string[];
-  shape?: "package" | "starter";
+  shape?: "package";
   note?: string;
 }
 
@@ -87,7 +76,7 @@ export interface QaDriverDeps {
  * Minimum shape the driver reads out of a package manifest. `demos[]`
  * carries `{ id }` objects (plus other fields the driver ignores). An
  * integration without a `demos:` block is structurally valid — some
- * integrations are starter-only or still in draft — and the driver
+ * integrations still in draft — and the driver
  * treats that as "nothing to check, aggregate green".
  */
 interface ManifestShape {
@@ -104,24 +93,6 @@ export function createQaDriver(
       const observedAt = ctx.now().toISOString();
       const slug = deriveSlug(input);
       const repoRoot = deps.repoRoot ?? resolveRepoRoot(ctx);
-
-      // Starter short-circuit: no /demos/* routing means no per-feature
-      // QA coverage to check. Green aggregate, no side rows.
-      if (input.shape === "starter") {
-        return {
-          key: input.key,
-          state: "green",
-          signal: {
-            slug,
-            total: 0,
-            covered: 0,
-            missing: [],
-            shape: "starter",
-            note: "starter: no /demos/* routing",
-          },
-          observedAt,
-        };
-      }
 
       const pkgDir = path.join(repoRoot, "showcase", "packages", slug);
       const manifestPath = path.join(pkgDir, "manifest.yaml");
@@ -171,7 +142,7 @@ export function createQaDriver(
         : [];
 
       // Empty demos set: nothing to check. Aggregate green, no side rows.
-      // A starter-only integration (no `demos:` block) lands here, as does
+      // An integration without demos (no `demos:` block) lands here, as does
       // a brand-new package still being scaffolded.
       if (demoIds.length === 0) {
         return {

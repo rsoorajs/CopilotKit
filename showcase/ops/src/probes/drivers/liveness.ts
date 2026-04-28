@@ -45,10 +45,10 @@ import type { ProbeContext, ProbeResult } from "../../types/index.js";
  *     the derived /api/health + agent URLs come from path manipulation.
  *   - Discovery: `{ key, name, imageRef, publicUrl, env }`. The smoke
  *     URL is `${publicUrl}/smoke`; slug is `name` with the `showcase-`
- *     prefix stripped (`showcase-ag2` → `ag2`, `showcase-starter-ag2`
- *     → `starter-ag2`). `imageRef` + `env` are ignored by this driver
- *     but declared in the schema so the railway-services record passes
- *     through without a translation hop — same pattern image-drift uses.
+ *     prefix stripped (`showcase-ag2` → `ag2`). `imageRef` + `env` are
+ *     ignored by this driver but declared in the schema so the
+ *     railway-services record passes through without a translation
+ *     hop — same pattern image-drift uses.
  *
  * Slug derivation priority: (1) if `name` is present, strip the
  * `showcase-` prefix; (2) otherwise split `key` on `:` and take the
@@ -94,26 +94,15 @@ const discoverySmokeInputSchema = z
   .object({
     mode: z.literal("discovery").optional(),
     key: z.string().min(1),
-    /** Discovery mode: Railway service name (`showcase-<slug>` or `showcase-starter-<slug>`). */
+    /** Discovery mode: Railway service name (`showcase-<slug>`). */
     name: z.string().min(1),
     /** Discovery mode: `https://<domain>` base URL. The driver appends `/smoke` or `/api/health` per shape. */
     publicUrl: z.string().url(),
     /**
      * Deployment shape tag from the discovery source
-     * (`discovery/railway-services.ts`). Controls which URL contract the
-     * driver exercises:
+     * (`discovery/railway-services.ts`). Only `"package"` shape exists.
      *
-     *   - `package` → `/api/smoke` + `/api/health` + `/api/copilotkit/`.
-     *   - `starter` → `/api/health` (primary + side-emit) +
-     *                 `/api/copilotkit/`. Starters have no `/smoke`
-     *                 route; using the legacy contract produces one
-     *                 false-red row per starter per endpoint.
-     *
-     * Optional — when absent the driver reclassifies from `name` at
-     * run() entry. When both are present and the classifier disagrees
-     * with the explicit value, the driver throws; silent drift between
-     * the classifier and caller-supplied shape is the exact failure
-     * mode this contract is meant to prevent.
+     * Optional — when absent the driver defaults to `"package"`.
      */
     shape: showcaseShapeSchema.optional(),
   })
@@ -245,9 +234,9 @@ export const livenessDriver: ProbeDriver<SmokeDriverInput, SmokeDriverSignal> =
       // `key_template` in YAML interpolates `${name}` and the template
       // language has no string-munge function to strip the prefix.
       // Rewrite to `smoke:<slug>` here so dashboards/alerts that match on
-      // `smoke:ag2` / `smoke:starter-ag2` stay intact. In STATIC mode,
-      // pass the YAML-authored key through verbatim so legacy callers
-      // keep their exact `input.key` in the primary result.
+      // `smoke:ag2` stay intact. In STATIC mode, pass the YAML-authored
+      // key through verbatim so legacy callers keep their exact
+      // `input.key` in the primary result.
       const primaryKey =
         input.mode === "discovery" ? `smoke:${slug}` : input.key;
 
@@ -255,15 +244,6 @@ export const livenessDriver: ProbeDriver<SmokeDriverInput, SmokeDriverSignal> =
       // count bounded at max_concurrency × 3 — Railway's edge has
       // historically rate-limited at higher parallelism, so we eat the
       // wall-clock cost to stay well under any edge threshold.
-      //
-      // Starter shape hits the same endpoint (`/api/health`) for both the
-      // primary smoke tick and the health side-emit. We intentionally run
-      // TWO independent GETs rather than reusing the first result: the
-      // `smoke:<slug>` and `health:<slug>` rows feed separate alert
-      // dimensions (`dimension: smoke` vs `dimension: health`) that
-      // dashboards compare for correlation, and a single-GET-reuse would
-      // make the two rows byte-identical and defeat that signal. The extra
-      // round-trip is a cheap liveness check against the same endpoint.
       const smokeResult = await probeOne({
         fetchImpl,
         url: smokeUrl,
@@ -274,9 +254,7 @@ export const livenessDriver: ProbeDriver<SmokeDriverInput, SmokeDriverSignal> =
         method: "GET",
       });
 
-      // Side-emit #1: health tick. Always a fresh GET — even when smokeUrl
-      // === healthUrl (starter shape), see the comment block above for why
-      // we do NOT reuse the smoke result.
+      // Side-emit #1: health tick.
       const healthKey = `health:${slug}`;
       const healthResult = await probeOne({
         fetchImpl,
@@ -598,10 +576,10 @@ async function probeAgent(opts: {
 
 /**
  * Derive the slug from driver input. Discovery shape wins: strip the
- * `showcase-` prefix from `name` so `showcase-ag2` → `ag2` and
- * `showcase-starter-ag2` → `starter-ag2`. Static shape falls back to
- * splitting the key on `:` — matches the pre-discovery behaviour so
- * static-YAML callers keep emitting the same `smoke:<slug>` rows.
+ * `showcase-` prefix from `name` so `showcase-ag2` → `ag2`. Static
+ * shape falls back to splitting the key on `:` — matches the
+ * pre-discovery behaviour so static-YAML callers keep emitting the
+ * same `smoke:<slug>` rows.
  *
  * When neither field yields a non-empty slug, fall back to the whole
  * key so a hand-wired caller (`{key:"bare", url:...}`) still produces
@@ -651,19 +629,6 @@ function deriveUrls(
 ): DerivedUrls {
   if (input.mode === "discovery") {
     const base = input.publicUrl.replace(/\/$/, "");
-    if (shape === "starter") {
-      // Starters expose `/api/health` as the canonical liveness route
-      // (see any starter's `app/api/health/route.ts`). There is no
-      // `/smoke` and no separate `/health` route — both the primary
-      // smoke probe and the health side-emit target `/api/health`. The
-      // two calls are intentionally independent round-trips; see the
-      // run() comment block for why.
-      return {
-        smokeUrl: `${base}/api/health`,
-        healthUrl: `${base}/api/health`,
-        agentUrl: `${base}/api/copilotkit/`,
-      };
-    }
     return {
       smokeUrl: `${base}/api/smoke`,
       healthUrl: `${base}/api/health`,
