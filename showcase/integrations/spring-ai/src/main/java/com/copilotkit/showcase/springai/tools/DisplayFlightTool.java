@@ -25,6 +25,13 @@ public class DisplayFlightTool implements Function<DisplayFlightTool.Request, St
 
     public record Request(String origin, String destination, String airline, String price) {}
 
+    // @region[backend-schema-json-load]
+    // The fixed-schema flight component tree. Spring AI doesn't ship a
+    // JSON-loading helper analogous to `a2ui.load_schema(...)`, so the
+    // schema is declared inline as a Java constant — equivalent to
+    // deserialising a `flight_schema.json` file at startup. The frontend
+    // catalog (`copilotkit://flight-fixed-catalog`) resolves each
+    // `component` name to a React renderer.
     private static final List<Map<String, Object>> FLIGHT_SCHEMA = List.of(
             Map.of("id", "root", "component", "Card", "child", "content"),
             Map.of("id", "content", "component", "Column",
@@ -58,6 +65,7 @@ public class DisplayFlightTool implements Function<DisplayFlightTool.Request, St
                     )),
             Map.of("id", "bookButtonLabel", "component", "Text", "text", "Book flight")
     );
+    // @endregion[backend-schema-json-load]
 
     @Override
     public String apply(Request request) {

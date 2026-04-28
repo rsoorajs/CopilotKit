@@ -155,6 +155,14 @@ def search_flights(flights: list[dict]):
     return json.dumps(result)
 
 
+# @region[backend-render-operations]
+# The `generate_a2ui` tool runs a secondary LLM call with a forced
+# `render_a2ui` tool, then converts that tool call's args into the
+# A2UI `a2ui_operations` container via
+# `build_a2ui_operations_from_tool_call`. The ag_ui_strands middleware
+# detects the container in the tool result and forwards the ops to
+# the frontend, which resolves component names through the registered
+# catalog (`copilotkit://generative-catalog`).
 @tool
 def generate_a2ui(context: str) -> str:
     """Generate dynamic A2UI components based on the conversation.
@@ -273,6 +281,7 @@ def generate_a2ui(context: str) -> str:
 
     result = build_a2ui_operations_from_tool_call(args)
     return json.dumps(result)
+# @endregion[backend-render-operations]
 
 
 @tool

@@ -145,6 +145,14 @@ export const searchFlightsTool = createTool({
   execute: async ({ flights }) => JSON.stringify(searchFlightsImpl(flights)),
 });
 
+// @region[backend-render-operations]
+// The `generate-a2ui` tool runs a secondary LLM call with a forced
+// `render_a2ui` tool, then converts that tool call's args into the
+// A2UI `a2ui_operations` container that the middleware forwards to
+// the frontend renderer. Mastra returns the operations as a JSON
+// string from the tool body; the catalog
+// (`copilotkit://generative-catalog`) resolves component names to
+// React renderers on the client.
 export const generateA2uiTool = createTool({
   id: "generate-a2ui",
   description: "Generate dynamic A2UI surface components",
@@ -197,3 +205,4 @@ export const generateA2uiTool = createTool({
     );
   },
 });
+// @endregion[backend-render-operations]
