@@ -41,7 +41,8 @@ export class BrowserPool {
   }
 
   async init(): Promise<void> {
-    const { chromium } = (await import("playwright")) as typeof import("playwright");
+    const { chromium } =
+      (await import("playwright")) as typeof import("playwright");
     this.launchBrowser = () =>
       chromium.launch({
         headless: true,

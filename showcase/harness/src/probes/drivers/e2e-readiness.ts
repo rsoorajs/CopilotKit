@@ -273,7 +273,9 @@ const defaultLauncher: E2eDemosBrowserLauncher =
     };
   };
 
-export function createPooledE2eDemosLauncher(pool: BrowserPool): E2eDemosBrowserLauncher {
+export function createPooledE2eDemosLauncher(
+  pool: BrowserPool,
+): E2eDemosBrowserLauncher {
   return async (): Promise<E2eDemosBrowser> => {
     const browser = await pool.acquire();
     return {
@@ -291,7 +293,9 @@ export function createPooledE2eDemosLauncher(pool: BrowserPool): E2eDemosBrowser
           close: () => ctx.close(),
         };
       },
-      close: async () => { pool.release(browser); },
+      close: async () => {
+        pool.release(browser);
+      },
     };
   };
 }

@@ -259,7 +259,9 @@ const defaultLauncher: E2eBrowserLauncher = async (): Promise<E2eBrowser> => {
   };
 };
 
-export function createPooledE2eSmokeLauncher(pool: BrowserPool): E2eBrowserLauncher {
+export function createPooledE2eSmokeLauncher(
+  pool: BrowserPool,
+): E2eBrowserLauncher {
   return async (): Promise<E2eBrowser> => {
     const browser = await pool.acquire();
     return {
@@ -281,7 +283,9 @@ export function createPooledE2eSmokeLauncher(pool: BrowserPool): E2eBrowserLaunc
           close: () => ctx.close(),
         };
       },
-      close: async () => { pool.release(browser); },
+      close: async () => {
+        pool.release(browser);
+      },
     };
   };
 }

@@ -38,10 +38,26 @@ import { livenessDriver } from "./probes/drivers/liveness.js";
 import { imageDriftDriver } from "./probes/drivers/image-drift.js";
 import { versionDriftDriver } from "./probes/drivers/version-drift.js";
 import { redirectDecommissionDriver } from "./probes/drivers/redirect-decommission.js";
-import { e2eChatToolsDriver, createE2eSmokeDriver, createPooledE2eSmokeLauncher } from "./probes/drivers/e2e-chat-tools.js";
-import { e2eReadinessDriver, createE2eDemosDriver, createPooledE2eDemosLauncher } from "./probes/drivers/e2e-readiness.js";
-import { e2eDeepDriver, createE2eDeepDriver, createPooledE2eDeepLauncher } from "./probes/drivers/e2e-deep.js";
-import { e2eParityDriver, createE2eParityDriver, createPooledE2eParityLauncher } from "./probes/drivers/e2e-parity.js";
+import {
+  e2eChatToolsDriver,
+  createE2eSmokeDriver,
+  createPooledE2eSmokeLauncher,
+} from "./probes/drivers/e2e-chat-tools.js";
+import {
+  e2eReadinessDriver,
+  createE2eDemosDriver,
+  createPooledE2eDemosLauncher,
+} from "./probes/drivers/e2e-readiness.js";
+import {
+  e2eDeepDriver,
+  createE2eDeepDriver,
+  createPooledE2eDeepLauncher,
+} from "./probes/drivers/e2e-deep.js";
+import {
+  e2eParityDriver,
+  createE2eParityDriver,
+  createPooledE2eParityLauncher,
+} from "./probes/drivers/e2e-parity.js";
 import { BrowserPool } from "./probes/helpers/browser-pool.js";
 import { qaDriver } from "./probes/drivers/qa.js";
 import { railwayServicesSource } from "./probes/discovery/railway-services.js";
@@ -859,10 +875,18 @@ export function registerAllProbeDrivers(
   probeRegistry.register(redirectDecommissionDriver);
 
   if (pool) {
-    probeRegistry.register(createE2eSmokeDriver({ launcher: createPooledE2eSmokeLauncher(pool) }));
-    probeRegistry.register(createE2eDemosDriver({ launcher: createPooledE2eDemosLauncher(pool) }));
-    probeRegistry.register(createE2eDeepDriver({ launcher: createPooledE2eDeepLauncher(pool) }));
-    probeRegistry.register(createE2eParityDriver({ launcher: createPooledE2eParityLauncher(pool) }));
+    probeRegistry.register(
+      createE2eSmokeDriver({ launcher: createPooledE2eSmokeLauncher(pool) }),
+    );
+    probeRegistry.register(
+      createE2eDemosDriver({ launcher: createPooledE2eDemosLauncher(pool) }),
+    );
+    probeRegistry.register(
+      createE2eDeepDriver({ launcher: createPooledE2eDeepLauncher(pool) }),
+    );
+    probeRegistry.register(
+      createE2eParityDriver({ launcher: createPooledE2eParityLauncher(pool) }),
+    );
   } else {
     probeRegistry.register(e2eChatToolsDriver);
     probeRegistry.register(e2eReadinessDriver);

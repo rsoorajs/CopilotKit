@@ -350,7 +350,9 @@ const defaultLauncher: E2eParityBrowserLauncher =
     };
   };
 
-export function createPooledE2eParityLauncher(pool: BrowserPool): E2eParityBrowserLauncher {
+export function createPooledE2eParityLauncher(
+  pool: BrowserPool,
+): E2eParityBrowserLauncher {
   return async (): Promise<E2eParityBrowser> => {
     const browser = await pool.acquire();
     return {
@@ -366,7 +368,9 @@ export function createPooledE2eParityLauncher(pool: BrowserPool): E2eParityBrows
           close: () => ctx.close(),
         };
       },
-      close: async () => { pool.release(browser); },
+      close: async () => {
+        pool.release(browser);
+      },
     };
   };
 }
