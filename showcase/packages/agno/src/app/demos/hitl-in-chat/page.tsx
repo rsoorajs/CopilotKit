@@ -53,15 +53,13 @@ function Chat() {
     parameters: z.object({
       topic: z
         .string()
-        .describe("What the call is about (e.g. 'Intro with sales')"),
-      attendee: z
-        .string()
-        .describe("Who the call is with (e.g. 'Alice from Sales')"),
+        .describe("What the call is about (e.g. 'Onboarding call')"),
+      name: z.string().describe("Name of the attendee"),
     }),
     render: ({ args, status, respond }: any) => (
       <TimePickerCard
         topic={args?.topic ?? "a call"}
-        attendee={args?.attendee}
+        attendee={args?.name}
         slots={DEFAULT_SLOTS}
         status={status}
         onSubmit={(result) => respond?.(result)}

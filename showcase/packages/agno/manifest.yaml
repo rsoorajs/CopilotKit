@@ -29,7 +29,6 @@ starter:
   clone_command: npx degit CopilotKit/CopilotKit/showcase/starters/agno my-copilotkit-app
 features:
   - agentic-chat
-  - hitl-in-chat
   - tool-rendering
   - gen-ui-agent
   - shared-state-streaming
@@ -43,7 +42,6 @@ features:
   - readonly-state-agent-context
   - tool-rendering-default-catchall
   - tool-rendering-custom-catchall
-  - hitl-in-chat-booking
   - agentic-chat-reasoning
   - reasoning-default-render
   - tool-rendering-reasoning-chain
@@ -60,17 +58,6 @@ demos:
     highlight:
       - src/agents/main.py
       - src/app/demos/agentic-chat/page.tsx
-      - src/app/api/copilotkit/route.ts
-  - id: hitl-in-chat
-    name: In-Chat Human in the Loop
-    description: User approves agent actions before execution
-    tags:
-      - interactivity
-    route: /demos/hitl
-    animated_preview_url:
-    highlight:
-      - src/agents/main.py
-      - src/app/demos/hitl/page.tsx
       - src/app/api/copilotkit/route.ts
   - id: tool-rendering
     name: Tool Rendering
@@ -185,18 +172,6 @@ demos:
     highlight:
       - src/agents/main.py
       - src/app/demos/readonly-state-agent-context/page.tsx
-      - src/app/api/copilotkit/route.ts
-  - id: hitl-in-chat-booking
-    name: In-Chat HITL (Booking)
-    description: Time-picker card rendered inline via useHumanInTheLoop
-    tags:
-      - interactivity
-    route: /demos/hitl-in-chat
-    animated_preview_url:
-    highlight:
-      - src/agents/main.py
-      - src/app/demos/hitl-in-chat/page.tsx
-      - src/app/demos/hitl-in-chat/time-picker-card.tsx
       - src/app/api/copilotkit/route.ts
   - id: tool-rendering-default-catchall
     name: Tool Rendering (Default Catch-all)

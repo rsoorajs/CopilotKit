@@ -18,6 +18,8 @@ from google.adk.models.llm_request import LlmRequest
 from google.adk.models.llm_response import LlmResponse
 from google.genai import types
 
+from .shared_chat import get_model
+
 logger = logging.getLogger(__name__)
 
 CONFIG_PREFIX_SIGNATURE = "[agent-config] config:"
@@ -137,7 +139,7 @@ _INSTRUCTION = (
 
 agent_config_agent = LlmAgent(
     name="AgentConfigAgent",
-    model="gemini-2.5-flash",
+    model=get_model(),
     instruction=_INSTRUCTION,
     tools=[],
     before_model_callback=_inject_config,

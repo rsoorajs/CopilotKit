@@ -13,6 +13,8 @@ import os
 from google.adk.agents import LlmAgent
 from google.adk.tools import ToolContext
 
+from .shared_chat import get_model
+
 from .tools import query_data_impl  # noqa: E402
 
 def query_data(tool_context: ToolContext, query: str) -> list:
@@ -28,7 +30,7 @@ _INSTRUCTION = (
 
 byoc_agent = LlmAgent(
     name="ByocAgent",
-    model="gemini-2.5-flash",
+    model=get_model(),
     instruction=_INSTRUCTION,
     tools=[query_data],
 )

@@ -18,6 +18,8 @@ from typing import Optional
 
 from google.adk.agents import LlmAgent
 from google.adk.agents.callback_context import CallbackContext
+
+from .shared_chat import get_model
 from google.adk.models.llm_request import LlmRequest
 from google.adk.models.llm_response import LlmResponse
 from google.adk.tools import ToolContext
@@ -141,7 +143,7 @@ _INSTRUCTION = (
 
 shared_state_read_write_agent = LlmAgent(
     name="SharedStateReadWriteAgent",
-    model="gemini-2.5-flash",
+    model=get_model(),
     instruction=_INSTRUCTION,
     tools=[set_notes],
     before_model_callback=_inject_preferences,

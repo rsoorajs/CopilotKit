@@ -24,7 +24,6 @@ interaction_modalities:
 features:
   - cli-start
   - agentic-chat
-  - hitl
   - tool-rendering
   - tool-rendering-default-catchall
   - tool-rendering-custom-catchall
@@ -60,13 +59,6 @@ demos:
     tags:
       - chat-ui
     route: /demos/agentic-chat
-    animated_preview_url:
-  - id: hitl
-    name: In-Chat Human in the Loop
-    description: User approves agent actions before execution
-    tags:
-      - interactivity
-    route: /demos/hitl
     animated_preview_url:
   - id: tool-rendering
     name: Tool Rendering

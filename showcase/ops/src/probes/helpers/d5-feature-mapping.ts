@@ -43,7 +43,7 @@ import type { D5FeatureType } from "./d5-registry.js";
  *   - `tool-rendering`         : 3 demos (all the tool-rendering variants)
  *   - `gen-ui-headless`        : 2 demos (headless chat surfaces)
  *   - `gen-ui-custom`          : 1 demo
- *   - `hitl-text-input`        : 3 demos (in-chat HITL variants)
+ *   - `hitl-text-input`        : 2 demos (in-chat HITL variants using useHumanInTheLoop)
  *   - `hitl-steps`             : 1 demo (step-selection confirmation)
  *   - `hitl-approve-deny`      : 1 demo (modal/in-app approval)
  *   - `shared-state-read|write`: 1 demo, 2 D5 types (one-to-many)
@@ -73,12 +73,20 @@ const REGISTRY_TO_D5: Readonly<Record<string, readonly D5FeatureType[]>> = {
   // gen-ui (custom tier)
   "gen-ui-tool-based": ["gen-ui-custom"],
 
-  // hitl (text-input / in-chat tier) — every in-chat HITL variant maps
-  // to the `hitl-text-input` D5 script (which navigates to
-  // /demos/hitl-in-chat via preNavigateRoute).
+  // hitl (text-input / in-chat tier) — in-chat HITL variants that use
+  // `useHumanInTheLoop` with a `book_call` tool call. The D5 script
+  // navigates to /demos/hitl-in-chat via preNavigateRoute.
+  //
+  // NOTE: `gen-ui-interrupt` is intentionally NOT mapped here. That demo
+  // uses `useInterrupt` (LangGraph interrupt events), not
+  // `useHumanInTheLoop` (frontend tool calls). The hitl-text-input
+  // fixture sends a `book_call` tool call which `useInterrupt` pages
+  // never handle — the TimePickerCard never renders and the probe times
+  // out. gen-ui-interrupt needs its own D5 script + fixture that drives
+  // the interrupt flow; until that exists it is unmapped (silently
+  // skipped by `demosToFeatureTypes`).
   "hitl-in-chat": ["hitl-text-input"],
   "hitl-in-chat-booking": ["hitl-text-input"],
-  "gen-ui-interrupt": ["hitl-text-input"],
   hitl: ["hitl-steps"],
 
   // hitl (approve/deny tier) — out-of-chat modal approval flow.

@@ -847,7 +847,15 @@ ${AGENT_HEALTH_CHECK}`;
       // which then takes over steady-state monitoring. If the java process
       // dies during startup, the PID probe inside the loop fails-fast so
       // a crash-looping boot exits quickly.
-      return `echo "[entrypoint] Starting Spring AI agent on port 8123..."
+      return `# Derive SPRING_AI_OPENAI_BASE_URL from the showcase-wide OPENAI_BASE_URL if
+# not already set. OPENAI_BASE_URL includes "/v1" but Spring AI appends
+# "/v1/chat/completions" itself, so strip the trailing "/v1".
+if [ -z "\${SPRING_AI_OPENAI_BASE_URL:-}" ] && [ -n "\${OPENAI_BASE_URL:-}" ]; then
+    export SPRING_AI_OPENAI_BASE_URL="\${OPENAI_BASE_URL%/v1}"
+    echo "[entrypoint] Derived SPRING_AI_OPENAI_BASE_URL=\${SPRING_AI_OPENAI_BASE_URL} from OPENAI_BASE_URL=\${OPENAI_BASE_URL}"
+fi
+
+echo "[entrypoint] Starting Spring AI agent on port 8123..."
 java -jar agent/app.jar --server.port=8123 ${AGENT_LOG_PREFIX} &
 AGENT_PID=$!
 STARTUP_TIMEOUT=60

@@ -14,12 +14,15 @@ from __future__ import annotations
 
 import functools
 import logging
+import os
 import uuid
 
 from google import genai
 from google.adk.agents import LlmAgent
 from google.adk.tools import ToolContext
 from google.genai import types
+
+from .shared_chat import get_model
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +43,9 @@ _CRITIQUE_SYSTEM = (
 
 @functools.lru_cache(maxsize=1)
 def _client() -> genai.Client:
+    base_url = os.environ.get("GOOGLE_GEMINI_BASE_URL")
+    if base_url:
+        return genai.Client(http_options={"api_endpoint": base_url})
     return genai.Client()
 
 class _SubAgentError(Exception):
@@ -258,7 +264,7 @@ _SUPERVISOR_INSTRUCTION = (
 
 subagents_root_agent = LlmAgent(
     name="SubagentsSupervisor",
-    model=_SUB_MODEL,
+    model=get_model(_SUB_MODEL),
     instruction=_SUPERVISOR_INSTRUCTION,
     tools=[research_agent, writing_agent, critique_agent],
 )

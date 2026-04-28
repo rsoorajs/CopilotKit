@@ -32,6 +32,8 @@ from ag_ui_adk.config import PredictStateMapping
 from google.adk.agents import LlmAgent
 from google.adk.tools import ToolContext
 
+from .shared_chat import get_model
+
 def write_document(tool_context: ToolContext, content: str) -> dict:
     """Write a document into shared state.
 
@@ -52,7 +54,7 @@ _INSTRUCTION = (
 
 shared_state_streaming_agent = LlmAgent(
     name="SharedStateStreamingAgent",
-    model="gemini-2.5-flash",
+    model=get_model(),
     instruction=_INSTRUCTION,
     tools=[write_document],
 )

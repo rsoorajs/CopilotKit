@@ -148,16 +148,14 @@ demos:
       - src/app/demos/frontend-tools-async/notes-card.tsx
       - src/app/api/copilotkit/route.ts
   - id: hitl
-    name: In-Chat Human in the Loop (Original)
-    description: Interactive approval/decision surface rendered inline in the chat via the high-level `useHumanInTheLoop` hook (original HITL demo)
+    name: Human in the Loop (Step Selection)
+    description: Interactive step-selection surface rendered inline in the chat via `useHumanInTheLoop` and `useLangGraphInterrupt` hooks
     tags:
       - interactivity
-    route: /demos/hitl-in-chat
+    route: /demos/hitl
     animated_preview_url:
     highlight:
-      - src/agents/hitl_in_chat_agent.py
-      - src/app/demos/hitl-in-chat/page.tsx
-      - src/app/demos/hitl-in-chat/time-picker-card.tsx
+      - src/app/demos/hitl/page.tsx
       - src/app/api/copilotkit/route.ts
   - id: hitl-in-chat
     name: In-Chat HITL (useHumanInTheLoop — ergonomic API)

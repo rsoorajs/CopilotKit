@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { CopilotKit } from "@copilotkit/react-core";
 import {
-  CopilotSidebar,
+  CopilotChat,
   useFrontendTool,
   useConfigureSuggestions,
 } from "@copilotkit/react-core/v2";
@@ -14,35 +14,6 @@ interface Haiku {
   english: string[];
   image_name: string | null;
   gradient: string;
-}
-
-export default function GenUiToolBasedDemo() {
-  return (
-    <CopilotKit runtimeUrl="/api/copilotkit" agent="gen-ui-tool-based">
-      <SidebarWithSuggestions />
-      <HaikuDisplay />
-    </CopilotKit>
-  );
-}
-
-function SidebarWithSuggestions() {
-  useConfigureSuggestions({
-    suggestions: [
-      { title: "Nature Haiku", message: "Write me a haiku about nature." },
-      { title: "Ocean Haiku", message: "Create a haiku about the ocean." },
-      { title: "Spring Haiku", message: "Generate a haiku about spring." },
-    ],
-    available: "always",
-  });
-
-  return (
-    <CopilotSidebar
-      defaultOpen={true}
-      labels={{
-        modalHeaderTitle: "Haiku Generator",
-      }}
-    />
-  );
 }
 
 const VALID_IMAGE_NAMES = [
@@ -58,19 +29,25 @@ const VALID_IMAGE_NAMES = [
   "Mount_Fuji_Lake_Reflection_Cherry_Blossoms_Sakura_Spring.jpg",
 ];
 
-function HaikuDisplay() {
-  const [haikus, setHaikus] = useState<Haiku[]>([
-    {
-      japanese: ["仮の句よ", "まっさらながら", "花を呼ぶ"],
-      english: [
-        "A placeholder verse--",
-        "even in a blank canvas,",
-        "it beckons flowers.",
-      ],
-      image_name: null,
-      gradient: "",
-    },
-  ]);
+export default function GenUiToolBasedDemo() {
+  return (
+    <CopilotKit runtimeUrl="/api/copilotkit" agent="gen-ui-tool-based">
+      <Chat />
+    </CopilotKit>
+  );
+}
+
+function Chat() {
+  const [haikus, setHaikus] = useState<Haiku[]>([]);
+
+  useConfigureSuggestions({
+    suggestions: [
+      { title: "Nature Haiku", message: "Write me a haiku about nature." },
+      { title: "Ocean Haiku", message: "Create a haiku about the ocean." },
+      { title: "Spring Haiku", message: "Generate a haiku about spring." },
+    ],
+    available: "always",
+  });
 
   useFrontendTool(
     {
@@ -105,10 +82,7 @@ function HaikuDisplay() {
           image_name: image_name || null,
           gradient: gradient || "",
         };
-        setHaikus((prev) => [
-          newHaiku,
-          ...prev.filter((h) => h.english[0] !== "A placeholder verse--"),
-        ]);
+        setHaikus((prev) => [newHaiku, ...prev]);
         return "Haiku generated!";
       },
       render: ({ args }: { args: Partial<Haiku> }) => {
@@ -120,13 +94,12 @@ function HaikuDisplay() {
   );
 
   return (
-    <div className="relative flex items-center justify-center h-full w-full">
-      <div className="px-20 py-12 w-full max-w-4xl">
-        <div className="space-y-6">
-          {haikus.map((haiku, index) => (
-            <HaikuCard key={index} haiku={haiku} />
-          ))}
-        </div>
+    <div className="flex justify-center items-center h-screen w-full">
+      <div className="h-full w-full max-w-4xl">
+        <CopilotChat
+          agentId="gen-ui-tool-based"
+          className="h-full rounded-2xl"
+        />
       </div>
     </div>
   );
