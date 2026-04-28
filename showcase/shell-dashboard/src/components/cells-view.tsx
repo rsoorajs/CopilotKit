@@ -121,16 +121,18 @@ export function CellsView({ catalog, liveStatus, connection }: CellsViewProps) {
       (c) => c.status === "unshipped",
     ).length;
 
-    // Max achieved depth across all cells
+    // Max achieved depth + regression count across all cells
     let maxDepth = 0;
+    let regressions = 0;
     for (const cell of catalog.cells) {
       if (cell.status !== "unshipped") {
         const d = deriveDepth(cell, liveStatus);
         if (d.achieved > maxDepth) maxDepth = d.achieved;
+        if (d.isRegression) regressions++;
       }
     }
 
-    return { wired, stub, unshipped, maxDepth, regressions: 0 };
+    return { wired, stub, unshipped, maxDepth, regressions };
   }, [catalog.cells, liveStatus]);
 
   const defaultOpenCategories = useMemo(

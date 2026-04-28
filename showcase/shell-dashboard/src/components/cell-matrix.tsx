@@ -215,27 +215,15 @@ export function CellMatrix({
       });
     }
     if (filter === "regressions") {
-      // TODO: regression detection not yet implemented — see DepthResult.isRegression
-      // (always false). Until that lands, this filter shows no rows; the matrix
-      // surfaces an explicit empty-state below so users see *why*.
-      return false;
+      return visibleIntegrations.some((int) => {
+        const cell = cellIndex.get(`${int.slug}/${featureId}`);
+        if (!cell) return false;
+        const depth = deriveDepth(cell, liveStatus);
+        return depth.isRegression;
+      });
     }
     return true;
   };
-
-  // Regressions filter has no implementation yet; surface an explicit empty
-  // state instead of silently rendering an empty grid.
-  if (filter === "regressions") {
-    return (
-      <div
-        data-testid="cell-matrix"
-        data-empty-reason="regressions-not-implemented"
-        className="rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] p-6 text-center text-sm text-[var(--text-muted)]"
-      >
-        Regression detection not yet implemented.
-      </div>
-    );
-  }
 
   return (
     <div

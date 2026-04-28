@@ -84,6 +84,7 @@ const cells: CatalogCell[] = [
     feature: "agentic-chat",
     feature_name: "Agentic Chat",
     status: "wired",
+    max_depth: 0,
     category: "chat-ui",
     category_name: "Chat & UI",
   },
@@ -94,6 +95,7 @@ const cells: CatalogCell[] = [
     feature: "agentic-chat",
     feature_name: "Agentic Chat",
     status: "unshipped",
+    max_depth: 0,
     category: "chat-ui",
     category_name: "Chat & UI",
   },
@@ -104,6 +106,7 @@ const cells: CatalogCell[] = [
     feature: "auth",
     feature_name: "Authentication",
     status: "wired",
+    max_depth: 0,
     category: "platform",
     category_name: "Platform",
   },
@@ -114,6 +117,7 @@ const cells: CatalogCell[] = [
     feature: "auth",
     feature_name: "Authentication",
     status: "stub",
+    max_depth: 0,
     category: "platform",
     category_name: "Platform",
   },
@@ -237,6 +241,7 @@ describe("CellMatrix", () => {
         feature: "voice",
         feature_name: "Voice",
         status: "unshipped",
+        max_depth: 0,
         category: "lab",
         category_name: "Lab",
       },
@@ -247,6 +252,7 @@ describe("CellMatrix", () => {
         feature: "voice",
         feature_name: "Voice",
         status: "unshipped",
+        max_depth: 0,
         category: "lab",
         category_name: "Lab",
       },
@@ -279,26 +285,56 @@ describe("CellMatrix", () => {
     expect(wired.queryByText("Authentication")).not.toBeNull();
   });
 
-  it("renders empty-state when filter=regressions (not yet implemented)", () => {
-    const { getByTestId, getByText } = render(
+  it("filters to rows with regressions when filter=regressions", () => {
+    // lgp/agentic-chat has max_depth=3 but achieves D2 (health+agent green) → regression
+    // lgp/auth has max_depth=0 → no regression possible
+    const regressCells: CatalogCell[] = [
+      {
+        id: "lgp/agentic-chat",
+        integration: "lgp",
+        integration_name: "LangGraph Python",
+        feature: "agentic-chat",
+        feature_name: "Agentic Chat",
+        status: "wired",
+        max_depth: 3,
+        category: "chat-ui",
+        category_name: "Chat & UI",
+      },
+      {
+        id: "lgp/auth",
+        integration: "lgp",
+        integration_name: "LangGraph Python",
+        feature: "auth",
+        feature_name: "Authentication",
+        status: "wired",
+        max_depth: 0,
+        category: "platform",
+        category_name: "Platform",
+      },
+    ];
+    const live = mapOf([
+      row("health:lgp", "health", "green"),
+      row("agent:lgp", "agent", "green"),
+    ]);
+    const oneIntegration = [
+      { slug: "lgp", name: "LangGraph Python", tier: "reference" as const },
+    ];
+    const { queryByText } = render(
       <CellMatrix
-        cells={cells}
+        cells={regressCells}
         categories={categories}
         features={features}
-        integrations={integrations}
-        liveStatus={new Map()}
+        integrations={oneIntegration}
+        liveStatus={live}
         defaultOpenCategories={new Set(["chat-ui", "platform"])}
         filter="regressions"
         referenceSlug="lgp"
       />,
     );
-    const root = getByTestId("cell-matrix");
-    expect(root.getAttribute("data-empty-reason")).toBe(
-      "regressions-not-implemented",
-    );
-    expect(
-      getByText(/Regression detection not yet implemented/i),
-    ).toBeDefined();
+    // agentic-chat has regression (achieved=2 < max_depth=3) → visible
+    expect(queryByText("Agentic Chat")).not.toBeNull();
+    // auth has no regression (achieved=2 >= max_depth=0) → hidden
+    expect(queryByText("Authentication")).toBeNull();
   });
 
   it("skips starter cells (feature===null) without orphaning the cell index", () => {
@@ -312,6 +348,7 @@ describe("CellMatrix", () => {
       feature: null,
       feature_name: null,
       status: "wired",
+      max_depth: 0,
       category: null,
       category_name: null,
     };

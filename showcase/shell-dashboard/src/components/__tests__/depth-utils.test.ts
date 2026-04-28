@@ -35,6 +35,7 @@ const cell = (
   slug: string,
   featureId: string,
   status: CatalogCell["status"] = "wired",
+  max_depth: number = 0,
 ): CatalogCell => ({
   id: `${slug}/${featureId}`,
   integration: slug,
@@ -42,6 +43,7 @@ const cell = (
   feature: featureId,
   feature_name: featureId,
   status,
+  max_depth,
   category: "dev-ex",
   category_name: "Dev Ex",
 });
@@ -52,6 +54,7 @@ const cell = (
 const starter = (
   slug: string,
   status: CatalogCell["status"] = "wired",
+  max_depth: number = 0,
 ): CatalogCell => ({
   id: `${slug}/__starter`,
   integration: slug,
@@ -59,6 +62,7 @@ const starter = (
   feature: null,
   feature_name: null,
   status,
+  max_depth,
   category: null,
   category_name: null,
 });
@@ -188,14 +192,39 @@ describe("deriveDepth", () => {
     expect(result.achieved).toBe(0);
   });
 
-  it("isRegression is always false for now", () => {
-    const c = cell("lgp", "agentic-chat");
+  it("isRegression is true when achieved depth < max_depth", () => {
+    // Cell previously achieved D4 but now only achieves D2
+    const c = cell("lgp", "agentic-chat", "wired", 4);
     const live = mapOf([
       row("health:lgp", "health", "green"),
       row("agent:lgp", "agent", "green"),
     ]);
     const result = deriveDepth(c, live);
+    expect(result.achieved).toBe(2);
+    expect(result.isRegression).toBe(true);
+  });
+
+  it("isRegression is false when achieved depth >= max_depth", () => {
+    // Cell max_depth is 2 and currently achieves D2 — no regression
+    const c = cell("lgp", "agentic-chat", "wired", 2);
+    const live = mapOf([
+      row("health:lgp", "health", "green"),
+      row("agent:lgp", "agent", "green"),
+    ]);
+    const result = deriveDepth(c, live);
+    expect(result.achieved).toBe(2);
     expect(result.isRegression).toBe(false);
+  });
+
+  it("isRegression is true when health drops and max_depth > 0", () => {
+    // Cell had D1 previously but now health is red = D0
+    const c = cell("lgp", "agentic-chat", "wired", 1);
+    const live = mapOf([
+      row("health:lgp", "health", "red"),
+    ]);
+    const result = deriveDepth(c, live);
+    expect(result.achieved).toBe(0);
+    expect(result.isRegression).toBe(true);
   });
 
   it("starter cell (feature null) caps at D2 with health+agent green", () => {
