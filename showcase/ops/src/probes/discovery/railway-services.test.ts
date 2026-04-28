@@ -997,14 +997,15 @@ describe("railwayServicesSource", () => {
           {
             slug: "ag2",
             demos: [
-              { id: "agentic-chat" },
-              { id: "human-in-the-loop" },
-              { id: "tool-based-generative-ui" },
+              { id: "agentic-chat", route: "/demos/agentic-chat" },
+              { id: "human-in-the-loop", route: "/demos/human-in-the-loop" },
+              { id: "tool-based-generative-ui", route: "/demos/tool-based-generative-ui" },
+              { id: "cli-start", name: "CLI Start Command", command: "npx create-copilotkit@latest" },
             ],
           },
           {
             slug: "langgraph-python",
-            demos: [{ id: "agentic-chat" }],
+            demos: [{ id: "agentic-chat", route: "/demos/agentic-chat" }],
           },
         ],
       }),
@@ -1052,7 +1053,7 @@ describe("railwayServicesSource", () => {
     // as "no demos" rather than poisoning the tick.
     const registryPath = await writeRegistry(
       JSON.stringify({
-        integrations: [{ slug: "ag2", demos: [{ id: "agentic-chat" }] }],
+        integrations: [{ slug: "ag2", demos: [{ id: "agentic-chat", route: "/demos/agentic-chat" }] }],
       }),
     );
     const { fetchImpl } = makeFetch([
@@ -1227,7 +1228,7 @@ describe("railwayServicesSource", () => {
         integrations: [
           {
             slug: "ag2",
-            demos: [{ id: "demo-from-override" }],
+            demos: [{ id: "demo-from-override", route: "/demos/demo-from-override" }],
           },
         ],
       }),
@@ -1263,7 +1264,7 @@ describe("railwayServicesSource", () => {
     // empty demos map (NOT an exception that aborts the whole tick).
     const registryPath = await writeRegistry(
       JSON.stringify({
-        integrations: [{ slug: "ag2", demos: [{ id: "agentic-chat" }] }],
+        integrations: [{ slug: "ag2", demos: [{ id: "agentic-chat", route: "/demos/agentic-chat" }] }],
       }),
     );
     const { fetchImpl } = makeFetch([
@@ -1889,7 +1890,7 @@ describe("railwayServicesSource", () => {
     it("starter service slug strips only `showcase-` prefix; demos lookup misses gracefully", async () => {
       const registryPath = await writeRegistry(
         JSON.stringify({
-          integrations: [{ slug: "ag2", demos: [{ id: "agentic-chat" }] }],
+          integrations: [{ slug: "ag2", demos: [{ id: "agentic-chat", route: "/demos/agentic-chat" }] }],
         }),
       );
       const { fetchImpl } = makeFetch([

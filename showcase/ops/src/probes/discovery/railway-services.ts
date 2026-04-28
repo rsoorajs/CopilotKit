@@ -483,7 +483,7 @@ async function loadDemosMap(
   const parsed = parsedUnknown as {
     integrations?: Array<{
       slug?: string;
-      demos?: Array<{ id?: string }>;
+      demos?: Array<{ id?: string; route?: string }>;
     }>;
   };
   const map = new Map<string, string[]>();
@@ -491,7 +491,7 @@ async function loadDemosMap(
     if (!it.slug) continue;
     const demos: string[] = [];
     for (const d of it.demos ?? []) {
-      if (typeof d.id === "string") demos.push(d.id);
+      if (typeof d.id === "string" && typeof d.route === "string") demos.push(d.id);
     }
     map.set(it.slug, demos);
   }
