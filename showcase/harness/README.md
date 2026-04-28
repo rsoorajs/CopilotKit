@@ -56,9 +56,9 @@ All read at boot unless marked otherwise. See `showcase/harness/src/orchestrator
 
 **Caller-side (GitHub Actions repo secrets, not this service):**
 
-| Secret                       | Used by                                           |
-| ---------------------------- | ------------------------------------------------- |
-| `SHOWCASE_HARNESS_URL`           | `notify-harness` step in `showcase_deploy.yml`.       |
+| Secret                           | Used by                                           |
+| -------------------------------- | ------------------------------------------------- |
+| `SHOWCASE_HARNESS_URL`           | `notify-harness` step in `showcase_deploy.yml`.   |
 | `SHOWCASE_HARNESS_SHARED_SECRET` | Same — paired with the service's `SHARED_SECRET`. |
 
 ## 1.3 Alert rule YAMLs

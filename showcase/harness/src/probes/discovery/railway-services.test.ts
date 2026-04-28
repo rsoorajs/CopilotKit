@@ -1783,17 +1783,13 @@ describe("railwayServicesSource", () => {
 
   describe("resolveShape (B6)", () => {
     it("returns 'package' when classifier and caller-supplied shape agree", () => {
-      expect(
-        resolveShape({ name: "showcase-ag2", shape: "package" }),
-      ).toBe("package");
+      expect(resolveShape({ name: "showcase-ag2", shape: "package" })).toBe(
+        "package",
+      );
     });
 
     it("returns 'package' from classifier when no shape is supplied", () => {
-      expect(
-        resolveShape({ name: "showcase-ag2" }),
-      ).toBe("package");
+      expect(resolveShape({ name: "showcase-ag2" })).toBe("package");
     });
   });
-
-
 });
