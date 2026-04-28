@@ -150,6 +150,9 @@ demos:
       - agent-capabilities
     route: /demos/tool-rendering
     animated_preview_url:
+    highlight:
+      - src/agents/agent.py
+      - src/app/demos/tool-rendering/page.tsx
   - id: gen-ui-agent
     name: Agentic Generative UI
     description: Long-running agent tasks with generated UI

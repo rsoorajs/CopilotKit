@@ -32,6 +32,7 @@ import { openGenUiSuggestions } from "./suggestions";
 
 export default function OpenGenUiAdvancedDemo() {
   return (
+    // @region[sandbox-function-registration]
     // Pass the sandbox-function array on the `openGenerativeUI` provider prop.
     // The built-in `OpenGenerativeUIActivityRenderer` wires these as callable
     // remotes inside the agent-authored iframe.
@@ -46,6 +47,7 @@ export default function OpenGenUiAdvancedDemo() {
         </div>
       </div>
     </CopilotKit>
+    // @endregion[sandbox-function-registration]
   );
 }
 

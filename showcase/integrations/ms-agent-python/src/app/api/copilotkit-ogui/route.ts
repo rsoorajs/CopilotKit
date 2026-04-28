@@ -39,6 +39,8 @@ export const POST = async (req: NextRequest) => {
       // Open Generative UI for the listed agent(s); the runtime middleware
       // converts each agent's streamed `generateSandboxedUi` tool call into
       // `open-generative-ui` activity events.
+      // @region[minimal-runtime-flag]
+      // @region[advanced-runtime-config]
       runtime: new CopilotRuntime({
         // @ts-ignore -- see main route.ts for type-comment rationale
         agents,
@@ -46,6 +48,8 @@ export const POST = async (req: NextRequest) => {
           agents: ["open-gen-ui", "open-gen-ui-advanced"],
         },
       }),
+      // @endregion[advanced-runtime-config]
+      // @endregion[minimal-runtime-flag]
     });
     return await handleRequest(req);
   } catch (error: unknown) {

@@ -34,10 +34,13 @@ def _load_schema(path: Path) -> list[dict]:
         return json.load(f)
 
 
+# @region[backend-schema-json-load]
 FLIGHT_SCHEMA = _load_schema(_SCHEMAS_DIR / "flight_schema.json")
 BOOKED_SCHEMA = _load_schema(_SCHEMAS_DIR / "booked_schema.json")  # noqa: F841 — kept for parity with LangGraph reference
+# @endregion[backend-schema-json-load]
 
 
+# @region[backend-render-operations]
 def _build_a2ui_ops(
     *, origin: str, destination: str, airline: str, price: str
 ) -> dict:
@@ -77,6 +80,7 @@ def _build_a2ui_ops(
         },
     ]
     return {"a2ui_operations": ops}
+# @endregion[backend-render-operations]
 
 
 @tool(

@@ -111,6 +111,7 @@ export default function OpenGenUiDemo() {
   // no custom tool renderers, no activity-renderer registration.
   // We DO pass `openGenerativeUI.designSkill` to swap in visualisation-tuned
   // guidance in place of the default shadcn design skill.
+  // @region[minimal-provider-setup]
   return (
     <CopilotKit
       runtimeUrl="/api/copilotkit-ogui"
@@ -124,6 +125,7 @@ export default function OpenGenUiDemo() {
       </div>
     </CopilotKit>
   );
+  // @endregion[minimal-provider-setup]
 }
 
 function Chat() {
