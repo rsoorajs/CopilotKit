@@ -117,7 +117,17 @@ export function FrameworkSelector({
   // (Built-in Agent). The selector should never read "Pick a backend"
   // when the docs are actually rendering BIA code — that's misleading.
   const current = options.find((o) => o.slug === effectiveFramework);
-  const label = current?.name ?? "Pick an agentic backend";
+
+  // BIA is the soft-default and the framing on the sidebar is "you're
+  // reading CopilotKit's docs" rather than "you've picked the Built-in
+  // Agent backend." Show "CopilotKit" in the sidebar selector chrome
+  // (closed pill + dropdown row) but keep the registry name elsewhere
+  // so DocsLandingNext, IntegrationGrid, etc. still call it Built-in
+  // Agent where the framing is about choosing a backend.
+  const isSidebar = variant === "sidebar";
+  const displayNameFor = (opt: FrameworkOption) =>
+    isSidebar && opt.slug === "built-in-agent" ? "CopilotKit" : opt.name;
+  const label = current ? displayNameFor(current) : "Pick an agentic backend";
 
   // Compute the target href for a given framework option given the current
   // path. Preserves feature slug when possible.
@@ -158,11 +168,19 @@ export function FrameworkSelector({
   for (const cat of categoryOrder) grouped.set(cat.id, []);
   grouped.set("other", []);
   for (const opt of options) {
+    // Sidebar variant lifts BIA out of its category bucket and renders
+    // it at the top of the dropdown — see render path below. Skip it
+    // here so it doesn't also appear under Popular.
+    if (isSidebar && opt.slug === "built-in-agent") continue;
     const bucket = grouped.has(opt.category) ? opt.category : "other";
     grouped.get(bucket)!.push(opt);
   }
 
-  const isSidebar = variant === "sidebar";
+  // BIA pinned at the top of the sidebar dropdown — only the sidebar
+  // variant (the topbar selector keeps the standard category layout).
+  const pinnedBIA = isSidebar
+    ? (options.find((o) => o.slug === "built-in-agent") ?? null)
+    : null;
 
   // Sidebar variant: full-width pill with integration logo on the left,
   // framework name centered, chevron right. Violet accent border when a
@@ -202,7 +220,7 @@ export function FrameworkSelector({
             )}
             <span className="flex-1 min-w-0 text-left">
               {current ? (
-                <span className="block truncate">{current.name}</span>
+                <span className="block truncate">{label}</span>
               ) : (
                 <span className="block truncate text-[var(--text-muted)]">
                   Pick a backend
@@ -292,6 +310,35 @@ export function FrameworkSelector({
             </button>
           )}
 
+          {pinnedBIA && (
+            <div className="mb-2">
+              <button
+                key={pinnedBIA.slug}
+                type="button"
+                onClick={() => selectFramework(pinnedBIA.slug)}
+                className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-[13px] transition-colors cursor-pointer ${
+                  pinnedBIA.slug === effectiveFramework
+                    ? "bg-[var(--accent-light)] text-[var(--accent)]"
+                    : "text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text)]"
+                }`}
+              >
+                {pinnedBIA.logo ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={pinnedBIA.logo}
+                    alt=""
+                    className="w-4 h-4 shrink-0"
+                  />
+                ) : (
+                  <span className="w-4 h-4 shrink-0" />
+                )}
+                <span className="flex-1 text-left truncate">
+                  {displayNameFor(pinnedBIA)}
+                </span>
+              </button>
+            </div>
+          )}
+
           {[...grouped.entries()].map(([catId, opts]) => {
             if (opts.length === 0) return null;
             const catLabel =
@@ -326,7 +373,7 @@ export function FrameworkSelector({
                         <span className="w-4 h-4 shrink-0" />
                       )}
                       <span className="flex-1 text-left truncate">
-                        {opt.name}
+                        {displayNameFor(opt)}
                       </span>
                     </button>
                   );

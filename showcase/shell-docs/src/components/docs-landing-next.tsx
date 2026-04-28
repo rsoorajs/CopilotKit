@@ -33,8 +33,11 @@ function FrameworkPicker({
   heading: string;
   description: string;
 }) {
+  // Drop Built-in Agent: it's the soft-default the page is already
+  // rendering as, so showing it under "Switch backend" would just be a
+  // no-op tile.
   const integrations = getIntegrations()
-    .slice()
+    .filter((i) => i.slug !== "built-in-agent")
     .sort((a, b) => (a.sort_order ?? 999) - (b.sort_order ?? 999));
 
   // Bucket integrations by category, honoring the canonical ordering.
