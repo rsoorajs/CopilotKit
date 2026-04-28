@@ -162,6 +162,17 @@ The dashboard at [showcase.copilotkit.ai](https://showcase.copilotkit.ai) reads 
 1. **Static `catalog.json`** — generated at build time by `pnpm generate-registry`. Contains the full 38-feature x 17-integration cell matrix with status (`wired` / `stub` / `unshipped`), parity tiers, and feature categories. Changes require a generator run + commit.
 2. **Live PocketBase probe results** — streamed via SSE. Probes discover demo routes automatically and update the dashboard in real time. No manual intervention needed for probe data.
 
+**Known limitation — PocketBase fetch cap:** `useLiveStatus.ts` fetches
+status records with a hard `INITIAL_CAP` (currently 2000). PocketBase
+returns records in rowid (creation) order. If the total record count
+exceeds the cap, later-created dimensions (e.g. `e2e:<slug>/<featureId>`
+per-cell records from the 6-hourly e2e-demos probe) get silently
+truncated, causing the dashboard to show D2 instead of D4 across the
+board. If new probe types are added and the dashboard regresses to D2,
+raise `INITIAL_CAP` in `shell-dashboard/src/hooks/useLiveStatus.ts`.
+The correct long-term fix is dimension-scoped fetching or `sort=-updated`
+so the cap never silently drops functional records.
+
 Key invariants:
 
 - **Parity tiers are never manually set.** They are computed by comparing each integration's wired feature set against the reference integration's.
