@@ -166,7 +166,7 @@ export function AdaptiveLegend({ overlays }: AdaptiveLegendProps) {
   return (
     <div
       data-testid="adaptive-legend"
-      className="px-8 pb-8 mt-4 flex flex-wrap gap-x-6 gap-y-2 text-xs text-[var(--text-muted)]"
+      className="fixed bottom-0 left-0 right-0 z-40 px-8 py-3 flex flex-wrap gap-x-6 gap-y-2 text-xs text-[var(--text-muted)] bg-[var(--bg-surface)] border-t border-[var(--border)]"
     >
       {overlays.has("links") && <LinksLegend />}
       {overlays.has("depth") && <DepthLegend />}

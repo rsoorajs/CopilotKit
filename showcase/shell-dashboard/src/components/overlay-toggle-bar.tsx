@@ -58,6 +58,29 @@ export function OverlayToggleBar({
       data-testid="overlay-toggle-bar"
       className="flex items-center gap-[6px] px-2 py-[6px] bg-[var(--bg-muted)] rounded-[6px] border border-[var(--border)]"
     >
+      {/* Preset buttons */}
+      {PRESETS.map((preset) => {
+        const isPresetActive = activePreset === preset.id;
+        return (
+          <button
+            key={preset.id}
+            type="button"
+            data-testid={`preset-btn-${preset.id}`}
+            onClick={() => onApplyPreset(preset.id)}
+            className={`px-[6px] py-[2px] rounded-[4px] text-[9px] font-medium transition-colors cursor-pointer border ${
+              isPresetActive
+                ? "bg-[var(--accent)]/10 text-[var(--accent)] border-[var(--accent)]"
+                : "text-[var(--text-muted)] border-[var(--border)] hover:text-[var(--accent)] hover:border-[var(--accent)]"
+            }`}
+          >
+            {preset.label}
+          </button>
+        );
+      })}
+
+      {/* Separator */}
+      <div className="w-px h-4 bg-[var(--border)] mx-[2px]" />
+
       {/* Label */}
       <span className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] font-medium select-none">
         Show:
@@ -82,29 +105,6 @@ export function OverlayToggleBar({
             }`}
           >
             {OVERLAY_LABELS[overlay]}
-          </button>
-        );
-      })}
-
-      {/* Separator */}
-      <div className="w-px h-4 bg-[var(--border)] mx-[2px]" />
-
-      {/* Preset buttons */}
-      {PRESETS.map((preset) => {
-        const isPresetActive = activePreset === preset.id;
-        return (
-          <button
-            key={preset.id}
-            type="button"
-            data-testid={`preset-btn-${preset.id}`}
-            onClick={() => onApplyPreset(preset.id)}
-            className={`px-[6px] py-[2px] rounded-[4px] text-[9px] font-medium transition-colors cursor-pointer border ${
-              isPresetActive
-                ? "bg-[var(--accent)]/10 text-[var(--accent)] border-[var(--accent)]"
-                : "text-[var(--text-muted)] border-[var(--border)] hover:text-[var(--accent)] hover:border-[var(--accent)]"
-            }`}
-          >
-            {preset.label}
           </button>
         );
       })}

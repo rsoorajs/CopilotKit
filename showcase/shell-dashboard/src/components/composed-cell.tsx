@@ -7,8 +7,10 @@
  * a single composable component that stacks only the active layers.
  */
 
+import { useState, useEffect, useRef, useCallback } from "react";
 import type { CellContext } from "@/components/feature-grid";
 import { CellStatus, DocsRow, urlsFor } from "@/components/cell-pieces";
+import { CellDrilldown } from "@/components/cell-drilldown";
 import { CommandCell } from "@/components/command-cell";
 import { DepthChip } from "@/components/depth-chip";
 import { deriveDepth } from "@/components/depth-utils";
@@ -59,6 +61,7 @@ function LinksLayer({ ctx }: { ctx: CellContext }) {
 
 /**
  * Render the Depth layer: DepthChip showing D0-D4 with regression marker.
+ * Clicking the chip opens a CellDrilldown popup with per-badge dimension details.
  */
 function DepthLayer({
   ctx,
@@ -67,17 +70,59 @@ function DepthLayer({
   ctx: CellContext;
   catalogCell?: CatalogCell;
 }) {
+  const [drilldownOpen, setDrilldownOpen] = useState<boolean>(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const closeDrilldown = useCallback(() => setDrilldownOpen(false), []);
+
+  // Close drilldown on click-outside
+  useEffect(() => {
+    if (!drilldownOpen) return;
+    function handleClickOutside(e: MouseEvent) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(e.target as Node)
+      ) {
+        setDrilldownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [drilldownOpen]);
+
   if (!catalogCell) return null;
 
   const depth = deriveDepth(catalogCell, ctx.liveStatus);
 
   return (
-    <div className="flex items-center gap-1" data-testid="depth-layer">
-      <DepthChip
-        depth={depth.achieved}
-        status={catalogCell.status}
-        regression={depth.isRegression}
-      />
+    <div
+      ref={containerRef}
+      className="flex items-center gap-1 relative"
+      data-testid="depth-layer"
+    >
+      <button
+        type="button"
+        data-testid={`depth-btn-${ctx.integration.slug}-${ctx.feature.id}`}
+        className="cursor-pointer bg-transparent border-none p-0"
+        onClick={() => setDrilldownOpen((prev) => !prev)}
+      >
+        <DepthChip
+          depth={depth.achieved}
+          status={catalogCell.status}
+          regression={depth.isRegression}
+        />
+      </button>
+      {drilldownOpen && (
+        <CellDrilldown
+          slug={ctx.integration.slug}
+          featureId={ctx.feature.id}
+          integrationName={ctx.integration.name}
+          featureName={ctx.feature.name}
+          liveStatus={ctx.liveStatus}
+          connection={ctx.connection}
+          onClose={closeDrilldown}
+        />
+      )}
     </div>
   );
 }
@@ -139,12 +184,12 @@ export function ComposedCell({
   return (
     <div
       data-testid="composed-cell"
-      className={`flex flex-col gap-1 text-[11px] ${isTesting ? "opacity-60" : ""}`}
+      className={`flex flex-col items-center gap-1 text-[11px] ${isTesting ? "opacity-60" : ""}`}
     >
       {hasLinks && <LinksLayer ctx={ctx} />}
       {hasDepth && <DepthLayer ctx={ctx} catalogCell={catalogCell} />}
       {hasHealth && <HealthLayer ctx={ctx} />}
-      {hasDocs && <DocsLayer ctx={ctx} />}
+      {hasDocs && !hasHealth && <DocsLayer ctx={ctx} />}
     </div>
   );
 }
