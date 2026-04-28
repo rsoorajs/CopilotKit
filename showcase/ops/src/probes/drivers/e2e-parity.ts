@@ -124,7 +124,6 @@ type E2eParityDriverInput = z.infer<typeof inputSchema>;
 /**
  * Aggregate signal carried on the primary `e2e-parity:<slug>` ProbeResult.
  *
- *   - `shape: "starter"` — short-circuit before launch.
  *   - `mode` — the resolved scoping mode (weekly-rotation | on-demand).
  *   - `scopingReason` — human-readable explanation of WHY this slug ran
  *     this tick (or didn't). Surfaced verbatim in dashboards / Slack.
@@ -137,7 +136,7 @@ type E2eParityDriverInput = z.infer<typeof inputSchema>;
  *     a single severity number.
  */
 export interface E2eParityAggregateSignal {
-  shape: "package" | "starter";
+  shape: "package";
   slug: string;
   backendUrl: string;
   mode: "weekly-rotation" | "on-demand";
@@ -514,7 +513,7 @@ export function createE2eParityDriver(
       // the latter fails-loud as RED on every tick, which is the wrong
       // signal for "intentionally deferred". Green-with-note matches
       // the existing skipped semantics elsewhere in the driver
-      // (starter shape, no-features, not-selected-this-tick).
+      // (no-features, not-selected-this-tick).
       const d6EnabledRaw = ctx.env.D6_ENABLED;
       const d6Enabled =
         typeof d6EnabledRaw === "string" &&
@@ -528,7 +527,7 @@ export function createE2eParityDriver(
           key: input.key,
           state: "green",
           signal: {
-            shape: input.shape ?? "package",
+            shape: "package",
             slug,
             backendUrl,
             mode: "weekly-rotation",
@@ -622,32 +621,6 @@ export function createE2eParityDriver(
             axisFailures: 0,
             errorDesc: "scoping-error",
             failureSummary: truncateUtf8(msg, 1200),
-          },
-          observedAt,
-        };
-      }
-
-      // Starter short-circuit. Same rule as e2e-deep — no /demos
-      // routing, so D6 has nothing to compare against. Aggregate
-      // green, no chromium launched.
-      if (input.shape === "starter") {
-        return {
-          key: input.key,
-          state: "green",
-          signal: {
-            shape: "starter",
-            slug,
-            backendUrl,
-            mode: scopingMode,
-            selectedThisTick: false,
-            scopingReason: "starter: no /demos/* routing",
-            total: 0,
-            passed: 0,
-            amber: 0,
-            red: 0,
-            skipped: [],
-            axisFailures: 0,
-            note: "starter: no /demos/* routing",
           },
           observedAt,
         };
