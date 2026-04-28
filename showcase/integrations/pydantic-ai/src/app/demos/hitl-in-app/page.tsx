@@ -2,11 +2,11 @@
 
 import React, { useState } from "react";
 import {
+  CopilotKit,
   CopilotChat,
   useFrontendTool,
   useConfigureSuggestions,
 } from "@copilotkit/react-core/v2";
-import { CopilotKit } from "@copilotkit/react-core";
 import { z } from "zod";
 import { ApprovalDialog, PendingApproval } from "./approval-dialog";
 

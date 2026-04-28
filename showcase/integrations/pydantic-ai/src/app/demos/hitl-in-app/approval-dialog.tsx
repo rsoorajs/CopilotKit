@@ -1,9 +1,11 @@
 "use client";
 
 // Modal dialog rendered at the APP level — positioned with `fixed inset-0`
-// so it overlays the whole page without needing a React portal.
+// and portal'd to <body> so it overlays the whole page cleanly regardless
+// of the parent component's CSS context (transforms, overflow, stacking).
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 
 export type PendingApproval = {
   message: string;
@@ -17,8 +19,15 @@ type Props = {
 
 export function ApprovalDialog({ pending, onResolve }: Props) {
   const [reason, setReason] = useState("");
+  const [mounted, setMounted] = useState(false);
 
-  return (
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) return null;
+
+  const content = (
     <div
       data-testid="approval-dialog-overlay"
       className="fixed inset-0 z-50 flex items-center justify-center bg-[#010507]/40 backdrop-blur-sm"
@@ -82,4 +91,6 @@ export function ApprovalDialog({ pending, onResolve }: Props) {
       </div>
     </div>
   );
+
+  return createPortal(content, document.body);
 }
