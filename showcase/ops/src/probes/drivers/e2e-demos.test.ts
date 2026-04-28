@@ -633,7 +633,9 @@ describe("e2e-demos driver", () => {
     // A single compound selector is tried (all selectors at once).
     expect(selectorsTried).toHaveLength(1);
     expect(selectorsTried[0]).toContain("textarea");
-    expect(selectorsTried[0]).toContain('[data-testid="copilot-chat-textarea"]');
+    expect(selectorsTried[0]).toContain(
+      '[data-testid="copilot-chat-textarea"]',
+    );
 
     expect(writes).toHaveLength(1);
     expect(writes[0]?.state).toBe("green");
@@ -685,7 +687,9 @@ describe("e2e-demos driver", () => {
     expect(result.state).toBe("red");
     // Single compound selector tried (not 6 individual ones).
     expect(selectorsTried).toHaveLength(1);
-    expect(selectorsTried[0]).toContain('[data-testid="copilot-chat-textarea"]');
+    expect(selectorsTried[0]).toContain(
+      '[data-testid="copilot-chat-textarea"]',
+    );
     expect(selectorsTried[0]).toContain('[role="textbox"]');
     expect(writes).toHaveLength(1);
     expect(writes[0]?.state).toBe("red");
