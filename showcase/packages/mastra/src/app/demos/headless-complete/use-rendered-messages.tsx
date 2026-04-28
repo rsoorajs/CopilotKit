@@ -40,6 +40,7 @@ import {
  * formatting decisions behind an opaque black box. Apps that want markdown
  * can drop Streamdown / react-markdown in at this exact line.
  */
+// @region[use-rendered-messages-hook]
 export type RenderedMessage = Message & { renderedContent: React.ReactNode };
 
 export function useRenderedMessages(
@@ -74,6 +75,7 @@ export function useRenderedMessages(
     renderCustomMessage,
   ]);
 }
+// @endregion[use-rendered-messages-hook]
 
 function renderMessageContent(args: {
   message: Message;
@@ -112,6 +114,7 @@ function renderMessageContent(args: {
 
   let body: React.ReactNode = null;
 
+  // @region[manual-activity-message-rendering]
   if (message.role === "assistant") {
     body = renderAssistantBody({
       message: message as AssistantMessage,
@@ -131,6 +134,7 @@ function renderMessageContent(args: {
   } else if (message.role === "activity") {
     body = renderActivityMessage(message as ActivityMessage);
   }
+  // @endregion[manual-activity-message-rendering]
 
   if (!customBefore && !customAfter) {
     return body;
@@ -144,6 +148,7 @@ function renderMessageContent(args: {
   );
 }
 
+// @region[manual-tool-call-rendering]
 function renderAssistantBody(args: {
   message: AssistantMessage;
   messages: Message[];
@@ -171,6 +176,7 @@ function renderAssistantBody(args: {
     </>
   );
 }
+// @endregion[manual-tool-call-rendering]
 
 function renderUserBody(message: UserMessage): React.ReactNode {
   // AG-UI user messages may carry a string OR an array of parts (text, image,
