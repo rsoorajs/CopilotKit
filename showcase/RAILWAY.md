@@ -59,8 +59,8 @@ safety net, not the primary deploy path.
 2. **Add to `showcase_deploy.yml`** `ALL_SERVICES` matrix so CI builds
    and pushes the GHCR image on code changes.
 
-3. **Add to `showcase/ops/config/probes/smoke.yml`** so the service is
-   monitored by showcase-ops probes.
+3. **Add to `showcase/harness/config/probes/smoke.yml`** so the service is
+   monitored by showcase-harness probes.
 
 4. **Git-based services**: auto-updates only apply to image-sourced
    services. Skip step 1 for git-deploy services.

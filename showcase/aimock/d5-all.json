@@ -1,5 +1,5 @@
 {
-  "_comment": "Bundled D5 (e2e-deep) fixtures. Source files: showcase/ops/fixtures/d5/*.json. Loaded by aimock before feature-parity.json for match precedence.",
+  "_comment": "Bundled D5 (e2e-deep) fixtures. Source files: showcase/harness/fixtures/d5/*.json. Loaded by aimock before feature-parity.json for match precedence.",
   "fixtures": [
     {
       "match": {
