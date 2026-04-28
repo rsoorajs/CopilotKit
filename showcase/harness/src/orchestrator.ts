@@ -269,12 +269,21 @@ export async function boot(opts: BootOptions = {}): Promise<{
   // later — caches, batching) is shared across invokers.
   const runWriter = createProbeRunWriter(pb);
 
-  const browserPool = new BrowserPool(4);
-  await browserPool.init();
+  const poolSize = process.env.BROWSER_POOL_SIZE
+    ? parseInt(process.env.BROWSER_POOL_SIZE, 10) || 4
+    : 4;
+  const browserPool = new BrowserPool(poolSize);
+  let browserPoolReady = false;
+  try {
+    await browserPool.init();
+    browserPoolReady = true;
+  } catch (err) {
+    logger.error("boot.browser-pool-init-failed", { error: String(err) });
+  }
 
   const probeRegistry = createProbeRegistry();
   const discoveryRegistry = createDiscoveryRegistry();
-  registerAllProbeDrivers(probeRegistry, browserPool);
+  registerAllProbeDrivers(probeRegistry, browserPoolReady ? browserPool : undefined);
   discoveryRegistry.register(railwayServicesSource);
   discoveryRegistry.register(pnpmPackagesDiscoverySource);
   const probeConfigDir =
@@ -822,7 +831,7 @@ export async function boot(opts: BootOptions = {}): Promise<{
       unwatchProbes();
       engine.stop();
       await scheduler.stop();
-      await browserPool.shutdown();
+      if (browserPoolReady) await browserPool.shutdown();
       // Release all bus subscriptions so repeated boot/stop don't accumulate
       // listeners on the shared EventEmitter.
       for (const u of busUnsubs) u();

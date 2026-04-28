@@ -414,9 +414,8 @@ export function createPooledE2eDeepLauncher(
           close: () => ctx.close(),
         };
       },
-      close: () => {
+      close: async () => {
         pool.release(browser);
-        return Promise.resolve();
       },
     };
   };

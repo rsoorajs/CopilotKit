@@ -33,11 +33,12 @@ export class BrowserPool {
 
   constructor(size = 4, recycleAfter?: number) {
     this.poolSize = size;
+    const envRecycle = process.env.BROWSER_POOL_RECYCLE_AFTER
+      ? parseInt(process.env.BROWSER_POOL_RECYCLE_AFTER, 10)
+      : undefined;
     this.recycleAfter =
       recycleAfter ??
-      (process.env.BROWSER_POOL_RECYCLE_AFTER
-        ? parseInt(process.env.BROWSER_POOL_RECYCLE_AFTER, 10)
-        : 100);
+      (envRecycle !== undefined && !Number.isNaN(envRecycle) ? envRecycle : 100);
   }
 
   async init(): Promise<void> {
@@ -61,7 +62,7 @@ export class BrowserPool {
   // Assigned during init() after the dynamic import resolves.
   private launchBrowser!: () => Promise<Browser>;
 
-  async acquire(): Promise<Browser> {
+  async acquire(timeoutMs = 30_000): Promise<Browser> {
     if (this.isShutdown) {
       throw new Error("BrowserPool is shut down");
     }
@@ -72,11 +73,32 @@ export class BrowserPool {
     }
 
     return new Promise<Browser>((resolve, reject) => {
-      this.waiters.push({ resolve, reject });
+      const waiter: Waiter = { resolve, reject };
+      const timer = setTimeout(() => {
+        const idx = this.waiters.indexOf(waiter);
+        if (idx !== -1) this.waiters.splice(idx, 1);
+        reject(new Error("BrowserPool acquire timeout"));
+      }, timeoutMs);
+
+      // Wrap resolve/reject so the timeout is always cleared.
+      const origResolve = waiter.resolve;
+      const origReject = waiter.reject;
+      waiter.resolve = (browser: Browser) => {
+        clearTimeout(timer);
+        origResolve(browser);
+      };
+      waiter.reject = (err: Error) => {
+        clearTimeout(timer);
+        origReject(err);
+      };
+
+      this.waiters.push(waiter);
     });
   }
 
   release(browser: Browser): void {
+    if (this.isShutdown) return;
+
     const slot = this.browserToSlot.get(browser);
 
     // Browser was already recycled or doesn't belong to this pool.
@@ -163,19 +185,40 @@ export class BrowserPool {
         slot.contextCount = 0;
         this.browserToSlot.set(fresh, slot);
 
+        if (this.isShutdown) {
+          // Shutdown was initiated while we were launching. Close the
+          // fresh browser and don't hand it to anyone.
+          await fresh.close().catch(() => {});
+          return;
+        }
+
         const waiter = this.waiters.shift();
         if (waiter) {
           waiter.resolve(fresh);
         } else {
           this.available.push(slot);
         }
-      } catch {
+      } catch (err) {
         // Launch failed — remove this slot from the pool entirely so
-        // stats reflect the reduced capacity. Waiters stay queued and
-        // will be served by other slots or future releases.
+        // stats reflect the reduced capacity.
         const idx = this.slots.indexOf(slot);
         if (idx !== -1) {
           this.slots.splice(idx, 1);
+        }
+        console.error(
+          `[BrowserPool] recycleSlot launch failed (slot ${idx}, pool size now ${this.slots.length}):`,
+          err,
+        );
+
+        // If pool is completely exhausted with waiters pending, reject
+        // them all — no remaining slots can ever serve them.
+        if (this.slots.length === 0 && this.waiters.length > 0) {
+          const stale = this.waiters.splice(0);
+          for (const w of stale) {
+            w.reject(
+              new Error("BrowserPool exhausted: all slots failed to launch"),
+            );
+          }
         }
       }
     })();
