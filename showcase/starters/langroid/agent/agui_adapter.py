@@ -1,14 +1,20 @@
 """
 AG-UI SSE Adapter for Langroid
 
-Implements the AG-UI protocol over SSE, translating between
-Langroid's ChatAgent and the AG-UI event stream that CopilotKit expects.
+Implements the AG-UI protocol over SSE, calling the OpenAI chat completions
+API directly (via ``openai.AsyncOpenAI``) and translating the response into
+the AG-UI event stream that CopilotKit expects. Tool schemas are derived
+from Langroid ToolMessage subclasses defined in ``agents.agent``.
+
+The adapter preserves structured multi-turn messages (including ``role:
+"tool"`` with ``tool_call_id``) so that aimock fixture matchers can match
+follow-up requests by toolCallId — enabling the frontend tool execution
+loop (e.g. gen-ui-headless: show_card → follow-up narration).
 
 AG-UI event types used:
   - RUN_STARTED / RUN_FINISHED
   - TEXT_MESSAGE_START / TEXT_MESSAGE_CONTENT / TEXT_MESSAGE_END
   - TOOL_CALL_START / TOOL_CALL_ARGS / TOOL_CALL_END
-  - STATE_SNAPSHOT
 """
 
 from __future__ import annotations
@@ -16,6 +22,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import os
 import uuid
 from dataclasses import dataclass
 from types import MappingProxyType
@@ -34,7 +41,6 @@ from ag_ui.core import (
     ToolCallStartEvent,
     ToolCallArgsEvent,
     ToolCallEndEvent,
-    StateSnapshotEvent,
     RunAgentInput,
 )
 from fastapi import Request
@@ -42,14 +48,12 @@ from fastapi.responses import JSONResponse, StreamingResponse
 
 from .agent import (
     build_agent_config_system_prompt,
-    create_agent,
     extract_agent_config_properties,
     ALL_TOOLS,
-    BACKEND_TOOLS,
     FRONTEND_TOOL_NAMES,
+    SYSTEM_PROMPT,
 )
 
-import langroid as lr
 from langroid.agent.tool_message import ToolMessage
 
 logger = logging.getLogger(__name__)
@@ -244,6 +248,209 @@ async def _run_backend_tool(
         _execute_backend_tool, tool_instance, tool_name
     )
 
+def _agui_messages_to_openai(
+    messages: list,
+    system_prompt: str,
+) -> list[dict[str, Any]]:
+    """Convert AG-UI messages to OpenAI chat completion format.
+
+    AG-UI messages arrive as typed Pydantic models (UserMessage,
+    AssistantMessage, ToolMessage, etc.) with fields like ``tool_calls``
+    and ``tool_call_id``. The previous flattening logic (``"role: content"``)
+    lost these structured fields, preventing aimock's ``toolCallId`` fixture
+    matcher from finding follow-up tool results.
+
+    This function preserves the full message structure so the OpenAI API
+    (or aimock standing in for it) receives proper multi-turn conversations
+    including ``role: "tool"`` messages with ``tool_call_id``.
+    """
+    oai_msgs: list[dict[str, Any]] = [
+        {"role": "system", "content": system_prompt},
+    ]
+
+    for msg in messages:
+        role = getattr(msg, "role", None)
+        if not isinstance(role, str):
+            if isinstance(msg, dict):
+                role = msg.get("role")
+            if not isinstance(role, str):
+                continue
+
+        if role == "tool":
+            # AG-UI ToolMessage → OpenAI tool result message.
+            tool_call_id = getattr(msg, "tool_call_id", None)
+            if isinstance(msg, dict):
+                tool_call_id = tool_call_id or msg.get("tool_call_id")
+            content = getattr(msg, "content", "") or ""
+            if isinstance(msg, dict):
+                content = content or msg.get("content", "")
+            if tool_call_id:
+                oai_msgs.append({
+                    "role": "tool",
+                    "tool_call_id": str(tool_call_id),
+                    "content": str(content),
+                })
+            continue
+
+        if role == "assistant":
+            # AG-UI AssistantMessage may carry tool_calls.
+            content = getattr(msg, "content", None)
+            if isinstance(msg, dict):
+                content = content or msg.get("content")
+            tool_calls_raw = getattr(msg, "tool_calls", None)
+            if isinstance(msg, dict):
+                tool_calls_raw = tool_calls_raw or msg.get("tool_calls")
+
+            oai_msg: dict[str, Any] = {"role": "assistant"}
+            if content:
+                oai_msg["content"] = str(content)
+            if tool_calls_raw:
+                oai_tcs = []
+                for tc in tool_calls_raw:
+                    tc_id = getattr(tc, "id", None)
+                    fn = getattr(tc, "function", None)
+                    if fn is None and isinstance(tc, dict):
+                        fn_name = tc.get("function", {}).get("name", "")
+                        fn_args = tc.get("function", {}).get("arguments", "")
+                        tc_id = tc_id or tc.get("id", "")
+                    else:
+                        fn_name = getattr(fn, "name", "") if fn else ""
+                        fn_args = getattr(fn, "arguments", "") if fn else ""
+                    if tc_id and fn_name:
+                        oai_tcs.append({
+                            "id": str(tc_id),
+                            "type": "function",
+                            "function": {
+                                "name": str(fn_name),
+                                "arguments": str(fn_args),
+                            },
+                        })
+                if oai_tcs:
+                    oai_msg["tool_calls"] = oai_tcs
+                    # OpenAI requires content to be null (not missing)
+                    # when tool_calls are present and there's no text.
+                    if "content" not in oai_msg:
+                        oai_msg["content"] = None
+            else:
+                # Plain assistant text — ensure content is present.
+                if "content" not in oai_msg:
+                    oai_msg["content"] = ""
+            oai_msgs.append(oai_msg)
+            continue
+
+        if role in ("user", "system", "developer"):
+            content = getattr(msg, "content", None)
+            if isinstance(msg, dict):
+                content = content or msg.get("content")
+            if content is not None:
+                oai_msgs.append({
+                    "role": role,
+                    "content": str(content),
+                })
+            continue
+
+        # Unknown role — skip with a debug log.
+        logger.debug(
+            "Skipping message with unrecognized role %r in "
+            "_agui_messages_to_openai",
+            role,
+        )
+
+    return oai_msgs
+
+def _build_openai_tools() -> list[dict[str, Any]]:
+    """Build OpenAI-format tool definitions from ALL_TOOLS.
+
+    Each Langroid ToolMessage subclass declares ``request`` (tool name),
+    ``purpose`` (description), and typed fields (parameters). We convert
+    these into the ``{"type": "function", "function": {...}}`` shape that
+    the OpenAI chat completions API expects.
+    """
+    tools: list[dict[str, Any]] = []
+    for tool_cls in ALL_TOOLS:
+        name = tool_cls.default_value("request")
+        purpose = tool_cls.default_value("purpose") if hasattr(tool_cls, "purpose") else ""
+
+        # Build parameters from model fields, excluding metadata.
+        properties: dict[str, Any] = {}
+        required: list[str] = []
+        for field_name, field_info in tool_cls.model_fields.items():
+            if field_name in ("request", "purpose", "result"):
+                continue
+            # Simple type mapping — sufficient for aimock fixture matching.
+            annotation = field_info.annotation
+            if annotation is str or (hasattr(annotation, "__origin__") is False and annotation is str):
+                prop = {"type": "string"}
+            elif annotation is int:
+                prop = {"type": "integer"}
+            elif annotation is float:
+                prop = {"type": "number"}
+            elif annotation is bool:
+                prop = {"type": "boolean"}
+            elif annotation is list or (hasattr(annotation, "__origin__") and getattr(annotation, "__origin__", None) is list):
+                prop = {"type": "array"}
+            else:
+                prop = {"type": "string"}
+
+            desc = ""
+            if hasattr(field_info, "description") and field_info.description:
+                desc = field_info.description
+            elif hasattr(field_info, "metadata"):
+                for m in field_info.metadata:
+                    if isinstance(m, str):
+                        desc = m
+                        break
+            if desc:
+                prop["description"] = desc
+
+            properties[field_name] = prop
+            if field_info.default is pydantic.fields.PydanticUndefined:
+                required.append(field_name)
+
+        func_def: dict[str, Any] = {
+            "name": name,
+            "description": purpose or f"Tool: {name}",
+            "parameters": {
+                "type": "object",
+                "properties": properties,
+            },
+        }
+        if required:
+            func_def["parameters"]["required"] = required
+
+        tools.append({"type": "function", "function": func_def})
+
+    return tools
+
+# Cache tool definitions — they don't change at runtime.
+_OPENAI_TOOLS: list[dict[str, Any]] | None = None
+
+def _get_openai_tools() -> list[dict[str, Any]]:
+    """Return cached OpenAI tool definitions."""
+    global _OPENAI_TOOLS
+    if _OPENAI_TOOLS is None:
+        _OPENAI_TOOLS = _build_openai_tools()
+    return _OPENAI_TOOLS
+
+async def _call_openai(
+    messages: list[dict[str, Any]],
+    tools: list[dict[str, Any]],
+    model: str,
+) -> Any:
+    """Call the OpenAI chat completions API directly.
+
+    Uses ``openai.AsyncOpenAI()`` which reads ``OPENAI_API_KEY`` and
+    ``OPENAI_BASE_URL`` from the environment (aimock sets the base URL
+    in the showcase). Returns the first choice's message object.
+    """
+    client = openai.AsyncOpenAI()
+    response = await client.chat.completions.create(
+        model=model,
+        messages=messages,
+        tools=tools if tools else openai.NOT_GIVEN,
+    )
+    return response.choices[0].message
+
 async def handle_run(request: Request) -> StreamingResponse:
     """Handle an AG-UI /run endpoint — parse input, run agent, stream events."""
     # Parse request body defensively. A malformed body (bad JSON, missing
@@ -290,49 +497,25 @@ async def handle_run(request: Request) -> StreamingResponse:
     agent_config_props = extract_agent_config_properties(
         run_input.forwarded_props
     )
-    system_override: str | None = None
+    system_prompt = SYSTEM_PROMPT
     if agent_config_props is not None:
-        system_override = build_agent_config_system_prompt(
+        system_prompt = build_agent_config_system_prompt(
             tone=agent_config_props.get("tone"),
             expertise=agent_config_props.get("expertise"),
             response_length=agent_config_props.get("responseLength"),
         )
-    agent = create_agent(system_message=system_override)
 
-    # Build conversation history from all messages so multi-turn works.
-    # Each ``msg.role`` / ``msg.content`` must be a string — silently
-    # f-stringifying ``None`` or a complex object produces garbage like
-    # "None: {'foo': 'bar'}" that the LLM then tries to interpret as
-    # conversation. Drop non-string entries and log a warning so the
-    # shape drift is at least visible in ops logs.
-    conversation_parts: list[str] = []
-    if run_input.messages:
-        for msg in run_input.messages:
-            if hasattr(msg, "role") and hasattr(msg, "content"):
-                role = getattr(msg, "role", None)
-                content = getattr(msg, "content", None)
-                if not isinstance(role, str) or not isinstance(content, str):
-                    logger.warning(
-                        "Skipping message with non-string role/content "
-                        "(role=%s, content=%s)",
-                        type(role).__name__,
-                        type(content).__name__,
-                    )
-                    continue
-                conversation_parts.append(f"{role}: {content}")
-            elif isinstance(msg, dict):
-                role = msg.get("role", "user")
-                content = msg.get("content", "")
-                if not isinstance(role, str) or not isinstance(content, str):
-                    logger.warning(
-                        "Skipping dict message with non-string role/content "
-                        "(role=%s, content=%s)",
-                        type(role).__name__,
-                        type(content).__name__,
-                    )
-                    continue
-                conversation_parts.append(f"{role}: {content}")
-    user_message = "\n".join(conversation_parts) if conversation_parts else ""
+    # Build proper OpenAI-format messages from the AG-UI message history.
+    # The previous approach flattened all messages into a single "role:
+    # content" string, which lost structured fields like tool_call_id and
+    # tool_calls. This prevented aimock's toolCallId fixture matcher from
+    # finding follow-up tool results, breaking the gen-ui-headless flow
+    # (frontend tool → follow-up narration never arrived).
+    oai_messages = _agui_messages_to_openai(
+        run_input.messages or [], system_prompt
+    )
+    model = os.getenv("LANGROID_MODEL", "gpt-4.1")
+    oai_tools = _get_openai_tools()
 
     # Compute the effective thread_id ONCE so every event emitted for this
     # run (RUN_STARTED, RUN_FINISHED, ...) references the same thread.
@@ -376,37 +559,25 @@ async def handle_run(request: Request) -> StreamingResponse:
             run_id=run_id,
         ))
 
-        # Run the Langroid agent. Any failure here happens *after*
-        # RUN_STARTED was emitted, so the frontend is already waiting
-        # for a RUN_FINISHED. If we let the exception escape here, the
-        # generator dies mid-stream and the UI hangs forever. Emit a
-        # sanitized TEXT_MESSAGE triple (so the user sees *something*)
-        # and then RUN_FINISHED to close out the run cleanly. The
-        # full traceback is preserved server-side via
-        # ``logger.exception``.
+        # Call the LLM directly via the OpenAI client. This replaced
+        # langroid's ``agent.llm_response_async(flattened_string)`` to
+        # preserve structured multi-turn messages (tool_calls,
+        # tool_call_id) that aimock's fixture matchers depend on for
+        # follow-up requests (e.g. gen-ui-headless second-leg narration).
         #
-        # Exception scope: narrowed to the set of runtime failures we
-        # actually expect from ``agent.llm_response_async`` — upstream
-        # LLM API errors (``openai.APIError``), transport failures
-        # (``httpx.HTTPError``), timeouts, and schema drift
-        # (``pydantic.ValidationError``). Programmer bugs
-        # (``AttributeError``, ``NameError``, ``TypeError``) are NOT
-        # sanitized here — they propagate up and surface as real
-        # tracebacks. Any uncaught mid-stream exception is still
-        # handled one level up by the route boundary's try/except, but
-        # with a less operator-friendly "unknown error" message —
-        # that's the right trade: a narrower list keeps legitimate
-        # bugs visible instead of masking them as "Agent run failed:
-        # AttributeError".
+        # Any failure here happens *after* RUN_STARTED was emitted, so
+        # the frontend is already waiting for a RUN_FINISHED. Emit a
+        # sanitized TEXT_MESSAGE triple and then RUN_FINISHED to close
+        # out the run cleanly. The full traceback is preserved
+        # server-side via ``logger.exception``.
         try:
-            response = await agent.llm_response_async(user_message)
+            response = await _call_openai(oai_messages, oai_tools, model)
         except (
             openai.APIError,
             httpx.HTTPError,
             asyncio.TimeoutError,
-            pydantic.ValidationError,
         ) as exc:
-            logger.exception("agent.llm_response_async failed mid-stream")
+            logger.exception("_call_openai failed mid-stream")
             err_payload = json.dumps({
                 "error": f"Agent run failed: {exc.__class__.__name__}"
             })
@@ -428,20 +599,12 @@ async def handle_run(request: Request) -> StreamingResponse:
             ))
             return
 
-        # `response` is a Langroid ChatDocument. `.content` is the canonical
-        # source of text; `str(response)` includes debug formatting and is
-        # not a useful fallback, so default to "" when content is absent.
+        # ``response`` is an OpenAI ChatCompletionMessage. ``.content``
+        # is the text; ``.tool_calls`` carries structured tool calls.
         content = getattr(response, "content", None) or ""
+        oai_tool_calls = getattr(response, "tool_calls", None) or []
 
-        # Langroid's OpenAI-backed LLM emits tool calls on
-        # `response.oai_tool_calls` (OpenAI tools API) or `response.function_call`
-        # (legacy function-calling API) with empty `content`. We must synthesize
-        # AG-UI TOOL_CALL_* events from those so CopilotKit's frontend can
-        # render the tool card (weather, haiku, etc.).
-        oai_tool_calls = getattr(response, "oai_tool_calls", None) or []
-        function_call = getattr(response, "function_call", None)
-
-        if oai_tool_calls or function_call:
+        if oai_tool_calls:
             # Emit synthesized tool-call events for each OAI tool call.
             # ``_parse_tool_args`` returns a ``ParsedArgs`` with
             # ``status`` in ``{"ok", "empty", "malformed"}``. We only
@@ -451,31 +614,14 @@ async def handle_run(request: Request) -> StreamingResponse:
             # UI card). The warning already fired inside
             # ``_parse_tool_args`` on the malformed path.
             calls_to_emit = []
-            if oai_tool_calls:
-                for tc in oai_tool_calls:
-                    fn = getattr(tc, "function", None)
-                    name = getattr(fn, "name", None) if fn is not None else None
-                    raw_args = getattr(fn, "arguments", {}) if fn is not None else {}
-                    parsed = _parse_tool_args(raw_args)
-                    call_id = getattr(tc, "id", None) or str(uuid.uuid4())
-                    if name and parsed.usable:
-                        calls_to_emit.append((call_id, name, parsed.args))
-                    elif name:
-                        logger.warning(
-                            "Skipping tool call %s: arguments could not be parsed (status=%s)",
-                            name,
-                            parsed.status,
-                        )
-            elif function_call is not None:
-                # Legacy function_call shape: single call. Empty-string
-                # ``arguments`` is normalized to ``"malformed"`` by
-                # ``_parse_tool_args`` so this path behaves identically
-                # to a malformed-JSON oai call (skip + warn).
-                name = getattr(function_call, "name", None)
-                raw_args = getattr(function_call, "arguments", "") or ""
+            for tc in oai_tool_calls:
+                fn = getattr(tc, "function", None)
+                name = getattr(fn, "name", None) if fn is not None else None
+                raw_args = getattr(fn, "arguments", {}) if fn is not None else {}
                 parsed = _parse_tool_args(raw_args)
+                call_id = getattr(tc, "id", None) or str(uuid.uuid4())
                 if name and parsed.usable:
-                    calls_to_emit.append((str(uuid.uuid4()), name, parsed.args))
+                    calls_to_emit.append((call_id, name, parsed.args))
                 elif name:
                     logger.warning(
                         "Skipping tool call %s: arguments could not be parsed (status=%s)",
@@ -483,40 +629,62 @@ async def handle_run(request: Request) -> StreamingResponse:
                         parsed.status,
                     )
 
-            for call_id, tool_name, tool_args in calls_to_emit:
-                yield _sse_line(ToolCallStartEvent(
-                    type=EventType.TOOL_CALL_START,
-                    tool_call_id=call_id,
-                    tool_call_name=tool_name,
+            if calls_to_emit:
+                # Emit a TEXT_MESSAGE_START to create a parent assistant
+                # message that the tool calls attach to.  Without this,
+                # the AG-UI client still synthesizes a message per tool
+                # call, but the Runtime's middleware SSE parser (used by
+                # open-gen-ui and other middleware) cannot associate tool
+                # calls with a parent message — they are silently dropped.
+                # Emitting the triple (START → tool calls → END) mirrors
+                # what LangGraph and google-adk adapters produce.
+                tc_parent_id = str(uuid.uuid4())
+                yield _sse_line(TextMessageStartEvent(
+                    type=EventType.TEXT_MESSAGE_START,
+                    message_id=tc_parent_id,
                 ))
 
-                yield _sse_line(ToolCallArgsEvent(
-                    type=EventType.TOOL_CALL_ARGS,
-                    tool_call_id=call_id,
-                    delta=json.dumps(tool_args),
+                for call_id, tool_name, tool_args in calls_to_emit:
+                    yield _sse_line(ToolCallStartEvent(
+                        type=EventType.TOOL_CALL_START,
+                        tool_call_id=call_id,
+                        tool_call_name=tool_name,
+                        parent_message_id=tc_parent_id,
+                    ))
+
+                    yield _sse_line(ToolCallArgsEvent(
+                        type=EventType.TOOL_CALL_ARGS,
+                        tool_call_id=call_id,
+                        delta=json.dumps(tool_args),
+                    ))
+
+                    yield _sse_line(ToolCallEndEvent(
+                        type=EventType.TOOL_CALL_END,
+                        tool_call_id=call_id,
+                    ))
+
+                    # For backend tools, execute and stream the result as text.
+                    # Both the oai-path and the content-JSON path below fan
+                    # out through ``_run_backend_tool`` so sanitization and
+                    # off-thread execution behave identically.
+                    if tool_name not in FRONTEND_TOOL_NAMES:
+                        tool_cls = _TOOL_BY_NAME.get(tool_name)
+                        result: str | None = None
+                        if tool_cls is not None:
+                            result = await _run_backend_tool(
+                                tool_cls, tool_name, tool_args
+                            )
+
+                        if result:
+                            msg_id = str(uuid.uuid4())
+                            for line in emit_text_block(msg_id, result):
+                                yield line
+
+                # Close the parent message that wraps the tool calls.
+                yield _sse_line(TextMessageEndEvent(
+                    type=EventType.TEXT_MESSAGE_END,
+                    message_id=tc_parent_id,
                 ))
-
-                yield _sse_line(ToolCallEndEvent(
-                    type=EventType.TOOL_CALL_END,
-                    tool_call_id=call_id,
-                ))
-
-                # For backend tools, execute and stream the result as text.
-                # Both the oai-path and the content-JSON path below fan
-                # out through ``_run_backend_tool`` so sanitization and
-                # off-thread execution behave identically.
-                if tool_name not in FRONTEND_TOOL_NAMES:
-                    tool_cls = _TOOL_BY_NAME.get(tool_name)
-                    result: str | None = None
-                    if tool_cls is not None:
-                        result = await _run_backend_tool(
-                            tool_cls, tool_name, tool_args
-                        )
-
-                    if result:
-                        msg_id = str(uuid.uuid4())
-                        for line in emit_text_block(msg_id, result):
-                            yield line
 
             yield _sse_line(RunFinishedEvent(
                 type=EventType.RUN_FINISHED,
@@ -526,7 +694,7 @@ async def handle_run(request: Request) -> StreamingResponse:
             return
 
         # Check if the response contains a tool call parsed from content
-        tool_msg = _try_parse_tool(content, agent)
+        tool_msg = _try_parse_tool(content)
 
         if tool_msg is not None:
             tool_name = tool_msg.default_value("request") if hasattr(tool_msg, "default_value") else getattr(tool_msg, "request", "unknown")
@@ -545,10 +713,21 @@ async def handle_run(request: Request) -> StreamingResponse:
                     continue
                 tool_args[field_name] = value
 
+            # Emit a parent TEXT_MESSAGE that wraps the tool call, same
+            # as the oai_tool_calls path above. Without this, the
+            # Runtime middleware-sse-parser cannot attach the tool call
+            # to a parent message and silently drops it.
+            ct_parent_id = str(uuid.uuid4())
+            yield _sse_line(TextMessageStartEvent(
+                type=EventType.TEXT_MESSAGE_START,
+                message_id=ct_parent_id,
+            ))
+
             yield _sse_line(ToolCallStartEvent(
                 type=EventType.TOOL_CALL_START,
                 tool_call_id=tool_call_id,
                 tool_call_name=tool_name,
+                parent_message_id=ct_parent_id,
             ))
 
             yield _sse_line(ToolCallArgsEvent(
@@ -596,6 +775,10 @@ async def handle_run(request: Request) -> StreamingResponse:
                         str(uuid.uuid4()), err_payload
                     ):
                         yield line
+                    yield _sse_line(TextMessageEndEvent(
+                        type=EventType.TEXT_MESSAGE_END,
+                        message_id=ct_parent_id,
+                    ))
                     yield _sse_line(RunFinishedEvent(
                         type=EventType.RUN_FINISHED,
                         thread_id=thread_id,
@@ -605,6 +788,12 @@ async def handle_run(request: Request) -> StreamingResponse:
                 if result:
                     for line in emit_text_block(message_id, result):
                         yield line
+
+            # Close the parent message that wraps the tool call.
+            yield _sse_line(TextMessageEndEvent(
+                type=EventType.TEXT_MESSAGE_END,
+                message_id=ct_parent_id,
+            ))
         else:
             # Plain text response — stream it. emit_text_block handles the
             # empty-delta guard (AG-UI requires non-empty deltas, e.g. a
@@ -628,14 +817,14 @@ async def handle_run(request: Request) -> StreamingResponse:
         },
     )
 
-def _try_parse_tool(content: str, agent: lr.ChatAgent) -> ToolMessage | None:
+def _try_parse_tool(content: str) -> ToolMessage | None:
     """Try to parse a Langroid ToolMessage from the LLM response content.
 
-    Langroid's `agent.llm_response_async(...)` returns a `ChatDocument`,
-    not a `ToolMessage`, so the previous isinstance-based path was
-    effectively dead code. We rely on the JSON fallback, which matches
-    both the Langroid tool envelope (`{"request": ..., ...}`) and the
-    OpenAI function-call shape (`{"name": ..., "arguments": ...}`).
+    The OpenAI response's ``content`` field sometimes contains a JSON
+    tool envelope (Langroid convention: ``{"request": ..., ...}``) or
+    an OpenAI function-call shape (``{"name": ..., "arguments": ...}``).
+    This fallback path catches those cases when the response didn't use
+    the structured ``tool_calls`` field.
 
     Logging philosophy (matters — this is on the hot path for every
     turn, including plain chat replies like "hello"):
