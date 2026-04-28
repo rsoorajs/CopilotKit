@@ -61,6 +61,7 @@ class SubagentsSnapshot(BaseModel):
 # prompt. They don't share memory or tools with the supervisor — the
 # supervisor only sees what each sub-agent's final reply produces.
 
+# @region[subagent-setup]
 _SUB_LLM_CONFIG = LLMConfig({"model": "gpt-4o-mini", "stream": False})
 
 _research_agent = ConversableAgent(
@@ -102,6 +103,7 @@ _critique_agent = ConversableAgent(
     human_input_mode="NEVER",
     max_consecutive_auto_reply=1,
 )
+# @endregion[subagent-setup]
 
 
 async def _invoke_sub_agent(sub_agent: ConversableAgent, task: str) -> str:
@@ -215,6 +217,12 @@ async def _run_delegation(
 # ---------------------------------------------------------------------------
 
 
+# @region[supervisor-delegation-tools]
+# Each @tool wraps a sub-agent invocation. The supervisor LLM "calls"
+# these tools to delegate work; each call asynchronously runs the
+# matching sub-agent, records the delegation into shared state via
+# ContextVariables, and returns a ReplyResult the supervisor reads as
+# its tool output on the next step.
 @tool()
 async def research_agent(
     context_variables: ContextVariables,
@@ -266,6 +274,7 @@ async def critique_agent(
     return await _run_delegation(
         context_variables, "critique_agent", _critique_agent, task
     )
+# @endregion[supervisor-delegation-tools]
 
 
 # ---------------------------------------------------------------------------
