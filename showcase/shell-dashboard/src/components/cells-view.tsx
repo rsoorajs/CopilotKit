@@ -133,7 +133,11 @@ export function CellsView({ catalog, liveStatus, connection }: CellsViewProps) {
         if (d.isRegression) regressions++;
         // Count cells with red rollup as failures
         if (cell.feature !== null) {
-          const cellState = resolveCell(liveStatus, cell.integration, cell.feature);
+          const cellState = resolveCell(
+            liveStatus,
+            cell.integration,
+            cell.feature,
+          );
           if (cellState.rollup === "red") failures++;
         }
       }

@@ -7,7 +7,13 @@
  * label, tooltip, and — for red/amber badges — failure metadata: fail_count,
  * first_failure_at, and the signal payload.
  */
-import { resolveCell, type CellState, type BadgeRender, type LiveStatusMap, type ConnectionStatus } from "@/lib/live-status";
+import {
+  resolveCell,
+  type CellState,
+  type BadgeRender,
+  type LiveStatusMap,
+  type ConnectionStatus,
+} from "@/lib/live-status";
 import { TONE_CLASS, DOT_BG } from "./badges";
 
 export interface CellDrilldownProps {
@@ -21,7 +27,10 @@ export interface CellDrilldownProps {
 }
 
 /** Dimension metadata for display ordering. */
-const DIMENSIONS: Array<{ key: keyof Omit<CellState, "rollup">; label: string }> = [
+const DIMENSIONS: Array<{
+  key: keyof Omit<CellState, "rollup">;
+  label: string;
+}> = [
   { key: "health", label: "Health" },
   { key: "e2e", label: "E2E" },
   { key: "smoke", label: "Smoke" },
@@ -48,7 +57,8 @@ function formatSignal(signal: unknown): string | null {
   if (typeof signal === "string") return signal || null;
   if (typeof signal === "object") {
     if (Array.isArray(signal) && signal.length === 0) return null;
-    if (!Array.isArray(signal) && Object.keys(signal as object).length === 0) return null;
+    if (!Array.isArray(signal) && Object.keys(signal as object).length === 0)
+      return null;
     try {
       return JSON.stringify(signal, null, 2);
     } catch {
@@ -69,10 +79,16 @@ function BadgeRow({ badge, label }: { badge: BadgeRender; label: string }) {
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className={`inline-block w-2 h-2 rounded-full ${DOT_BG[badge.tone]}`} />
-          <span className="text-xs font-medium text-[var(--text)]">{label}</span>
+          <span
+            className={`inline-block w-2 h-2 rounded-full ${DOT_BG[badge.tone]}`}
+          />
+          <span className="text-xs font-medium text-[var(--text)]">
+            {label}
+          </span>
         </div>
-        <span className={`text-xs font-semibold tabular-nums ${TONE_CLASS[badge.tone]}`}>
+        <span
+          className={`text-xs font-semibold tabular-nums ${TONE_CLASS[badge.tone]}`}
+        >
           {badge.label}
         </span>
       </div>
@@ -84,7 +100,10 @@ function BadgeRow({ badge, label }: { badge: BadgeRender; label: string }) {
           {badge.row.fail_count > 0 && (
             <div className="text-[10px]">
               <span className="text-[var(--text-muted)]">Failures:</span>{" "}
-              <span data-testid="fail-count" className="text-[var(--danger)] font-semibold tabular-nums">
+              <span
+                data-testid="fail-count"
+                className="text-[var(--danger)] font-semibold tabular-nums"
+              >
                 {badge.row.fail_count}
               </span>
             </div>
@@ -154,8 +173,12 @@ export function CellDrilldown({
       </div>
       {/* Rollup */}
       <div className="px-3 py-1.5 flex items-center gap-2 border-b border-[var(--border)]">
-        <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Rollup</span>
-        <span className={`inline-block w-2 h-2 rounded-full ${DOT_BG[cell.rollup]}`} />
+        <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
+          Rollup
+        </span>
+        <span
+          className={`inline-block w-2 h-2 rounded-full ${DOT_BG[cell.rollup]}`}
+        />
         <span className={`text-xs font-semibold ${TONE_CLASS[cell.rollup]}`}>
           {cell.rollup}
         </span>

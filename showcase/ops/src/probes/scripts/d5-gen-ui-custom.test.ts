@@ -262,9 +262,7 @@ describe("d5-gen-ui-custom script", () => {
       },
     });
 
-    await expect(turn.assertions!(page)).rejects.toThrow(
-      /zero children/,
-    );
+    await expect(turn.assertions!(page)).rejects.toThrow(/zero children/);
   });
 
   it("haiku: assertion PASSES on a healthy haiku card render (no narration check)", async () => {

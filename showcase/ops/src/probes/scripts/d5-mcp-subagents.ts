@@ -200,9 +200,7 @@ async function readFullPageText(page: Page): Promise<string> {
         body: { innerText?: string; textContent?: string };
       };
     };
-    return (
-      win.document.body.innerText ?? win.document.body.textContent ?? ""
-    );
+    return win.document.body.innerText ?? win.document.body.textContent ?? "";
   });
 }
 

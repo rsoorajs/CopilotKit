@@ -152,9 +152,7 @@ async function readLatestAssistantText(page: Page): Promise<string> {
 const TEXT_POLL_TIMEOUT_MS = 3_000;
 const TEXT_POLL_INTERVAL_MS = 200;
 
-async function waitForNonEmptyAssistantText(
-  page: Page,
-): Promise<string> {
+async function waitForNonEmptyAssistantText(page: Page): Promise<string> {
   // Fast path: text is already available (no tool-call-only lag).
   const initial = (await readLatestAssistantText(page)) ?? "";
   if (initial.length > 0) return initial;

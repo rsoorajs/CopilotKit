@@ -219,9 +219,7 @@ describe("deriveDepth", () => {
   it("isRegression is true when health drops and max_depth > 0", () => {
     // Cell had D1 previously but now health is red = D0
     const c = cell("lgp", "agentic-chat", "wired", 1);
-    const live = mapOf([
-      row("health:lgp", "health", "red"),
-    ]);
+    const live = mapOf([row("health:lgp", "health", "red")]);
     const result = deriveDepth(c, live);
     expect(result.achieved).toBe(0);
     expect(result.isRegression).toBe(true);

@@ -163,9 +163,7 @@ async function assertHaikuCardShape(
 
     // Try the specific haiku testid first, then fall back to any
     // rendered component with children.
-    const haikuCard = win.document.querySelector(
-      '[data-testid="haiku-card"]',
-    );
+    const haikuCard = win.document.querySelector('[data-testid="haiku-card"]');
     if (haikuCard) {
       return {
         found: true as const,
