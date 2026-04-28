@@ -183,6 +183,93 @@ const nextConfig: NextConfig = {
         destination: "/:path*",
         permanent: true,
       },
+
+      // /learn/* tree retired. The seven explanation-tier pages were
+      // promoted into the Concepts subgroup, the multi-conversation
+      // tutorial moved to /tutorials/, the open-json-ui page moved to
+      // /generative-ui/, and the What's New tree became its own
+      // top-level section. Redirects below funnel old URLs to the
+      // canonical homes.
+      {
+        source: "/learn",
+        destination: "/concepts/architecture",
+        permanent: true,
+      },
+      {
+        source: "/learn/architecture",
+        destination: "/concepts/architecture",
+        permanent: true,
+      },
+      {
+        source: "/learn/threads",
+        destination: "/concepts/threads",
+        permanent: true,
+      },
+      {
+        source: "/learn/intelligence-platform",
+        destination: "/concepts/intelligence-platform",
+        permanent: true,
+      },
+      {
+        source: "/learn/agentic-protocols",
+        destination: "/concepts/agentic-protocols",
+        permanent: true,
+      },
+      {
+        source: "/learn/ag-ui-protocol",
+        destination: "/concepts/ag-ui-protocol",
+        permanent: true,
+      },
+      {
+        source: "/learn/a2a-protocol",
+        destination: "/concepts/a2a-protocol",
+        permanent: true,
+      },
+      {
+        source: "/learn/connect-mcp-servers",
+        destination: "/concepts/mcp-servers",
+        permanent: true,
+      },
+      {
+        source: "/learn/generative-ui",
+        destination: "/concepts/generative-ui-overview",
+        permanent: true,
+      },
+      {
+        source: "/learn/generative-ui/specs/open-json-ui",
+        destination: "/generative-ui/open-json-ui",
+        permanent: true,
+      },
+      {
+        source: "/learn/generative-ui/specs/a2ui",
+        destination: "/generative-ui/a2ui",
+        permanent: true,
+      },
+      {
+        source: "/learn/generative-ui/specs/mcp-apps",
+        destination: "/generative-ui/mcp-apps",
+        permanent: true,
+      },
+      {
+        source: "/learn/generative-ui/specs",
+        destination: "/concepts/generative-ui-overview",
+        permanent: true,
+      },
+      {
+        source: "/learn/tutorials/multi-conversation-chat",
+        destination: "/tutorials/multi-conversation-chat",
+        permanent: true,
+      },
+      {
+        source: "/learn/whats-new/:path*",
+        destination: "/whats-new/:path*",
+        permanent: true,
+      },
+      {
+        source: "/learn/whats-new",
+        destination: "/whats-new",
+        permanent: true,
+      },
     ];
   },
 };
