@@ -220,8 +220,16 @@ export function CellMatrix({
   useEffect(() => {
     if (!selectedCell) return;
     function handleClickOutside(e: MouseEvent) {
-      const drilldown = document.querySelector("[data-testid='cell-drilldown']");
-      if (drilldown && !drilldown.contains(e.target as Node)) {
+      const target = e.target as Node;
+      const drilldown = document.querySelector(
+        "[data-testid='cell-drilldown']",
+      );
+      if (drilldown && !drilldown.contains(target)) {
+        // Don't interfere with cell button clicks — their onClick handles toggle
+        const cellBtn = (target as Element).closest?.(
+          "[data-testid^='cell-btn-']",
+        );
+        if (cellBtn) return;
         setSelectedCell(null);
       }
     }
