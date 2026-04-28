@@ -65,6 +65,9 @@ RUN pnpm --filter @copilotkit/showcase-ops --prod --legacy --ignore-scripts depl
 FROM node:22-bookworm-slim
 WORKDIR /app
 ENV NODE_ENV=production
+# qa probe: repo-root override so the walk-up from dist/probes/drivers/
+# (3 levels to /app) matches the showcase/packages/ layout copied above.
+ENV QA_REPO_ROOT=/app
 # Playwright cache lives outside /home/node so `chown` below doesn't
 # have to recurse over the ~300MB chromium tree on every build. Setting
 # PLAYWRIGHT_BROWSERS_PATH at this stage pins the install target; the
@@ -94,6 +97,11 @@ RUN node ./node_modules/playwright/cli.js install --with-deps chromium \
 # keep the image lean until another probe config actually needs those trees.
 COPY --from=build /repo/pnpm-workspace.yaml ./pnpm-workspace.yaml
 COPY --from=build /repo/packages ./packages
+# qa probe: the driver reads showcase/packages/<slug>/manifest.yaml to
+# check QA file coverage. Copy only the manifests (not full source) to
+# keep the runtime image lean. The qa/ subdirectories are also needed
+# since the driver file-stats qa/<featureId>.md per demo.
+COPY --from=build /repo/showcase/packages ./showcase/packages
 # e2e-smoke probe: the driver's default demos resolver reads
 # `/app/data/registry.json` to look up each Railway service slug's demo
 # list (`tool-rendering` gates the L4 tool-rendering check). The registry
