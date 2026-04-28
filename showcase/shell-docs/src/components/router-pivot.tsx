@@ -48,4 +48,3 @@ export function RouterPivot({ slugPath }: RouterPivotProps) {
     </div>
   );
 }
-
