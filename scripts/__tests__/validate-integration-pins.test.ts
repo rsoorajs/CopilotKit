@@ -30,56 +30,71 @@ describe("validatePins", () => {
     if (fixtureDir) fs.rmSync(fixtureDir, { recursive: true, force: true });
   });
 
-  it("returns no violations when every @copilotkit/* dep matches the expected version", () => {
+  const ENFORCED = new Set(["adk"]);
+
+  it("returns no violations when every enforced integration matches the expected version", () => {
     fixtureDir = setupFixture({
       adk: { "@copilotkit/react-core": "1.56.4" },
-      mastra: {
-        "@copilotkit/react-core": "1.56.4",
-        "@copilotkit/runtime": "1.56.4",
-      },
     });
     const violations = validatePins({
       expectedVersion: "1.56.4",
       integrationsDir: fixtureDir,
+      enforced: ENFORCED,
     });
     expect(violations).toEqual([]);
   });
 
-  it("flags stale exact-pinned versions", () => {
+  it("flags stale exact-pinned versions in enforced integrations", () => {
     fixtureDir = setupFixture({
       adk: { "@copilotkit/react-core": "1.55.2" },
-      "mcp-apps": { "@copilotkit/runtime": "1.52.1" },
     });
     const violations = validatePins({
       expectedVersion: "1.56.4",
       integrationsDir: fixtureDir,
+      enforced: ENFORCED,
     });
-    expect(violations).toHaveLength(2);
-    expect(violations.every((v) => v.reason === "stale")).toBe(true);
+    expect(violations).toHaveLength(1);
+    expect(violations[0].reason).toBe("stale");
   });
 
   it("flags floating dist-tag pins like 'latest' and 'next'", () => {
     fixtureDir = setupFixture({
-      "a2a-middleware": { "@copilotkit/react-core": "latest" },
-      showcase: { "@copilotkit/react-ui": "next" },
+      adk: { "@copilotkit/react-core": "latest" },
     });
     const violations = validatePins({
       expectedVersion: "1.56.4",
       integrationsDir: fixtureDir,
+      enforced: ENFORCED,
     });
-    expect(violations).toHaveLength(2);
-    expect(violations.every((v) => v.reason === "floating-tag")).toBe(true);
+    expect(violations).toHaveLength(1);
+    expect(violations[0].reason).toBe("floating-tag");
+  });
+
+  it("ignores integrations not on the allowlist (the 14 others left for QA)", () => {
+    fixtureDir = setupFixture({
+      adk: { "@copilotkit/react-core": "1.56.4" },
+      mastra: { "@copilotkit/react-core": "1.55.2" },
+      "mcp-apps": { "@copilotkit/runtime": "1.52.1" },
+      "a2a-middleware": { "@copilotkit/react-core": "latest" },
+    });
+    const violations = validatePins({
+      expectedVersion: "1.56.4",
+      integrationsDir: fixtureDir,
+      enforced: ENFORCED,
+    });
+    expect(violations).toEqual([]);
   });
 
   it("ignores intentional pre-release pins (e.g. ag-ui pre-release tags)", () => {
     fixtureDir = setupFixture({
-      "agent-spec": {
+      adk: {
         "@copilotkit/react-core": "0.0.0-mme-ag-ui-0-0-46-20260227141603",
       },
     });
     const violations = validatePins({
       expectedVersion: "1.56.4",
       integrationsDir: fixtureDir,
+      enforced: ENFORCED,
     });
     expect(violations).toEqual([]);
   });
@@ -95,6 +110,7 @@ describe("validatePins", () => {
     const violations = validatePins({
       expectedVersion: "1.56.4",
       integrationsDir: fixtureDir,
+      enforced: ENFORCED,
     });
     expect(violations).toEqual([]);
   });
@@ -113,6 +129,7 @@ describe("validatePins", () => {
     const violations = validatePins({
       expectedVersion: "1.56.4",
       integrationsDir: fixtureDir,
+      enforced: ENFORCED,
     });
     expect(violations).toHaveLength(1);
     expect(violations[0].dep).toBe("@copilotkit/react-core");
@@ -120,10 +137,11 @@ describe("validatePins", () => {
 
   it("skips integrations without a package.json", () => {
     fixtureDir = fs.mkdtempSync(path.join(os.tmpdir(), "validate-pins-skip-"));
-    fs.mkdirSync(path.join(fixtureDir, "agentcore"));
+    fs.mkdirSync(path.join(fixtureDir, "adk"));
     const violations = validatePins({
       expectedVersion: "1.56.4",
       integrationsDir: fixtureDir,
+      enforced: ENFORCED,
     });
     expect(violations).toEqual([]);
   });
