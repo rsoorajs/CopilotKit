@@ -248,6 +248,12 @@ const READY_SELECTORS = [
   '[role="textbox"]',
 ] as const;
 
+/** Compound CSS selector: Playwright matches ANY of the comma-separated
+ *  selectors simultaneously, so a single `waitForSelector` call replaces
+ *  the old sequential loop (which gave each selector the full remaining
+ *  budget, starving subsequent selectors of time). */
+const READY_SELECTOR_COMPOUND = READY_SELECTORS.join(", ");
+
 const defaultLauncher: E2eDemosBrowserLauncher =
   async (): Promise<E2eDemosBrowser> => {
     const mod = (await import("playwright")) as typeof import("playwright");
@@ -809,24 +815,21 @@ async function runDemo(opts: {
       };
     }
 
-    // Try each structural selector in order; first match wins. Neither
-    // matching is surfaced as a selector-error so operators can spot
-    // which demos need a testid added. Keeping the error taxonomy
-    // distinct from a navigation failure lets alert rules branch on
-    // `errorClass` without string-matching prose.
-    //
-    // Abort responsiveness (C7): check the signal at the top of every
-    // iteration so a cap that fires mid-loop bails promptly rather
-    // than walking all 6 selectors at `pageTimeoutMs` each.
-    //
-    // Deadline responsiveness (C11): break out as `selector-timeout`
-    // when the per-demo budget is exhausted instead of starting another
-    // selector wait that would extend the wall-clock past the bound.
-    let lastError: Error | undefined;
-    for (const sel of READY_SELECTORS) {
-      if (abortSignal.aborted) {
-        throw new DOMException("aborted", "AbortError");
-      }
+    // Try ALL structural selectors simultaneously via a compound CSS
+    // selector. Playwright's comma-separated selector returns as soon as
+    // ANY one matches. This replaces the old sequential loop that gave
+    // each selector the full remaining budget — starving later selectors
+    // when the first didn't match.
+    if (abortSignal.aborted) {
+      throw new DOMException("aborted", "AbortError");
+    }
+    try {
+      await page.waitForSelector(READY_SELECTOR_COMPOUND, {
+        state: "visible",
+        timeout: remaining(),
+      });
+      return { ok: true };
+    } catch (err) {
       const left = remaining();
       if (left <= 0) {
         return {
@@ -838,24 +841,15 @@ async function runDemo(opts: {
           ),
         };
       }
-      try {
-        await page.waitForSelector(sel, {
-          state: "visible",
-          timeout: left,
-        });
-        return { ok: true };
-      } catch (err) {
-        lastError = err instanceof Error ? err : new Error(String(err));
-      }
+      return {
+        ok: false,
+        errorClass: "selector-error",
+        errorDesc: truncateUtf8(
+          err instanceof Error ? err.message : "ready selectors not found",
+          1200,
+        ),
+      };
     }
-    return {
-      ok: false,
-      errorClass: "selector-error",
-      errorDesc: truncateUtf8(
-        lastError?.message ?? "ready selectors not found",
-        1200,
-      ),
-    };
   } catch (err) {
     // C5: classify via `err.name === "AbortError"` directly. The prior
     // implementation read `abortSignal.aborted` after the catch settled
