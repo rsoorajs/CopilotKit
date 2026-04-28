@@ -154,11 +154,17 @@ const nextConfig: NextConfig = {
         destination: "/tutorials/:path*",
         permanent: true,
       },
+      // Interrupt-based was a LangGraph-specific page parked in
+      // unselected/. Real homes are
+      // `/<langgraph-slug>/human-in-the-loop/interrupt-flow` (and the
+      // Mastra equivalent). Send anyone landing on the legacy URL to
+      // the framework-agnostic HITL page; soft-default routes them
+      // through to the right framework's interrupt flow if they're
+      // stored as LangGraph or Mastra.
       {
         source:
           "/unselected/generative-ui/your-components/interrupt-based",
-        destination:
-          "/generative-ui/your-components/interrupt-based",
+        destination: "/human-in-the-loop",
         permanent: true,
       },
       // agent-app-context was concept-per-framework only; no canonical
