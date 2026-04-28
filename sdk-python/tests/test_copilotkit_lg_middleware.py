@@ -24,6 +24,7 @@ and what state updates the middleware emits):
 
 from __future__ import annotations
 
+import asyncio
 import json
 from typing import Any
 from unittest.mock import MagicMock
@@ -304,8 +305,8 @@ def test_expose_state_emits_valid_json_payload():
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.asyncio
-async def test_async_wrap_mirrors_sync_behavior_for_state_and_tools():
+def test_async_wrap_mirrors_sync_behavior_for_state_and_tools():
+    """The async path applies the same state/tool augmentations as the sync one."""
     middleware = CopilotKitMiddleware(expose_state=True)
     request = _make_request(
         state={
@@ -322,7 +323,10 @@ async def test_async_wrap_mirrors_sync_behavior_for_state_and_tools():
         received["req"] = req
         return "ok"
 
-    result = await middleware.awrap_model_call(request, handler)
+    async def go():
+        return await middleware.awrap_model_call(request, handler)
+
+    result = asyncio.run(go())
 
     seen = received["req"]
     assert result == "ok"
