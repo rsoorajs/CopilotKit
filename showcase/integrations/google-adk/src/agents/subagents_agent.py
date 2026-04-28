@@ -210,7 +210,7 @@ def _delegate(
     return {"status": "completed", "result": result}
 
 
-def research_agent(tool_context: ToolContext, task: str) -> dict:
+def research_agent(tool_context: ToolContext, topic: str) -> dict:
     """Delegate a research task to the research sub-agent.
 
     Use for: gathering facts, background, definitions, statistics. Returns
@@ -221,17 +221,18 @@ def research_agent(tool_context: ToolContext, task: str) -> dict:
         tool_context,
         sub_agent="research_agent",
         system_prompt=_RESEARCH_SYSTEM,
-        task=task,
+        task=topic,
     )
 
 
-def writing_agent(tool_context: ToolContext, task: str) -> dict:
+def writing_agent(tool_context: ToolContext, brief: str, facts: str = "") -> dict:
     """Delegate a drafting task to the writing sub-agent.
 
-    Use for: producing a polished paragraph, draft, or summary. Pass
-    relevant facts from prior research inside `task`. Same return shape
-    as research_agent.
+    Use for: producing a polished paragraph, draft, or summary. Pass a
+    brief describing the deliverable and optional source facts. Same
+    return shape as research_agent.
     """
+    task = brief if not facts else f"{brief}\n\nFacts:\n{facts}"
     return _delegate(
         tool_context,
         sub_agent="writing_agent",
@@ -240,7 +241,7 @@ def writing_agent(tool_context: ToolContext, task: str) -> dict:
     )
 
 
-def critique_agent(tool_context: ToolContext, task: str) -> dict:
+def critique_agent(tool_context: ToolContext, draft: str) -> dict:
     """Delegate a critique task to the critique sub-agent.
 
     Use for: reviewing a draft and suggesting concrete improvements. Same
@@ -250,7 +251,7 @@ def critique_agent(tool_context: ToolContext, task: str) -> dict:
         tool_context,
         sub_agent="critique_agent",
         system_prompt=_CRITIQUE_SYSTEM,
-        task=task,
+        task=draft,
     )
 
 
@@ -258,11 +259,11 @@ _SUPERVISOR_INSTRUCTION = (
     "You are a supervisor agent that coordinates three specialized "
     "sub-agents to produce high-quality deliverables.\n\n"
     "Available sub-agents (call them as tools):\n"
-    "  - research_agent: gathers facts on a topic.\n"
-    "  - writing_agent: turns facts + a brief into a polished draft.\n"
-    "  - critique_agent: reviews a draft and suggests improvements.\n\n"
+    "  - research_agent(topic): gathers facts on a topic.\n"
+    "  - writing_agent(brief, facts): turns facts + a brief into a polished draft.\n"
+    "  - critique_agent(draft): reviews a draft and suggests improvements.\n\n"
     "For most non-trivial user requests, delegate in sequence: research -> "
-    "write -> critique. Pass the relevant facts/draft through the `task` "
+    "write -> critique. Pass the relevant facts/draft through the appropriate "
     "argument of each tool. Each tool returns a dict shaped "
     "`{status: 'completed' | 'failed', result?: str, error?: str}`. If a "
     "sub-agent fails, surface the failure briefly to the user (don't "
