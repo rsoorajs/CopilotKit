@@ -65,14 +65,11 @@ export interface Page extends ConversationPage {
 
 const SELECTOR_PROBE_TIMEOUT_MS = 3_000;
 /**
- * Extended timeout for the approval-dialog cascade. The dialog only
- * appears after the full aimock→CopilotKit→frontend-tool→React-render
- * chain completes: the agent response must be received, the tool call
- * dispatched to the frontend handler, the handler must set React state,
- * and the portal must mount (useEffect + createPortal). On Railway this
- * chain regularly exceeds the default 3 s probe timeout.
+ * Extended timeout for HITL card/dialog cascades. These only appear
+ * after the full aimock→CopilotKit→frontend-tool→React-render chain
+ * completes. On Railway this chain regularly exceeds the default 3s.
  */
-const APPROVAL_DIALOG_TIMEOUT_MS = 15_000;
+const HITL_CARD_TIMEOUT_MS = 15_000;
 const ASSISTANT_FOLLOWUP_TIMEOUT_MS = 30_000;
 const POLL_INTERVAL_MS = 100;
 /**
@@ -172,7 +169,7 @@ export async function approveOrDeny(
     page,
     APPROVAL_DIALOG_SELECTORS,
     "approval dialog",
-    APPROVAL_DIALOG_TIMEOUT_MS,
+    HITL_CARD_TIMEOUT_MS,
   );
   const buttonSelectors =
     action === "approve" ? APPROVE_BUTTON_SELECTORS : REJECT_BUTTON_SELECTORS;
@@ -203,6 +200,7 @@ export async function pickTimeSlot(page: Page): Promise<void> {
     page,
     TIME_PICKER_CARD_SELECTORS,
     "time-picker card",
+    HITL_CARD_TIMEOUT_MS,
   );
   // Anchor every slot selector under the resolved card selector so
   // a stray `[data-testid="time-picker-slot"]` (or a generic

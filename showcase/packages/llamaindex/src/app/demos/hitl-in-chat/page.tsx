@@ -47,17 +47,18 @@ function Chat() {
 
   useHumanInTheLoop({
     agentId: "human_in_the_loop",
-    name: "schedule_meeting",
+    name: "book_call",
     description:
       "Ask the user to pick a time slot for a meeting. The picker UI presents fixed candidate slots; the user's choice is returned to the agent.",
     parameters: z.object({
-      reason: z
+      topic: z
         .string()
-        .describe("What the call is about (e.g. 'Intro with sales')"),
+        .describe("What the call is about (e.g. 'Onboarding call')"),
+      name: z.string().describe("Name of the attendee"),
     }),
     render: ({ args, status, respond }: any) => (
       <TimePickerCard
-        topic={args?.reason ?? "a call"}
+        topic={args?.topic ?? "a call"}
         slots={DEFAULT_SLOTS}
         status={status}
         onSubmit={(result) => respond?.(result)}
