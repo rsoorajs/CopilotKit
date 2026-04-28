@@ -87,8 +87,19 @@ export function Card({
   if (href) {
     // Rewrite /reference/v2/... paths to /reference/...
     const resolvedHref = href.replace(/^\/reference\/v2\//, "/reference/");
+    // Inline `textDecoration: none` is the load-bearing override here.
+    // The escape-hatch CSS rule `.reference-content .not-prose a {
+    // text-decoration: none }` only fires when `not-prose` sits on a
+    // *parent* of the <a> (descendant selector). Standalone Cards
+    // outside of a <Cards> wrapper have nothing above them to carry
+    // that class, so the prose-default underline still leaks through.
+    // The inline style wins on specificity in every shape.
     return (
-      <Link href={resolvedHref} className={mergedClassName}>
+      <Link
+        href={resolvedHref}
+        className={mergedClassName}
+        style={{ textDecoration: "none", color: "inherit" }}
+      >
         {content}
       </Link>
     );
