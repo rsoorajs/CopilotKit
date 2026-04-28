@@ -37,6 +37,7 @@ const SYSTEM_PROMPT =
   "atomic answer and more tool calls would feel intrusive. Never " +
   "fabricate data that a tool could provide.";
 
+// @region[weather-tool-backend]
 const getWeather = tool(
   async ({ location }) => ({
     city: location,
@@ -55,6 +56,7 @@ const getWeather = tool(
     }),
   },
 );
+// @endregion[weather-tool-backend]
 
 const searchFlights = tool(
   async ({ origin, destination }) => ({
