@@ -14,7 +14,7 @@ import {
   hydrateProbeLastRuns,
 } from "./orchestrator.js";
 import { createProbeRegistry } from "./probes/drivers/index.js";
-import { createScheduler } from "./scheduler/scheduler.js";
+import type { createScheduler } from "./scheduler/scheduler.js";
 import { createEventBus } from "./events/event-bus.js";
 import { logger } from "./logger.js";
 import type { CompiledRule } from "./rules/rule-loader.js";
@@ -1918,24 +1918,23 @@ describe("hydrateProbeLastRuns", () => {
     scheduler.register({ id: "probe:smoke-all", cron: "0 * * * *" });
     scheduler.register({ id: "probe:pin-drift", cron: "0 9 * * 1" });
     const runWriter = makeStubRunWriter();
-    runWriter.recent
-      .mockImplementation(async (probeId: string) => {
-        if (probeId === "smoke-all") {
-          return [
-            {
-              id: "run1",
-              probeId: "smoke-all",
-              startedAt: "2025-01-01T00:00:00.000Z",
-              finishedAt: "2025-01-01T00:01:00.000Z",
-              durationMs: 60000,
-              triggered: false,
-              state: "completed",
-              summary: { total: 5, passed: 5, failed: 0 },
-            },
-          ];
-        }
-        return [];
-      });
+    runWriter.recent.mockImplementation(async (probeId: string) => {
+      if (probeId === "smoke-all") {
+        return [
+          {
+            id: "run1",
+            probeId: "smoke-all",
+            startedAt: "2025-01-01T00:00:00.000Z",
+            finishedAt: "2025-01-01T00:01:00.000Z",
+            durationMs: 60000,
+            triggered: false,
+            state: "completed",
+            summary: { total: 5, passed: 5, failed: 0 },
+          },
+        ];
+      }
+      return [];
+    });
     const log = makeStubLogger();
 
     await hydrateProbeLastRuns({
