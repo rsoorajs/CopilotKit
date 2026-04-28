@@ -118,10 +118,12 @@ function detectLanguage(filename: string): string {
     ".js": "javascript",
     ".py": "python",
     ".cs": "csharp",
+    ".java": "java",
     ".css": "css",
     ".json": "json",
     ".yaml": "yaml",
     ".yml": "yaml",
+    ".xml": "xml",
     ".md": "markdown",
     ".mdx": "markdown",
   };
