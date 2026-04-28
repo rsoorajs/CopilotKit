@@ -240,7 +240,7 @@ function CategorySection({
                 return (
                   <td
                     key={integration.slug}
-                    className="border-l border-[var(--border)] px-3 py-2 align-top text-left"
+                    className="border-l border-[var(--border)] px-3 py-2 align-top text-center"
                   >
                     {demo ? (
                       renderCell({

@@ -184,7 +184,7 @@ export function ComposedCell({
   return (
     <div
       data-testid="composed-cell"
-      className={`flex flex-col gap-1 text-[11px] ${isTesting ? "opacity-60" : ""}`}
+      className={`flex flex-col items-center gap-1 text-[11px] ${isTesting ? "opacity-60" : ""}`}
     >
       {hasLinks && <LinksLayer ctx={ctx} />}
       {hasDepth && <DepthLayer ctx={ctx} catalogCell={catalogCell} />}
