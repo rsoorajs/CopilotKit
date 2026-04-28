@@ -687,38 +687,16 @@ describe("railwayServicesSource", () => {
   });
 
   // -----------------------------------------------------------------
-  // Shape classification: starter vs. package
+  // Shape classification
   //
-  // Each discovered service is tagged with `shape: "package" | "starter"`
-  // so downstream drivers (smoke, e2e-smoke) can branch on the URL
-  // surface without re-parsing the service name. Starters mount as a
-  // single-app integration at `/` with health at `/api/health`; packages
-  // are the shell-based showcases with `/smoke`, `/health`, and
-  // `/demos/*` routing. Without the field, probes hit `/smoke` on every
-  // starter and emit one false-red row per starter per probed endpoint.
+  // Each discovered service is tagged with `shape: "package"` so
+  // downstream drivers (smoke, e2e-smoke) can branch on the URL
+  // surface without re-parsing the service name. Packages are the
+  // shell-based showcases with `/smoke`, `/health`, and `/demos/*`
+  // routing.
   // -----------------------------------------------------------------
 
-  it("tags services whose name starts with `showcase-starter-` as shape='starter'", async () => {
-    const { fetchImpl } = makeFetch([
-      {
-        status: 200,
-        body: railwayProjectResponse([
-          {
-            id: "s-1",
-            name: "showcase-starter-ag2",
-            image: "ghcr.io/copilotkit/showcase-starter-ag2:latest",
-            domain: "showcase-starter-ag2-production.up.railway.app",
-          },
-        ]),
-      },
-      { status: 200, body: { data: { variables: {} } } },
-    ]);
-    const out = await railwayServicesSource.enumerate(makeCtx(fetchImpl), {});
-    expect(out).toHaveLength(1);
-    expect(out[0].shape).toBe("starter");
-  });
-
-  it("tags non-starter `showcase-*` services as shape='package'", async () => {
+  it("tags `showcase-*` services as shape='package'", async () => {
     const { fetchImpl } = makeFetch([
       {
         status: 200,
@@ -738,7 +716,7 @@ describe("railwayServicesSource", () => {
     expect(out[0].shape).toBe("package");
   });
 
-  it("classifies a mixed batch of starter + package services correctly without any warn", async () => {
+  it("classifies a batch of package services correctly without any warn", async () => {
     // Regression guard: prior iteration silently produced warns on the
     // hyphen-bearing package names below. The return-value check is not
     // enough — we also assert the classifier logger was not invoked,
@@ -757,26 +735,12 @@ describe("railwayServicesSource", () => {
           },
           {
             id: "s-2",
-            name: "showcase-starter-ag2",
-            image: "ghcr.io/copilotkit/showcase-starter-ag2:latest",
-            domain: "showcase-starter-ag2-production.up.railway.app",
-          },
-          {
-            id: "s-3",
             name: "showcase-langgraph-python",
             image: "ghcr.io/copilotkit/showcase-langgraph-python:latest",
             domain: "showcase-langgraph-python.up.railway.app",
           },
-          {
-            id: "s-4",
-            name: "showcase-starter-mastra",
-            image: "ghcr.io/copilotkit/showcase-starter-mastra:latest",
-            domain: "showcase-starter-mastra-production.up.railway.app",
-          },
         ]),
       },
-      { status: 200, body: { data: { variables: {} } } },
-      { status: 200, body: { data: { variables: {} } } },
       { status: 200, body: { data: { variables: {} } } },
       { status: 200, body: { data: { variables: {} } } },
     ]);
@@ -784,14 +748,12 @@ describe("railwayServicesSource", () => {
       { fetchImpl, logger: ctxLogger, env: BASE_ENV },
       {},
     );
-    expect(out).toHaveLength(4);
+    expect(out).toHaveLength(2);
     const byName = Object.fromEntries(out.map((s) => [s.name, s.shape]));
     expect(byName["showcase-ag2"]).toBe("package");
-    expect(byName["showcase-starter-ag2"]).toBe("starter");
     expect(byName["showcase-langgraph-python"]).toBe("package");
-    expect(byName["showcase-starter-mastra"]).toBe("starter");
     // No name-shape-unknown warn should have fired — every name above
-    // matches either the starter or widened-package regex.
+    // matches the package regex.
     const shapeWarns = warn.mock.calls.filter(
       (c) => c[0] === "discovery.railway-services.name-shape-unknown",
     );
@@ -800,28 +762,23 @@ describe("railwayServicesSource", () => {
 
   // -----------------------------------------------------------------
   // Audit-warn branch on classifyShape: any `showcase-*` name that is
-  // neither a well-formed `showcase-starter-<slug>` nor a well-formed
-  // package root `showcase-<slug>` (lowercase-alnum-hyphen) falls to
-  // `package` but logs an audit warn. Covers typos like
-  // `showcase-strater-foo`, underscore forms, and future archetypes
-  // that would otherwise silently misclassify.
+  // not a well-formed package root `showcase-<slug>`
+  // (lowercase-alnum-hyphen) falls to `package` but logs an audit
+  // warn. Covers underscore forms and future archetypes that would
+  // otherwise silently misclassify.
   // -----------------------------------------------------------------
 
-  it("classifyShape warns on an underscore-form `showcase_starter_*` name but still returns 'package'", () => {
-    // Underscore forms fail both regexes because the package pattern
-    // only allows hyphens. The widened multi-segment package pattern
-    // can no longer distinguish typos that happen to be hyphen-shaped
-    // (`showcase-strater-foo` is now accepted as a valid package name
-    // — indistinguishable from legit multi-segment names like
-    // `showcase-langgraph-python`) so the warn-on-typo assertion
-    // migrates to a structurally-invalid form instead.
+  it("classifyShape warns on an underscore-form name but still returns 'package'", () => {
+    // Underscore forms fail the package regex because it only allows
+    // hyphens. They still return "package" as the safe default but
+    // log an audit warn.
     const warn = vi.fn();
-    const shape = classifyShape("showcase_starter_ag2", { logger: { warn } });
+    const shape = classifyShape("showcase_some_service", { logger: { warn } });
     expect(shape).toBe("package");
     expect(warn).toHaveBeenCalledTimes(1);
     expect(warn).toHaveBeenCalledWith(
       "discovery.railway-services.name-shape-unknown",
-      { name: "showcase_starter_ag2" },
+      { name: "showcase_some_service" },
     );
   });
 
@@ -829,13 +786,6 @@ describe("railwayServicesSource", () => {
     const warn = vi.fn();
     const shape = classifyShape("showcase-ag2", { logger: { warn } });
     expect(shape).toBe("package");
-    expect(warn).not.toHaveBeenCalled();
-  });
-
-  it("classifyShape does not warn on a well-formed starter name", () => {
-    const warn = vi.fn();
-    const shape = classifyShape("showcase-starter-ag2", { logger: { warn } });
-    expect(shape).toBe("starter");
     expect(warn).not.toHaveBeenCalled();
   });
 
@@ -1828,119 +1778,22 @@ describe("railwayServicesSource", () => {
   });
 
   // -----------------------------------------------------------------
-  // B6 — resolveShape mismatch-throw path coverage.
+  // B6 — resolveShape classifier-vs-supplied shape coverage.
   // -----------------------------------------------------------------
 
-  describe("resolveShape mismatch (B6)", () => {
-    it("throws when classifier disagrees with caller-supplied shape", () => {
-      // `showcase-starter-ag2` classifies as "starter"; pass shape
-      // "package" — the resolver must throw rather than silently pick
-      // one. Inverting that fix is the exact regression this test
-      // guards against.
-      expect(() =>
-        resolveShape({ name: "showcase-starter-ag2", shape: "package" }),
-      ).toThrow(/Shape mismatch/);
+  describe("resolveShape (B6)", () => {
+    it("returns 'package' when classifier and caller-supplied shape agree", () => {
+      expect(
+        resolveShape({ name: "showcase-ag2", shape: "package" }),
+      ).toBe("package");
     });
 
-    it("throws with both classifier value and input value in the message", () => {
-      // `showcase-ag2` classifies as "package"; passing shape "starter"
-      // mismatches. The error message must include both values for
-      // operator triage.
-      expect(() =>
-        resolveShape({ name: "showcase-ag2", shape: "starter" }),
-      ).toThrow(/classifier="package".*input="starter"/);
+    it("returns 'package' from classifier when no shape is supplied", () => {
+      expect(
+        resolveShape({ name: "showcase-ag2" }),
+      ).toBe("package");
     });
   });
 
-  // -----------------------------------------------------------------
-  // B7 — classifyShape silent typo nudge. A name like
-  // `showcase-strater-ag2` is a transposition of `showcase-starter-`
-  // and is currently classified as "package" silently. Surface the
-  // suspicion via a `classify-typo-suspected` warn (without changing
-  // the classification).
-  // -----------------------------------------------------------------
 
-  describe("classifyShape typo nudge (B7)", () => {
-    it("emits classify-typo-suspected warn for 1-edit-distance typos of `starter-`", () => {
-      const warn = vi.fn();
-      const shape = classifyShape("showcase-strater-ag2", { logger: { warn } });
-      // Classification stays "package" — we don't change behaviour,
-      // we just surface the suspicion.
-      expect(shape).toBe("package");
-      const typoWarns = warn.mock.calls.filter(
-        (c) => c[0] === "discovery.railway-services.classify-typo-suspected",
-      );
-      expect(typoWarns).toHaveLength(1);
-      expect(typoWarns[0][1]).toMatchObject({
-        name: "showcase-strater-ag2",
-        suggested: "showcase-starter-ag2",
-      });
-    });
-
-    it("does not emit classify-typo-suspected warn for legitimate package names", () => {
-      const warn = vi.fn();
-      classifyShape("showcase-langgraph-python", { logger: { warn } });
-      classifyShape("showcase-ag2", { logger: { warn } });
-      const typoWarns = warn.mock.calls.filter(
-        (c) => c[0] === "discovery.railway-services.classify-typo-suspected",
-      );
-      expect(typoWarns).toHaveLength(0);
-    });
-
-    it("does not emit classify-typo-suspected warn on well-formed starter names", () => {
-      const warn = vi.fn();
-      classifyShape("showcase-starter-ag2", { logger: { warn } });
-      const typoWarns = warn.mock.calls.filter(
-        (c) => c[0] === "discovery.railway-services.classify-typo-suspected",
-      );
-      expect(typoWarns).toHaveLength(0);
-    });
-  });
-
-  // -----------------------------------------------------------------
-  // Starter slug contract (L): documents that
-  // deriveSlugFromServiceName() strips only `showcase-`, so
-  // `showcase-starter-ag2` becomes `starter-ag2` — which doesn't
-  // match registry slugs (which use bare integration names like
-  // `ag2`). Starters intentionally end up with `demos: []`.
-  // -----------------------------------------------------------------
-
-  describe("starter slug contract (L)", () => {
-    it("starter service slug strips only `showcase-` prefix; demos lookup misses gracefully", async () => {
-      const registryPath = await writeRegistry(
-        JSON.stringify({
-          integrations: [
-            {
-              slug: "ag2",
-              demos: [{ id: "agentic-chat", route: "/demos/agentic-chat" }],
-            },
-          ],
-        }),
-      );
-      const { fetchImpl } = makeFetch([
-        {
-          status: 200,
-          body: railwayProjectResponse([
-            {
-              id: "s-1",
-              name: "showcase-starter-ag2",
-              image: "ghcr.io/c/showcase-starter-ag2:v1",
-              domain: "showcase-starter-ag2-production.up.railway.app",
-            },
-          ]),
-        },
-        { status: 200, body: { data: { variables: {} } } },
-      ]);
-      const env = { ...BASE_ENV, REGISTRY_JSON_PATH: registryPath };
-      const out = await railwayServicesSource.enumerate(
-        makeCtx(fetchImpl, env),
-        {},
-      );
-      expect(out).toHaveLength(1);
-      expect(out[0].name).toBe("showcase-starter-ag2");
-      // The slug becomes `starter-ag2`, which is NOT in the registry,
-      // so demos resolves to [] — documented contract for starters.
-      expect(out[0].demos).toEqual([]);
-    });
-  });
 });
