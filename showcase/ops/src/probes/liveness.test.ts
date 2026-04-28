@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { smokeProbe } from "./smoke.js";
+import { livenessProbe } from "./liveness.js";
 import { logger } from "../logger.js";
 import type { ProbeContext } from "../types/index.js";
 
@@ -19,7 +19,7 @@ function fakeFetch(status: number, okBody = ""): typeof fetch {
 
 describe("smoke probe", () => {
   it("returns green on 200", async () => {
-    const r = await smokeProbe.run(
+    const r = await livenessProbe.run(
       { slug: "mastra", url: "https://x/api/smoke", fetchImpl: fakeFetch(200) },
       ctx,
     );
@@ -31,7 +31,7 @@ describe("smoke probe", () => {
   });
 
   it("returns red on 5xx with errorDesc", async () => {
-    const r = await smokeProbe.run(
+    const r = await livenessProbe.run(
       { slug: "mastra", url: "https://x/api/smoke", fetchImpl: fakeFetch(503) },
       ctx,
     );
@@ -43,7 +43,7 @@ describe("smoke probe", () => {
     const fetchImpl: typeof fetch = (async () => {
       throw new Error("ECONNRESET");
     }) as unknown as typeof fetch;
-    const r = await smokeProbe.run(
+    const r = await livenessProbe.run(
       { slug: "mastra", url: "https://x/api/smoke", fetchImpl },
       ctx,
     );
@@ -52,7 +52,7 @@ describe("smoke probe", () => {
   });
 
   it("derives health URL from /smoke with trailing slash (/smoke/)", async () => {
-    const r = await smokeProbe.run(
+    const r = await livenessProbe.run(
       {
         slug: "mastra",
         url: "https://x/api/smoke/",
@@ -64,7 +64,7 @@ describe("smoke probe", () => {
   });
 
   it("derives health URL by appending /health when URL has no /smoke suffix", async () => {
-    const r = await smokeProbe.run(
+    const r = await livenessProbe.run(
       { slug: "mastra", url: "https://x/", fetchImpl: fakeFetch(200) },
       ctx,
     );
@@ -90,7 +90,7 @@ describe("smoke probe", () => {
       });
     }) as unknown as typeof fetch;
 
-    const r = await smokeProbe.run(
+    const r = await livenessProbe.run(
       {
         slug: "mastra",
         url: "https://x/api/smoke",
@@ -104,7 +104,7 @@ describe("smoke probe", () => {
   });
 
   it("returns empty health URL when smoke URL is unparseable", async () => {
-    const r = await smokeProbe.run(
+    const r = await livenessProbe.run(
       { slug: "mastra", url: "not a url", fetchImpl: fakeFetch(200) },
       ctx,
     );

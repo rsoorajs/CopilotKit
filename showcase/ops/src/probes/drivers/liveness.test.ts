@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import * as http from "node:http";
 import type { AddressInfo } from "node:net";
-import { smokeDriver, type SmokeDriverSignal } from "./smoke.js";
+import { livenessDriver, type SmokeDriverSignal } from "./liveness.js";
 import { logger } from "../../logger.js";
 import type {
   ProbeContext,
@@ -10,8 +10,8 @@ import type {
 } from "../../types/index.js";
 
 // Driver-level tests for the smoke ProbeDriver. Deep behavioural coverage of
-// `deriveHealthUrl` + the legacy `smokeProbe.run` path lives in
-// `../smoke.test.ts`; this file verifies the driver-adapter layer:
+// `deriveHealthUrl` + the legacy `livenessProbe.run` path lives in
+// `../liveness.test.ts`; this file verifies the driver-adapter layer:
 //   - schema accepts/rejects the expected YAML-static input shape
 //   - primary return value (smoke tick) matches the canonical ProbeResult
 //     shape per status code
@@ -94,7 +94,7 @@ function fakeFetch(opts: {
   }) as unknown as typeof fetch;
 }
 
-describe("smokeDriver", () => {
+describe("livenessDriver", () => {
   beforeEach(() => {
     // Each test stubs globalThis.fetch via vi.stubGlobal so parallel test
     // runs don't cross-contaminate and a failure in one test restores a
@@ -106,11 +106,11 @@ describe("smokeDriver", () => {
   });
 
   it("exposes kind === 'smoke'", () => {
-    expect(smokeDriver.kind).toBe("smoke");
+    expect(livenessDriver.kind).toBe("smoke");
   });
 
   it("inputSchema accepts { key, url }", () => {
-    const parsed = smokeDriver.inputSchema.safeParse({
+    const parsed = livenessDriver.inputSchema.safeParse({
       key: "smoke:mastra",
       url: "https://x.example/smoke",
     });
@@ -118,21 +118,21 @@ describe("smokeDriver", () => {
   });
 
   it("inputSchema rejects missing url", () => {
-    const parsed = smokeDriver.inputSchema.safeParse({
+    const parsed = livenessDriver.inputSchema.safeParse({
       key: "smoke:mastra",
     });
     expect(parsed.success).toBe(false);
   });
 
   it("inputSchema rejects missing key", () => {
-    const parsed = smokeDriver.inputSchema.safeParse({
+    const parsed = livenessDriver.inputSchema.safeParse({
       url: "https://x.example/smoke",
     });
     expect(parsed.success).toBe(false);
   });
 
   it("inputSchema rejects non-url url", () => {
-    const parsed = smokeDriver.inputSchema.safeParse({
+    const parsed = livenessDriver.inputSchema.safeParse({
       key: "smoke:mastra",
       url: "not-a-url",
     });
@@ -145,7 +145,7 @@ describe("smokeDriver", () => {
       fakeFetch({ smokeStatus: 200, healthStatus: 200, agentStatus: 200 }),
     );
     const { writer, writes } = mkWriter();
-    const r = await smokeDriver.run(mkCtx(writer), {
+    const r = await livenessDriver.run(mkCtx(writer), {
       key: "smoke:mastra",
       url: "https://x.example/smoke",
     });
@@ -165,7 +165,7 @@ describe("smokeDriver", () => {
       fakeFetch({ smokeStatus: 500, healthStatus: 200, agentStatus: 200 }),
     );
     const { writer, writes } = mkWriter();
-    const r = await smokeDriver.run(mkCtx(writer), {
+    const r = await livenessDriver.run(mkCtx(writer), {
       key: "smoke:mastra",
       url: "https://x.example/smoke",
     });
@@ -189,7 +189,7 @@ describe("smokeDriver", () => {
       }),
     );
     const { writer, writes } = mkWriter();
-    const r = await smokeDriver.run(mkCtx(writer), {
+    const r = await livenessDriver.run(mkCtx(writer), {
       key: "smoke:ag2",
       url: "https://x.example/smoke",
     });
@@ -223,7 +223,7 @@ describe("smokeDriver", () => {
       env: { SMOKE_TIMEOUT_MS: "5" },
       writer,
     };
-    const r = await smokeDriver.run(ctx, {
+    const r = await livenessDriver.run(ctx, {
       key: "smoke:mastra",
       url: "https://x.example/smoke",
     });
@@ -250,7 +250,7 @@ describe("smokeDriver", () => {
       }),
     );
     const { writer, writes } = mkWriter();
-    const r = await smokeDriver.run(mkCtx(writer), {
+    const r = await livenessDriver.run(mkCtx(writer), {
       key: "smoke:mastra",
       url: "https://x.example/smoke",
     });
@@ -268,7 +268,7 @@ describe("smokeDriver", () => {
       fakeFetch({ smokeStatus: 200, healthStatus: 503, agentStatus: 200 }),
     );
     const { writer, writes } = mkWriter();
-    const r = await smokeDriver.run(mkCtx(writer), {
+    const r = await livenessDriver.run(mkCtx(writer), {
       key: "smoke:mastra",
       url: "https://x.example/smoke",
     });
@@ -285,7 +285,7 @@ describe("smokeDriver", () => {
 
   it("missing writer logs a warning and does not throw", async () => {
     vi.stubGlobal("fetch", fakeFetch({ smokeStatus: 200, healthStatus: 200 }));
-    const r = await smokeDriver.run(mkCtx(undefined), {
+    const r = await livenessDriver.run(mkCtx(undefined), {
       key: "smoke:mastra",
       url: "https://x.example/smoke",
     });
@@ -299,7 +299,7 @@ describe("smokeDriver", () => {
         throw new Error("writer exploded");
       },
     };
-    const r = await smokeDriver.run(mkCtx(writer), {
+    const r = await livenessDriver.run(mkCtx(writer), {
       key: "smoke:mastra",
       url: "https://x.example/smoke",
     });
@@ -313,7 +313,7 @@ describe("smokeDriver", () => {
     }) as unknown as typeof fetch;
     vi.stubGlobal("fetch", fetchImpl);
     const { writer, writes } = mkWriter();
-    const r = await smokeDriver.run(mkCtx(writer), {
+    const r = await livenessDriver.run(mkCtx(writer), {
       key: "smoke:mastra",
       url: "https://x.example/smoke",
     });
@@ -343,7 +343,7 @@ describe("smokeDriver", () => {
     const ctx = mkCtx(writer);
     const results = await Promise.all(
       slugs.map((slug) =>
-        smokeDriver.run(ctx, {
+        livenessDriver.run(ctx, {
           key: `smoke:${slug}`,
           url: `https://x-${slug}.example/smoke`,
         }),
@@ -380,7 +380,7 @@ describe("smokeDriver", () => {
       fakeFetch({ smokeStatus: 500, smokeBody: longBody, healthStatus: 200 }),
     );
     const { writer } = mkWriter();
-    const r = await smokeDriver.run(mkCtx(writer), {
+    const r = await livenessDriver.run(mkCtx(writer), {
       key: "smoke:mastra",
       url: "https://x.example/smoke",
     });
@@ -407,7 +407,7 @@ describe("smokeDriver", () => {
       brokenResponse) as unknown as typeof fetch;
     vi.stubGlobal("fetch", fetchImpl);
     const { writer } = mkWriter();
-    const r = await smokeDriver.run(mkCtx(writer), {
+    const r = await livenessDriver.run(mkCtx(writer), {
       key: "smoke:mastra",
       url: "https://x.example/smoke",
     });
@@ -424,7 +424,7 @@ describe("smokeDriver", () => {
       env: { SMOKE_TIMEOUT_MS: "nonsense" },
       writer,
     };
-    const r = await smokeDriver.run(ctx, {
+    const r = await livenessDriver.run(ctx, {
       key: "smoke:mastra",
       url: "https://x.example/smoke",
     });
@@ -441,7 +441,7 @@ describe("smokeDriver", () => {
     }) as unknown as typeof fetch;
     vi.stubGlobal("fetch", fetchImpl);
     const { writer } = mkWriter();
-    const r = await smokeDriver.run(mkCtx(writer), {
+    const r = await livenessDriver.run(mkCtx(writer), {
       key: "smoke:mastra",
       url: "https://x.example/smoke",
     });
@@ -455,7 +455,7 @@ describe("smokeDriver", () => {
       fakeFetch({ smokeStatus: 200, healthStatus: 200, agentStatus: 200 }),
     );
     const { writer, writes } = mkWriter();
-    const r = await smokeDriver.run(mkCtx(writer), {
+    const r = await livenessDriver.run(mkCtx(writer), {
       key: "bare",
       url: "https://x.example/smoke",
     });
@@ -474,7 +474,7 @@ describe("smokeDriver", () => {
       fakeFetch({ smokeStatus: 200, healthStatus: 200, agentStatus: 200 }),
     );
     const { writer, writes } = mkWriter();
-    await smokeDriver.run(mkCtx(writer), {
+    await livenessDriver.run(mkCtx(writer), {
       key: "smoke:mastra",
       url: "https://x.example/smoke",
     });
@@ -492,7 +492,7 @@ describe("smokeDriver", () => {
       fakeFetch({ smokeStatus: 200, healthStatus: 200, agentStatus: 400 }),
     );
     const { writer, writes } = mkWriter();
-    await smokeDriver.run(mkCtx(writer), {
+    await livenessDriver.run(mkCtx(writer), {
       key: "smoke:mastra",
       url: "https://x.example/smoke",
     });
@@ -512,7 +512,7 @@ describe("smokeDriver", () => {
       }),
     );
     const { writer, writes } = mkWriter();
-    await smokeDriver.run(mkCtx(writer), {
+    await livenessDriver.run(mkCtx(writer), {
       key: "smoke:mastra",
       url: "https://x.example/smoke",
     });
@@ -534,7 +534,7 @@ describe("smokeDriver", () => {
       }),
     );
     const { writer, writes } = mkWriter();
-    await smokeDriver.run(mkCtx(writer), {
+    await livenessDriver.run(mkCtx(writer), {
       key: "smoke:mastra",
       url: "https://x.example/smoke",
     });
@@ -560,7 +560,7 @@ describe("smokeDriver", () => {
     }) as unknown as typeof fetch;
     vi.stubGlobal("fetch", fetchImpl);
     const { writer, writes } = mkWriter();
-    await smokeDriver.run(mkCtx(writer), {
+    await livenessDriver.run(mkCtx(writer), {
       key: "smoke:mastra",
       url: "https://x.example/smoke",
     });
@@ -590,7 +590,7 @@ describe("smokeDriver", () => {
     }) as unknown as typeof fetch;
     vi.stubGlobal("fetch", fetchImpl);
     const { writer } = mkWriter();
-    await smokeDriver.run(mkCtx(writer), {
+    await livenessDriver.run(mkCtx(writer), {
       key: "smoke:mastra",
       url: "https://x.example/smoke",
     });
@@ -634,7 +634,7 @@ describe("smokeDriver", () => {
     }) as unknown as typeof fetch;
     vi.stubGlobal("fetch", fetchImpl);
     const { writer, writes } = mkWriter();
-    const r = await smokeDriver.run(mkCtx(writer), {
+    const r = await livenessDriver.run(mkCtx(writer), {
       key: "smoke:ag2",
       name: "showcase-ag2",
       imageRef: "ghcr.io/copilotkit/showcase-ag2:latest",
@@ -659,7 +659,7 @@ describe("smokeDriver", () => {
       fakeFetch({ smokeStatus: 200, healthStatus: 200, agentStatus: 200 }),
     );
     const { writer, writes } = mkWriter();
-    const r = await smokeDriver.run(mkCtx(writer), {
+    const r = await livenessDriver.run(mkCtx(writer), {
       key: "smoke:starter-ag2",
       name: "showcase-starter-ag2",
       imageRef: "ghcr.io/copilotkit/showcase-starter-ag2:latest",
@@ -698,7 +698,7 @@ describe("smokeDriver", () => {
     }) as unknown as typeof fetch;
     vi.stubGlobal("fetch", fetchImpl);
     const { writer, writes } = mkWriter();
-    const r = await smokeDriver.run(mkCtx(writer), {
+    const r = await livenessDriver.run(mkCtx(writer), {
       key: "smoke:starter-ag2",
       name: "showcase-starter-ag2",
       publicUrl: "https://showcase-starter-ag2-production.up.railway.app",
@@ -743,7 +743,7 @@ describe("smokeDriver", () => {
     }) as unknown as typeof fetch;
     vi.stubGlobal("fetch", fetchImpl);
     const { writer, writes } = mkWriter();
-    const r = await smokeDriver.run(mkCtx(writer), {
+    const r = await livenessDriver.run(mkCtx(writer), {
       key: "smoke:starter-ag2",
       name: "showcase-starter-ag2",
       publicUrl: "https://showcase-starter-ag2-production.up.railway.app",
@@ -769,7 +769,7 @@ describe("smokeDriver", () => {
     }) as unknown as typeof fetch;
     vi.stubGlobal("fetch", fetchImpl);
     const { writer, writes } = mkWriter();
-    const r = await smokeDriver.run(mkCtx(writer), {
+    const r = await livenessDriver.run(mkCtx(writer), {
       key: "smoke:starter-ag2",
       name: "showcase-starter-ag2",
       publicUrl: "https://showcase-starter-ag2-production.up.railway.app",
@@ -802,7 +802,7 @@ describe("smokeDriver", () => {
     }) as unknown as typeof fetch;
     vi.stubGlobal("fetch", fetchImpl);
     const { writer } = mkWriter();
-    await smokeDriver.run(mkCtx(writer), {
+    await livenessDriver.run(mkCtx(writer), {
       key: "smoke:starter-mastra",
       name: "showcase-starter-mastra",
       publicUrl: "https://showcase-starter-mastra.up.railway.app",
@@ -828,7 +828,7 @@ describe("smokeDriver", () => {
     }) as unknown as typeof fetch;
     vi.stubGlobal("fetch", fetchImpl);
     const { writer } = mkWriter();
-    await smokeDriver.run(mkCtx(writer), {
+    await livenessDriver.run(mkCtx(writer), {
       key: "smoke:ag2",
       name: "showcase-ag2",
       publicUrl: "https://showcase-ag2.up.railway.app",
@@ -864,7 +864,7 @@ describe("smokeDriver", () => {
       // Restore real fetch — we're intentionally talking to a real socket.
       vi.unstubAllGlobals();
       const { writer, writes } = mkWriter();
-      await smokeDriver.run(mkCtx(writer), {
+      await livenessDriver.run(mkCtx(writer), {
         key: "smoke:mastra",
         url: `${url}/smoke`,
       });
@@ -884,7 +884,7 @@ describe("smokeDriver", () => {
     try {
       vi.unstubAllGlobals();
       const { writer, writes } = mkWriter();
-      await smokeDriver.run(mkCtx(writer), {
+      await livenessDriver.run(mkCtx(writer), {
         key: "smoke:mastra",
         url: `${url}/smoke`,
       });
@@ -919,7 +919,7 @@ describe("smokeDriver", () => {
     }) as unknown as typeof fetch;
     vi.stubGlobal("fetch", fetchImpl);
     const { writer } = mkWriter();
-    await smokeDriver.run(mkCtx(writer), {
+    await livenessDriver.run(mkCtx(writer), {
       key: "smoke:ag2",
       name: "showcase-ag2",
       publicUrl: "https://showcase-ag2.up.railway.app",
@@ -947,7 +947,7 @@ describe("smokeDriver", () => {
     }) as unknown as typeof fetch;
     vi.stubGlobal("fetch", fetchImpl);
     const { writer } = mkWriter();
-    await smokeDriver.run(mkCtx(writer), {
+    await livenessDriver.run(mkCtx(writer), {
       key: "smoke:starter-ag2",
       name: "showcase-starter-ag2",
       publicUrl: "https://showcase-starter-ag2.up.railway.app",
@@ -968,7 +968,7 @@ describe("smokeDriver", () => {
     );
     const { writer } = mkWriter();
     await expect(
-      smokeDriver.run(mkCtx(writer), {
+      livenessDriver.run(mkCtx(writer), {
         key: "smoke:starter-ag2",
         name: "showcase-starter-ag2",
         publicUrl: "https://showcase-starter-ag2.up.railway.app",
@@ -978,7 +978,7 @@ describe("smokeDriver", () => {
   });
 
   it("inputSchema rejects `url` + `shape` combo (shape only valid with publicUrl)", () => {
-    const parsed = smokeDriver.inputSchema.safeParse({
+    const parsed = livenessDriver.inputSchema.safeParse({
       key: "smoke:mastra",
       url: "https://x.example/smoke",
       shape: "starter",
@@ -990,12 +990,12 @@ describe("smokeDriver", () => {
   // get a unified rejection for structural mistakes regardless of which
   // arm's strictness would otherwise absorb them.
   it("inputSchema rejects bare `{ key }` (no url, no name+publicUrl)", () => {
-    const parsed = smokeDriver.inputSchema.safeParse({ key: "k" });
+    const parsed = livenessDriver.inputSchema.safeParse({ key: "k" });
     expect(parsed.success).toBe(false);
   });
 
   it("inputSchema rejects `{ key, name }` (discovery missing publicUrl)", () => {
-    const parsed = smokeDriver.inputSchema.safeParse({
+    const parsed = livenessDriver.inputSchema.safeParse({
       key: "k",
       name: "showcase-ag2",
     });
@@ -1006,7 +1006,7 @@ describe("smokeDriver", () => {
     // Discovery arm's .passthrough() would otherwise absorb the stray
     // `url` field; the union-level superRefine enforces XOR across the
     // two modes.
-    const parsed = smokeDriver.inputSchema.safeParse({
+    const parsed = livenessDriver.inputSchema.safeParse({
       key: "k",
       url: "http://x.example/smoke",
       name: "showcase-ag2",
@@ -1026,7 +1026,7 @@ describe("smokeDriver", () => {
       fakeFetch({ smokeStatus: 200, healthStatus: 200, agentStatus: 200 }),
     );
     const { writer } = mkWriter();
-    const r = await smokeDriver.run(mkCtx(writer), {
+    const r = await livenessDriver.run(mkCtx(writer), {
       key: "smoke:showcase-ag2",
       name: "showcase-ag2",
       publicUrl: "https://showcase-ag2.up.railway.app",
@@ -1047,7 +1047,7 @@ describe("smokeDriver", () => {
       return new Response("", { status: 404 });
     }) as unknown as typeof fetch);
     const { writer } = mkWriter();
-    const r = await smokeDriver.run(mkCtx(writer), {
+    const r = await livenessDriver.run(mkCtx(writer), {
       key: "smoke:showcase-starter-ag2",
       name: "showcase-starter-ag2",
       publicUrl: "https://showcase-starter-ag2.up.railway.app",
@@ -1062,7 +1062,7 @@ describe("smokeDriver", () => {
       fakeFetch({ smokeStatus: 200, healthStatus: 200, agentStatus: 200 }),
     );
     const { writer } = mkWriter();
-    const r = await smokeDriver.run(mkCtx(writer), {
+    const r = await livenessDriver.run(mkCtx(writer), {
       key: "smoke:custom-yaml-key",
       url: "https://x.example/smoke",
     });
@@ -1097,7 +1097,7 @@ describe("smokeDriver", () => {
       env: { FOO: "bar" },
       shape: "starter" as const,
     };
-    await smokeDriver.run(mkCtx(writer), {
+    await livenessDriver.run(mkCtx(writer), {
       ...discoveryRecord,
       key: "smoke:starter-ag2",
     });
@@ -1120,7 +1120,7 @@ describe("smokeDriver", () => {
     }) as unknown as typeof fetch;
     vi.stubGlobal("fetch", fetchImpl);
     const { writer } = mkWriter();
-    await smokeDriver.run(mkCtx(writer), {
+    await livenessDriver.run(mkCtx(writer), {
       key: "smoke:ag2",
       name: "showcase-ag2",
       imageRef: "",
@@ -1137,11 +1137,11 @@ describe("smokeDriver", () => {
 /**
  * Proxy helper for the two schema-level assertions above. Not exposed
  * from the module itself (drivers keep their schemas private); the tests
- * pull it through the existing `smokeDriver` import so the tested shape
+ * pull it through the existing `livenessDriver` import so the tested shape
  * matches exactly what the invoker hands in.
  */
 function smokeInputSchema_safeParse(input: unknown): { success: boolean } {
-  return smokeDriver.inputSchema.safeParse(input);
+  return livenessDriver.inputSchema.safeParse(input);
 }
 
 /**

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { deriveHealthUrl } from "../smoke.js";
+import { deriveHealthUrl } from "../liveness.js";
 import {
   resolveShape,
   showcaseShapeSchema,
@@ -213,7 +213,7 @@ export interface SmokeDriverSignal {
   latencyMs: number;
 }
 
-export const smokeDriver: ProbeDriver<SmokeDriverInput, SmokeDriverSignal> = {
+export const livenessDriver: ProbeDriver<SmokeDriverInput, SmokeDriverSignal> = {
   kind: "smoke",
   inputSchema: smokeInputSchema,
   async run(ctx, rawInput) {

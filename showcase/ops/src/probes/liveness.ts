@@ -1,13 +1,13 @@
 import type { Probe, ProbeContext, ProbeResult } from "../types/index.js";
 
-export interface SmokeInput {
+export interface LivenessInput {
   slug: string;
   url: string;
   timeoutMs?: number;
   fetchImpl?: typeof fetch;
 }
 
-export interface SmokeSignal {
+export interface LivenessSignal {
   slug: string;
   url: string;
   status?: number;
@@ -16,12 +16,12 @@ export interface SmokeSignal {
   links: { smoke: string; health: string };
 }
 
-export const smokeProbe: Probe<SmokeInput, SmokeSignal> = {
+export const livenessProbe: Probe<LivenessInput, LivenessSignal> = {
   dimension: "smoke",
   async run(
-    input: SmokeInput,
+    input: LivenessInput,
     ctx: ProbeContext,
-  ): Promise<ProbeResult<SmokeSignal>> {
+  ): Promise<ProbeResult<LivenessSignal>> {
     // Some runtimes (undici, certain bun builds) throw when `fetch` is invoked
     // without its `this` bound to globalThis. Bind defensively at dependency
     // construction so all call sites benefit.
@@ -43,7 +43,7 @@ export const smokeProbe: Probe<SmokeInput, SmokeSignal> = {
       const res = await fetchImpl(input.url, { signal: controller.signal });
       const latencyMs = ctx.now().getTime() - started;
       const state = res.ok ? "green" : "red";
-      const signal: SmokeSignal = {
+      const signal: LivenessSignal = {
         slug: input.slug,
         url: input.url,
         status: res.status,
@@ -105,15 +105,15 @@ export const smokeProbe: Probe<SmokeInput, SmokeSignal> = {
  * `deriveHealthUrl`). Neither flows from untrusted user input — they're
  * operator-configured service URLs. Safe to emit without HTML-escape.
  */
-export const SMOKE_SLACK_SAFE_FIELDS = [
-  // A3: the `links` object lives on the old `SmokeSignal` shape below (still
+export const LIVENESS_SLACK_SAFE_FIELDS = [
+  // A3: the `links` object lives on the old `LivenessSignal` shape below (still
   // exported for backward compatibility). The driver-emitted
-  // `SmokeDriverSignal` (probes/drivers/smoke.ts) carries `url` instead —
+  // `SmokeDriverSignal` (probes/drivers/liveness.ts) carries `url` instead —
   // the URL that was actually probed — which is now the canonical field
   // template authors reference for endpoint links.
   "url",
   // errorDesc is pre-sanitized at the probe driver's 8 assignment sites
-  // (probes/drivers/smoke.ts via sanitizeErrorDesc) — triple-brace is
+  // (probes/drivers/liveness.ts via sanitizeErrorDesc) — triple-brace is
   // intentional so already-stripped HTML / mrkdwn control tokens render
   // as literal characters in Slack rather than being double-escaped.
   "errorDesc",
