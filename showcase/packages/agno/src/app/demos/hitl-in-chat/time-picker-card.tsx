@@ -73,6 +73,7 @@ export function TimePickerCard({
           <button
             key={s.iso}
             disabled={disabled}
+            data-testid="time-picker-slot"
             onClick={() => {
               setPicked(s);
               onSubmit({ chosen_time: s.iso, chosen_label: s.label });
