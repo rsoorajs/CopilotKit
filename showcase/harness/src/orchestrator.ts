@@ -38,10 +38,11 @@ import { livenessDriver } from "./probes/drivers/liveness.js";
 import { imageDriftDriver } from "./probes/drivers/image-drift.js";
 import { versionDriftDriver } from "./probes/drivers/version-drift.js";
 import { redirectDecommissionDriver } from "./probes/drivers/redirect-decommission.js";
-import { e2eChatToolsDriver } from "./probes/drivers/e2e-chat-tools.js";
-import { e2eReadinessDriver } from "./probes/drivers/e2e-readiness.js";
-import { e2eDeepDriver } from "./probes/drivers/e2e-deep.js";
-import { e2eParityDriver } from "./probes/drivers/e2e-parity.js";
+import { e2eChatToolsDriver, createE2eSmokeDriver, createPooledE2eSmokeLauncher } from "./probes/drivers/e2e-chat-tools.js";
+import { e2eReadinessDriver, createE2eDemosDriver, createPooledE2eDemosLauncher } from "./probes/drivers/e2e-readiness.js";
+import { e2eDeepDriver, createE2eDeepDriver, createPooledE2eDeepLauncher } from "./probes/drivers/e2e-deep.js";
+import { e2eParityDriver, createE2eParityDriver, createPooledE2eParityLauncher } from "./probes/drivers/e2e-parity.js";
+import { BrowserPool } from "./probes/helpers/browser-pool.js";
 import { qaDriver } from "./probes/drivers/qa.js";
 import { railwayServicesSource } from "./probes/discovery/railway-services.js";
 import { pnpmPackagesDiscoverySource } from "./probes/discovery/pnpm-packages.js";
@@ -252,9 +253,12 @@ export async function boot(opts: BootOptions = {}): Promise<{
   // later — caches, batching) is shared across invokers.
   const runWriter = createProbeRunWriter(pb);
 
+  const browserPool = new BrowserPool(4);
+  await browserPool.init();
+
   const probeRegistry = createProbeRegistry();
   const discoveryRegistry = createDiscoveryRegistry();
-  registerAllProbeDrivers(probeRegistry);
+  registerAllProbeDrivers(probeRegistry, browserPool);
   discoveryRegistry.register(railwayServicesSource);
   discoveryRegistry.register(pnpmPackagesDiscoverySource);
   const probeConfigDir =
@@ -802,6 +806,7 @@ export async function boot(opts: BootOptions = {}): Promise<{
       unwatchProbes();
       engine.stop();
       await scheduler.stop();
+      await browserPool.shutdown();
       // Release all bus subscriptions so repeated boot/stop don't accumulate
       // listeners on the shared EventEmitter.
       for (const u of busUnsubs) u();
@@ -844,6 +849,7 @@ export async function boot(opts: BootOptions = {}): Promise<{
  */
 export function registerAllProbeDrivers(
   probeRegistry: Pick<ProbeRegistry, "register">,
+  pool?: BrowserPool,
 ): void {
   probeRegistry.register(aimockWiringDriver);
   probeRegistry.register(pinDriftDriver);
@@ -851,10 +857,19 @@ export function registerAllProbeDrivers(
   probeRegistry.register(imageDriftDriver);
   probeRegistry.register(versionDriftDriver);
   probeRegistry.register(redirectDecommissionDriver);
-  probeRegistry.register(e2eChatToolsDriver);
-  probeRegistry.register(e2eReadinessDriver);
-  probeRegistry.register(e2eDeepDriver);
-  probeRegistry.register(e2eParityDriver);
+
+  if (pool) {
+    probeRegistry.register(createE2eSmokeDriver({ launcher: createPooledE2eSmokeLauncher(pool) }));
+    probeRegistry.register(createE2eDemosDriver({ launcher: createPooledE2eDemosLauncher(pool) }));
+    probeRegistry.register(createE2eDeepDriver({ launcher: createPooledE2eDeepLauncher(pool) }));
+    probeRegistry.register(createE2eParityDriver({ launcher: createPooledE2eParityLauncher(pool) }));
+  } else {
+    probeRegistry.register(e2eChatToolsDriver);
+    probeRegistry.register(e2eReadinessDriver);
+    probeRegistry.register(e2eDeepDriver);
+    probeRegistry.register(e2eParityDriver);
+  }
+
   probeRegistry.register(qaDriver);
 }
 

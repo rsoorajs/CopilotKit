@@ -19,6 +19,7 @@ import {
 } from "../helpers/conversation-runner.js";
 import type { ProbeDriver } from "../types.js";
 import type { ProbeContext, ProbeResult } from "../../types/index.js";
+import type { BrowserPool } from "../helpers/browser-pool.js";
 
 /**
  * D5 — e2e-deep (multi-turn conversation) driver.
@@ -357,6 +358,69 @@ const defaultLauncher: E2eDeepBrowserLauncher =
       close: () => browser.close(),
     };
   };
+
+export function createPooledE2eDeepLauncher(
+  pool: BrowserPool,
+): E2eDeepBrowserLauncher {
+  return async (): Promise<E2eDeepBrowser> => {
+    const browser = await pool.acquire();
+    return {
+      async newContext(): Promise<E2eDeepBrowserContext> {
+        const ctx = await browser.newContext();
+        return {
+          async newPage(): Promise<E2eDeepPage> {
+            const page = await ctx.newPage();
+
+            const consoleLogs: string[] = [];
+            const requestFailures: string[] = [];
+
+            page.on("console", (msg) => {
+              const t = msg.type();
+              if (t === "error" || t === "warning") {
+                consoleLogs.push(`[${t}] ${msg.text().slice(0, 200)}`);
+              }
+            });
+
+            page.on("requestfailed", (request) => {
+              requestFailures.push(
+                `${request.method()} ${request.url().slice(0, 200)} => ${
+                  request.failure()?.errorText || "unknown"
+                }`,
+              );
+            });
+
+            const wrapped: E2eDeepPage = {
+              waitForSelector: (s, o) => page.waitForSelector(s, o),
+              fill: (s, v, o) => page.fill(s, v, o),
+              press: (s, k, o) => page.press(s, k, o),
+              evaluate: <R>(fn: () => R) => page.evaluate(fn),
+              goto: (url, opts) =>
+                page.goto(url, opts as Parameters<typeof page.goto>[1]),
+              close: () => page.close(),
+              click: (s, o) => page.click(s, o),
+              waitForFunction: (fn, opts) =>
+                page.waitForFunction(
+                  fn as Parameters<typeof page.waitForFunction>[0],
+                  undefined,
+                  opts,
+                ),
+              getDiagnostics: () => ({
+                consoleLogs: consoleLogs.slice(-20),
+                requestFailures: requestFailures.slice(-10),
+              }),
+            };
+            return wrapped;
+          },
+          close: () => ctx.close(),
+        };
+      },
+      close: () => {
+        pool.release(browser);
+        return Promise.resolve();
+      },
+    };
+  };
+}
 
 /**
  * Filename matcher for D5 script files. Accepts `d5-<name>.{js,ts}` but

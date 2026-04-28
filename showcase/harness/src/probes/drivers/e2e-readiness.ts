@@ -4,6 +4,7 @@ import { truncateUtf8 } from "../../render/filters.js";
 import { showcaseShapeSchema } from "../discovery/railway-services.js";
 import type { ProbeDriver } from "../types.js";
 import type { Logger, ProbeContext, ProbeResult } from "../../types/index.js";
+import type { BrowserPool } from "../helpers/browser-pool.js";
 
 /**
  * Phase 4B.1 — e2e-demos driver.
@@ -271,6 +272,29 @@ const defaultLauncher: E2eDemosBrowserLauncher =
       close: () => browser.close(),
     };
   };
+
+export function createPooledE2eDemosLauncher(pool: BrowserPool): E2eDemosBrowserLauncher {
+  return async (): Promise<E2eDemosBrowser> => {
+    const browser = await pool.acquire();
+    return {
+      async newContext(): Promise<E2eDemosBrowserContext> {
+        const ctx = await browser.newContext();
+        return {
+          async newPage(): Promise<E2eDemosPage> {
+            const page = await ctx.newPage();
+            return {
+              goto: (url, opts) => page.goto(url, opts),
+              waitForSelector: (sel, opts) => page.waitForSelector(sel, opts),
+              close: () => page.close(),
+            };
+          },
+          close: () => ctx.close(),
+        };
+      },
+      close: async () => { pool.release(browser); },
+    };
+  };
+}
 
 /**
  * Default demos resolver. Reads `registry.json` once (memoised in-closure)
