@@ -34,6 +34,8 @@ not an LLM-initiated tool call. Typical cases:
 For LLM-initiated pauses where the model decides on the fly to ask
 the user, prefer [`useHumanInTheLoop`](../human-in-the-loop).
 
+<WhenFrameworkHas flag="interrupt_pattern" equals="native">
+
 ## The backend: `interrupt()` inside a tool
 
 The example agent exposes a `schedule_meeting` tool. When the model
@@ -63,6 +65,41 @@ and `resolve(...)` is how you resume the run:
 
 Whatever you pass to `resolve` is round-tripped back to the agent as
 the return value of the matching `interrupt(...)` call.
+
+</WhenFrameworkHas>
+
+<WhenFrameworkHas flag="interrupt_pattern" equals="promise-based">
+
+## The Promise-based shim
+
+On Microsoft Agent Framework there's no native interrupt primitive —
+the runtime can't pause a run mid-tool and hand control to the client
+the way LangGraph's `interrupt()` does. Instead, the demo uses
+`useFrontendTool` with an async handler that returns a Promise. The
+agent calls `schedule_meeting` like any other tool, the client-side
+handler renders the picker, and the Promise only resolves once the
+user picks a slot or cancels. Same UX, different mechanism.
+
+### The frontend: `useFrontendTool` with a Promise-resolving handler
+
+The handler stores its `resolve` callback in a ref, returns a Promise
+that the user's pick eventually resolves, and renders the picker
+inline in the chat. This is the MS Agent equivalent of
+`useInterrupt`'s `event` / `resolve` pair:
+
+<Snippet region="frontend-promise-handler" title="frontend/src/app/page.tsx — useFrontendTool (Promise-based)" />
+
+### The backend: agent instructed to call the frontend tool
+
+The agent has no local `schedule_meeting` implementation — the tool is
+registered entirely on the frontend. The backend's only job is to
+instruct the model to call `schedule_meeting` whenever the user wants
+to book a meeting. AG-UI routes the tool call to the client, where
+the Promise-returning handler takes over:
+
+<Snippet region="backend-tool-call" title="backend — agent instructed to call schedule_meeting" />
+
+</WhenFrameworkHas>
 
 ### Key props
 

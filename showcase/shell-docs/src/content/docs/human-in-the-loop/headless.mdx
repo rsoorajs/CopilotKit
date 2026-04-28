@@ -37,6 +37,8 @@ mounting a chat at all.
 If you just want "a picker in chat", just use
 [`useInterrupt`](./useInterrupt).
 
+<WhenFrameworkHas flag="interrupt_pattern" equals="native">
+
 ## The primitives
 
 Under the hood, `useInterrupt` composes two public APIs:
@@ -65,6 +67,38 @@ A few things this hook is careful about:
   new turn always starts from a clean slate.
 - `onRunFailed` drops the staged event so a transport hiccup doesn't
   leave the UI stuck showing a picker for a run that never paused.
+
+</WhenFrameworkHas>
+
+<WhenFrameworkHas flag="interrupt_pattern" equals="promise-based">
+
+## The primitives (Promise-based shim)
+
+On Microsoft Agent Framework there's no native interrupt primitive —
+the runtime can't pause a run and surface a custom event for the
+client to subscribe to. Instead, the headless variant uses
+`useFrontendTool` with an async handler that returns a Promise: the
+handler exposes its pending payload via React state (so a separate
+"app surface" can render the picker outside the chat) and resolves
+the Promise once the user interacts. Same UX, different mechanism.
+
+The render callback intentionally returns `null` — the picker UI lives
+in the app surface, not in the chat transcript. The handler's pending
+state drives whether the picker is shown:
+
+<Snippet region="headless-promise-primitives" title="frontend/src/app/page.tsx — useFrontendTool (headless Promise-based)" />
+
+A few things this pattern is careful about:
+
+- The handler stages its `resolve` callback in a ref keyed by tool-call
+  id, so concurrent tool calls don't trample each other's resolvers.
+- `setPending` is called from inside the handler so the app surface
+  re-renders the picker as soon as the agent calls the tool, and again
+  with `null` after the user interacts so the picker disappears.
+- `render: () => null` keeps the chat transcript clean — the headless
+  variant deliberately bypasses inline rendering.
+
+</WhenFrameworkHas>
 
 ## Driving it from plain UI
 
