@@ -13,8 +13,13 @@ export function Cards({
   children: React.ReactNode;
   className?: string;
 }) {
+  // `not-prose` opts the wrapped Cards out of the .reference-content
+  // prose-link styling (which forces underline + accent color on every
+  // <a>). The Card's own className already controls link appearance.
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 my-6">{children}</div>
+    <div className="not-prose grid grid-cols-1 sm:grid-cols-2 gap-4 my-6">
+      {children}
+    </div>
   );
 }
 
@@ -36,13 +41,16 @@ export function Card({
   // Match the docs-landing pointer-card style:
   // - bordered surface, accent border on hover, subtle shadow on hover
   // - title flips to accent color on hover via `group-hover` so the link
-  //   feels active without using a default underline (prose CSS would
-  //   otherwise add one to the wrapping <a>)
-  // - linked variant suppresses the prose underline with `no-underline`
+  //   feels active without using a default underline
+  // - `not-prose` is the load-bearing class: the article body uses
+  //   `.reference-content` which forces `text-decoration: underline;
+  //   color: var(--accent)` on every <a>; that rule wins over the
+  //   Tailwind `no-underline` class on specificity. `not-prose`
+  //   triggers the global escape-hatch rule that drops both.
   const mergedClassName = [
     "block group rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] p-4",
     href
-      ? "no-underline hover:border-[var(--accent)] hover:shadow-sm transition"
+      ? "not-prose no-underline hover:border-[var(--accent)] hover:shadow-sm transition"
       : "transition-colors",
     className,
   ]
