@@ -18,13 +18,6 @@ interaction_modalities:
   - sidebar
   - embedded
   - chat
-starter:
-  path: showcase/integrations/llamaindex
-  name: Sales Dashboard
-  description: Full-featured sales pipeline with 4 GenUI rendering strategies
-  github_url: https://github.com/CopilotKit/CopilotKit/tree/main/showcase/integrations/llamaindex
-  demo_url: https://showcase-starter-llamaindex-production-78fe.up.railway.app
-  clone_command: npx degit CopilotKit/CopilotKit/showcase/integrations/llamaindex my-copilotkit-app
 features:
   - agentic-chat
   - agentic-chat-reasoning
