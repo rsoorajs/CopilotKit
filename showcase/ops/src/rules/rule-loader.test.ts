@@ -978,7 +978,8 @@ describe("rule-loader + renderer: full YAML contract coverage", () => {
     // event.*/env.* which are handled by validateTripleBrace.
     const { REDIRECT_DECOMMISSION_SLACK_SAFE_FIELDS } =
       await import("../probes/redirect-decommission.js");
-    const { LIVENESS_SLACK_SAFE_FIELDS } = await import("../probes/liveness.js");
+    const { LIVENESS_SLACK_SAFE_FIELDS } =
+      await import("../probes/liveness.js");
     // Mirror orchestrator.ts L1-L4 safe-field wiring: agent/chat/tools have
     // no probe module, so their safe-field set is defined inline (errorDesc
     // only, pre-sanitized by the shared smoke driver).
