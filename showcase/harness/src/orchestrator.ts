@@ -283,7 +283,10 @@ export async function boot(opts: BootOptions = {}): Promise<{
 
   const probeRegistry = createProbeRegistry();
   const discoveryRegistry = createDiscoveryRegistry();
-  registerAllProbeDrivers(probeRegistry, browserPoolReady ? browserPool : undefined);
+  registerAllProbeDrivers(
+    probeRegistry,
+    browserPoolReady ? browserPool : undefined,
+  );
   discoveryRegistry.register(railwayServicesSource);
   discoveryRegistry.register(pnpmPackagesDiscoverySource);
   const probeConfigDir =

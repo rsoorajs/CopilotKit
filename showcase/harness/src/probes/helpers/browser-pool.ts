@@ -38,7 +38,9 @@ export class BrowserPool {
       : undefined;
     this.recycleAfter =
       recycleAfter ??
-      (envRecycle !== undefined && !Number.isNaN(envRecycle) ? envRecycle : 100);
+      (envRecycle !== undefined && !Number.isNaN(envRecycle)
+        ? envRecycle
+        : 100);
   }
 
   async init(): Promise<void> {
