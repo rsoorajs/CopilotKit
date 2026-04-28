@@ -144,12 +144,14 @@ describe("d5-hitl-approve-deny script", () => {
         seenSelectors.push(selector);
         // Resolve only specific selectors to drive the cascade
         // deterministically:
-        //   - the canonical dialog testid (resolves dialog cascade)
-        //   - the canonical approve-button testid scoped under dialog
-        if (selector === '[data-testid="approval-dialog"]') return;
+        //   - the canonical overlay testid (resolves dialog cascade —
+        //     overlay is first in the cascade since it's the outermost
+        //     portal'd element)
+        //   - the canonical approve-button testid scoped under overlay
+        if (selector === '[data-testid="approval-dialog-overlay"]') return;
         if (
           selector ===
-          '[data-testid="approval-dialog"] [data-testid="approval-dialog-approve"]'
+          '[data-testid="approval-dialog-overlay"] [data-testid="approval-dialog-approve"]'
         ) {
           return;
         }
@@ -168,11 +170,11 @@ describe("d5-hitl-approve-deny script", () => {
 
     await turns[0]!.assertions!(page);
 
-    // Dialog selector queried first.
-    expect(seenSelectors[0]).toBe('[data-testid="approval-dialog"]');
-    // At least one button selector queried with the dialog prefix.
+    // Dialog overlay selector queried first (outermost portal'd element).
+    expect(seenSelectors[0]).toBe('[data-testid="approval-dialog-overlay"]');
+    // At least one button selector queried with the overlay prefix.
     const scopedButtons = seenSelectors.filter((s) =>
-      s.startsWith('[data-testid="approval-dialog"] '),
+      s.startsWith('[data-testid="approval-dialog-overlay"] '),
     );
     expect(scopedButtons.length).toBeGreaterThan(0);
     // No bare `button:has-text("Approve")` ever queried — every
