@@ -245,6 +245,11 @@ demos:
       - agent-state
     route: /demos/shared-state-read-write
     animated_preview_url:
+    highlight:
+      - src/agents/shared_state_read_write.py
+      - src/app/demos/shared-state-read-write/page.tsx
+      - src/app/demos/shared-state-read-write/notes-card.tsx
+      - src/app/demos/shared-state-read-write/preferences-card.tsx
   - id: subagents
     name: Sub-Agents
     description: Supervisor delegates to research / writing / critique CrewAI sub-crews with a live delegation log
@@ -252,6 +257,10 @@ demos:
       - multi-agent
     route: /demos/subagents
     animated_preview_url:
+    highlight:
+      - src/agents/subagents.py
+      - src/app/demos/subagents/page.tsx
+      - src/app/demos/subagents/delegation-log.tsx
   - id: readonly-state-agent-context
     name: Readonly State (Agent Context)
     description: Frontend provides read-only context to the agent via useAgentContext
