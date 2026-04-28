@@ -344,7 +344,7 @@ function createDefaultDemosResolver(): DemosResolver {
 }
 
 /** Create a configured e2e-smoke driver. Exported for tests; production
- * callers use the module-level `e2eSmokeDriver`. */
+ * callers use the module-level `e2eChatToolsDriver`. */
 export function createE2eSmokeDriver(
   deps: E2eSmokeDriverDeps = {},
 ): ProbeDriver<E2eSmokeDriverInput, E2eSmokeSignal> {
@@ -871,4 +871,4 @@ function deriveSlug(key: string, name?: string): string {
 
 /** Default driver instance with the real Playwright launcher. Registered
  * by the orchestrator at boot. */
-export const e2eSmokeDriver = createE2eSmokeDriver();
+export const e2eChatToolsDriver = createE2eSmokeDriver();

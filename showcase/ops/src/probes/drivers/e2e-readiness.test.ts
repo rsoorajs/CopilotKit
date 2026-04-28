@@ -4,13 +4,13 @@ import os from "node:os";
 import path from "node:path";
 import { z } from "zod";
 import {
-  e2eDemosDriver,
+  e2eReadinessDriver,
   createE2eDemosDriver,
   type E2eDemosBrowser,
   type E2eDemosBrowserContext,
   type E2eDemosPage,
   type E2eDemosAggregateSignal,
-} from "./e2e-demos.js";
+} from "./e2e-readiness.js";
 import { buildProbeInvoker } from "../loader/probe-invoker.js";
 import { createDiscoveryRegistry } from "../discovery/index.js";
 import type { DiscoverySource } from "../types.js";
@@ -56,7 +56,7 @@ function mkSpyLogger(): { logger: Logger; entries: LogEntry[] } {
 //
 // Real chromium is never touched — tests inject a pluggable launcher that
 // returns a scripted fake browser. Mirrors the e2e-smoke driver's test
-// pattern (see e2e-smoke.test.ts).
+// pattern (see e2e-chat-tools.test.ts).
 
 // --- Fakes ---------------------------------------------------------------
 
@@ -179,7 +179,7 @@ describe("e2e-demos driver", () => {
   });
 
   it("exposes kind === 'e2e_demos'", () => {
-    expect(e2eDemosDriver.kind).toBe("e2e_demos");
+    expect(e2eReadinessDriver.kind).toBe("e2e_demos");
   });
 
   it("emits one e2e:<slug>/<feature> row per declared demo", async () => {

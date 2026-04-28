@@ -22,7 +22,7 @@ import {
 } from "./storage/s3-backup.js";
 import { deployEventToProbeResult } from "./probes/deploy-result.js";
 import { REDIRECT_DECOMMISSION_SLACK_SAFE_FIELDS } from "./probes/redirect-decommission.js";
-import { SMOKE_SLACK_SAFE_FIELDS } from "./probes/smoke.js";
+import { LIVENESS_SLACK_SAFE_FIELDS } from "./probes/liveness.js";
 import { aimockWiringProbe } from "./probes/aimock-wiring.js";
 import { createProbeRegistry } from "./probes/drivers/index.js";
 import { createDiscoveryRegistry } from "./probes/discovery/index.js";
@@ -34,12 +34,12 @@ import { createProbeRunWriter } from "./probes/run-history.js";
 import type { ProbeRunWriter } from "./probes/run-history.js";
 import { aimockWiringDriver } from "./probes/drivers/aimock-wiring.js";
 import { pinDriftDriver } from "./probes/drivers/pin-drift.js";
-import { smokeDriver } from "./probes/drivers/smoke.js";
+import { livenessDriver } from "./probes/drivers/liveness.js";
 import { imageDriftDriver } from "./probes/drivers/image-drift.js";
 import { versionDriftDriver } from "./probes/drivers/version-drift.js";
 import { redirectDecommissionDriver } from "./probes/drivers/redirect-decommission.js";
-import { e2eSmokeDriver } from "./probes/drivers/e2e-smoke.js";
-import { e2eDemosDriver } from "./probes/drivers/e2e-demos.js";
+import { e2eChatToolsDriver } from "./probes/drivers/e2e-chat-tools.js";
+import { e2eReadinessDriver } from "./probes/drivers/e2e-readiness.js";
 import { e2eDeepDriver } from "./probes/drivers/e2e-deep.js";
 import { e2eParityDriver } from "./probes/drivers/e2e-parity.js";
 import { qaDriver } from "./probes/drivers/qa.js";
@@ -136,15 +136,15 @@ export async function boot(opts: BootOptions = {}): Promise<{
     opts.configDir ?? path.resolve(process.cwd(), "config/alerts");
   // L1-L4 per-starter dimensions (agent/chat/tools) don't have dedicated probe
   // modules today — their signals flow through the same smoke/e2e-smoke drivers
-  // as side-emissions (see probes/drivers/smoke.ts). The safe-field sets for
+  // as side-emissions (see probes/drivers/liveness.ts). The safe-field sets for
   // them mirror smoke's sanitized-errorDesc allow-list so triple-brace
   // {{{signal.errorDesc}}} in the red-tick YAMLs loads. Keep these in lockstep
-  // with SMOKE_SLACK_SAFE_FIELDS — any new sanitized field added there SHOULD
+  // with LIVENESS_SLACK_SAFE_FIELDS — any new sanitized field added there SHOULD
   // be added here too unless there's a dimension-specific reason otherwise.
   const L1_L4_SLACK_SAFE_FIELDS = ["errorDesc"] as const;
   const slackSafeFields: Record<string, Set<string>> = {
     redirect_decommission: new Set(REDIRECT_DECOMMISSION_SLACK_SAFE_FIELDS),
-    smoke: new Set(SMOKE_SLACK_SAFE_FIELDS),
+    smoke: new Set(LIVENESS_SLACK_SAFE_FIELDS),
     agent: new Set(L1_L4_SLACK_SAFE_FIELDS),
     chat: new Set(L1_L4_SLACK_SAFE_FIELDS),
     tools: new Set(L1_L4_SLACK_SAFE_FIELDS),
@@ -323,7 +323,7 @@ export async function boot(opts: BootOptions = {}): Promise<{
     // we compute a PER-CFG env overlay via `envForCfg(cfg, baseEnv)` and
     // hand it to `buildProbeInvoker` as the invoker's `env`. Drivers
     // read the timeout via `ctx.env.E2E_DEMOS_TIMEOUT_MS` (see
-    // drivers/e2e-demos.ts — `TIMEOUT_ENV_VAR`).
+    // drivers/e2e-readiness.ts — `TIMEOUT_ENV_VAR`).
     //
     // Pre-fix this loop wrote `process.env.E2E_DEMOS_TIMEOUT_MS = ...`
     // directly. Three problems with that:
@@ -847,12 +847,12 @@ export function registerAllProbeDrivers(
 ): void {
   probeRegistry.register(aimockWiringDriver);
   probeRegistry.register(pinDriftDriver);
-  probeRegistry.register(smokeDriver);
+  probeRegistry.register(livenessDriver);
   probeRegistry.register(imageDriftDriver);
   probeRegistry.register(versionDriftDriver);
   probeRegistry.register(redirectDecommissionDriver);
-  probeRegistry.register(e2eSmokeDriver);
-  probeRegistry.register(e2eDemosDriver);
+  probeRegistry.register(e2eChatToolsDriver);
+  probeRegistry.register(e2eReadinessDriver);
   probeRegistry.register(e2eDeepDriver);
   probeRegistry.register(e2eParityDriver);
   probeRegistry.register(qaDriver);
