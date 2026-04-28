@@ -69,7 +69,7 @@ internal sealed class SubagentsAgent : DelegatingAIAgent
         // exposes a per-thread "active" handle that the static tool
         // function reads. We restore the previous value on exit so nested /
         // overlapping runs don't trample each other.
-        var previous = _store.SetActiveThread(thread);
+        var previous = (AgentThread?)_store.SetActiveThread(thread);
         try
         {
             await foreach (var update in InnerAgent.RunStreamingAsync(messageList, thread, options, cancellationToken).ConfigureAwait(false))

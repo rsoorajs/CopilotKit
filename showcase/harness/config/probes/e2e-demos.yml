@@ -46,7 +46,7 @@
 # driver's runDemo() shares one 30s budget across goto + all 5
 # fallback selector waits, so a single demo cannot exceed 30s
 # regardless of how many selectors it tries (enforced via a single
-# wall-clock deadline in `drivers/e2e-demos.ts`'s runDemo()). For
+# wall-clock deadline in `drivers/e2e-readiness.ts`'s runDemo()). For
 # the largest 38-demo service the
 # absolute worst case is therefore ~38 × 30s ≈ ~19 min — bounded by
 # the 20-min outer cap below (which the driver's internal hard-cap is
@@ -78,7 +78,7 @@
 # outer cap is set to 20 min. The driver's internal hard-cap is
 # threaded from this YAML value at orchestrator boot (see
 # orchestrator.ts: `process.env.E2E_DEMOS_TIMEOUT_MS = cfg.timeout_ms`,
-# read per-`run()` by drivers/e2e-demos.ts), so the driver's own timer
+# read per-`run()` by drivers/e2e-readiness.ts), so the driver's own timer
 # fires at exactly the same wall-clock as the invoker's outer race —
 # no premature internal-cap edge that would short-circuit the YAML's
 # documented behaviour at the driver's pre-threading default of 5 min.

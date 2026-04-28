@@ -41,30 +41,20 @@ import {
  */
 
 /**
- * Service shape — distinguishes the two deployment archetypes that share
- * the `showcase-*` naming scheme on Railway but have wildly different URL
- * surfaces. Drivers branch on this field to pick the right probe contract
- * (see `drivers/smoke.ts` and `drivers/e2e-smoke.ts`).
+ * Service shape — identifies the deployment archetype for `showcase-*`
+ * services on Railway. Drivers branch on this field to pick the right
+ * probe contract (see `drivers/liveness.ts` and `drivers/e2e-chat-tools.ts`).
  *
  *   - `package`  Shell-based showcases (`showcase-ag2`, `showcase-mastra`,
  *                ...). They expose `/smoke`, `/health`, `/demos/*`, and
  *                `/api/copilotkit/` as distinct routes.
- *   - `starter`  Single-app integrations deployed from
- *                `showcase/starters/*` (Railway service name pattern
- *                `showcase-starter-*`). They mount the integration at
- *                `/`, health at `/api/health`, and have NO `/smoke` or
- *                `/demos/*` routing.
  *
- * Classification is derived from the Railway service name, so adding a
- * new starter requires no YAML edit — the next tick picks it up with
- * `shape: "starter"` automatically.
- *
- * Single-source tuple: the driver schemas import `showcaseShapeSchema`
- * below so every consumer of `shape` shares the exact enum — adding a new
+ * Single-source literal: the driver schemas import `showcaseShapeSchema`
+ * below so every consumer of `shape` shares the exact type — adding a new
  * archetype (e.g. `static`) is a one-line edit here plus a matching
  * classifier branch, not a cross-file ripple.
  */
-export const showcaseShapeSchema = z.enum(["package", "starter"]);
+export const showcaseShapeSchema = z.literal("package");
 export type ShowcaseServiceShape = z.infer<typeof showcaseShapeSchema>;
 
 export interface RailwayServiceInfo {
@@ -75,8 +65,7 @@ export interface RailwayServiceInfo {
   /**
    * Deployment archetype, classified from the service name. Drivers
    * that probe per-service URLs branch on this field to pick the right
-   * contract (starter: `/api/health` + skip `/smoke` + skip `/demos/*`;
-   * package: legacy `/smoke` + `/health` + `/demos/*`).
+   * contract (package: `/smoke` + `/health` + `/demos/*`).
    */
   shape: ShowcaseServiceShape;
   /**
@@ -132,127 +121,29 @@ function isAbortError(err: unknown): boolean {
 }
 
 /**
- * True iff `a` and `b` are exactly one single-character edit apart
- * (insertion, deletion, substitution, OR adjacent transposition).
- * Used by `classifyShape` to surface suspected typos of `starter-`.
- *
- * Equal strings return `false` — this checks "exactly one edit", not
- * "at most one". Implementation is the standard early-exit linear
- * scan; we don't pull in a full Levenshtein library because the
- * comparison budget is tiny (one segment vs. one literal "starter").
- *
- * Adjacent-transposition detection is included because the canonical
- * starter typo this guards against is `strater` (a/r swap), which a
- * pure Levenshtein-1 check would score as distance 2.
- */
-function isOneEditDistance(a: string, b: string): boolean {
-  if (a === b) return false;
-  // Adjacent transposition: same length, exactly two adjacent chars
-  // differ AND swapping them makes the strings equal.
-  if (a.length === b.length) {
-    let firstDiff = -1;
-    let secondDiff = -1;
-    for (let i = 0; i < a.length; i++) {
-      if (a[i] !== b[i]) {
-        if (firstDiff === -1) {
-          firstDiff = i;
-        } else if (secondDiff === -1) {
-          secondDiff = i;
-        } else {
-          // Three or more diffs — too far for a single edit.
-          firstDiff = -1;
-          break;
-        }
-      }
-    }
-    if (
-      firstDiff !== -1 &&
-      secondDiff === firstDiff + 1 &&
-      a[firstDiff] === b[secondDiff] &&
-      a[secondDiff] === b[firstDiff]
-    ) {
-      return true;
-    }
-  }
-  // Standard 1-edit check: substitution (same length), insertion or
-  // deletion (length differs by 1). Anything else is too far.
-  const [shorter, longer] = a.length <= b.length ? [a, b] : [b, a];
-  if (longer.length - shorter.length > 1) return false;
-  let i = 0;
-  let j = 0;
-  let edits = 0;
-  while (i < shorter.length && j < longer.length) {
-    if (shorter[i] === longer[j]) {
-      i++;
-      j++;
-      continue;
-    }
-    edits++;
-    if (edits > 1) return false;
-    if (shorter.length === longer.length) {
-      // Substitution — advance both.
-      i++;
-      j++;
-    } else {
-      // Insertion in `longer` — advance only `longer`.
-      j++;
-    }
-  }
-  // Trailing char in `longer` (single insertion at end).
-  if (j < longer.length) edits++;
-  return edits === 1;
-}
-
-/**
  * Classify a Railway service name into a `ShowcaseServiceShape`. Exported
  * so tests can exercise the classifier directly and downstream drivers
  * can reclassify from a bare name when the discovery record wasn't
  * threaded through (static-YAML callers). The rule set:
- *   - `showcase-starter-<slug>` → `"starter"`.
  *   - `showcase-<slug>` where `<slug>` is lowercase-alphanumeric plus
  *     hyphens (multi-segment names like `showcase-langgraph-python`,
  *     `showcase-claude-sdk-typescript`, `showcase-ms-agent-dotnet`) →
- *     `"package"`. The earlier single-segment regex misclassified every
- *     hyphen-bearing package as unknown and fired a warn per tick on
- *     real production services.
- *   - Any other name — typos like `showcase-strater-foo`, mixed case,
- *     or unrelated workloads (`copilotkit-cloud`, `my-random-service`)
- *     — still returns `"package"` as a safe default but emits an audit
- *     warn via `opts.logger?.warn`. That preserves the fall-through
- *     behaviour while alerting operators on drift (renamed service,
- *     unrelated workload picked up by discovery) on the first tick.
+ *     `"package"`.
+ *   - Any other name — mixed case, or unrelated workloads
+ *     (`copilotkit-cloud`, `my-random-service`) — still returns
+ *     `"package"` as a safe default but emits an audit warn via
+ *     `opts.logger?.warn`. That preserves the fall-through behaviour
+ *     while alerting operators on drift (renamed service, unrelated
+ *     workload picked up by discovery) on the first tick.
  */
 export function classifyShape(
   name: string,
   opts: { logger?: ShapeLogger } = {},
 ): ShowcaseServiceShape {
-  if (/^showcase-starter-[a-z0-9-]+$/.test(name)) return "starter";
-  // Widened package regex: starts with `showcase-`, not followed by
-  // `starter-` (that path is the branch above), then lowercase-alnum
+  // Package regex: starts with `showcase-`, then lowercase-alnum
   // plus hyphens. Accepts `showcase-ag2`, `showcase-langgraph-python`,
   // `showcase-claude-sdk-typescript`, etc. without firing a warn.
-  if (/^showcase-(?!starter-)[a-z0-9][a-z0-9-]*$/.test(name)) {
-    // Typo nudge: a name like `showcase-strater-ag2` (transposition)
-    // or `showcase-startr-ag2` (deletion) classifies as package
-    // silently, but is overwhelmingly likely to be a typo of
-    // `starter-`. Surface the suspicion via a structured warn with
-    // a suggested correction; do NOT change classification — that
-    // would break the documented "anything-not-starter is package"
-    // fallback. The widened package regex matches 1-edit-distance
-    // typos by construction, so we can't tighten the regex without
-    // also rejecting legitimate multi-segment package names.
-    const firstSegment = name.slice("showcase-".length).split("-")[0];
-    if (firstSegment && isOneEditDistance(firstSegment, "starter")) {
-      const suggested = `showcase-starter-${name
-        .slice("showcase-".length)
-        .split("-")
-        .slice(1)
-        .join("-")}`;
-      opts.logger?.warn?.(
-        "discovery.railway-services.classify-typo-suspected",
-        { name, suggested },
-      );
-    }
+  if (/^showcase-[a-z0-9][a-z0-9-]*$/.test(name)) {
     return "package";
   }
   // Everything else — a `showcase-*` typo, a mixed-case variant, or a
@@ -386,7 +277,7 @@ const VariablesSchema = z.object({
 
 /**
  * Read `registry.json` and build a `slug -> demos[].id[]` map. Mirrors
- * the parsing logic in `drivers/e2e-demos.ts`'s `defaultDemosResolver`
+ * the parsing logic in `drivers/e2e-readiness.ts`'s `defaultDemosResolver`
  * so behaviour stays consistent across the two readers — the discovery
  * source feeds the invoker's pre-dispatch sort while the driver's
  * resolver feeds the per-service fan-out at execute time.
@@ -505,16 +396,6 @@ async function loadDemosMap(
  * Mirrors the driver's `deriveSlug` for consistency. Names without the
  * prefix pass through unchanged so unrelated workloads simply don't
  * match a registry slug and end up with `demos: []`.
- *
- * Strip behaviour for starter services: `showcase-starter-ag2` becomes
- * `starter-ag2` (only the leading `showcase-` segment is removed). The
- * registry uses bare integration slugs (e.g. `ag2`) for package
- * services, so starter slugs don't match a registry entry and end up
- * with `demos: []`. This is the documented contract — the e2e-demos
- * driver doesn't fan out for starters anyway (shape-gated), so the
- * intentional miss is harmless. Adding a starter-specific demos slug
- * scheme would require a coordinated change in the driver, the
- * resolver, and `registry.json`'s `integrations` shape.
  */
 function deriveSlugFromServiceName(name: string): string {
   return name.startsWith("showcase-") ? name.slice("showcase-".length) : name;

@@ -998,7 +998,8 @@ describe("rule-loader + renderer: full YAML contract coverage", () => {
     // event.*/env.* which are handled by validateTripleBrace.
     const { REDIRECT_DECOMMISSION_SLACK_SAFE_FIELDS } =
       await import("../probes/redirect-decommission.js");
-    const { SMOKE_SLACK_SAFE_FIELDS } = await import("../probes/smoke.js");
+    const { LIVENESS_SLACK_SAFE_FIELDS } =
+      await import("../probes/liveness.js");
     // Mirror orchestrator.ts L1-L4 safe-field wiring: agent/chat/tools have
     // no probe module, so their safe-field set is defined inline (errorDesc
     // only, pre-sanitized by the shared smoke driver).
@@ -1008,7 +1009,7 @@ describe("rule-loader + renderer: full YAML contract coverage", () => {
       logger,
       slackSafeFields: {
         redirect_decommission: new Set(REDIRECT_DECOMMISSION_SLACK_SAFE_FIELDS),
-        smoke: new Set(SMOKE_SLACK_SAFE_FIELDS),
+        smoke: new Set(LIVENESS_SLACK_SAFE_FIELDS),
         agent: new Set(L1_L4_SLACK_SAFE_FIELDS),
         chat: new Set(L1_L4_SLACK_SAFE_FIELDS),
         tools: new Set(L1_L4_SLACK_SAFE_FIELDS),
@@ -1451,7 +1452,7 @@ describe("rule-loader + renderer: full YAML contract coverage", () => {
       ).text;
       expect(text).toContain("coagents-starter");
       expect(text).toContain("down, error: http 503");
-      // Triple-brace signal.url (marked slackSafe in SMOKE_SLACK_SAFE_FIELDS)
+      // Triple-brace signal.url (marked slackSafe in LIVENESS_SLACK_SAFE_FIELDS)
       // preserves the raw URL inside `<URL|label>` Slack link markup; prior
       // double-brace would HTML-escape `/` → `&#x2F;` and break the link at
       // Slack render time.

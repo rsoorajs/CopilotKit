@@ -247,15 +247,15 @@ Every `kind` resolves to a driver registered in `src/probes/drivers/index.ts`. T
 
 | YAML `kind`             | Driver file                        | Emitted key prefix(es)                 | Shape     |
 | ----------------------- | ---------------------------------- | -------------------------------------- | --------- |
-| `smoke`                 | `drivers/smoke.ts`                 | `smoke:<slug>` **and** `health:<slug>` | static    |
-| `e2e_smoke` (deferred)  | `drivers/e2e-smoke.ts`             | `e2e_smoke:<suite>`                    | static    |
+| `smoke`                 | `drivers/liveness.ts`              | `smoke:<slug>` **and** `health:<slug>` | static    |
+| `e2e_smoke` (deferred)  | `drivers/e2e-chat-tools.ts`        | `e2e_smoke:<suite>`                    | static    |
 | `image_drift`           | `drivers/image-drift.ts`           | `image_drift:<service>`                | discovery |
 | `version_drift`         | `drivers/version-drift.ts`         | `version_drift:<pkg>`                  | discovery |
 | `pin_drift`             | `drivers/pin-drift.ts`             | `pin_drift:overall`                    | single    |
 | `redirect_decommission` | `drivers/redirect-decommission.ts` | `redirect_decommission:overall`        | single    |
 | `aimock_wiring`         | `drivers/aimock-wiring.ts`         | `aimock_wiring:global`                 | single    |
 
-The `smoke` driver is the only one that emits **two** keys per target invocation: the primary `smoke:<slug>` ProbeResult is the driver's return value (written by the invoker), and the paired `health:<slug>` ProbeResult is side-emitted through `ctx.writer.write()` before returning. One YAML static target = two writer ticks per cycle. See the JSDoc on `smokeDriver` for why the paired emission is a writer side-channel rather than an array return.
+The `smoke` driver is the only one that emits **two** keys per target invocation: the primary `smoke:<slug>` ProbeResult is the driver's return value (written by the invoker), and the paired `health:<slug>` ProbeResult is side-emitted through `ctx.writer.write()` before returning. One YAML static target = two writer ticks per cycle. See the JSDoc on `livenessDriver` for why the paired emission is a writer side-channel rather than an array return.
 
 ### Discovery sources
 
@@ -357,7 +357,7 @@ src/
 ├── probes/
 │   ├── types.ts                  # ProbeDriver / DiscoverySource / registry interfaces
 │   ├── deploy-result.ts          # webhook deploy-event → ProbeResult mapper
-│   ├── smoke.ts                  # legacy smoke probe (deriveHealthUrl + SMOKE_SLACK_SAFE_FIELDS)
+│   ├── liveness.ts               # legacy liveness probe (deriveHealthUrl + LIVENESS_SLACK_SAFE_FIELDS)
 │   ├── pin-drift.ts              # pinDriftProbe state-machine authority
 │   ├── aimock-wiring.ts          # aimockWiringProbe (used by driver + legacy cron resolver)
 │   ├── redirect-decommission.ts  # legacy probe + REDIRECT_DECOMMISSION_SLACK_SAFE_FIELDS

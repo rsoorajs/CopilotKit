@@ -198,7 +198,7 @@ describe("red-tick YAML rendering — Items 2 & 3", () => {
   });
 
   // A3: the smoke template historically referenced `signal.links.smoke` /
-  // `signal.links.health` — the DRIVER signal (probes/drivers/smoke.ts) has
+  // `signal.links.health` — the DRIVER signal (probes/drivers/liveness.ts) has
   // `slug, url, status, errorDesc, latencyMs` and no `links` object, so those
   // section-guards were always empty. The template should pull `signal.url`
   // directly and render an "endpoint" link.

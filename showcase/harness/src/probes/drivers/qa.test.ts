@@ -260,28 +260,6 @@ describe("qa driver", () => {
     expect(writes.map((w) => w.key)).toEqual(["qa:baz/x"]);
   });
 
-  it("starter-shape input: returns green aggregate and emits no side rows", async () => {
-    // Starters have no per-demo /demos routing so the driver skips them.
-    const root = makeRepoFixture({
-      slug: "starter-foo",
-      features: ["something"],
-      qaFilesFor: [],
-      omitQaDir: true,
-    });
-    tmpRoots.push(root);
-
-    const { writer, writes } = mkWriter();
-    const ctx = mkCtx(writer, { QA_REPO_ROOT: root });
-    const result = await qaDriver.run(ctx, {
-      key: "qa:starter-foo",
-      slug: "starter-foo",
-      shape: "starter",
-    });
-
-    expect(result.state).toBe("green");
-    expect(writes).toHaveLength(0);
-  });
-
   it("manifest missing: returns state='error' with a readable errorDesc", async () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "qa-driver-empty-"));
     tmpRoots.push(root);
@@ -301,7 +279,7 @@ describe("qa driver", () => {
 
   it("manifest with no demos: aggregate green, no side rows", async () => {
     // An integration without any demos is structurally valid (some
-    // integrations are starter-only or still in draft) — the QA probe
+    // integrations are still in draft) — the QA probe
     // should NOT flip red for them; there's nothing to check.
     const root = makeRepoFixture({
       slug: "empty",
