@@ -124,7 +124,11 @@ const nextConfig: NextConfig = {
       },
       // Cat C promotions whose canonical home moved off the unselected
       // tail (e.g. `unselected/ag-ui` → `backend/ag-ui`).
-      { source: "/unselected/ag-ui", destination: "/backend/ag-ui", permanent: true },
+      {
+        source: "/unselected/ag-ui",
+        destination: "/backend/ag-ui",
+        permanent: true,
+      },
       {
         source: "/unselected/copilot-runtime",
         destination: "/backend/copilot-runtime",
@@ -162,8 +166,7 @@ const nextConfig: NextConfig = {
       // through to the right framework's interrupt flow if they're
       // stored as LangGraph or Mastra.
       {
-        source:
-          "/unselected/generative-ui/your-components/interrupt-based",
+        source: "/unselected/generative-ui/your-components/interrupt-based",
         destination: "/human-in-the-loop",
         permanent: true,
       },
