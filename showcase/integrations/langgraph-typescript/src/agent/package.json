@@ -7,7 +7,7 @@
     "start": "node --import tsx liveness.mjs"
   },
   "dependencies": {
-    "@copilotkit/sdk-js": "1.56.3",
+    "@copilotkit/sdk-js": "1.56.4",
     "@langchain/core": "1.1.41",
     "@langchain/langgraph": "1.2.9",
     "@langchain/langgraph-api": "1.1.17",
