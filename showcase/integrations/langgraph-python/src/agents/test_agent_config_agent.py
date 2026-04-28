@@ -1,10 +1,4 @@
-"""Unit tests for agent_config_agent's prompt builder + defensive defaults.
-
-`read_properties` now takes the runtime context dict directly (the agent
-reads from ``Runtime[AgentConfigContext].context`` rather than from
-``RunnableConfig["configurable"]["properties"]``), so these tests pass flat
-dicts that mirror the on-the-wire context payload.
-"""
+"""Unit tests for agent_config_agent's prompt builder + defensive defaults."""
 
 from src.agents.agent_config_agent import (
     DEFAULT_EXPERTISE,
@@ -24,8 +18,17 @@ def test_read_properties_returns_defaults_when_missing():
     }
 
 
-def test_read_properties_returns_defaults_when_context_empty():
+def test_read_properties_returns_defaults_when_configurable_missing():
     result = read_properties({})
+    assert result == {
+        "tone": DEFAULT_TONE,
+        "expertise": DEFAULT_EXPERTISE,
+        "response_length": DEFAULT_RESPONSE_LENGTH,
+    }
+
+
+def test_read_properties_returns_defaults_when_properties_missing():
+    result = read_properties({"configurable": {}})
     assert result == {
         "tone": DEFAULT_TONE,
         "expertise": DEFAULT_EXPERTISE,
@@ -36,9 +39,13 @@ def test_read_properties_returns_defaults_when_context_empty():
 def test_read_properties_accepts_valid_values():
     result = read_properties(
         {
-            "tone": "enthusiastic",
-            "expertise": "expert",
-            "responseLength": "detailed",
+            "configurable": {
+                "properties": {
+                    "tone": "enthusiastic",
+                    "expertise": "expert",
+                    "responseLength": "detailed",
+                }
+            }
         }
     )
     assert result == {
@@ -49,26 +56,36 @@ def test_read_properties_accepts_valid_values():
 
 
 def test_read_properties_rejects_invalid_tone_to_default():
-    result = read_properties({"tone": "sinister"})
+    result = read_properties(
+        {"configurable": {"properties": {"tone": "sinister"}}}
+    )
     assert result["tone"] == DEFAULT_TONE
 
 
 def test_read_properties_rejects_invalid_expertise_to_default():
-    result = read_properties({"expertise": "ninja"})
+    result = read_properties(
+        {"configurable": {"properties": {"expertise": "ninja"}}}
+    )
     assert result["expertise"] == DEFAULT_EXPERTISE
 
 
 def test_read_properties_rejects_invalid_length_to_default():
-    result = read_properties({"responseLength": "epic"})
+    result = read_properties(
+        {"configurable": {"properties": {"responseLength": "epic"}}}
+    )
     assert result["response_length"] == DEFAULT_RESPONSE_LENGTH
 
 
 def test_read_properties_mixes_valid_and_invalid():
     result = read_properties(
         {
-            "tone": "casual",
-            "expertise": "unknown",
-            "responseLength": "detailed",
+            "configurable": {
+                "properties": {
+                    "tone": "casual",
+                    "expertise": "unknown",
+                    "responseLength": "detailed",
+                }
+            }
         }
     )
     assert result == {

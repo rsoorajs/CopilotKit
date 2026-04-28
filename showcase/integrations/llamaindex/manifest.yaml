@@ -47,6 +47,8 @@ features:
   - open-gen-ui-advanced
   - agent-config
   - shared-state-streaming
+  - shared-state-read-write
+  - subagents
   - prebuilt-sidebar
   - prebuilt-popup
   - chat-slots
@@ -144,6 +146,31 @@ demos:
     highlight:
       - src/app/demos/shared-state-streaming/agent.py
       - src/app/demos/shared-state-streaming/page.tsx
+      - src/app/api/copilotkit/route.ts
+  - id: shared-state-read-write
+    name: Shared State (Read + Write)
+    description: Bidirectional shared state — UI writes preferences via agent.setState; agent writes notes via the set_notes tool. Backend reads preferences from state every turn through LlamaIndex's <state> prelude
+    tags:
+      - agent-state
+    route: /demos/shared-state-read-write
+    animated_preview_url:
+    highlight:
+      - src/agents/shared_state_read_write_agent.py
+      - src/app/demos/shared-state-read-write/page.tsx
+      - src/app/demos/shared-state-read-write/preferences-card.tsx
+      - src/app/demos/shared-state-read-write/notes-card.tsx
+      - src/app/api/copilotkit/route.ts
+  - id: subagents
+    name: Sub-Agents
+    description: Supervisor delegates to research / writing / critique sub-agents (each a stand-alone LlamaIndex FunctionAgent). Every delegation appends to a live log in shared agent state
+    tags:
+      - agent-capabilities
+    route: /demos/subagents
+    animated_preview_url:
+    highlight:
+      - src/agents/subagents_agent.py
+      - src/app/demos/subagents/page.tsx
+      - src/app/demos/subagents/delegation-log.tsx
       - src/app/api/copilotkit/route.ts
   - id: prebuilt-sidebar
     name: "Pre-Built: Sidebar"

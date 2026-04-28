@@ -22,12 +22,15 @@ below are the ones where those primitives are genuinely unavailable.
   No way to pause a `SpringAIAgent` run and resume it from client-supplied
   state.
 
-- **subagents** — No multi-agent orchestration primitive in the current
-  `SpringAIAgent` builder. The bean wraps a single `ChatClient`; there is
-  no nested-agent / graph-as-node construct equivalent to LangGraph's
-  `Send` / subgraph-as-node pattern. A tool-composition approximation would
-  not match the canonical demo's semantics (step-state events + per-agent
-  interrupt points), so the existing stub is left in place.
+- **subagents** — Ported using the tool-composition pattern (each
+  sub-agent is a separate `ChatClient` call wired as a supervisor tool;
+  see `SubagentsController`). This deviates from LangGraph's
+  graph-as-node construct: there is no per-sub-agent interrupt point, and
+  step-started/step-finished events are not emitted. The user-visible
+  semantics — supervisor delegates work, each delegation is logged in
+  shared state, the UI renders a live timeline — match the canonical
+  demo. STATE_SNAPSHOT is emitted after every delegation so the
+  delegation log updates incrementally.
 
 ### `ag-ui:spring-ai` adapter gaps
 

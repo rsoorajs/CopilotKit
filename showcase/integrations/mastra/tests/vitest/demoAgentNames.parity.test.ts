@@ -51,7 +51,13 @@ const DEMOS_DIR = path.resolve(__dirname, "../../src/app/demos");
 // Agent names that appear in demo page.tsx files but intentionally do NOT
 // need to be registered in `demoAgentNames` (e.g. demos that talk to a
 // different backend). Keep empty unless you have a reason; add the reason.
-const WELL_KNOWN_EXCLUDES = new Set<string>([]);
+const WELL_KNOWN_EXCLUDES = new Set<string>([
+  // The auth demo points at `/api/copilotkit-auth` (a separate route with
+  // its own runtime + agent map), not `/api/copilotkit`. Its agent name
+  // therefore does not — and must not — appear in the main `demoAgentNames`
+  // registry, which gates the `/api/copilotkit` route.
+  "auth-demo",
+]);
 
 function dirExists(p: string): boolean {
   try {

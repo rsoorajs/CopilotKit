@@ -36,7 +36,10 @@ import json
 import sys
 from typing import Any
 
-from ag_ui_crewai.endpoint import add_crewai_crew_fastapi_endpoint
+from ag_ui_crewai.endpoint import (
+    add_crewai_crew_fastapi_endpoint,
+    add_crewai_flow_fastapi_endpoint,
+)
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -47,6 +50,8 @@ from agents.beautiful_chat import BeautifulChat
 from agents.byoc_hashbrown_agent import ByocHashbrown
 from agents.byoc_json_render_agent import ByocJsonRender
 from agents.declarative_gen_ui import DeclarativeGenUI
+from agents.shared_state_read_write import shared_state_read_write_flow
+from agents.subagents import subagents_flow
 
 app = FastAPI(title="CrewAI (Crews) Agent Server")
 
@@ -405,6 +410,18 @@ add_crewai_crew_fastapi_endpoint(app, A2UIFixedSchema(), "/a2ui-fixed-schema")
 add_crewai_crew_fastapi_endpoint(app, ByocHashbrown(), "/byoc-hashbrown")
 add_crewai_crew_fastapi_endpoint(app, ByocJsonRender(), "/byoc-json-render")
 add_crewai_crew_fastapi_endpoint(app, BeautifulChat(), "/beautiful-chat")
+
+# Per-demo dedicated `Flow` (not Crew) endpoints. The shared
+# `ChatWithCrewFlow` cannot host these demos because it has no per-tool
+# state-mutation surface — it only writes `state["outputs"]` when the
+# model invokes the magic `<crew_name>` tool. Mounting these as raw
+# CrewAI Flows lets us emit STATE_SNAPSHOT events directly via
+# `copilotkit_emit_state` so the UI sees per-tool / per-delegation
+# state updates live.
+add_crewai_flow_fastapi_endpoint(
+    app, shared_state_read_write_flow, "/shared-state-read-write"
+)
+add_crewai_flow_fastapi_endpoint(app, subagents_flow, "/subagents")
 
 add_crewai_crew_fastapi_endpoint(app, LatestAiDevelopment(), "/")
 

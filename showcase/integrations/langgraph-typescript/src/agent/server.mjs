@@ -40,7 +40,11 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // production parser walks the source file with the TypeScript API; pointing at
 // dist/graph.js still works because the parser reads whatever path we hand it,
 // but the runtime import lives in the same location so no tsx is required.
-const graphSpec = { starterAgent: "./graph.ts:graph" };
+const graphSpec = {
+  starterAgent: "./graph.ts:graph",
+  shared_state_read_write: "./shared-state-read-write.ts:graph",
+  subagents: "./subagents.ts:graph",
+};
 
 // Pre-warm schema cache before we accept traffic. This is what the official
 // prod image's build.mts does at image-build time. We do it once at boot —

@@ -32,6 +32,8 @@ features:
   - tool-rendering
   - gen-ui-agent
   - shared-state-streaming
+  - shared-state-read-write
+  - subagents
   - prebuilt-sidebar
   - prebuilt-popup
   - chat-slots
@@ -91,6 +93,33 @@ demos:
     highlight:
       - src/agents/main.py
       - src/app/demos/shared-state-streaming/page.tsx
+      - src/app/api/copilotkit/route.ts
+  - id: shared-state-read-write
+    name: Shared State (Read + Write)
+    description: Bidirectional agent state — UI writes preferences, agent writes notes back
+    tags:
+      - agent-state
+    route: /demos/shared-state-read-write
+    animated_preview_url:
+    highlight:
+      - src/agents/shared_state_read_write.py
+      - src/agent_server.py
+      - src/app/demos/shared-state-read-write/page.tsx
+      - src/app/demos/shared-state-read-write/preferences-card.tsx
+      - src/app/demos/shared-state-read-write/notes-card.tsx
+      - src/app/api/copilotkit/route.ts
+  - id: subagents
+    name: Sub-Agents
+    description: Multiple agents with visible task delegation
+    tags:
+      - multi-agent
+    route: /demos/subagents
+    animated_preview_url:
+    highlight:
+      - src/agents/subagents.py
+      - src/agent_server.py
+      - src/app/demos/subagents/page.tsx
+      - src/app/demos/subagents/delegation-log.tsx
       - src/app/api/copilotkit/route.ts
   - id: prebuilt-sidebar
     name: "Pre-Built: Sidebar"

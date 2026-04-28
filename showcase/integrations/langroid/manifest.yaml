@@ -23,6 +23,8 @@ features:
   - hitl
   - gen-ui-agent
   - shared-state-streaming
+  - shared-state-read-write
+  - subagents
   - chat-customization-css
   - prebuilt-sidebar
   - prebuilt-popup
@@ -82,6 +84,31 @@ demos:
       - src/agents/agent.py
       - src/app/demos/shared-state-streaming/page.tsx
       - src/app/api/copilotkit/route.ts
+  - id: shared-state-read-write
+    name: Shared State (Read + Write)
+    description: Bidirectional shared state — UI writes preferences via agent.setState, agent writes notes via the set_notes tool
+    tags:
+      - agent-state
+    route: /demos/shared-state-read-write
+    animated_preview_url:
+    highlight:
+      - src/agents/shared_state_read_write.py
+      - src/app/demos/shared-state-read-write/page.tsx
+      - src/app/demos/shared-state-read-write/preferences-card.tsx
+      - src/app/demos/shared-state-read-write/notes-card.tsx
+      - src/app/api/copilotkit-shared-state-read-write/route.ts
+  - id: subagents
+    name: Sub-Agents
+    description: Supervisor LLM delegates to research / writing / critique sub-agents; live delegation log streams running -> completed transitions
+    tags:
+      - agent-capabilities
+    route: /demos/subagents
+    animated_preview_url:
+    highlight:
+      - src/agents/subagents.py
+      - src/app/demos/subagents/page.tsx
+      - src/app/demos/subagents/delegation-log.tsx
+      - src/app/api/copilotkit-subagents/route.ts
   - id: chat-customization-css
     name: Chat Customization (CSS)
     description: Default CopilotChat re-themed via CopilotKitCSSProperties

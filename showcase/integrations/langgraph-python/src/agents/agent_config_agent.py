@@ -1,27 +1,20 @@
 """LangGraph agent backing the Agent Config Object demo.
 
 Reads three forwarded properties — tone, expertise, responseLength — from the
-LangGraph runtime context (``Runtime[AgentConfigContext].context``) and builds
-its system prompt dynamically per turn.
+LangGraph run's ``RunnableConfig["configurable"]["properties"]`` dict and
+builds its system prompt dynamically per turn.
 
 The CopilotKit provider's ``properties`` prop is wired through the runtime as
-``forwardedProps`` on each AG-UI run; the Next.js route wrapper at
-``src/app/api/copilotkit-agent-config/route.ts`` repacks those props onto
-``forwardedProps.context`` so they arrive here as the run's runtime context.
-
-LangGraph 1.x rejects ``configurable`` when ``context`` is also present
-("Cannot specify both configurable and context"), so the demo deliberately
-uses the ``context`` channel only. ``RunnableConfig["configurable"]`` is no
-longer consulted by this graph.
+``forwardedProps`` on each AG-UI run. This graph reads those with defensive
+defaults (unknown / missing values fall back to the defaults) and composes the
+system prompt from three small rulebooks before invoking the model.
 """
 
 from typing import Any, Literal
 
-from typing_extensions import TypedDict
-
+from langchain_core.runnables import RunnableConfig
 from langchain_openai import ChatOpenAI
 from langgraph.graph import END, START, MessagesState, StateGraph
-from langgraph.runtime import Runtime
 
 
 _llm: ChatOpenAI | None = None
@@ -48,34 +41,18 @@ VALID_EXPERTISE: set[str] = {"beginner", "intermediate", "expert"}
 VALID_RESPONSE_LENGTHS: set[str] = {"concise", "detailed"}
 
 
-class AgentConfigContext(TypedDict, total=False):
-    """Run-scoped context schema for the Agent Config demo.
-
-    The route wrapper repacks the CopilotKit provider's ``properties`` onto
-    ``forwardedProps.context``, which LangGraph then surfaces here as the
-    run's ``Runtime.context``. ``total=False`` keeps every field optional —
-    ``read_properties`` falls back to defaults for anything missing.
-    """
-
-    tone: str
-    expertise: str
-    responseLength: str
-
-
-def read_properties(
-    ctx: AgentConfigContext | dict[str, Any] | None,
-) -> dict[str, str]:
-    """Read forwarded properties from the runtime context with defensive
-    defaults.
+def read_properties(config: RunnableConfig | None) -> dict[str, str]:
+    """Read the forwarded ``properties`` object with defensive defaults.
 
     Any missing or unrecognized value falls back to the corresponding
     ``DEFAULT_*`` constant. The function never raises.
     """
-    ctx_dict: dict[str, Any] = dict(ctx) if ctx else {}
+    configurable = (config or {}).get("configurable", {}) or {}
+    properties = configurable.get("properties", {}) or {}
 
-    tone = ctx_dict.get("tone", DEFAULT_TONE)
-    expertise = ctx_dict.get("expertise", DEFAULT_EXPERTISE)
-    response_length = ctx_dict.get("responseLength", DEFAULT_RESPONSE_LENGTH)
+    tone = properties.get("tone", DEFAULT_TONE)
+    expertise = properties.get("expertise", DEFAULT_EXPERTISE)
+    response_length = properties.get("responseLength", DEFAULT_RESPONSE_LENGTH)
 
     if tone not in VALID_TONES:
         tone = DEFAULT_TONE
@@ -129,11 +106,10 @@ def build_system_prompt(tone: str, expertise: str, response_length: str) -> str:
 
 
 def call_model(
-    state: MessagesState,
-    runtime: Runtime[AgentConfigContext],
+    state: MessagesState, config: RunnableConfig | None = None
 ) -> dict[str, Any]:
-    """Single graph node — read runtime context, build prompt, invoke LLM."""
-    props = read_properties(runtime.context if runtime else None)
+    """Single graph node — read forwarded props, build prompt, invoke LLM."""
+    props = read_properties(config)
     system_prompt = build_system_prompt(
         props["tone"], props["expertise"], props["response_length"]
     )
@@ -142,7 +118,7 @@ def call_model(
     return {"messages": [response]}
 
 
-graph_builder = StateGraph(MessagesState, context_schema=AgentConfigContext)
+graph_builder = StateGraph(MessagesState)
 graph_builder.add_node("model", call_model)
 graph_builder.add_edge(START, "model")
 graph_builder.add_edge("model", END)

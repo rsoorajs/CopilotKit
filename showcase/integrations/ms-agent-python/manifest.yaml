@@ -50,7 +50,9 @@ features:
   - tool-rendering-custom-catchall
   - tool-rendering
   - tool-rendering-reasoning-chain
+  - shared-state-read-write
   - shared-state-streaming
+  - subagents
   - readonly-state-agent-context
   - multimodal
   - auth
@@ -160,6 +162,31 @@ demos:
       - generative-ui
     route: /demos/gen-ui-agent
     animated_preview_url:
+  - id: shared-state-read-write
+    name: Shared State (Read + Write)
+    description: Bidirectional agent state — UI writes preferences, agent writes notes back via state_update
+    tags:
+      - agent-state
+    route: /demos/shared-state-read-write
+    animated_preview_url:
+    highlight:
+      - src/agents/shared_state_read_write_agent.py
+      - src/app/demos/shared-state-read-write/page.tsx
+      - src/app/demos/shared-state-read-write/preferences-card.tsx
+      - src/app/demos/shared-state-read-write/notes-card.tsx
+      - src/app/api/copilotkit/route.ts
+  - id: subagents
+    name: Sub-Agents
+    description: Supervisor delegates to research / writing / critique sub-agents with a live delegation log
+    tags:
+      - multi-agent
+    route: /demos/subagents
+    animated_preview_url:
+    highlight:
+      - src/agents/subagents_agent.py
+      - src/app/demos/subagents/page.tsx
+      - src/app/demos/subagents/delegation-log.tsx
+      - src/app/api/copilotkit/route.ts
   - id: shared-state-streaming
     name: State Streaming
     description: Per-token state delta streaming from agent to UI

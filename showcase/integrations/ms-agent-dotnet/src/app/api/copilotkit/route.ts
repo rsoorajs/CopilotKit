@@ -36,7 +36,6 @@ const agentNames = [
   "shared-state-read",
   "shared-state-write",
   "shared-state-streaming",
-  "subagents",
   "tool-rendering-default-catchall",
   "tool-rendering-custom-catchall",
   "tool-rendering-reasoning-chain",
@@ -75,6 +74,18 @@ agents["default"] = createAgent();
 // is registered client-side via `useFrontendTool` and resolves via a modal
 // rendered OUTSIDE the chat surface.
 agents["hitl-in-app"] = new HttpAgent({ url: `${AGENT_URL}/hitl-in-app` });
+
+// Shared State (Read + Write) demo backend. UI owns `preferences` (written
+// via agent.setState) and the agent owns `notes` via the `set_notes` tool.
+// See agent/SharedStateReadWriteAgent.cs.
+agents["shared-state-read-write"] = new HttpAgent({
+  url: `${AGENT_URL}/shared-state-read-write`,
+});
+
+// Sub-Agents demo backend. Supervisor delegates to research / writing /
+// critique sub-agents and emits a delegation snapshot to the UI on each
+// tool call. See agent/SubagentsAgent.cs.
+agents["subagents"] = new HttpAgent({ url: `${AGENT_URL}/subagents` });
 
 console.log(
   `[copilotkit/route] Registered ${Object.keys(agents).length} agent names: ${Object.keys(agents).join(", ")}`,

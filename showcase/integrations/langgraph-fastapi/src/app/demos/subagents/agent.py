@@ -1,6 +1,10 @@
 """
-Agent implementation for Sub-Agents
+Agent implementation for Sub-Agents.
 
-Uses the main FastAPI agent graph — the demo page renders a travel planner
-with flight/hotel/experience sub-agent delegation via interrupt.
+Implementation lives in:
+  src/agents/src/subagents.py
+
+Registered in `langgraph.json` as `subagents`. The Next.js runtime route
+(`src/app/api/copilotkit/route.ts`) maps the agent id `subagents` to the
+`subagents` graph on the FastAPI deployment.
 """

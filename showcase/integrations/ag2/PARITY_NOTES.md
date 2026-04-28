@@ -26,8 +26,23 @@ all pointing to the same HTTP backend.
 ### Previously ported (kept)
 
 - `agentic-chat`, `hitl-in-chat`, `tool-rendering`, `gen-ui-tool-based`,
-  `gen-ui-agent`, `shared-state-read-write`, `shared-state-streaming`,
-  `subagents`
+  `gen-ui-agent`, `shared-state-streaming`
+
+### Batch 2 — Dedicated AG2 sub-apps
+
+These demos own their own `ConversableAgent(s)` plus FastAPI sub-app
+mounted at a named path (`agent_server.py` mounts each one before the
+catch-all `/`). The Next.js runtime points an `HttpAgent` at the
+matching path so each demo gets its own ContextVariables-backed state
+slot, isolated from the shared default agent.
+
+- `shared-state-read-write` — bidirectional shared state via AG2
+  `ContextVariables` + `ReplyResult`. Agent calls `get_current_preferences`
+  to read UI-written prefs and `set_notes` to write back.
+- `subagents` — supervisor `ConversableAgent` that delegates to three
+  sub-`ConversableAgent`s (research/writing/critique) exposed as tools;
+  each delegation appends to `delegations` in shared state for the live
+  log UI.
 
 ## Deferred (require per-demo agent specialization)
 
@@ -66,8 +81,6 @@ strictly "missing primitive" skips:
   the lazy-init agent shape from langgraph-python.
 - `open-gen-ui`, `open-gen-ui-advanced` — OGUI runtime with frontend sandbox.
 - `mcp-apps` — MCP server-driven UI. AG2 has MCP support; needs wiring.
-- `subagents` expansion — the current `subagents` demo uses the shared
-  agent; a GroupChat-based multi-agent port is a separate scope.
 
 ## Skipped (missing primitive)
 

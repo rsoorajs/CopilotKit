@@ -27,6 +27,8 @@ from agents.multimodal_agent import multimodal_router
 from agents.open_gen_ui_advanced_agent import open_gen_ui_advanced_router
 from agents.open_gen_ui_agent import open_gen_ui_router
 from agents.reasoning_agent import reasoning_router
+from agents.shared_state_read_write_agent import shared_state_read_write_router
+from agents.subagents_agent import subagents_router
 from agents.tool_rendering_reasoning_chain_agent import (
     tool_rendering_reasoning_chain_router,
 )
@@ -77,6 +79,10 @@ app.include_router(
     open_gen_ui_advanced_router, prefix="/open-gen-ui-advanced"
 )
 app.include_router(mcp_apps_router, prefix="/mcp-apps")
+app.include_router(
+    shared_state_read_write_router, prefix="/shared-state-read-write"
+)
+app.include_router(subagents_router, prefix="/subagents")
 
 
 def main():
