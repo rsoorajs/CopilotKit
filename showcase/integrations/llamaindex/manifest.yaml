@@ -5,7 +5,7 @@ language: python
 logo: /logos/llamaindex.svg
 description: CopilotKit integration with LlamaIndex
 partner_docs: null
-repo: https://github.com/CopilotKit/CopilotKit/tree/main/showcase/packages/llamaindex
+repo: https://github.com/CopilotKit/CopilotKit/tree/main/showcase/integrations/llamaindex
 copilotkit_version: 2.0.0
 backend_url: https://showcase-llamaindex-production.up.railway.app
 deployed: true
@@ -19,12 +19,12 @@ interaction_modalities:
   - embedded
   - chat
 starter:
-  path: showcase/starters/llamaindex
+  path: showcase/integrations/llamaindex
   name: Sales Dashboard
   description: Full-featured sales pipeline with 4 GenUI rendering strategies
-  github_url: https://github.com/CopilotKit/CopilotKit/tree/main/showcase/starters/llamaindex
+  github_url: https://github.com/CopilotKit/CopilotKit/tree/main/showcase/integrations/llamaindex
   demo_url: https://showcase-starter-llamaindex-production-78fe.up.railway.app
-  clone_command: npx degit CopilotKit/CopilotKit/showcase/starters/llamaindex my-copilotkit-app
+  clone_command: npx degit CopilotKit/CopilotKit/showcase/integrations/llamaindex my-copilotkit-app
 features:
   - agentic-chat
   - agentic-chat-reasoning

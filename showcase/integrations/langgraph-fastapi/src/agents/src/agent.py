@@ -7,15 +7,6 @@ injected into the LLM's tool list and executed on the frontend rather than
 locally.
 """
 
-import sys
-import os
-
-sys.path.insert(
-    0,
-    os.path.join(
-        os.path.dirname(__file__), "..", "..", "..", "..", "..", "shared", "python"
-    ),
-)
 from tools import (
     get_weather_impl,
     query_data_impl,

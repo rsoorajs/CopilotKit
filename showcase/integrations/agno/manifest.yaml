@@ -7,7 +7,7 @@ description: >-
   CopilotKit integration with Agno. Supports the full range of CopilotKit features
   including generative UI, shared state, human-in-the-loop, sub-agents, and streaming.
 partner_docs: null
-repo: https://github.com/CopilotKit/CopilotKit/tree/main/showcase/packages/agno
+repo: https://github.com/CopilotKit/CopilotKit/tree/main/showcase/integrations/agno
 copilotkit_version: 2.0.0
 backend_url: https://showcase-agno-production.up.railway.app
 deployed: true
@@ -21,12 +21,12 @@ interaction_modalities:
   - embedded
   - chat
 starter:
-  path: showcase/starters/agno
+  path: showcase/integrations/agno
   name: Sales Dashboard
   description: Full-featured sales pipeline with 4 GenUI rendering strategies
-  github_url: https://github.com/CopilotKit/CopilotKit/tree/main/showcase/starters/agno
+  github_url: https://github.com/CopilotKit/CopilotKit/tree/main/showcase/integrations/agno
   demo_url: https://showcase-starter-agno-production-359f.up.railway.app
-  clone_command: npx degit CopilotKit/CopilotKit/showcase/starters/agno my-copilotkit-app
+  clone_command: npx degit CopilotKit/CopilotKit/showcase/integrations/agno my-copilotkit-app
 features:
   - agentic-chat
   - tool-rendering

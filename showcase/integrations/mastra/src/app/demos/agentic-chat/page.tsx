@@ -13,11 +13,9 @@ import { z } from "zod";
 
 export default function AgenticChatDemo() {
   return (
-    // @region[provider-setup]
     <CopilotKit runtimeUrl="/api/copilotkit" agent="agentic_chat">
       <Chat />
     </CopilotKit>
-    // @endregion[provider-setup]
   );
 }
 
@@ -70,7 +68,6 @@ function Chat() {
     },
   });
 
-  // @region[configure-suggestions]
   useConfigureSuggestions({
     suggestions: [
       {
@@ -84,7 +81,6 @@ function Chat() {
     ],
     available: "always",
   });
-  // @endregion[configure-suggestions]
 
   return (
     <div

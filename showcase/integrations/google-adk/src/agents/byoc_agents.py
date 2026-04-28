@@ -8,21 +8,13 @@ the result.
 
 from __future__ import annotations
 
-import os
-import sys
-
 from google.adk.agents import LlmAgent
 from google.adk.tools import ToolContext
 
 from agents.shared_chat import get_model
 
-sys.path.insert(
-    0,
-    os.path.join(
-        os.path.dirname(__file__), "..", "..", "..", "..", "shared", "python"
-    ),
-)
-from tools import query_data_impl  # noqa: E402
+# Shared tool implementations (via tools symlink -> ../../shared/python/tools)
+from tools import query_data_impl
 
 
 def query_data(tool_context: ToolContext, query: str) -> list:
@@ -31,10 +23,8 @@ def query_data(tool_context: ToolContext, query: str) -> list:
 
 
 _INSTRUCTION = (
-    "You are a sales-dashboard assistant. When the user asks for charts, "
-    "metrics, or financial data, call `query_data` with a short query "
-    "string. The frontend's BYOC renderer paints the result as a chart. "
-    "Provide a one-sentence summary after the tool returns."
+    "You are a helpful data analyst. When the user asks about data, call the "
+    "query_data tool. Summarise the result after each tool call."
 )
 
 byoc_agent = LlmAgent(

@@ -5,7 +5,7 @@ Backs three showcase cells:
     - reasoning-default-render     (CopilotKit's built-in reasoning card)
     - tool-rendering-reasoning-chain (reasoning + sequential tool calls)
 
-Mirrors `showcase/packages/langgraph-python/src/agents/reasoning_agent.py`
+Mirrors `showcase/integrations/langgraph-python/src/agents/reasoning_agent.py`
 (shared across the three reasoning demos there).
 
 Agno's AGUI interface emits REASONING_MESSAGE_* events (see
@@ -23,18 +23,12 @@ reasoning → tool call → reasoning → tool call chain.
 from __future__ import annotations
 
 import json
-import os
-import sys
 
 from agno.agent.agent import Agent
 from agno.models.openai import OpenAIChat
 from agno.tools import tool
 from dotenv import load_dotenv
 
-sys.path.insert(
-    0,
-    os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "shared", "python"),
-)
 from tools import (
     get_weather_impl,
     search_flights_impl,

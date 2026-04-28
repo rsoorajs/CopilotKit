@@ -9,7 +9,7 @@ description: >-
   CopilotKit features including generative UI, shared state, human-in-the-loop,
   sub-agents, and streaming.
 partner_docs: https://docs.copilotkit.ai/integrations/langgraph
-repo: https://github.com/CopilotKit/CopilotKit/tree/main/showcase/packages/langgraph-python
+repo: https://github.com/CopilotKit/CopilotKit/tree/main/showcase/integrations/langgraph-python
 copilotkit_version: 2.0.0
 backend_url: https://showcase-langgraph-python-production.up.railway.app
 deployed: true
@@ -26,12 +26,12 @@ managed_platform:
   name: LangGraph Platform
   url: https://langsmith.com
 starter:
-  path: showcase/starters/langgraph-python
+  path: showcase/integrations/langgraph-python
   name: Sales Dashboard
   description: Full-featured sales pipeline with 4 GenUI rendering strategies
-  github_url: https://github.com/CopilotKit/CopilotKit/tree/main/showcase/starters/langgraph-python
+  github_url: https://github.com/CopilotKit/CopilotKit/tree/main/showcase/integrations/langgraph-python
   demo_url: https://showcase-starter-langgraph-python-production-3f57.up.railway.app
-  clone_command: npx degit CopilotKit/CopilotKit/showcase/starters/langgraph-python my-copilotkit-app
+  clone_command: npx degit CopilotKit/CopilotKit/showcase/integrations/langgraph-python my-copilotkit-app
 features:
   - beautiful-chat
   - cli-start

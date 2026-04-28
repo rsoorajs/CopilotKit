@@ -12,17 +12,12 @@ The agent supports:
   - Frontend tool calls (change_background, generate_haiku, schedule_meeting)
   - Human-in-the-loop via schedule_meeting (frontend-rendered meeting time picker)
 
-NOTE ON DRIFT: This module is the canonical source. The starter copy at
-``showcase/starters/langroid/agent/agent.py`` is regenerated from this file
-by ``showcase/scripts/generate-starters.ts``, which strips the shared-tools
-path-injection block below (together with any now-unused stdlib imports it
-relied on) and rewrites ``from tools import ...`` into ``from .tools
-import ...`` — a single relative import against the starter's bundled
-``agent/tools/`` package; no legacy fallback path is emitted. Any fix
-must land in BOTH files until the generator is re-run.
+NOTE ON DRIFT: This module is the canonical source. Starters are now
+extracted on-demand from this integration directory via
+``showcase/scripts/extract-starter.ts``.
 Sibling provider-agnostic A2UI planner implementations live in
-``showcase/packages/google-adk/src/agents/main.py`` and
-``showcase/packages/strands/src/agents/agent.py`` — keep error shapes
+``showcase/integrations/google-adk/src/agents/main.py`` and
+``showcase/integrations/strands/src/agents/agent.py`` — keep error shapes
 aligned.
 """
 
@@ -32,7 +27,6 @@ import functools
 import json
 import logging
 import os
-import sys
 from enum import Enum
 from typing import Annotated, Any, Literal, Protocol, TypedDict, cast
 
@@ -57,13 +51,8 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 # =====================================================================
-# Shared tool implementations
+# Shared tool implementations (symlinked at project root → ../../shared/python/tools)
 # =====================================================================
-
-sys.path.insert(
-    0,
-    os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "shared", "python"),
-)
 from tools import (
     get_weather_impl,
     query_data_impl,
@@ -88,8 +77,8 @@ from tools import (
 # ``A2UI_MODEL`` without touching the primary agent.
 #
 # Sibling implementations live in
-# ``showcase/packages/google-adk/src/agents/main.py`` (Gemini-native) and
-# ``showcase/packages/strands/src/agents/agent.py`` (OpenAI-only). Keep the
+# ``showcase/integrations/google-adk/src/agents/main.py`` (Gemini-native) and
+# ``showcase/integrations/strands/src/agents/agent.py`` (OpenAI-only). Keep the
 # error-surface shape (_A2uiError) consistent across all three so the
 # frontend renderer treats them identically.
 
@@ -115,8 +104,8 @@ class _A2uiError(TypedDict):
     summarizing the tool result) see a consistent surface.
 
     NOTE: Identical TypedDicts live in
-    ``showcase/packages/google-adk/src/agents/main.py`` and
-    ``showcase/packages/strands/src/agents/agent.py``. Keep all three in
+    ``showcase/integrations/google-adk/src/agents/main.py`` and
+    ``showcase/integrations/strands/src/agents/agent.py``. Keep all three in
     sync — any key additions / removals must land in every sibling so the
     A2UI error surface stays consistent across showcase adapters.
     """
