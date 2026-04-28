@@ -12,7 +12,9 @@ import type { Page } from "../helpers/conversation-runner.js";
 import {
   buildTurns,
   buildToolRenderingAssertion,
+  validateProbe,
   TOOL_CARD_SELECTORS,
+  type ToolCardProbeResult,
 } from "./d5-tool-rendering.js";
 
 /**
@@ -146,9 +148,57 @@ describe("d5-tool-rendering script", () => {
     });
   });
 
+  describe("validateProbe", () => {
+    it("returns error when no selector matched", () => {
+      const result = validateProbe({ selector: null, text: "", childCount: 0 });
+      expect(result).toMatch(/selector cascade matched 0 elements/);
+    });
+
+    it("returns error when card matches but has no numeric temperature", () => {
+      const result = validateProbe({
+        selector: '[data-testid="weather-card"]',
+        text: "tokyo cloudy",
+        childCount: 3,
+      });
+      expect(result).toMatch(/no numeric temperature found/);
+    });
+
+    it("returns error when card matches but is missing Tokyo city label", () => {
+      const result = validateProbe({
+        selector: '[data-testid="weather-card"]',
+        text: "san francisco 22 sunny",
+        childCount: 3,
+      });
+      expect(result).toMatch(/missing city label "Tokyo"/);
+    });
+
+    it("returns error when card matches but has no inner elements", () => {
+      const result = validateProbe({
+        selector: '[data-testid="weather-card"]',
+        text: "tokyo 22 cloudy",
+        childCount: 0,
+      });
+      expect(result).toMatch(/no inner elements \(childCount=0\)/);
+    });
+
+    it("returns null when all checks pass", () => {
+      const result = validateProbe({
+        selector: '[data-testid="weather-card"]',
+        text: "current weather tokyo 22°f cloudy humidity 65% wind 8 mph",
+        childCount: 5,
+      });
+      expect(result).toBeNull();
+    });
+  });
+
   describe("assertion", () => {
+    // Use a short poll timeout (50ms) for failing tests so they don't
+    // block the test suite for 10s. The poll logic is exercised; the
+    // timeout is the only difference from production.
+    const FAST_POLL = { pollTimeoutMs: 50 };
+
     it("fails with selector-cascade message when no card is present", async () => {
-      const assertion = buildToolRenderingAssertion();
+      const assertion = buildToolRenderingAssertion(FAST_POLL);
       // Probe returns null selector — no card matched.
       const page = makePage({
         throwOnWaitForSelector: true,
@@ -160,7 +210,7 @@ describe("d5-tool-rendering script", () => {
     });
 
     it("fails when the card matches but has no numeric temperature", async () => {
-      const assertion = buildToolRenderingAssertion();
+      const assertion = buildToolRenderingAssertion(FAST_POLL);
       const page = makePage({
         evaluateValues: [
           {
@@ -176,7 +226,7 @@ describe("d5-tool-rendering script", () => {
     });
 
     it("fails when the card matches but is missing the Tokyo city label", async () => {
-      const assertion = buildToolRenderingAssertion();
+      const assertion = buildToolRenderingAssertion(FAST_POLL);
       const page = makePage({
         evaluateValues: [
           {
@@ -192,7 +242,7 @@ describe("d5-tool-rendering script", () => {
     });
 
     it("fails when the card matches but has no inner elements", async () => {
-      const assertion = buildToolRenderingAssertion();
+      const assertion = buildToolRenderingAssertion(FAST_POLL);
       const page = makePage({
         evaluateValues: [
           {
@@ -236,6 +286,29 @@ describe("d5-tool-rendering script", () => {
             childCount: 4,
           },
         ],
+      });
+      await expect(assertion(page)).resolves.toBeUndefined();
+    });
+
+    it("succeeds on retry when the card transitions from loading to complete", async () => {
+      // Models the race condition where the first probe catches the
+      // card in loading state (no digits), and a subsequent poll
+      // catches it after the tool result arrives (with digits). The
+      // evaluate queue returns loading state first, then the complete
+      // state on subsequent calls.
+      const loadingProbe: ToolCardProbeResult = {
+        selector: '[data-testid="weather-card"]',
+        text: "current weather tokyo fetching weather...",
+        childCount: 2,
+      };
+      const completeProbe: ToolCardProbeResult = {
+        selector: '[data-testid="weather-card"]',
+        text: "current weather tokyo 68°f sunny humidity 55% wind 10 mph",
+        childCount: 5,
+      };
+      const assertion = buildToolRenderingAssertion();
+      const page = makePage({
+        evaluateValues: [loadingProbe, loadingProbe, completeProbe],
       });
       await expect(assertion(page)).resolves.toBeUndefined();
     });
