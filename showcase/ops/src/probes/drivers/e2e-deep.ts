@@ -482,6 +482,8 @@ export function createE2eDeepDriver(
         };
       }
 
+      const sideEmit = makeSideEmit(ctx);
+
       // Resolve the feature list. Explicit `features` (from tests or a
       // hand-authored YAML target) wins; otherwise translate the
       // discovery-supplied `demos[]` (registry feature IDs) into D5
@@ -580,7 +582,7 @@ export function createE2eDeepDriver(
       // shows a definite "no-script-yet" badge instead of going gray.
       if (runnable.length === 0) {
         for (const ft of skipped) {
-          await sideEmit(ctx, {
+          await sideEmit({
             key: `d5:${slug}/${ft}`,
             state: "green",
             signal: {
@@ -663,7 +665,7 @@ export function createE2eDeepDriver(
         // dashboards never see a missing badge between runnable
         // features executing.
         for (const ft of skipped) {
-          await sideEmit(ctx, {
+          await sideEmit({
             key: `d5:${slug}/${ft}`,
             state: "green",
             signal: {
@@ -699,7 +701,7 @@ export function createE2eDeepDriver(
           await sem.acquire();
           try {
             if (abort.signal.aborted) {
-              await sideEmit(ctx, {
+              await sideEmit({
                 key: sideKey,
                 state: "red",
                 signal: {
@@ -732,7 +734,7 @@ export function createE2eDeepDriver(
             });
 
             if (featureResult.ok) {
-              await sideEmit(ctx, {
+              await sideEmit({
                 key: sideKey,
                 state: "green",
                 signal: {
@@ -750,7 +752,7 @@ export function createE2eDeepDriver(
               });
               return { ft, ok: true as const };
             } else {
-              await sideEmit(ctx, {
+              await sideEmit({
                 key: sideKey,
                 state: "red",
                 signal: {
@@ -805,7 +807,7 @@ export function createE2eDeepDriver(
             });
             failed.push(ft);
             try {
-              await sideEmit(ctx, {
+              await sideEmit({
                 key: `d5:${slug}/${ft}`,
                 state: "red",
                 signal: {
@@ -1107,22 +1109,29 @@ async function captureDiagnostics(
   return diagnostics;
 }
 
-async function sideEmit(
+function makeSideEmit(
   ctx: ProbeContext,
-  result: ProbeResult<E2eDeepFeatureSignal>,
-): Promise<void> {
-  if (!ctx.writer) {
-    ctx.logger.warn("probe.e2e-deep.writer-missing", { key: result.key });
-    return;
-  }
-  try {
-    await ctx.writer.write(result);
-  } catch (err) {
-    ctx.logger.error("probe.e2e-deep.side-emit-writer-failed", {
-      key: result.key,
-      err: err instanceof Error ? err.message : String(err),
-    });
-  }
+): (result: ProbeResult<E2eDeepFeatureSignal>) => Promise<void> {
+  let warnedNoWriter = false;
+  return async (result) => {
+    if (!ctx.writer) {
+      if (!warnedNoWriter) {
+        warnedNoWriter = true;
+        ctx.logger.warn("probe.e2e-deep.writer-missing", {
+          key: result.key,
+        });
+      }
+      return;
+    }
+    try {
+      await ctx.writer.write(result);
+    } catch (err) {
+      ctx.logger.error("probe.e2e-deep.side-emit-writer-failed", {
+        key: result.key,
+        err: err instanceof Error ? err.message : String(err),
+      });
+    }
+  };
 }
 
 /**

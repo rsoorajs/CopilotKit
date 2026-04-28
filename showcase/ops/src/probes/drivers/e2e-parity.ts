@@ -653,6 +653,8 @@ export function createE2eParityDriver(
         };
       }
 
+      const sideEmit = makeSideEmit(ctx);
+
       // Not picked by the scoping logic — sit out this tick. Aggregate
       // green so the dashboard doesn't flap red on every non-target
       // slug; the `scopingReason` carries why so operators tailing
@@ -683,7 +685,7 @@ export function createE2eParityDriver(
             demos: input.demos,
           });
           const url = `${backendUrl}${route}`;
-          await sideEmit(ctx, {
+          await sideEmit({
             key: `d6:${slug}/${ft}`,
             state: "green",
             signal: {
@@ -790,7 +792,7 @@ export function createE2eParityDriver(
       // launch outcomes — the dashboard sees a definite per-cell
       // verdict whether or not the runnable features even start.
       for (const ft of skippedScript) {
-        await sideEmit(ctx, {
+        await sideEmit({
           key: `d6:${slug}/${ft}`,
           state: "green",
           signal: {
@@ -803,7 +805,7 @@ export function createE2eParityDriver(
         });
       }
       for (const { ft, refPath } of skippedRef) {
-        await sideEmit(ctx, {
+        await sideEmit({
           key: `d6:${slug}/${ft}`,
           state: "green",
           signal: {
@@ -817,7 +819,7 @@ export function createE2eParityDriver(
         });
       }
       for (const { ft, refPath, reason } of invalidRef) {
-        await sideEmit(ctx, {
+        await sideEmit({
           key: `d6:${slug}/${ft}`,
           state: "red",
           signal: {
@@ -916,7 +918,7 @@ export function createE2eParityDriver(
               demos: input.demos,
             });
             const url = `${backendUrl}${route}`;
-            await sideEmit(ctx, {
+            await sideEmit({
               key: sideKey,
               state: "red",
               signal: {
@@ -967,7 +969,7 @@ export function createE2eParityDriver(
 
           if (abort.signal.aborted) {
             red += 1;
-            await sideEmit(ctx, {
+            await sideEmit({
               key: sideKey,
               state: "red",
               signal: {
@@ -1005,7 +1007,7 @@ export function createE2eParityDriver(
 
           if (!featureResult.ok) {
             red += 1;
-            await sideEmit(ctx, {
+            await sideEmit({
               key: sideKey,
               state: "red",
               signal: {
@@ -1042,7 +1044,7 @@ export function createE2eParityDriver(
             red += 1;
           }
 
-          await sideEmit(ctx, {
+          await sideEmit({
             key: sideKey,
             state,
             signal: {
@@ -1308,22 +1310,29 @@ function severityFromFailureCount(n: number): "green" | "amber" | "red" {
   return "red";
 }
 
-async function sideEmit(
+function makeSideEmit(
   ctx: ProbeContext,
-  result: ProbeResult<E2eParityFeatureSignal>,
-): Promise<void> {
-  if (!ctx.writer) {
-    ctx.logger.warn("probe.e2e-parity.writer-missing", { key: result.key });
-    return;
-  }
-  try {
-    await ctx.writer.write(result);
-  } catch (err) {
-    ctx.logger.error("probe.e2e-parity.side-emit-writer-failed", {
-      key: result.key,
-      err: err instanceof Error ? err.message : String(err),
-    });
-  }
+): (result: ProbeResult<E2eParityFeatureSignal>) => Promise<void> {
+  let warnedNoWriter = false;
+  return async (result) => {
+    if (!ctx.writer) {
+      if (!warnedNoWriter) {
+        warnedNoWriter = true;
+        ctx.logger.warn("probe.e2e-parity.writer-missing", {
+          key: result.key,
+        });
+      }
+      return;
+    }
+    try {
+      await ctx.writer.write(result);
+    } catch (err) {
+      ctx.logger.error("probe.e2e-parity.side-emit-writer-failed", {
+        key: result.key,
+        err: err instanceof Error ? err.message : String(err),
+      });
+    }
+  };
 }
 
 function deriveSlug(key: string, name?: string): string {
