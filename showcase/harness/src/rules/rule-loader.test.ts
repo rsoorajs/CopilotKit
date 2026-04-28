@@ -49,7 +49,9 @@ describe("rule-loader: valid fixtures", () => {
 describe("rule-loader: rate_limit: null disables the default rate-limit", () => {
   it("accepts rate_limit: null without a parse error and strips the default", async () => {
     const os = await import("node:os");
-    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), "showcase-harness-rl-"));
+    const tmp = await fs.mkdtemp(
+      path.join(os.tmpdir(), "showcase-harness-rl-"),
+    );
     // Defaults declare rate_limit: { window: 15m }; rule overrides with `null`.
     await fs.writeFile(
       path.join(tmp, "_defaults.yml"),
@@ -98,7 +100,9 @@ describe("rule-loader: rate_limit: null disables the default rate-limit", () => 
 
   it("rejects a rule with a malformed suppress.when expression at load time", async () => {
     const os = await import("node:os");
-    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), "showcase-harness-sup-"));
+    const tmp = await fs.mkdtemp(
+      path.join(os.tmpdir(), "showcase-harness-sup-"),
+    );
     await fs.writeFile(
       path.join(tmp, "bad-suppress.yml"),
       [
@@ -135,7 +139,9 @@ describe("rule-loader: rate_limit: null disables the default rate-limit", () => 
     // of silently passing through at render time. Pairs with the
     // triple-brace passthrough test below to pin the shared-regex contract.
     const os = await import("node:os");
-    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), "showcase-harness-bad-f-"));
+    const tmp = await fs.mkdtemp(
+      path.join(os.tmpdir(), "showcase-harness-bad-f-"),
+    );
     await fs.writeFile(
       path.join(tmp, "bad-filter.yml"),
       [
@@ -168,7 +174,9 @@ describe("rule-loader: rate_limit: null disables the default rate-limit", () => 
     // include it in SUPPRESS_VALIDATION_VARS so the parse-time eval succeeds
     // — otherwise the rule fails at load with "unknown identifier".
     const os = await import("node:os");
-    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), "showcase-harness-has-"));
+    const tmp = await fs.mkdtemp(
+      path.join(os.tmpdir(), "showcase-harness-has-"),
+    );
     await fs.writeFile(
       path.join(tmp, "has-candidates.yml"),
       [
@@ -226,7 +234,9 @@ describe("rule-loader: rate_limit: null disables the default rate-limit", () => 
     // side and the load path rejects the typo with Zod's standard
     // enum-violation message listing the valid dimensions.
     const os = await import("node:os");
-    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), "showcase-harness-dim-"));
+    const tmp = await fs.mkdtemp(
+      path.join(os.tmpdir(), "showcase-harness-dim-"),
+    );
     await fs.writeFile(
       path.join(tmp, "bad-dimension.yml"),
       [
@@ -264,7 +274,9 @@ describe("rule-loader: rate_limit: null disables the default rate-limit", () => 
 describe("rule-loader: target dedupe + non-empty validation", () => {
   async function writeDir(files: Record<string, string>): Promise<string> {
     const os = await import("node:os");
-    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), "showcase-harness-td-"));
+    const tmp = await fs.mkdtemp(
+      path.join(os.tmpdir(), "showcase-harness-td-"),
+    );
     for (const [name, body] of Object.entries(files)) {
       await fs.writeFile(path.join(tmp, name), body, "utf-8");
     }
@@ -558,7 +570,9 @@ describe("rule-loader: invalid fixtures (skipped, not fatal)", () => {
 
   it("one bad file does NOT prevent loading valid siblings", async () => {
     const os = await import("node:os");
-    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), "showcase-harness-mixed-"));
+    const tmp = await fs.mkdtemp(
+      path.join(os.tmpdir(), "showcase-harness-mixed-"),
+    );
     // Copy valid fixture + _defaults.
     await fs.copyFile(
       path.join(FIXTURES, "valid", "_defaults.yml"),
@@ -590,7 +604,9 @@ describe("rule-loader: reload error propagation", () => {
     // loadWithErrors() on a mixed-valid/invalid directory — it's the exact
     // function watch() calls on every tick.
     const os = await import("node:os");
-    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), "showcase-harness-mix-"));
+    const tmp = await fs.mkdtemp(
+      path.join(os.tmpdir(), "showcase-harness-mix-"),
+    );
     await fs.copyFile(
       path.join(FIXTURES, "valid", "_defaults.yml"),
       path.join(tmp, "_defaults.yml"),
@@ -640,7 +656,9 @@ describe("rule-loader: rate_limit.perKey filter-pipeline validation (A3)", () =>
     // inside perKey would silently corrupt the dedupe key at runtime.
     // Rule-loader must catch this at boot.
     const os = await import("node:os");
-    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), "showcase-harness-pk-"));
+    const tmp = await fs.mkdtemp(
+      path.join(os.tmpdir(), "showcase-harness-pk-"),
+    );
     await fs.writeFile(
       path.join(tmp, "bad-perkey.yml"),
       [
@@ -673,7 +691,9 @@ describe("rule-loader: rate_limit.perKey filter-pipeline validation (A3)", () =>
 
   it("accepts perKey with plain Mustache interpolation (no filters)", async () => {
     const os = await import("node:os");
-    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), "showcase-harness-pk-ok-"));
+    const tmp = await fs.mkdtemp(
+      path.join(os.tmpdir(), "showcase-harness-pk-ok-"),
+    );
     await fs.writeFile(
       path.join(tmp, "ok-perkey.yml"),
       [
@@ -1815,7 +1835,9 @@ describe("rule-loader: rate_limit.window load-time validation (R28 bucket-a)", (
   // unit at boot with a clear "must be e.g. 15m/1h/3d" message.
   it("rejects a rule whose rate_limit.window is missing a unit suffix ('15')", async () => {
     const os = await import("node:os");
-    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), "showcase-harness-rlw-"));
+    const tmp = await fs.mkdtemp(
+      path.join(os.tmpdir(), "showcase-harness-rlw-"),
+    );
     await fs.writeFile(
       path.join(tmp, "bad-rlwindow.yml"),
       [
@@ -1850,7 +1872,9 @@ describe("rule-loader: rate_limit.window load-time validation (R28 bucket-a)", (
 
   it("rejects a rule whose rate_limit.window contains an internal space ('1 hour')", async () => {
     const os = await import("node:os");
-    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), "showcase-harness-rlw2-"));
+    const tmp = await fs.mkdtemp(
+      path.join(os.tmpdir(), "showcase-harness-rlw2-"),
+    );
     await fs.writeFile(
       path.join(tmp, "bad-rlwindow-human.yml"),
       [
@@ -1957,7 +1981,9 @@ describe("rule-loader: signal.filter.dimension load-time validation (R28 bucket-
   // `FilterSchema.dimension` is also `DimensionEnum.optional()`.
   it("rejects a rule whose signal.filter.dimension is typoed ('smokee')", async () => {
     const os = await import("node:os");
-    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), "showcase-harness-fdim-"));
+    const tmp = await fs.mkdtemp(
+      path.join(os.tmpdir(), "showcase-harness-fdim-"),
+    );
     await fs.writeFile(
       path.join(tmp, "bad-filter-dim.yml"),
       [
@@ -2024,7 +2050,9 @@ describe("rule-loader: signal.filter.dimension load-time validation (R28 bucket-
 
 async function makeSingleFixtureDir(file: string): Promise<string> {
   const os = await import("node:os");
-  const tmp = await fs.mkdtemp(path.join(os.tmpdir(), "showcase-harness-rule-"));
+  const tmp = await fs.mkdtemp(
+    path.join(os.tmpdir(), "showcase-harness-rule-"),
+  );
   const src = path.join(FIXTURES, "invalid", file);
   const dest = path.join(tmp, file);
   await fs.copyFile(src, dest);

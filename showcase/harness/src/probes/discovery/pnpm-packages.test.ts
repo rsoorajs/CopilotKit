@@ -197,7 +197,10 @@ describe("pnpmPackagesDiscoverySource", () => {
   });
 
   it("supports literal (non-glob) workspace entries", async () => {
-    await writeFile("pnpm-workspace.yaml", `packages:\n  - "showcase/harness"\n`);
+    await writeFile(
+      "pnpm-workspace.yaml",
+      `packages:\n  - "showcase/harness"\n`,
+    );
     await writeFile(
       "showcase/harness/package.json",
       JSON.stringify({ name: "@x/ops", version: "0.1.0" }),

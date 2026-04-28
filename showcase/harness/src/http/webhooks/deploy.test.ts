@@ -247,7 +247,9 @@ describe("POST /webhooks/deploy — webhook_rejections metric wiring", () => {
       /showcase_harness_webhook_rejections\{reason="stale"\}\s+1/,
     );
     // Deprecated alias still populated for HMAC-category reasons.
-    expect(text).toMatch(/showcase_harness_hmac_failures\{reason="stale"\}\s+1/);
+    expect(text).toMatch(
+      /showcase_harness_hmac_failures\{reason="stale"\}\s+1/,
+    );
   });
 
   it("increments webhook_rejections on bad signature", async () => {

@@ -1058,7 +1058,9 @@ describe("orchestrator /api/probes wiring (F1)", () => {
   beforeEach(async () => {
     // Mirror the boot path's expected layout: configDir is the alerts dir,
     // probes live in a sibling `../probes` dir.
-    const root = await fs.mkdtemp(path.join(os.tmpdir(), "harness-orch-probes-"));
+    const root = await fs.mkdtemp(
+      path.join(os.tmpdir(), "harness-orch-probes-"),
+    );
     tempDir = path.join(root, "alerts");
     probeDir = path.join(root, "probes");
     await fs.mkdir(tempDir, { recursive: true });
@@ -1254,7 +1256,9 @@ describe("orchestrator probe unregister failure preserves config (CR-A2.2)", () 
   let prevToken: string | undefined;
 
   beforeEach(async () => {
-    const root = await fs.mkdtemp(path.join(os.tmpdir(), "harness-orch-unreg-"));
+    const root = await fs.mkdtemp(
+      path.join(os.tmpdir(), "harness-orch-unreg-"),
+    );
     tempDir = path.join(root, "alerts");
     probeDir = path.join(root, "probes");
     await fs.mkdir(tempDir, { recursive: true });

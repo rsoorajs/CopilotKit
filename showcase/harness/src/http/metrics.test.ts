@@ -52,7 +52,9 @@ describe("metrics registry", () => {
     reg.observe("probe_duration_ms", 2500, { dimension: "smoke" });
 
     const text = renderPrometheus(reg);
-    expect(text).toContain("# TYPE showcase_harness_probe_duration_ms histogram");
+    expect(text).toContain(
+      "# TYPE showcase_harness_probe_duration_ms histogram",
+    );
     expect(text).toMatch(
       /showcase_harness_probe_duration_ms_bucket\{dimension="smoke",le="100"\}\s+1/,
     );
@@ -71,7 +73,9 @@ describe("metrics registry", () => {
     const reg = createMetricsRegistry();
     reg.inc("probe_runs", { dimension: 'a"b\\c' });
     const text = renderPrometheus(reg);
-    expect(text).toContain('showcase_harness_probe_runs{dimension="a\\"b\\\\c"}');
+    expect(text).toContain(
+      'showcase_harness_probe_runs{dimension="a\\"b\\\\c"}',
+    );
   });
 
   it("escapes \\r and \\n in label values", () => {
@@ -126,7 +130,9 @@ describe("metrics registry", () => {
     expect(text).toContain(
       "# TYPE showcase_harness_internal_backup_failures_total counter",
     );
-    expect(text).toMatch(/^showcase_harness_internal_backup_failures_total\s+2$/m);
+    expect(text).toMatch(
+      /^showcase_harness_internal_backup_failures_total\s+2$/m,
+    );
     // Must not have leaked into probe_runs.
     expect(text).toMatch(/^showcase_harness_probe_runs 0$/m);
   });

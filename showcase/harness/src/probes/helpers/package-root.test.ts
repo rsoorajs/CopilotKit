@@ -46,9 +46,9 @@ describe("findPackageRoot", () => {
 
   it("throws when no package.json is found before the filesystem root", () => {
     const exists = (): boolean => false;
-    expect(() => findPackageRoot("/abs/showcase/harness/scripts", exists)).toThrow(
-      /no package\.json/,
-    );
+    expect(() =>
+      findPackageRoot("/abs/showcase/harness/scripts", exists),
+    ).toThrow(/no package\.json/);
   });
 
   it("stops at the deepest enclosing package.json, not the workspace root", () => {
