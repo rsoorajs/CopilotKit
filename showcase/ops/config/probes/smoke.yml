@@ -17,9 +17,7 @@
 #
 # `slug` is derived by stripping the `showcase-` prefix from the Railway
 # service name. So `showcase-ag2` → keys `smoke:ag2` / `health:ag2` /
-# `agent:ag2`, and `showcase-starter-ag2` → `smoke:starter-ag2` /
-# `health:starter-ag2` / `agent:starter-ag2`. This keeps the 17 package
-# + 17 starter services observable as 34 × 3 = 102 independent probe
+# `agent:ag2`. Each package service produces 3 independent probe
 # rows — each can flip green/red without blinding its siblings.
 #
 # Auto-discovery: adding a new `showcase-*` service on Railway
