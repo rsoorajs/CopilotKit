@@ -3,17 +3,15 @@
  */
 import { describe, it, expect, vi } from "vitest";
 import { render, fireEvent } from "@testing-library/react";
-import {
-  OverlayToggleBar,
-  ALL_OVERLAYS,
-  PRESETS,
-  type Overlay,
-} from "../overlay-toggle-bar";
+import { OverlayToggleBar, ALL_OVERLAYS, PRESETS } from "../overlay-toggle-bar";
+import type { Overlay } from "../overlay-toggle-bar";
 
-function renderBar(overrides: {
-  overlays?: Set<Overlay>;
-  activePreset?: string | null;
-} = {}) {
+function renderBar(
+  overrides: {
+    overlays?: Set<Overlay>;
+    activePreset?: string | null;
+  } = {},
+) {
   const onToggle = vi.fn();
   const onApplyPreset = vi.fn();
   const overlays = overrides.overlays ?? new Set<Overlay>();

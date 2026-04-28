@@ -4,7 +4,8 @@
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render } from "@testing-library/react";
-import { ComposedCell, type Overlay } from "../composed-cell";
+import { ComposedCell } from "../composed-cell";
+import type { Overlay } from "../composed-cell";
 import type { CellContext } from "@/components/feature-grid";
 import type { CatalogCell } from "@/components/depth-utils";
 import type { LiveStatusMap } from "@/lib/live-status";
@@ -49,7 +50,10 @@ vi.mock("@/components/depth-chip", () => ({
       status: string;
       regression?: boolean;
     }) => (
-      <span data-testid="mock-depth-chip" data-regression={String(!!regression)}>
+      <span
+        data-testid="mock-depth-chip"
+        data-regression={String(!!regression)}
+      >
         D{depth}
       </span>
     ),
@@ -57,9 +61,9 @@ vi.mock("@/components/depth-chip", () => ({
 }));
 
 vi.mock("@/components/depth-utils", async () => {
-  const actual = await vi.importActual<typeof import("@/components/depth-utils")>(
-    "@/components/depth-utils",
-  );
+  const actual = await vi.importActual<
+    typeof import("@/components/depth-utils")
+  >("@/components/depth-utils");
   return {
     ...actual,
     deriveDepth: vi.fn(() => ({ achieved: 2, isRegression: false })),
@@ -216,7 +220,7 @@ describe("ComposedCell", () => {
   it("renders Links + Depth stacked when both active", () => {
     const ctx = makeCtx();
     const catalogCell = makeCatalogCell();
-    const { getByText, getByTestId, container } = render(
+    const { getByText, getByTestId } = render(
       <ComposedCell
         ctx={ctx}
         overlays={overlaySet("links", "depth")}
@@ -235,7 +239,9 @@ describe("ComposedCell", () => {
 
     // First child contains Demo link, second contains depth chip
     expect(children[0].textContent).toContain("Demo");
-    expect(children[1].querySelector("[data-testid='mock-depth-chip']")).toBeTruthy();
+    expect(
+      children[1].querySelector("[data-testid='mock-depth-chip']"),
+    ).toBeTruthy();
   });
 
   it("renders all 4 layers when all active (excluding parity)", () => {

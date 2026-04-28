@@ -4,7 +4,8 @@
  * shows LevelStrip, ParityBadge, and tally based on active overlays.
  */
 import { LevelStrip } from "@/components/level-strip";
-import { ParityBadge, type ParityTier } from "@/components/parity-badge";
+import { ParityBadge } from "@/components/parity-badge";
+import type { ParityTier } from "@/components/parity-badge";
 import type { Integration } from "@/lib/registry";
 import type { ConnectionStatus, LiveStatusMap } from "@/lib/live-status";
 
@@ -27,7 +28,7 @@ export function OverlayColumnHeader({
   tally,
   overlays,
   liveStatus,
-  connection,
+  connection: _connection,
   parityTier,
   minWidth = 220,
 }: OverlayColumnHeaderProps) {

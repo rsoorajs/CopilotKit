@@ -24,7 +24,8 @@ function parseHash(): {
   tab: "matrix" | "ops";
   overlays: OverlaySet | null;
 } {
-  const raw = typeof window !== "undefined" ? window.location.hash.slice(1) : "";
+  const raw =
+    typeof window !== "undefined" ? window.location.hash.slice(1) : "";
   if (!raw) return { tab: "matrix", overlays: null };
 
   // #ops — switch to ops tab
@@ -156,25 +157,22 @@ export function useOverlays(): UseOverlaysReturn {
     saveToStorage(next);
   }, []);
 
-  const toggle = useCallback(
-    (overlay: Overlay) => {
-      setOverlays((prev) => {
-        // Minimum-one rule: toggling the last active overlay is a no-op
-        if (prev.has(overlay) && prev.size === 1) return prev;
+  const toggle = useCallback((overlay: Overlay) => {
+    setOverlays((prev) => {
+      // Minimum-one rule: toggling the last active overlay is a no-op
+      if (prev.has(overlay) && prev.size === 1) return prev;
 
-        const next = new Set(prev) as OverlaySet;
-        if (next.has(overlay)) {
-          next.delete(overlay);
-        } else {
-          next.add(overlay);
-        }
-        writeHash("matrix", next);
-        saveToStorage(next);
-        return next;
-      });
-    },
-    [],
-  );
+      const next = new Set(prev) as OverlaySet;
+      if (next.has(overlay)) {
+        next.delete(overlay);
+      } else {
+        next.add(overlay);
+      }
+      writeHash("matrix", next);
+      saveToStorage(next);
+      return next;
+    });
+  }, []);
 
   const applyPreset = useCallback(
     (presetId: string) => {
@@ -186,10 +184,13 @@ export function useOverlays(): UseOverlaysReturn {
     [updateOverlays],
   );
 
-  const setTab = useCallback((tab: "matrix" | "ops") => {
-    setActiveTabRaw(tab);
-    writeHash(tab, overlays);
-  }, [overlays]);
+  const setTab = useCallback(
+    (tab: "matrix" | "ops") => {
+      setActiveTabRaw(tab);
+      writeHash(tab, overlays);
+    },
+    [overlays],
+  );
 
   const activePreset = useMemo(() => {
     for (const preset of PRESETS) {

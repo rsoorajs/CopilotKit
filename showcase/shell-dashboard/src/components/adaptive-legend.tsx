@@ -27,9 +27,7 @@ function LinksLegend() {
         open hosted preview
       </LegendItem>
       <LegendItem>
-        <span className="text-[var(--accent)] font-medium">
-          Code {"</>"}
-        </span>
+        <span className="text-[var(--accent)] font-medium">Code {"</>"}</span>
         open source
       </LegendItem>
     </>

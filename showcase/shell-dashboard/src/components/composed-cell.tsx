@@ -11,7 +11,8 @@ import type { CellContext } from "@/components/feature-grid";
 import { CellStatus, DocsRow, urlsFor } from "@/components/cell-pieces";
 import { CommandCell } from "@/components/command-cell";
 import { DepthChip } from "@/components/depth-chip";
-import { deriveDepth, type CatalogCell } from "@/components/depth-utils";
+import { deriveDepth } from "@/components/depth-utils";
+import type { CatalogCell } from "@/components/depth-utils";
 
 /** Overlay types — defined locally; canonical types live in a sibling module. */
 export type Overlay = "links" | "depth" | "health" | "parity" | "docs";
@@ -117,7 +118,11 @@ function DocsLayer({ ctx }: { ctx: CellContext }) {
  * "parity" overlay adds no per-cell content — if only parity is active,
  * the cell renders empty.
  */
-export function ComposedCell({ ctx, overlays, catalogCell }: ComposedCellProps) {
+export function ComposedCell({
+  ctx,
+  overlays,
+  catalogCell,
+}: ComposedCellProps) {
   const isTesting = ctx.feature.kind === "testing";
   const hasLinks = overlays.has("links");
   const hasDepth = overlays.has("depth");

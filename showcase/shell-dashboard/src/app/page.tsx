@@ -3,7 +3,8 @@
 // Matrix tab: overlay toggles control which visual layers render.
 // Ops tab: probe status grid (unchanged from legacy).
 import { useCallback, useMemo } from "react";
-import { FeatureGrid, type CellContext } from "@/components/feature-grid";
+import { FeatureGrid } from "@/components/feature-grid";
+import type { CellContext } from "@/components/feature-grid";
 import { StatusTab } from "@/components/status-tab";
 import { useLiveStatus } from "@/hooks/useLiveStatus";
 import { useProbes, useTriggerProbe } from "@/hooks/use-probes";
@@ -56,14 +57,8 @@ export default function Page() {
   );
 
   // Overlay state management (handles URL hash + localStorage persistence)
-  const {
-    overlays,
-    activeTab,
-    toggle,
-    applyPreset,
-    setTab,
-    activePreset,
-  } = useOverlays();
+  const { overlays, activeTab, toggle, applyPreset, setTab, activePreset } =
+    useOverlays();
 
   // Build a cell-lookup map: integration slug + feature id -> CatalogCell
   const cellLookup = useMemo(() => {

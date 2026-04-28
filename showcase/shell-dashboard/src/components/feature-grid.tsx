@@ -4,20 +4,15 @@ import {
   getIntegrations,
   getFeatures,
   getFeatureCategories,
-  type Integration,
-  type Feature,
-  type Demo,
 } from "@/lib/registry";
-import {
-  keyFor,
-  resolveCell,
-  type ConnectionStatus,
-  type LiveStatusMap,
-} from "@/lib/live-status";
+import type { Integration, Feature, Demo } from "@/lib/registry";
+import { keyFor, resolveCell } from "@/lib/live-status";
+import type { ConnectionStatus, LiveStatusMap } from "@/lib/live-status";
 import { LevelStrip } from "@/components/level-strip";
 import { OverlayColumnHeader } from "@/components/overlay-column-header";
 import { RefDepthHeader, RefDepthCell } from "@/components/ref-depth-column";
-import { deriveDepth, type CatalogCell } from "@/components/depth-utils";
+import { deriveDepth } from "@/components/depth-utils";
+import type { CatalogCell } from "@/components/depth-utils";
 import type { Overlay } from "@/lib/overlay-types";
 import type { ParityTier } from "@/components/parity-badge";
 import type { CatalogData } from "@/data/catalog-types";
@@ -369,19 +364,23 @@ export function FeatureGrid({
                           )}
                         </div>
                       </td>
-                      {showRefDepth && (
-                        refCell && refDepth ? (
+                      {showRefDepth &&
+                        (refCell && refDepth ? (
                           <RefDepthCell
                             depth={refDepth.achieved}
                             status={refCell.status}
                             regression={refDepth.isRegression}
                           />
                         ) : (
-                          <td className="sticky left-[260px] z-10 px-3 py-2 border-r-2 border-r-[#c4b5fd] border-l border-[var(--border)] align-top" style={{ backgroundColor: "#f5f0ff" }}>
-                            <span className="text-[var(--text-muted)] text-[10px]">--</span>
+                          <td
+                            className="sticky left-[260px] z-10 px-3 py-2 border-r-2 border-r-[#c4b5fd] border-l border-[var(--border)] align-top"
+                            style={{ backgroundColor: "#f5f0ff" }}
+                          >
+                            <span className="text-[var(--text-muted)] text-[10px]">
+                              --
+                            </span>
                           </td>
-                        )
-                      )}
+                        ))}
                       {integrations.map((integration) => {
                         const demo = integration.demos.find(
                           (d) => d.id === feature.id,

@@ -5,7 +5,8 @@
  */
 
 import { CoverageBar } from "./coverage-bar";
-import { ParityBadge, type ParityTier } from "./parity-badge";
+import { ParityBadge } from "./parity-badge";
+import type { ParityTier } from "./parity-badge";
 import type { CatalogData } from "../data/catalog-types";
 
 type Overlay = "links" | "depth" | "health" | "parity" | "docs";
@@ -127,7 +128,11 @@ function HealthSection({
     <div className="flex items-center gap-3">
       <span className="flex items-center gap-1">
         <Dot color="var(--ok)" />
-        <MiniStat value={stats.green} label="green" colorClass="text-[var(--ok)]" />
+        <MiniStat
+          value={stats.green}
+          label="green"
+          colorClass="text-[var(--ok)]"
+        />
       </span>
       <span className="flex items-center gap-1">
         <Dot color="var(--amber)" />
@@ -139,7 +144,11 @@ function HealthSection({
       </span>
       <span className="flex items-center gap-1">
         <Dot color="var(--danger)" />
-        <MiniStat value={stats.red} label="red" colorClass="text-[var(--danger)]" />
+        <MiniStat
+          value={stats.red}
+          label="red"
+          colorClass="text-[var(--danger)]"
+        />
       </span>
     </div>
   );
@@ -210,10 +219,7 @@ export function AdaptiveStatsBar({
 
   // Base — always present
   sections.push(
-    <BaseSection
-      key="base"
-      totalCells={catalog.metadata.total_cells}
-    />,
+    <BaseSection key="base" totalCells={catalog.metadata.total_cells} />,
   );
 
   if (overlays.has("depth")) {
