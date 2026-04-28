@@ -72,13 +72,8 @@ export function FrameworkSelector({
 }: FrameworkSelectorProps) {
   const router = useRouter();
   const pathname = usePathname() ?? "";
-  const {
-    framework,
-    storedFramework,
-    effectiveFramework,
-    knownFrameworks,
-    setStoredFramework,
-  } = useFramework();
+  const { effectiveFramework, knownFrameworks, setStoredFramework } =
+    useFramework();
   const [open, setOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -286,30 +281,6 @@ export function FrameworkSelector({
               : "absolute top-full left-0 mt-1 w-[340px] max-h-[70vh] overflow-y-auto rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] shadow-lg z-50 p-2"
           }
         >
-          {storedFramework && (
-            <button
-              type="button"
-              className="w-full text-left px-2 py-1.5 text-[11px] text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer"
-              onClick={() => {
-                setStoredFramework(null);
-                // If we're on a framework-scoped route, flip back to
-                // the unscoped equivalent so the soft-default takes
-                // over. On already-unscoped pages, clearing is just a
-                // preference change with no navigation needed.
-                const frameworkTail = stripFrameworkPrefix(
-                  pathname,
-                  knownFrameworks,
-                );
-                if (frameworkTail !== null) {
-                  router.replace(frameworkTail ? `/${frameworkTail}` : "/");
-                }
-                setOpen(false);
-              }}
-            >
-              Reset to default (Built-in Agent)
-            </button>
-          )}
-
           {pinnedBIA && (
             <div className="mb-2">
               <button
