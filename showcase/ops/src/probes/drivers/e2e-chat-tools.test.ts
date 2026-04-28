@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
-  e2eSmokeDriver,
+  e2eChatToolsDriver,
   createE2eSmokeDriver,
   type E2eBrowser,
   type E2eBrowserContext,
@@ -9,7 +9,7 @@ import {
   type E2eSmokePackageSignal,
   type E2eSmokeSignal,
   type E2eSmokeStarterSignal,
-} from "./e2e-smoke.js";
+} from "./e2e-chat-tools.js";
 import { logger } from "../../logger.js";
 import type { ProbeContext, ProbeResult } from "../../types/index.js";
 
@@ -133,9 +133,9 @@ class CapturingWriter {
 
 // --- Schema --------------------------------------------------------------
 
-describe("e2eSmokeDriver.inputSchema", () => {
+describe("e2eChatToolsDriver.inputSchema", () => {
   it("accepts { key, backendUrl, demos }", () => {
-    const parsed = e2eSmokeDriver.inputSchema.safeParse({
+    const parsed = e2eChatToolsDriver.inputSchema.safeParse({
       key: "e2e-smoke:foo",
       backendUrl: "https://example.com",
       demos: ["agentic-chat", "tool-rendering"],
@@ -144,7 +144,7 @@ describe("e2eSmokeDriver.inputSchema", () => {
   });
 
   it("accepts omitted demos (no L4)", () => {
-    const parsed = e2eSmokeDriver.inputSchema.safeParse({
+    const parsed = e2eChatToolsDriver.inputSchema.safeParse({
       key: "e2e-smoke:foo",
       backendUrl: "https://example.com",
     });
@@ -152,7 +152,7 @@ describe("e2eSmokeDriver.inputSchema", () => {
   });
 
   it("rejects empty key", () => {
-    const parsed = e2eSmokeDriver.inputSchema.safeParse({
+    const parsed = e2eChatToolsDriver.inputSchema.safeParse({
       key: "",
       backendUrl: "https://example.com",
     });
@@ -160,7 +160,7 @@ describe("e2eSmokeDriver.inputSchema", () => {
   });
 
   it("rejects non-URL backendUrl", () => {
-    const parsed = e2eSmokeDriver.inputSchema.safeParse({
+    const parsed = e2eChatToolsDriver.inputSchema.safeParse({
       key: "e2e-smoke:foo",
       backendUrl: "not-a-url",
     });
@@ -170,7 +170,7 @@ describe("e2eSmokeDriver.inputSchema", () => {
 
 // --- L3 behaviour --------------------------------------------------------
 
-describe("e2eSmokeDriver L3 (chat)", () => {
+describe("e2eChatToolsDriver L3 (chat)", () => {
   it("green when chat returns any non-empty response", async () => {
     const { browser, state } = makeBrowser([{ assistantText: "Hi there!" }]);
     const driver = createE2eSmokeDriver({ launcher: async () => browser });
@@ -287,7 +287,7 @@ describe("e2eSmokeDriver L3 (chat)", () => {
 
 // --- L4 behaviour --------------------------------------------------------
 
-describe("e2eSmokeDriver L4 (tools)", () => {
+describe("e2eChatToolsDriver L4 (tools)", () => {
   it("skipped when demos does not include 'tool-rendering'", async () => {
     const { browser, state } = makeBrowser([
       { assistantText: "Hi" },
@@ -377,7 +377,7 @@ describe("e2eSmokeDriver L4 (tools)", () => {
 
 // --- Launcher / error paths ---------------------------------------------
 
-describe("e2eSmokeDriver error paths", () => {
+describe("e2eChatToolsDriver error paths", () => {
   it("red with launcher-error when chromium launch throws", async () => {
     const driver = createE2eSmokeDriver({
       launcher: async () => {
@@ -446,7 +446,7 @@ describe("e2eSmokeDriver error paths", () => {
 
 // --- Side-emit / writer plumbing ----------------------------------------
 
-describe("e2eSmokeDriver side-emits", () => {
+describe("e2eChatToolsDriver side-emits", () => {
   it("survives writer failure on chat side-emit without swallowing L3 result", async () => {
     const { browser } = makeBrowser([
       { assistantText: "Hi" },
@@ -498,7 +498,7 @@ describe("e2eSmokeDriver side-emits", () => {
 // rather than silently producing a red page-error. This also avoids the
 // registry-lookup path (starters aren't keyed in registry.json).
 
-describe("e2eSmokeDriver starter shape", () => {
+describe("e2eChatToolsDriver starter shape", () => {
   it("aggregate green-skipped when shape='starter' — full signal contract locked in", async () => {
     // The fake browser is never used, but we still wire it in to verify
     // the driver short-circuits BEFORE launching chromium (no newContext
@@ -654,7 +654,7 @@ describe("e2eSmokeDriver starter shape", () => {
 // would yield `hasToolRendering === false` silently and skip every L4
 // row. These tests pin the end-to-end flow.
 
-describe("e2eSmokeDriver package shape: deriveSlug + demosResolver", () => {
+describe("e2eChatToolsDriver package shape: deriveSlug + demosResolver", () => {
   it("calls demosResolver with the stripped slug for a `showcase-<multi-seg>` name", async () => {
     const resolverCalls: string[] = [];
     const { browser } = makeBrowser([
@@ -708,9 +708,9 @@ describe("e2eSmokeDriver package shape: deriveSlug + demosResolver", () => {
   });
 });
 
-describe("e2eSmokeDriver module export", () => {
-  it("module-level e2eSmokeDriver has kind === 'e2e_smoke'", () => {
-    expect(e2eSmokeDriver.kind).toBe("e2e_smoke");
-    expect(typeof e2eSmokeDriver.run).toBe("function");
+describe("e2eChatToolsDriver module export", () => {
+  it("module-level e2eChatToolsDriver has kind === 'e2e_smoke'", () => {
+    expect(e2eChatToolsDriver.kind).toBe("e2e_smoke");
+    expect(typeof e2eChatToolsDriver.run).toBe("function");
   });
 });

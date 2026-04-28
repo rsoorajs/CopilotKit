@@ -44,7 +44,7 @@ import {
  * Service shape — distinguishes the two deployment archetypes that share
  * the `showcase-*` naming scheme on Railway but have wildly different URL
  * surfaces. Drivers branch on this field to pick the right probe contract
- * (see `drivers/smoke.ts` and `drivers/e2e-smoke.ts`).
+ * (see `drivers/liveness.ts` and `drivers/e2e-chat-tools.ts`).
  *
  *   - `package`  Shell-based showcases (`showcase-ag2`, `showcase-mastra`,
  *                ...). They expose `/smoke`, `/health`, `/demos/*`, and
@@ -386,7 +386,7 @@ const VariablesSchema = z.object({
 
 /**
  * Read `registry.json` and build a `slug -> demos[].id[]` map. Mirrors
- * the parsing logic in `drivers/e2e-demos.ts`'s `defaultDemosResolver`
+ * the parsing logic in `drivers/e2e-readiness.ts`'s `defaultDemosResolver`
  * so behaviour stays consistent across the two readers — the discovery
  * source feeds the invoker's pre-dispatch sort while the driver's
  * resolver feeds the per-service fan-out at execute time.

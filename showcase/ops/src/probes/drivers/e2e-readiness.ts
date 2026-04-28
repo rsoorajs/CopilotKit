@@ -945,4 +945,4 @@ function deriveSlug(key: string, name?: string): string {
 }
 
 /** Default driver instance — registered by the orchestrator at boot. */
-export const e2eDemosDriver = createE2eDemosDriver();
+export const e2eReadinessDriver = createE2eDemosDriver();
