@@ -242,6 +242,7 @@ const TIMEOUT_ENV_VAR = "E2E_DEMOS_TIMEOUT_MS";
 const READY_SELECTORS = [
   '[data-testid="copilot-chat-textarea"]',
   '[data-testid="copilot-chat-input"] textarea',
+  '[data-testid="copilot-chat-toggle"]',
   "textarea",
   'input[placeholder="Type a message"]',
   'input[type="text"]',
