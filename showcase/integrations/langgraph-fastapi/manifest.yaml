@@ -78,6 +78,9 @@ demos:
       - agent-capabilities
     route: /demos/tool-rendering
     animated_preview_url:
+    highlight:
+      - src/agents/src/tool_rendering_agent.py
+      - src/app/demos/tool-rendering/page.tsx
   - id: hitl
     name: In-Chat Human in the Loop (Original)
     description: User approves agent actions before execution
