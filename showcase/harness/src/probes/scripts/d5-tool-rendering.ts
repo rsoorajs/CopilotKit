@@ -48,10 +48,14 @@
  * Structural sub-assertions: once the card is found, we read its
  * textContent and child-element count and assert presence of:
  *   - a numeric temperature (any digit run),
- *   - the city label ("Tokyo" — case-insensitive substring),
  *   - at least one inner element (childCount >= 1) — proxy for
  *     "non-empty structured card", since exact image/icon selectors
  *     vary by integration.
+ *
+ * Note: the city label ("Tokyo") is intentionally NOT asserted. Some
+ * integrations render the card with only temperature + condition,
+ * omitting the city name from the card element's textContent. The
+ * city label is a D3 rendering-detail concern, not a D5 signal.
  */
 
 import {
@@ -167,9 +171,17 @@ export async function probeToolCard(page: Page): Promise<ToolCardProbeResult> {
 
 /**
  * Check whether a probe result satisfies all structural sub-assertions:
- * numeric temperature, "Tokyo" city label, and childCount >= 1. Returns
- * `null` when all checks pass, or a human-readable error string on the
- * first failing check. Used by both the one-shot and polling code paths.
+ * numeric temperature and childCount >= 1. Returns `null` when all checks
+ * pass, or a human-readable error string on the first failing check.
+ * Used by both the one-shot and polling code paths.
+ *
+ * Note: the city label ("Tokyo") is intentionally NOT checked here.
+ * Some integrations render the weather card with only temperature +
+ * condition text, without the city name in the card element's
+ * textContent. The card's structure (selector matched, numeric
+ * temperature, childCount >= 1) is the D5-level signal that
+ * tool-rendering works. Per-integration rendering details (which
+ * fields appear in the card) are a D3 concern.
  */
 export function validateProbe(probe: ToolCardProbeResult): string | null {
   if (probe.selector === null) {
@@ -177,9 +189,6 @@ export function validateProbe(probe: ToolCardProbeResult): string | null {
   }
   if (!/\d/.test(probe.text)) {
     return `tool-rendering: card matched ${probe.selector} but no numeric temperature found in "${probe.text.slice(0, 200)}"`;
-  }
-  if (!probe.text.includes("tokyo")) {
-    return `tool-rendering: card matched ${probe.selector} but missing city label "Tokyo" in "${probe.text.slice(0, 200)}"`;
   }
   if (probe.childCount < 1) {
     return `tool-rendering: card matched ${probe.selector} has no inner elements (childCount=0) — expected an icon / labelled block`;
@@ -199,8 +208,8 @@ export function validateProbe(probe: ToolCardProbeResult): string | null {
  *      mount.
  *   2. Poll `probeToolCard` up to `PROBE_POLL_TIMEOUT_MS`, checking
  *      after each probe whether the card satisfies all structural
- *      sub-assertions (numeric temperature, "Tokyo" label,
- *      childCount >= 1). The poll loop exists because the tool
+ *      sub-assertions (numeric temperature, childCount >= 1). The
+ *      poll loop exists because the tool
  *      render lifecycle (`inProgress` → `executing` → `complete`)
  *      is driven by the `TOOL_CALL_RESULT` AG-UI event which may
  *      arrive slightly after the text message that caused the
