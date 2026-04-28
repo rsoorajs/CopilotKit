@@ -4,17 +4,18 @@ import {
   getIntegrations,
   getFeatures,
   getFeatureCategories,
-  type Integration,
-  type Feature,
-  type Demo,
 } from "@/lib/registry";
-import {
-  keyFor,
-  resolveCell,
-  type ConnectionStatus,
-  type LiveStatusMap,
-} from "@/lib/live-status";
+import type { Integration, Feature, Demo } from "@/lib/registry";
+import { keyFor, resolveCell } from "@/lib/live-status";
+import type { ConnectionStatus, LiveStatusMap } from "@/lib/live-status";
 import { LevelStrip } from "@/components/level-strip";
+import { OverlayColumnHeader } from "@/components/overlay-column-header";
+import { RefDepthHeader, RefDepthCell } from "@/components/ref-depth-column";
+import { deriveDepth } from "@/components/depth-utils";
+import type { CatalogCell } from "@/components/depth-utils";
+import type { Overlay } from "@/lib/overlay-types";
+import type { ParityTier } from "@/components/parity-badge";
+import type { CatalogData } from "@/data/catalog-types";
 
 export interface CellContext {
   integration: Integration;
@@ -135,6 +136,10 @@ export interface FeatureGridProps {
   liveStatus: LiveStatusMap;
   /** Aggregated SSE connection status (lifted to page). */
   connection: ConnectionStatus;
+  /** When provided, use overlay-aware column headers and ref-depth column. */
+  overlays?: Set<Overlay>;
+  /** Catalog data — required when overlays is provided, for ref-depth and parity. */
+  catalog?: CatalogData;
 }
 
 export function FeatureGrid({
@@ -144,6 +149,8 @@ export function FeatureGrid({
   minColWidth = 220,
   liveStatus,
   connection,
+  overlays,
+  catalog,
 }: FeatureGridProps) {
   const shellUrl = resolveShellUrl();
   // `getIntegrations()` / `getFeatures()` call `.sort()` / array spread on
@@ -168,12 +175,45 @@ export function FeatureGrid({
     return out;
   }, [integrations, features, liveStatus, connection]);
 
+  // Whether to show the parity ref-depth column
+  const showRefDepth = overlays ? overlays.has("parity") : false;
+
+  // Build parity tier map for overlay column headers (integration slug -> ParityTier)
+  const parityTierMap = useMemo(() => {
+    if (!catalog) return new Map<string, ParityTier>();
+    const map = new Map<string, ParityTier>();
+    const seen = new Set<string>();
+    for (const cell of catalog.cells) {
+      if (!seen.has(cell.integration)) {
+        seen.add(cell.integration);
+        map.set(cell.integration, cell.parity_tier as ParityTier);
+      }
+    }
+    return map;
+  }, [catalog]);
+
+  // Build catalog cell lookup for ref-depth column
+  const refCellsByFeature = useMemo(() => {
+    if (!catalog || !showRefDepth) return new Map<string, CatalogCell>();
+    const referenceSlug = catalog.metadata.reference;
+    const map = new Map<string, CatalogCell>();
+    for (const cell of catalog.cells) {
+      if (cell.integration === referenceSlug && cell.feature !== null) {
+        map.set(cell.feature, cell);
+      }
+    }
+    return map;
+  }, [catalog, showRefDepth]);
+
   const featuresByCategory = categories
     .map((cat) => ({
       ...cat,
       features: features.filter((f) => f.category === cat.id),
     }))
     .filter((cat) => cat.features.length > 0);
+
+  // Colspan for category separator row: base (Feature col) + integrations + optional ref-depth
+  const categoryColSpan = integrations.length + 1 + (showRefDepth ? 1 : 0);
 
   return (
     <div className="p-8 max-w-[100vw]">
@@ -199,6 +239,7 @@ export function FeatureGrid({
                   Feature
                 </span>
               </th>
+              {showRefDepth && <RefDepthHeader />}
               {integrations.map((integration) => {
                 const tally = tallies.get(integration.slug) ?? {
                   green: 0,
@@ -206,6 +247,24 @@ export function FeatureGrid({
                   red: 0,
                   unknown: false,
                 };
+
+                // Overlay-aware header when overlays prop is provided
+                if (overlays) {
+                  return (
+                    <OverlayColumnHeader
+                      key={integration.slug}
+                      integration={integration}
+                      tally={tally}
+                      overlays={overlays}
+                      liveStatus={liveStatus}
+                      connection={connection}
+                      parityTier={parityTierMap.get(integration.slug)}
+                      minWidth={minColWidth}
+                    />
+                  );
+                }
+
+                // Legacy header rendering (backwards compat when overlays not provided)
                 const total = tally.green + tally.amber + tally.red;
                 const tallyTitle = tally.unknown
                   ? "dashboard offline — live signal unavailable (§5.3)"
@@ -268,7 +327,7 @@ export function FeatureGrid({
               <Fragment key={cat.id}>
                 <tr>
                   <td
-                    colSpan={integrations.length + 1}
+                    colSpan={categoryColSpan}
                     className="sticky left-0 px-4 pt-5 pb-1.5 text-[10px] font-medium uppercase tracking-wider text-[var(--text-muted)] bg-[var(--bg-surface)]"
                   >
                     {cat.name}
@@ -276,6 +335,13 @@ export function FeatureGrid({
                 </tr>
                 {cat.features.map((feature) => {
                   const testing = feature.kind === "testing";
+                  // Ref-depth cell data for this feature row
+                  const refCell = showRefDepth
+                    ? refCellsByFeature.get(feature.id)
+                    : undefined;
+                  const refDepth = refCell
+                    ? deriveDepth(refCell, liveStatus)
+                    : undefined;
                   return (
                     <tr
                       key={feature.id}
@@ -298,6 +364,23 @@ export function FeatureGrid({
                           )}
                         </div>
                       </td>
+                      {showRefDepth &&
+                        (refCell && refDepth ? (
+                          <RefDepthCell
+                            depth={refDepth.achieved}
+                            status={refCell.status}
+                            regression={refDepth.isRegression}
+                          />
+                        ) : (
+                          <td
+                            className="sticky left-[260px] z-10 px-3 py-2 border-r-2 border-r-[#c4b5fd] border-l border-[var(--border)] align-top"
+                            style={{ backgroundColor: "#f5f0ff" }}
+                          >
+                            <span className="text-[var(--text-muted)] text-[10px]">
+                              --
+                            </span>
+                          </td>
+                        ))}
                       {integrations.map((integration) => {
                         const demo = integration.demos.find(
                           (d) => d.id === feature.id,
