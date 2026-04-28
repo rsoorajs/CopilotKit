@@ -491,7 +491,8 @@ async function loadDemosMap(
     if (!it.slug) continue;
     const demos: string[] = [];
     for (const d of it.demos ?? []) {
-      if (typeof d.id === "string" && typeof d.route === "string") demos.push(d.id);
+      if (typeof d.id === "string" && typeof d.route === "string")
+        demos.push(d.id);
     }
     map.set(it.slug, demos);
   }
