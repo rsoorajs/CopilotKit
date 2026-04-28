@@ -250,6 +250,11 @@ public sealed class SubagentsAgentFactory
     private const string DefaultOpenAiEndpoint = "https://models.inference.ai.azure.com";
     private const string SubAgentModel = "gpt-4o-mini";
 
+    // @region[subagent-setup]
+    // Each sub-agent is a single-shot ChatClient call (built per-delegation
+    // in DelegateAsync) with its own system prompt. They don't share memory
+    // or tools with the supervisor — the supervisor only sees their return
+    // value as a tool result.
     private const string ResearchSystemPrompt =
         "You are a research sub-agent. Given a topic, produce a concise " +
         "bulleted list of 3-5 key facts. No preamble, no closing.";
@@ -259,6 +264,7 @@ public sealed class SubagentsAgentFactory
     private const string CritiqueSystemPrompt =
         "You are an editorial critique sub-agent. Given a draft, give 2-3 crisp, " +
         "actionable critiques. No preamble.";
+    // @endregion[subagent-setup]
 
     private const string SupervisorPrompt =
         "You are a supervisor agent that coordinates three specialized " +
@@ -312,6 +318,12 @@ public sealed class SubagentsAgentFactory
     {
         var chatClient = _openAiClient.GetChatClient("gpt-4o-mini").AsIChatClient();
 
+        // @region[supervisor-delegation-tools]
+        // Each sub-agent is exposed to the supervisor LLM as an AIFunction
+        // tool. When the supervisor invokes one, DelegateAsync runs a fresh
+        // ChatClient call with that sub-agent's system prompt, appends a
+        // Delegation entry to shared state, and returns the sub-agent's
+        // output to the supervisor as a tool result.
         var research = AIFunctionFactory.Create(
             (Func<string, CancellationToken, Task<string>>)((task, ct) =>
                 DelegateAsync("research_agent", ResearchSystemPrompt, task, ct)),
@@ -339,6 +351,7 @@ public sealed class SubagentsAgentFactory
                 Description = "Delegate a critique task to the critique sub-agent. Returns JSON {status, result?, error?}.",
                 SerializerOptions = _jsonSerializerOptions,
             });
+        // @endregion[supervisor-delegation-tools]
 
         var inner = new ChatClientAgent(
             chatClient,
