@@ -1,12 +1,13 @@
 "use client";
 
 import React, { useState } from "react";
-import { CopilotKit, useLangGraphInterrupt } from "@copilotkit/react-core";
 import {
+  CopilotKit,
   CopilotChat,
   useHumanInTheLoop,
   useConfigureSuggestions,
 } from "@copilotkit/react-core/v2";
+import { useLangGraphInterrupt } from "@copilotkit/react-core";
 import { z } from "zod";
 
 interface Step {

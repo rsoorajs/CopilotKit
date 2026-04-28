@@ -1,7 +1,7 @@
 fastapi>=0.115.0
 uvicorn>=0.34.0
 langroid>=0.53.0
-ag-ui-protocol==0.1.9
+ag-ui-protocol>=0.1.14
 python-dotenv>=1.0.0
 # Direct-dependency pins: agui_adapter.py imports httpx / openai / pydantic
 # explicitly. langroid already transitively pulls all three, but pinning

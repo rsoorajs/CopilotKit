@@ -59,6 +59,12 @@ agents["interrupt-headless"] = createAgent("interrupt_agent");
 agents["frontend_tools"] = createAgent("frontend_tools");
 agents["frontend-tools-async"] = createAgent("frontend_tools_async");
 agents["hitl-in-app"] = createAgent("hitl_in_app");
+// HITL step-selection: dedicated graph with tools=[] + CopilotKitMiddleware.
+// The `human_in_the_loop` alias in the neutral-assistant loop above maps to
+// `sample_agent` which has 7+ backend tools and a custom AgentState — the
+// frontend-only `generate_task_steps` tool (from useHumanInTheLoop) is the
+// ONLY tool this demo needs, so a minimal graph avoids state/tool contention.
+agents["human_in_the_loop"] = createAgent("hitl_steps");
 agents["readonly-state-agent-context"] = createAgent(
   "readonly_state_agent_context",
 );

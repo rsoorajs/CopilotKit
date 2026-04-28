@@ -2,13 +2,13 @@
 
 import React, { useState } from "react";
 import {
+  CopilotKit,
+  CopilotChat,
   useFrontendTool,
   useRenderTool,
   useAgentContext,
   useConfigureSuggestions,
-  CopilotChat,
 } from "@copilotkit/react-core/v2";
-import { CopilotKit } from "@copilotkit/react-core";
 import { z } from "zod";
 
 export default function AgenticChatDemo() {

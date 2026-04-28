@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import { CopilotKit } from "@copilotkit/react-core";
 import {
+  CopilotKit,
   CopilotSidebar,
   useFrontendTool,
   useConfigureSuggestions,

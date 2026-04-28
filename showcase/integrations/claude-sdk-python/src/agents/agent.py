@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import os
+import traceback
 from collections.abc import AsyncIterator
 from textwrap import dedent
 from typing import Any
@@ -477,64 +478,76 @@ async def run_agent(
         if not disable_tools:
             stream_kwargs["tools"] = TOOLS  # type: ignore[assignment]
 
-        async with client.messages.stream(**stream_kwargs) as stream:
-            current_tool_id: str | None = None
-            current_tool_name: str | None = None
-            current_tool_args = ""
+        try:
+            async with client.messages.stream(**stream_kwargs) as stream:
+                current_tool_id: str | None = None
+                current_tool_name: str | None = None
+                current_tool_args = ""
 
-            async for event in stream:
-                etype = type(event).__name__
+                async for event in stream:
+                    etype = type(event).__name__
 
-                if etype == "RawContentBlockStartEvent":
-                    block = event.content_block  # type: ignore[attr-defined]
-                    if block.type == "text":
-                        pass  # streaming text chunks follow
-                    elif block.type == "tool_use":
-                        current_tool_id = block.id
-                        current_tool_name = block.name
-                        current_tool_args = ""
-                        yield encoder.encode(ToolCallStartEvent(
-                            type=EventType.TOOL_CALL_START,
-                            tool_call_id=current_tool_id,
-                            tool_call_name=current_tool_name,
-                            parent_message_id=msg_id,
-                        ))
+                    if etype == "RawContentBlockStartEvent":
+                        block = event.content_block  # type: ignore[attr-defined]
+                        if block.type == "text":
+                            pass  # streaming text chunks follow
+                        elif block.type == "tool_use":
+                            current_tool_id = block.id
+                            current_tool_name = block.name
+                            current_tool_args = ""
+                            yield encoder.encode(ToolCallStartEvent(
+                                type=EventType.TOOL_CALL_START,
+                                tool_call_id=current_tool_id,
+                                tool_call_name=current_tool_name,
+                                parent_message_id=msg_id,
+                            ))
 
-                elif etype == "RawContentBlockDeltaEvent":
-                    delta = event.delta  # type: ignore[attr-defined]
-                    if delta.type == "text_delta":
-                        response_text += delta.text
-                        yield encoder.encode(TextMessageContentEvent(
-                            type=EventType.TEXT_MESSAGE_CONTENT,
-                            message_id=msg_id,
-                            delta=delta.text,
-                        ))
-                    elif delta.type == "input_json_delta":
-                        current_tool_args += delta.partial_json
-                        yield encoder.encode(ToolCallArgsEvent(
-                            type=EventType.TOOL_CALL_ARGS,
-                            tool_call_id=current_tool_id or "",
-                            delta=delta.partial_json,
-                        ))
+                    elif etype == "RawContentBlockDeltaEvent":
+                        delta = event.delta  # type: ignore[attr-defined]
+                        if delta.type == "text_delta":
+                            response_text += delta.text
+                            yield encoder.encode(TextMessageContentEvent(
+                                type=EventType.TEXT_MESSAGE_CONTENT,
+                                message_id=msg_id,
+                                delta=delta.text,
+                            ))
+                        elif delta.type == "input_json_delta":
+                            current_tool_args += delta.partial_json
+                            yield encoder.encode(ToolCallArgsEvent(
+                                type=EventType.TOOL_CALL_ARGS,
+                                tool_call_id=current_tool_id or "",
+                                delta=delta.partial_json,
+                            ))
 
-                elif etype == "RawContentBlockStopEvent":
-                    if current_tool_id and current_tool_name:
-                        yield encoder.encode(ToolCallEndEvent(
-                            type=EventType.TOOL_CALL_END,
-                            tool_call_id=current_tool_id,
-                        ))
-                        try:
-                            parsed_args = json.loads(current_tool_args) if current_tool_args else {}
-                        except json.JSONDecodeError:
-                            parsed_args = {}
-                        tool_calls.append({
-                            "id": current_tool_id,
-                            "name": current_tool_name,
-                            "input": parsed_args,
-                        })
-                        current_tool_id = None
-                        current_tool_name = None
-                        current_tool_args = ""
+                    elif etype == "RawContentBlockStopEvent":
+                        if current_tool_id and current_tool_name:
+                            yield encoder.encode(ToolCallEndEvent(
+                                type=EventType.TOOL_CALL_END,
+                                tool_call_id=current_tool_id,
+                            ))
+                            try:
+                                parsed_args = json.loads(current_tool_args) if current_tool_args else {}
+                            except json.JSONDecodeError:
+                                parsed_args = {}
+                            tool_calls.append({
+                                "id": current_tool_id,
+                                "name": current_tool_name,
+                                "input": parsed_args,
+                            })
+                            current_tool_id = None
+                            current_tool_name = None
+                            current_tool_args = ""
+        except Exception:
+            # Surface the error as visible text in the chat so D5
+            # probes see a non-empty assistant response instead of a
+            # silent broken SSE stream. Full traceback is logged
+            # server-side by FastAPI's exception handler.
+            err_text = f"Agent error: {traceback.format_exc()}"
+            yield encoder.encode(TextMessageContentEvent(
+                type=EventType.TEXT_MESSAGE_CONTENT,
+                message_id=msg_id,
+                delta=err_text,
+            ))
 
         yield encoder.encode(TextMessageEndEvent(
             type=EventType.TEXT_MESSAGE_END,
@@ -571,6 +584,7 @@ async def run_agent(
             yield encoder.encode(ToolCallResultEvent(
                 type=EventType.TOOL_CALL_RESULT,
                 tool_call_id=tc["id"],
+                message_id=f"{msg_id}-tool-result-{tc['id']}",
                 content=result_text,
             ))
             tool_results.append({

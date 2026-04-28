@@ -1,8 +1,8 @@
 "use client";
 
 import React from "react";
-import { CopilotKit } from "@copilotkit/react-core";
 import {
+  CopilotKit,
   CopilotPopup,
   useConfigureSuggestions,
 } from "@copilotkit/react-core/v2";
