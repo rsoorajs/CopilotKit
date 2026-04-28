@@ -127,9 +127,16 @@ describe("d5-hitl-text-input preNavigateRoute branching", () => {
         demos: ["hitl-in-chat-booking"],
       }),
     ).toBe("/demos/hitl-in-chat");
+  });
+
+  it("falls back to /demos/hitl-in-chat for gen-ui-interrupt (not routable by this script)", async () => {
+    // gen-ui-interrupt uses `useInterrupt` (LangGraph interrupt events),
+    // not `useHumanInTheLoop` (frontend tool calls). It is no longer in
+    // ROUTE_PRECEDENCE so it falls through to the default route.
+    const mod = await import("./d5-hitl-text-input.js");
     expect(
       mod.preNavigateRoute("hitl-text-input", { demos: ["gen-ui-interrupt"] }),
-    ).toBe("/demos/gen-ui-interrupt");
+    ).toBe("/demos/hitl-in-chat");
   });
 
   it("returns /demos/hitl when only the legacy hitl id is declared", async () => {

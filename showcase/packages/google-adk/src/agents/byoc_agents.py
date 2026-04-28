@@ -14,6 +14,8 @@ import sys
 from google.adk.agents import LlmAgent
 from google.adk.tools import ToolContext
 
+from agents.shared_chat import get_model
+
 sys.path.insert(
     0,
     os.path.join(
@@ -37,7 +39,7 @@ _INSTRUCTION = (
 
 byoc_agent = LlmAgent(
     name="ByocAgent",
-    model="gemini-2.5-flash",
+    model=get_model(),
     instruction=_INSTRUCTION,
     tools=[query_data],
 )

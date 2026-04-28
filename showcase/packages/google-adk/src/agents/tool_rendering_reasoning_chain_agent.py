@@ -11,6 +11,7 @@ from __future__ import annotations
 from google.adk.agents import LlmAgent
 from google.genai import types
 
+from agents.shared_chat import get_model
 from agents.tool_rendering_common import (
     TOOL_RENDERING_INSTRUCTION,
     get_weather,
@@ -20,7 +21,7 @@ from agents.tool_rendering_common import (
 
 tool_rendering_reasoning_chain_agent = LlmAgent(
     name="ToolRenderingReasoningChainAgent",
-    model="gemini-2.5-flash",
+    model=get_model(),
     instruction=TOOL_RENDERING_INSTRUCTION,
     tools=[get_weather, search_flights, query_data],
     generate_content_config=types.GenerateContentConfig(

@@ -10,6 +10,8 @@ from __future__ import annotations
 
 from google.adk.agents import LlmAgent
 
+from agents.shared_chat import get_model
+
 _INSTRUCTION = (
     "You are a multimodal assistant. The user can upload images and PDFs "
     "via the chat composer. When attachments are present, describe what "
@@ -20,7 +22,7 @@ _INSTRUCTION = (
 
 multimodal_agent = LlmAgent(
     name="MultimodalAgent",
-    model="gemini-2.5-flash",
+    model=get_model(),
     instruction=_INSTRUCTION,
     tools=[],
 )

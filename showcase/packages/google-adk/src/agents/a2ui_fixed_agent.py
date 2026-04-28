@@ -15,6 +15,8 @@ from typing import Any
 from google.adk.agents import LlmAgent
 from google.adk.tools import ToolContext
 
+from agents.shared_chat import get_model
+
 CATALOG_ID = "copilotkit://flight-fixed-catalog"
 SURFACE_ID = "flight-fixed-schema"
 
@@ -90,7 +92,7 @@ _INSTRUCTION = (
 
 a2ui_fixed_agent = LlmAgent(
     name="A2uiFixedAgent",
-    model="gemini-2.5-flash",
+    model=get_model(),
     instruction=_INSTRUCTION,
     tools=[display_flight],
 )

@@ -11,6 +11,8 @@ from __future__ import annotations
 from google.adk.agents import LlmAgent
 from google.adk.tools import ToolContext
 
+from agents.shared_chat import get_model
+
 
 def set_recipe(tool_context: ToolContext, recipe: dict) -> dict:
     """Replace the entire recipe in shared state.
@@ -33,7 +35,7 @@ _INSTRUCTION = (
 
 shared_state_read_agent = LlmAgent(
     name="SharedStateReadAgent",
-    model="gemini-2.5-flash",
+    model=get_model(),
     instruction=_INSTRUCTION,
     tools=[set_recipe],
 )

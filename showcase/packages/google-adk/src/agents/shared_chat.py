@@ -8,14 +8,37 @@ headless-simple, headless-complete, voice, frontend-tools, agentic-chat).
 `build_thinking_chat_agent` uses Gemini 2.5 Flash with the thinking_config
 exposed so reasoning is streamed back as `thought` parts; the v2 React core
 renders these via CopilotChatReasoningMessage.
+
+`get_model` returns a `Gemini` instance configured with the aimock proxy
+endpoint when `GOOGLE_GEMINI_BASE_URL` is set, or the default model string
+otherwise. All agent modules should call `get_model()` instead of
+hard-coding `"gemini-2.5-flash"` so Railway deployments route through
+aimock.
 """
 
 from __future__ import annotations
 
+import os
+from typing import Union
+
 from google.adk.agents import LlmAgent
+from google.adk.models.google_llm import Gemini
 from google.genai import types
 
 DEFAULT_MODEL = "gemini-2.5-flash"
+
+
+def get_model(model: str = DEFAULT_MODEL) -> Union[str, Gemini]:
+    """Return a model suitable for LlmAgent's `model=` parameter.
+
+    When `GOOGLE_GEMINI_BASE_URL` is set (Railway aimock proxy), returns a
+    `Gemini` instance with its `base_url` pointed at the proxy. Otherwise
+    returns the plain model string so the ADK resolves the default endpoint.
+    """
+    base_url = os.environ.get("GOOGLE_GEMINI_BASE_URL")
+    if base_url:
+        return Gemini(model=model, base_url=base_url)
+    return model
 
 
 def build_simple_chat_agent(
@@ -24,7 +47,7 @@ def build_simple_chat_agent(
     instruction: str,
     model: str = DEFAULT_MODEL,
 ) -> LlmAgent:
-    return LlmAgent(name=name, model=model, instruction=instruction, tools=[])
+    return LlmAgent(name=name, model=get_model(model), instruction=instruction, tools=[])
 
 
 def build_thinking_chat_agent(
@@ -42,7 +65,7 @@ def build_thinking_chat_agent(
     """
     return LlmAgent(
         name=name,
-        model=model,
+        model=get_model(model),
         instruction=instruction,
         tools=[],
         generate_content_config=types.GenerateContentConfig(
