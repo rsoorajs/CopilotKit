@@ -212,7 +212,7 @@ const nextConfig: NextConfig = {
       },
       {
         source: "/learn/agentic-protocols",
-        destination: "/agentic-protocols",
+        destination: "/agentic-protocols/overview",
         permanent: true,
       },
       {
@@ -279,8 +279,13 @@ const nextConfig: NextConfig = {
       // catch URLs that were live in the brief window between the
       // first /learn/ consolidation pass and this restructure.
       {
+        source: "/agentic-protocols",
+        destination: "/agentic-protocols/overview",
+        permanent: true,
+      },
+      {
         source: "/concepts/agentic-protocols",
-        destination: "/agentic-protocols",
+        destination: "/agentic-protocols/overview",
         permanent: true,
       },
       {
