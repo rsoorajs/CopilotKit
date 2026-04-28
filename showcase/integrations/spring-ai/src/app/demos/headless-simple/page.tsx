@@ -176,7 +176,9 @@ function HeadlessChat() {
                   </div>
                 )}
                 {toolCalls.map((tc: { id: string }) => (
-                  <div key={tc.id}>{renderToolCall({ toolCall: tc as any })}</div>
+                  <div key={tc.id}>
+                    {renderToolCall({ toolCall: tc as any })}
+                  </div>
                 ))}
               </div>
             );
