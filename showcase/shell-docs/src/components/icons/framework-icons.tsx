@@ -111,10 +111,7 @@ const AgnoIcon = wrap(
       d="M12.8184 0H4.63127V2.9279H10.8196L16.0933 17.2121H19.5L12.8184 0Z"
       fill="currentColor"
     />
-    <path
-      d="M8.38314 14.2843H0V17.2122H8.38314V14.2843Z"
-      fill="currentColor"
-    />
+    <path d="M8.38314 14.2843H0V17.2122H8.38314V14.2843Z" fill="currentColor" />
   </>,
 );
 
@@ -228,10 +225,7 @@ const SpringIcon = wrap(
   />,
 );
 
-const FRAMEWORK_ICONS: Record<
-  string,
-  React.ComponentType<IconProps>
-> = {
+const FRAMEWORK_ICONS: Record<string, React.ComponentType<IconProps>> = {
   "langgraph-python": LanggraphIcon,
   "langgraph-typescript": LanggraphIcon,
   "langgraph-fastapi": LanggraphIcon,
