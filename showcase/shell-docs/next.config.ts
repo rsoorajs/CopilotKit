@@ -79,6 +79,104 @@ const nextConfig: NextConfig = {
         destination: "/",
         permanent: true,
       },
+
+      // /unselected/* tree retired. Most files were either canonical at
+      // root or duplicated content from `integrations/built-in-agent/`.
+      // Per-path redirects below handle the BIA-canonical mappings; the
+      // catch-all at the bottom funnels everything else to root (where
+      // either the canonical version now lives or the soft-default
+      // serves the right framework view).
+      { source: "/unselected", destination: "/", permanent: true },
+      {
+        source: "/unselected/quickstart",
+        destination: "/built-in-agent/quickstart",
+        permanent: true,
+      },
+      {
+        source: "/unselected/advanced-configuration",
+        destination: "/built-in-agent/advanced-configuration",
+        permanent: true,
+      },
+      {
+        source: "/unselected/mcp-servers",
+        destination: "/built-in-agent/mcp-servers",
+        permanent: true,
+      },
+      {
+        source: "/unselected/model-selection",
+        destination: "/built-in-agent/model-selection",
+        permanent: true,
+      },
+      {
+        source: "/unselected/server-tools",
+        destination: "/built-in-agent/server-tools",
+        permanent: true,
+      },
+      {
+        source: "/unselected/shared-state",
+        destination: "/built-in-agent/shared-state",
+        permanent: true,
+      },
+      {
+        source: "/unselected/generative-ui/mcp-apps",
+        destination: "/built-in-agent/generative-ui/mcp-apps",
+        permanent: true,
+      },
+      // Cat C promotions whose canonical home moved off the unselected
+      // tail (e.g. `unselected/ag-ui` → `backend/ag-ui`).
+      { source: "/unselected/ag-ui", destination: "/backend/ag-ui", permanent: true },
+      {
+        source: "/unselected/copilot-runtime",
+        destination: "/backend/copilot-runtime",
+        permanent: true,
+      },
+      // troubleshooting/migrate-to-* in unselected → existing
+      // /migrate/* canonical (already redirected at the
+      // /troubleshooting/migrate-to-* level).
+      {
+        source: "/unselected/troubleshooting/migrate-to-v2",
+        destination: "/migrate/v2",
+        permanent: true,
+      },
+      {
+        source: "/unselected/troubleshooting/migrate-to-1.10.X",
+        destination: "/migrate/1.10.X",
+        permanent: true,
+      },
+      {
+        source: "/unselected/troubleshooting/migrate-to-1.8.2",
+        destination: "/migrate/1.8.2",
+        permanent: true,
+      },
+      // Tutorials and interrupt-based moved out of unselected/ to root.
+      {
+        source: "/unselected/tutorials/:path*",
+        destination: "/tutorials/:path*",
+        permanent: true,
+      },
+      {
+        source:
+          "/unselected/generative-ui/your-components/interrupt-based",
+        destination:
+          "/generative-ui/your-components/interrupt-based",
+        permanent: true,
+      },
+      // agent-app-context was concept-per-framework only; no canonical
+      // root home. Send legacy URLs to `/` rather than 404 — readers
+      // who stored the old link will land on docs and can navigate.
+      {
+        source: "/unselected/agent-app-context",
+        destination: "/",
+        permanent: true,
+      },
+      // Catch-all: any remaining /unselected/* path lands on its
+      // canonical root equivalent (Cat A files: coding-agents,
+      // custom-look-and-feel/*, frontend-tools, etc.).
+      {
+        source: "/unselected/:path*",
+        destination: "/:path*",
+        permanent: true,
+      },
     ];
   },
 };
