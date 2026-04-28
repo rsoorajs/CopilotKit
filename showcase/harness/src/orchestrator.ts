@@ -831,7 +831,7 @@ export async function boot(opts: BootOptions = {}): Promise<{
       unwatchProbes();
       engine.stop();
       await scheduler.stop();
-      if (browserPoolReady) await browserPool.shutdown();
+      await browserPool.shutdown();
       // Release all bus subscriptions so repeated boot/stop don't accumulate
       // listeners on the shared EventEmitter.
       for (const u of busUnsubs) u();

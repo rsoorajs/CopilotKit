@@ -181,9 +181,6 @@ export class BrowserPool {
 
       try {
         const fresh = await this.launchBrowser();
-        slot.browser = fresh;
-        slot.contextCount = 0;
-        this.browserToSlot.set(fresh, slot);
 
         if (this.isShutdown) {
           // Shutdown was initiated while we were launching. Close the
@@ -191,6 +188,10 @@ export class BrowserPool {
           await fresh.close().catch(() => {});
           return;
         }
+
+        slot.browser = fresh;
+        slot.contextCount = 0;
+        this.browserToSlot.set(fresh, slot);
 
         const waiter = this.waiters.shift();
         if (waiter) {
