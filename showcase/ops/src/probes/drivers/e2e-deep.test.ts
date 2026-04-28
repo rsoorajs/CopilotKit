@@ -414,34 +414,6 @@ describe("e2e-deep driver", () => {
     );
   });
 
-  it("short-circuits green for starter shape without launching browser", async () => {
-    let launched = false;
-    const driver = createE2eDeepDriver({
-      launcher: async () => {
-        launched = true;
-        const { browser } = makeBrowser([{}]);
-        return browser;
-      },
-      scriptLoader: async () => {
-        /* no-op */
-      },
-    });
-
-    const result = await driver.run(mkCtx(), {
-      key: "e2e-deep:showcase-mastra-starter",
-      publicUrl: "https://showcase-mastra-starter.example.com",
-      name: "showcase-mastra-starter",
-      features: ["agentic-chat"],
-      shape: "starter",
-    });
-
-    expect(launched).toBe(false);
-    expect(result.state).toBe("green");
-    const sig = result.signal as E2eDeepAggregateSignal;
-    expect(sig.shape).toBe("starter");
-    expect(sig.note).toMatch(/starter/);
-  });
-
   it("returns aggregate green with zero rows and no browser launch when scripts directory is empty", async () => {
     // Wave 2b not yet landed: no scripts registered, no scripts on
     // disk. The driver must still typecheck and run cleanly. Empty

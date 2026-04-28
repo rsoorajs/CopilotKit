@@ -936,46 +936,6 @@ describe("e2e-parity driver", () => {
     expect(sig.scopingReason).toMatch(/week 17/);
   });
 
-  it("short-circuits green for starter shape without launching browser", async () => {
-    let launched = false;
-    const driver = createE2eParityDriver({
-      launcher: async () => {
-        launched = true;
-        return makeBrowser().browser;
-      },
-      attachInterceptor: async () => ({
-        async stop() {
-          return makeCapture();
-        },
-      }),
-      serializeDom: async () => [],
-      loadReference: async () => ({
-        status: "ok",
-        snapshot: makeSnapshot(),
-        snapshotPath: "/fake/x.json",
-      }),
-      runConversation: async () => ({
-        turns_completed: 1,
-        total_turns: 1,
-        turn_durations_ms: [100],
-      }),
-      fleetResolver: async () => ["langgraph-python"],
-    });
-
-    const result = await driver.run(mkCtx(), {
-      key: "e2e-parity:showcase-langgraph-python-starter",
-      publicUrl: "https://x.example.com",
-      name: "showcase-langgraph-python-starter",
-      features: ["agentic-chat"],
-      shape: "starter",
-    });
-
-    expect(launched).toBe(false);
-    expect(result.state).toBe("green");
-    const sig = result.signal as E2eParityAggregateSignal;
-    expect(sig.shape).toBe("starter");
-  });
-
   it("emits red with launcher-error when chromium fails to launch", async () => {
     registerD5Script(makeScript());
     const { writer, writes } = mkWriter();

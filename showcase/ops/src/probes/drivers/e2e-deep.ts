@@ -94,13 +94,11 @@ type E2eDeepDriverInput = z.infer<typeof inputSchema>;
 /**
  * Aggregate signal carried on the primary `e2e-deep:<slug>` row.
  *
- *   - `shape: "starter"`  — short-circuit before launch. Starters have
- *                           no demo routing.
  *   - `shape: "package"`  — normal fan-out. `failed`/`skipped` track
  *                           per-feature outcomes.
  */
 export interface E2eDeepAggregateSignal {
-  shape: "package" | "starter";
+  shape: "package";
   slug: string;
   backendUrl: string;
   total: number;
@@ -461,26 +459,6 @@ export function createE2eDeepDriver(
       const observedAt = ctx.now().toISOString();
       const backendUrl = (input.backendUrl ?? input.publicUrl)!;
       const slug = deriveSlug(input.key, input.name);
-
-      // Starter short-circuit. Starters have no /demos routing → fan-
-      // out would 404 every feature. Mirrors e2e-demos / e2e-smoke.
-      if (input.shape === "starter") {
-        return {
-          key: input.key,
-          state: "green",
-          signal: {
-            shape: "starter",
-            slug,
-            backendUrl,
-            total: 0,
-            passed: 0,
-            failed: [],
-            skipped: [],
-            note: "starter: no /demos/* routing",
-          },
-          observedAt,
-        };
-      }
 
       // Resolve the feature list. Explicit `features` (from tests or a
       // hand-authored YAML target) wins; otherwise translate the
