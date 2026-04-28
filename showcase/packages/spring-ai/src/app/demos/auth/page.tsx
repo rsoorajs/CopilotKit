@@ -142,6 +142,7 @@ export default function AuthDemoPage() {
       agent="auth"
       headers={headers}
       onError={onError}
+      useSingleEndpoint={false}
     >
       <div className="flex h-screen flex-col gap-3 p-6">
         <AuthBanner

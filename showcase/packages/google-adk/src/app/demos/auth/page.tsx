@@ -20,6 +20,7 @@ export default function AuthDemo() {
       runtimeUrl="/api/copilotkit-auth"
       agent="auth-demo"
       headers={headers as Record<string, string>}
+      useSingleEndpoint={false}
     >
       <div className="min-h-screen w-full bg-gray-50 flex flex-col">
         <AuthBanner
