@@ -305,7 +305,6 @@ export default async function FrameworkScopedDocsPage({
       contentSlugPath={contentSlugPath}
       slugHrefPrefix={`/${framework}`}
       frameworkOverride={framework}
-      sidebarTitle={integration.name}
       navTree={navTree}
       bannerSlot={banner}
     />
@@ -331,12 +330,6 @@ function FrameworkLandingPage({ framework }: { framework: string }) {
     <div className="flex" style={{ height: "calc(100vh - 53px)" }}>
       <aside className="w-[240px] shrink-0 border-r border-[var(--border)] bg-[var(--bg)] overflow-y-auto p-4">
         <SidebarFrameworkSelector />
-        <Link
-          href={`/${framework}`}
-          className="block text-xs font-mono uppercase tracking-widest text-[var(--accent)] mb-4"
-        >
-          {integration.name}
-        </Link>
         {tree.map((node, i) => (
           <RenderNav key={i} node={node} framework={framework} />
         ))}
