@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { runConversation } from "./conversation-runner.js";
+import {
+  runConversation,
+  fillAndVerifySend,
+  readUserMessageCount,
+} from "./conversation-runner.js";
 import type { ConversationTurn, Page } from "./conversation-runner.js";
 
 /**
@@ -31,10 +35,39 @@ interface PageScript {
   throwOnPress?: Error;
   // Recorded inputs the runner sent; tests assert on these.
   recorded?: { fills: string[]; presses: string[] };
+  // Scripted user-message counts for the send-verification retry loop.
+  // When provided, `page.evaluate` checks whether the evaluate function
+  // body references user-message selectors and returns from this queue
+  // instead of the main `evaluateValues` queue.
+  userMessageValues?: number[];
+}
+
+/**
+ * Wrap an evaluate function so that user-message reads (from
+ * `readUserMessageCount`) return a monotonically increasing count —
+ * simulating that the user message appeared on first try after each
+ * fill+press. This prevents `fillAndVerifySend` from burning 2s×3
+ * retries in tests that don't care about the send-verification loop.
+ */
+function wrapEvaluateForUserMessages(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  inner: (...args: any[]) => Promise<any>,
+): Page["evaluate"] {
+  let userCalls = 0;
+  return (async <R>(fn: () => R): Promise<R> => {
+    if (fn.toString().includes("copilot-user-message")) {
+      return userCalls++ as never;
+    }
+    return inner(fn) as Promise<R>;
+  }) as Page["evaluate"];
 }
 
 function makePage(script: PageScript = {}): Page {
   const queue = [...(script.evaluateValues ?? [])];
+  const userQueue = [...(script.userMessageValues ?? [])];
+  // Auto-succeed counter: first user-message read = 0 (baseline),
+  // subsequent reads = 1 (growth detected → verify loop succeeds).
+  let autoUserCalls = 0;
   return {
     async waitForSelector() {
       // No-op — the runner uses this only to confirm the chat input exists.
@@ -49,6 +82,25 @@ function makePage(script: PageScript = {}): Page {
     },
     async evaluate(fn) {
       if (script.evaluate) return script.evaluate(fn) as never;
+
+      // Detect whether the evaluate call is reading user messages or
+      // assistant messages by inspecting the function body. The
+      // readUserMessageCount function references "copilot-user-message"
+      // while readMessageCount references "copilot-assistant-message".
+      const fnBody = fn.toString();
+      if (fnBody.includes("copilot-user-message")) {
+        if (userQueue.length > 0) {
+          if (userQueue.length === 1) return userQueue[0]! as never;
+          return userQueue.shift()! as never;
+        }
+        // No explicit user-message script — auto-succeed so the
+        // verify loop doesn't burn time in tests that only care about
+        // assistant-message settling. Returns a monotonically
+        // increasing count so every fillAndVerifySend call sees
+        // growth past its baseline on the first poll.
+        return autoUserCalls++ as never;
+      }
+
       // Drain one value per call. Once exhausted, freeze on the last
       // value so any post-script poll sees the steady-state count
       // (matches a real assistant message that has finished streaming).
@@ -238,12 +290,12 @@ describe("runConversation", () => {
       },
       async fill() {},
       async press() {},
-      async evaluate() {
+      evaluate: wrapEvaluateForUserMessages(async () => {
         // First read is the baseline (= 0); subsequent reads return 1
         // and stay there → growth past baseline + stable → settled.
         evalCalls++;
         return (evalCalls === 1 ? 0 : 1) as never;
-      },
+      }),
     };
 
     const result = await runConversation(page, [{ input: "hi" }], {
@@ -300,10 +352,10 @@ describe("runConversation", () => {
         }
       },
       async press() {},
-      async evaluate() {
+      evaluate: wrapEvaluateForUserMessages(async () => {
         evalCalls++;
         return (evalCalls === 1 ? 0 : 1) as never;
-      },
+      }),
     };
 
     const result = await runConversation(page, [{ input: "hello" }], {
@@ -326,10 +378,10 @@ describe("runConversation", () => {
       },
       async fill() {},
       async press() {},
-      async evaluate() {
+      evaluate: wrapEvaluateForUserMessages(async () => {
         evalCalls++;
         return (evalCalls === 1 ? 0 : 1) as never;
-      },
+      }),
     };
 
     const result = await runConversation(page, [{ input: "hi" }], {
@@ -397,14 +449,20 @@ describe("runConversation", () => {
     // on subsequent reads. The runner's readMessageCount catch returns 0
     // on error so the baseline becomes 0 and the turn still settles when
     // the count grows.
-    let calls = 0;
+    let assistantCalls = 0;
+    let userCalls = 0;
     const page: Page = {
       async waitForSelector() {},
       async fill() {},
       async press() {},
-      async evaluate() {
-        calls++;
-        if (calls === 1) throw new Error("evaluate boom");
+      async evaluate(fn) {
+        // User-message reads return a monotonically increasing count
+        // so fillAndVerifySend sees growth and doesn't retry.
+        if (fn.toString().includes("copilot-user-message")) {
+          return userCalls++ as never;
+        }
+        assistantCalls++;
+        if (assistantCalls === 1) throw new Error("evaluate boom");
         return 1 as never;
       },
     };
@@ -452,11 +510,17 @@ describe("runConversation", () => {
       },
     };
 
+    let userMsgCalls1 = 0;
     const page: Page = {
       async waitForSelector() {},
       async fill() {},
       async press() {},
       async evaluate(fn) {
+        // User-message reads bypass the fake document entirely — we
+        // only care about assistant-message selector queries here.
+        if (fn.toString().includes("copilot-user-message")) {
+          return userMsgCalls1++ as never;
+        }
         // Patch globalThis.document with our fake for the duration
         // of the evaluate call. The selector-fn closes over
         // globalThis at runtime, mirroring the browser-side execution.
@@ -510,11 +574,16 @@ describe("runConversation", () => {
       },
     };
 
+    let userMsgCalls2 = 0;
     const page: Page = {
       async waitForSelector() {},
       async fill() {},
       async press() {},
       async evaluate(fn) {
+        // User-message reads bypass the fake document entirely.
+        if (fn.toString().includes("copilot-user-message")) {
+          return userMsgCalls2++ as never;
+        }
         const originalDoc = (globalThis as { document?: unknown }).document;
         (globalThis as { document?: unknown }).document = fakeDocument;
         try {
@@ -562,5 +631,136 @@ describe("runConversation", () => {
     });
     expect(result.failure_turn).toBe(1);
     expect(result.error).toContain("non-error string boom");
+  });
+});
+
+describe("fillAndVerifySend", () => {
+  it("succeeds on first attempt when user message appears immediately", async () => {
+    const recorded = { fills: [] as string[], presses: [] as string[] };
+    // User message count: baseline=0, then 1 after Enter → success on first attempt.
+    const page = makePage({
+      recorded,
+      userMessageValues: [0, 1],
+    });
+
+    await fillAndVerifySend(page, "textarea", "hello world");
+
+    // fill+press called exactly once — no retry needed.
+    expect(recorded.fills).toEqual(["hello world"]);
+    expect(recorded.presses).toEqual(["Enter"]);
+  });
+
+  it("retries when first attempt fails (no user message) and succeeds on second", async () => {
+    const recorded = { fills: [] as string[], presses: [] as string[] };
+    // Attempt 1: baseline=0, single poll returns 0 → timeout, retry.
+    // Attempt 2: single poll returns 1 → success.
+    // With short delays (initialDelayMs=10, timeoutMs=50) each attempt
+    // fits exactly 1 poll (POLL_INTERVAL_MS=100 > remaining 40ms window).
+    const userValues: number[] = [
+      0, // baseline read
+      0, // attempt 1: single poll → no growth → retry
+      1, // attempt 2: single poll → growth → success
+    ];
+    const page = makePage({
+      recorded,
+      userMessageValues: userValues,
+    });
+
+    await fillAndVerifySend(page, "textarea", "retry me", {
+      initialDelayMs: 10,
+      timeoutMs: 50,
+    });
+
+    // fill+press called twice — first attempt failed, second succeeded.
+    expect(recorded.fills).toEqual(["retry me", "retry me"]);
+    expect(recorded.presses).toEqual(["Enter", "Enter"]);
+  });
+
+  it("falls through after all 3 retries fail without throwing", async () => {
+    const recorded = { fills: [] as string[], presses: [] as string[] };
+    // All 3 attempts see user message count stuck at 0. The function
+    // should return silently (not throw) so the downstream timeout
+    // produces a clear failure message.
+    const page = makePage({
+      recorded,
+      userMessageValues: [0], // stays at 0 forever (single-value freeze)
+    });
+
+    // Should NOT throw — just returns after exhausting retries.
+    // Use short delays so the test doesn't exceed the 5s timeout.
+    await fillAndVerifySend(page, "textarea", "doomed", {
+      initialDelayMs: 10,
+      timeoutMs: 50,
+    });
+
+    // fill+press called 3 times (max attempts).
+    expect(recorded.fills).toEqual(["doomed", "doomed", "doomed"]);
+    expect(recorded.presses).toEqual(["Enter", "Enter", "Enter"]);
+  });
+});
+
+describe("readUserMessageCount", () => {
+  it("returns 0 when no user messages exist", async () => {
+    const fakeDocument = {
+      querySelectorAll: (_sel: string): { length: number } => ({ length: 0 }),
+    };
+    const page: Page = {
+      async waitForSelector() {},
+      async fill() {},
+      async press() {},
+      async evaluate(fn) {
+        const originalDoc = (globalThis as { document?: unknown }).document;
+        (globalThis as { document?: unknown }).document = fakeDocument;
+        try {
+          return fn() as never;
+        } finally {
+          (globalThis as { document?: unknown }).document = originalDoc;
+        }
+      },
+    };
+    expect(await readUserMessageCount(page)).toBe(0);
+  });
+
+  it("prefers canonical testid when present", async () => {
+    const queriedSelectors: string[] = [];
+    const fakeDocument = {
+      querySelectorAll: (sel: string): { length: number } => {
+        queriedSelectors.push(sel);
+        if (sel === '[data-testid="copilot-user-message"]') {
+          return { length: 3 };
+        }
+        // Should never reach these — canonical short-circuits.
+        return { length: 999 };
+      },
+    };
+    const page: Page = {
+      async waitForSelector() {},
+      async fill() {},
+      async press() {},
+      async evaluate(fn) {
+        const originalDoc = (globalThis as { document?: unknown }).document;
+        (globalThis as { document?: unknown }).document = fakeDocument;
+        try {
+          return fn() as never;
+        } finally {
+          (globalThis as { document?: unknown }).document = originalDoc;
+        }
+      },
+    };
+    expect(await readUserMessageCount(page)).toBe(3);
+    // Should NOT have fallen through to the other selectors.
+    expect(queriedSelectors).toEqual(['[data-testid="copilot-user-message"]']);
+  });
+
+  it("returns 0 on evaluate error", async () => {
+    const page: Page = {
+      async waitForSelector() {},
+      async fill() {},
+      async press() {},
+      async evaluate() {
+        throw new Error("page crashed");
+      },
+    };
+    expect(await readUserMessageCount(page)).toBe(0);
   });
 });

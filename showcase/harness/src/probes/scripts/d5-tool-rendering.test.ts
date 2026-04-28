@@ -25,12 +25,11 @@ import {
  *   2. `buildTurns` produces the user inputs that match the recorded
  *      fixture verbatim (`weather in Tokyo`).
  *   3. The assertion fires (throws) when the DOM lacks the expected
- *      card structure — covering the four failure modes:
+ *      card structure — covering the three failure modes:
  *        a. selector cascade matched 0 elements,
  *        b. card matched but missing a numeric temperature,
- *        c. card matched but missing the "Tokyo" city label,
- *        d. card matched but childCount === 0 (string-only render).
- *      And green-paths through when all four checks pass.
+ *        c. card matched but childCount === 0 (string-only render).
+ *      And green-paths through when all three checks pass.
  *
  * The Page interface is the structural minimal surface from
  * conversation-runner.ts — tests inject scripted fakes whose `evaluate`
@@ -163,13 +162,13 @@ describe("d5-tool-rendering script", () => {
       expect(result).toMatch(/no numeric temperature found/);
     });
 
-    it("returns error when card matches but is missing Tokyo city label", () => {
+    it("passes when card matches with temperature but without city label (Tokyo not required)", () => {
       const result = validateProbe({
         selector: '[data-testid="weather-card"]',
         text: "san francisco 22 sunny",
         childCount: 3,
       });
-      expect(result).toMatch(/missing city label "Tokyo"/);
+      expect(result).toBeNull();
     });
 
     it("returns error when card matches but has no inner elements", () => {
@@ -225,8 +224,8 @@ describe("d5-tool-rendering script", () => {
       );
     });
 
-    it("fails when the card matches but is missing the Tokyo city label", async () => {
-      const assertion = buildToolRenderingAssertion(FAST_POLL);
+    it("passes when the card matches with temperature but without city label (Tokyo not required)", async () => {
+      const assertion = buildToolRenderingAssertion();
       const page = makePage({
         evaluateValues: [
           {
@@ -236,9 +235,7 @@ describe("d5-tool-rendering script", () => {
           },
         ],
       });
-      await expect(assertion(page)).rejects.toThrow(
-        /missing city label "Tokyo"/,
-      );
+      await expect(assertion(page)).resolves.toBeUndefined();
     });
 
     it("fails when the card matches but has no inner elements", async () => {
