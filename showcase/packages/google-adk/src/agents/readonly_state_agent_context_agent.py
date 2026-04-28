@@ -18,6 +18,8 @@ from google.adk.models.llm_request import LlmRequest
 from google.adk.models.llm_response import LlmResponse
 from google.genai import types
 
+from agents.shared_chat import get_model
+
 logger = logging.getLogger(__name__)
 
 CONTEXT_PREFIX_SIGNATURE = "[agent-context] frontend-supplied context:"
@@ -138,7 +140,7 @@ _INSTRUCTION = (
 
 readonly_state_agent_context_agent = LlmAgent(
     name="ReadonlyStateAgentContextAgent",
-    model="gemini-2.5-flash",
+    model=get_model(),
     instruction=_INSTRUCTION,
     tools=[],
     before_model_callback=_inject_context,

@@ -32,7 +32,6 @@ features:
   - tool-rendering-reasoning-chain
   - frontend-tools
   - frontend-tools-async
-  - hitl-in-chat
   - tool-rendering
   - tool-rendering-default-catchall
   - tool-rendering-custom-catchall
@@ -89,18 +88,6 @@ demos:
       - src/app/demos/frontend-tools-async/agent.py
       - src/app/demos/frontend-tools-async/page.tsx
       - src/app/demos/frontend-tools-async/notes-card.tsx
-      - src/app/api/copilotkit/route.ts
-  - id: hitl-in-chat
-    name: In-Chat HITL (useHumanInTheLoop — ergonomic API)
-    description: Interactive approval/decision surface rendered inline in the chat via the high-level `useHumanInTheLoop` hook
-    tags:
-      - interactivity
-    route: /demos/hitl-in-chat
-    animated_preview_url:
-    highlight:
-      - src/app/demos/hitl-in-chat/agent.py
-      - src/app/demos/hitl-in-chat/page.tsx
-      - src/app/demos/hitl-in-chat/time-picker-card.tsx
       - src/app/api/copilotkit/route.ts
   - id: tool-rendering
     name: Tool Rendering
@@ -355,7 +342,7 @@ demos:
       - src/app/demos/auth/auth-banner.tsx
       - src/app/demos/auth/use-demo-auth.ts
       - src/app/demos/auth/demo-token.ts
-      - src/app/api/copilotkit-auth/route.ts
+      - src/app/api/copilotkit-auth/[[...slug]]/route.ts
   - id: voice
     name: Voice Input
     description: Speech-to-text via @copilotkit/voice with a bundled sample audio button
@@ -367,7 +354,7 @@ demos:
       - src/agents/agent.py
       - src/app/demos/voice/page.tsx
       - src/app/demos/voice/sample-audio-button.tsx
-      - src/app/api/copilotkit-voice/route.ts
+      - src/app/api/copilotkit-voice/[[...slug]]/route.ts
   - id: agent-config
     name: Agent Config Object
     description: Forward a typed config object (tone / expertise / response length) from the provider to the agent

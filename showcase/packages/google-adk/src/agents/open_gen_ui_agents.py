@@ -11,6 +11,8 @@ from __future__ import annotations
 
 from google.adk.agents import LlmAgent
 
+from agents.shared_chat import get_model
+
 _OPEN_GEN_UI_INSTRUCTION = (
     "You are a UI-generation assistant. When the user describes something "
     "they want to see (a card, a form, a small dashboard), respond with a "
@@ -31,14 +33,14 @@ _OPEN_GEN_UI_ADVANCED_INSTRUCTION = (
 
 open_gen_ui_agent = LlmAgent(
     name="OpenGenUiAgent",
-    model="gemini-2.5-flash",
+    model=get_model(),
     instruction=_OPEN_GEN_UI_INSTRUCTION,
     tools=[],
 )
 
 open_gen_ui_advanced_agent = LlmAgent(
     name="OpenGenUiAdvancedAgent",
-    model="gemini-2.5-flash",
+    model=get_model(),
     instruction=_OPEN_GEN_UI_ADVANCED_INSTRUCTION,
     tools=[],
 )

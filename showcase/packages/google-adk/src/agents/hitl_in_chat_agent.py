@@ -14,6 +14,8 @@ from __future__ import annotations
 from google.adk.agents import LlmAgent
 from google.adk.tools import ToolContext
 
+from agents.shared_chat import get_model
+
 
 def generate_task_steps(tool_context: ToolContext, steps: list[dict]) -> dict:
     """Generate a list of steps for the user to review.
@@ -41,7 +43,7 @@ _INSTRUCTION = (
 
 hitl_in_chat_agent = LlmAgent(
     name="HitlInChatAgent",
-    model="gemini-2.5-flash",
+    model=get_model(),
     instruction=_INSTRUCTION,
     tools=[generate_task_steps],
 )

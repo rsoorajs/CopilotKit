@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from google.adk.agents import LlmAgent
 
+from agents.shared_chat import get_model
 from agents.tool_rendering_common import (
     TOOL_RENDERING_INSTRUCTION,
     get_weather,
@@ -19,7 +20,7 @@ from agents.tool_rendering_common import (
 
 tool_rendering_default_catchall_agent = LlmAgent(
     name="ToolRenderingDefaultCatchallAgent",
-    model="gemini-2.5-flash",
+    model=get_model(),
     instruction=TOOL_RENDERING_INSTRUCTION,
     tools=[get_weather, search_flights, query_data],
 )

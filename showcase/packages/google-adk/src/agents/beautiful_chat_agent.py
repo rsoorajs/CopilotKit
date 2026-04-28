@@ -14,6 +14,8 @@ import sys
 from google.adk.agents import LlmAgent
 from google.adk.tools import ToolContext
 
+from agents.shared_chat import get_model
+
 sys.path.insert(
     0,
     os.path.join(
@@ -53,7 +55,7 @@ _INSTRUCTION = (
 
 beautiful_chat_agent = LlmAgent(
     name="BeautifulChatAgent",
-    model="gemini-2.5-flash",
+    model=get_model(),
     instruction=_INSTRUCTION,
     tools=[query_data, search_flights, schedule_meeting],
 )

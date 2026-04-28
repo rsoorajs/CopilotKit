@@ -32,7 +32,6 @@ features:
   - chat-customization-css
   - frontend-tools
   - frontend-tools-async
-  - hitl-in-chat
   - gen-ui-agent
   - open-gen-ui
   - open-gen-ui-advanced
@@ -93,17 +92,6 @@ demos:
     highlight:
       - src/app/demos/frontend-tools-async/page.tsx
       - src/app/demos/frontend-tools-async/notes-card.tsx
-      - src/app/api/copilotkit/route.ts
-  - id: hitl-in-chat
-    name: In-Chat HITL (useHumanInTheLoop)
-    description: Interactive approval surface rendered inline in the chat via the high-level `useHumanInTheLoop` hook
-    tags:
-      - interactivity
-    route: /demos/hitl-in-chat
-    animated_preview_url:
-    highlight:
-      - src/app/demos/hitl-in-chat/page.tsx
-      - src/app/demos/hitl-in-chat/time-picker-card.tsx
       - src/app/api/copilotkit/route.ts
   - id: gen-ui-agent
     name: Agentic Generative UI
@@ -180,7 +168,7 @@ demos:
       - src/app/demos/auth/auth-banner.tsx
       - src/app/demos/auth/use-demo-auth.ts
       - src/app/demos/auth/demo-token.ts
-      - src/app/api/copilotkit-auth/route.ts
+      - src/app/api/copilotkit-auth/[[...slug]]/route.ts
   - id: open-gen-ui
     name: Open Generative UI (Minimal)
     description: Agent streams HTML + CSS into a sandboxed iframe via the built-in OpenGenerativeUIActivityRenderer
@@ -213,7 +201,7 @@ demos:
     highlight:
       - src/app/demos/voice/page.tsx
       - src/app/demos/voice/sample-audio-button.tsx
-      - src/app/api/copilotkit-voice/route.ts
+      - src/app/api/copilotkit-voice/[[...slug]]/route.ts
   - id: agent-config
     name: Agent Config Object
     description: Frontend forwards typed config (tone, expertise, responseLength) to Spring, which rebuilds the system prompt per request

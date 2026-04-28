@@ -1,6 +1,16 @@
 #!/bin/bash
 set -e
 
+# Derive SPRING_AI_OPENAI_BASE_URL from the showcase-wide OPENAI_BASE_URL if
+# not already set. The showcase convention is that OPENAI_BASE_URL includes
+# "/v1" (e.g. https://aimock.example.com/v1), but Spring AI appends
+# "/v1/chat/completions" itself, so we must strip the trailing "/v1" to avoid
+# a doubled path segment.
+if [ -z "${SPRING_AI_OPENAI_BASE_URL:-}" ] && [ -n "${OPENAI_BASE_URL:-}" ]; then
+    export SPRING_AI_OPENAI_BASE_URL="${OPENAI_BASE_URL%/v1}"
+    echo "[entrypoint] Derived SPRING_AI_OPENAI_BASE_URL=${SPRING_AI_OPENAI_BASE_URL} from OPENAI_BASE_URL=${OPENAI_BASE_URL}"
+fi
+
 echo "[entrypoint] Starting Spring Boot agent backend..."
 # jdk.httpclient.keepalive.timeout=0 disables JDK HttpClient connection pooling.
 # Required because Spring-AI streams via WebClient + JdkClientHttpConnector and a

@@ -6,14 +6,22 @@ import { useState } from "react";
  * Sample-audio button for the voice demo.
  *
  * Bypasses the microphone entirely: fetches a bundled audio clip from
- * /public, base64-encodes it, and POSTs the single-route transcription
- * envelope to the configured runtime URL. On success, invokes
- * `onTranscribed(text)` so the caller can populate the chat composer.
+ * /public and POSTs it as multipart/form-data to the runtime's
+ * `/transcribe` endpoint. On success, invokes `onTranscribed(text)` so the
+ * caller can populate the chat composer.
+ *
+ * Matches the REST-mode payload shape used by `transcribeAudio()` in
+ * `@copilotkit/react-core`'s transcription-client.ts when the provider runs
+ * with `useSingleEndpoint={false}`.
  */
 export interface SampleAudioButtonProps {
+  /** Called with the transcribed text on success. */
   onTranscribed: (text: string) => void;
+  /** Runtime URL whose `/transcribe` sub-path receives the upload. */
   runtimeUrl: string;
+  /** Public path of the sample audio clip. */
   audioSrc: string;
+  /** Caption shown next to the button — what the user should expect. */
   sampleLabel: string;
 }
 
@@ -33,19 +41,12 @@ export function SampleAudioButton({
         throw new Error(`Failed to fetch sample audio: ${audioRes.status}`);
       }
       const blob = await audioRes.blob();
-      const buffer = await blob.arrayBuffer();
-      const base64 = bufferToBase64(buffer);
-      const transcribeRes = await fetch(runtimeUrl, {
+      const formData = new FormData();
+      formData.append("audio", blob, "sample.wav");
+      const base = runtimeUrl.replace(/\/$/, "");
+      const transcribeRes = await fetch(`${base}/transcribe`, {
         method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          method: "transcribe",
-          body: {
-            audio: base64,
-            mimeType: blob.type || "audio/wav",
-            filename: "sample.wav",
-          },
-        }),
+        body: formData,
       });
       if (!transcribeRes.ok) {
         throw new Error(`Transcribe failed: ${transcribeRes.status}`);
@@ -89,17 +90,4 @@ export function SampleAudioButton({
       )}
     </div>
   );
-}
-
-function bufferToBase64(buffer: ArrayBuffer): string {
-  let binary = "";
-  const bytes = new Uint8Array(buffer);
-  const chunkSize = 0x8000;
-  for (let i = 0; i < bytes.length; i += chunkSize) {
-    binary += String.fromCharCode.apply(
-      null,
-      Array.from(bytes.subarray(i, i + chunkSize)),
-    );
-  }
-  return btoa(binary);
 }

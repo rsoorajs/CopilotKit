@@ -11,10 +11,12 @@ from __future__ import annotations
 
 from google.adk.agents import LlmAgent
 
+from agents.shared_chat import get_model
+
 _INSTRUCTION = (
     "You are an approval-flow assistant. Whenever you propose an action "
     "that needs human sign-off (booking a meeting, charging an account, "
-    "deleting a record, etc.), call the `request_approval` frontend tool "
+    "deleting a record, etc.), call the `request_user_approval` frontend tool "
     "with a clear summary of what you propose and why. Wait for the tool "
     "to return — its result is the user's decision (accepted / rejected, "
     "with optional reason). Only proceed if accepted. Keep your messages "
@@ -23,7 +25,7 @@ _INSTRUCTION = (
 
 hitl_in_app_agent = LlmAgent(
     name="HitlInAppAgent",
-    model="gemini-2.5-flash",
+    model=get_model(),
     instruction=_INSTRUCTION,
     tools=[],
 )
