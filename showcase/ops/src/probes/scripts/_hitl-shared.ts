@@ -64,6 +64,15 @@ export interface Page extends ConversationPage {
 }
 
 const SELECTOR_PROBE_TIMEOUT_MS = 3_000;
+/**
+ * Extended timeout for the approval-dialog cascade. The dialog only
+ * appears after the full aimock→CopilotKit→frontend-tool→React-render
+ * chain completes: the agent response must be received, the tool call
+ * dispatched to the frontend handler, the handler must set React state,
+ * and the portal must mount (useEffect + createPortal). On Railway this
+ * chain regularly exceeds the default 3 s probe timeout.
+ */
+const APPROVAL_DIALOG_TIMEOUT_MS = 15_000;
 const ASSISTANT_FOLLOWUP_TIMEOUT_MS = 30_000;
 const POLL_INTERVAL_MS = 100;
 /**
@@ -77,25 +86,35 @@ const ASSISTANT_FOLLOWUP_SETTLE_MS = 1_500;
 
 /**
  * Approval-dialog cascade. Reference DOM is langgraph-python's
- * `approval-dialog.tsx` which uses both `[data-testid="approval-dialog"]`
- * AND `role="dialog"` — the testid wins on conformant integrations, the
- * role / class fallbacks catch ports that lost the testid.
+ * `approval-dialog.tsx` which renders:
+ *   - Outer overlay: `data-testid="approval-dialog-overlay"`
+ *   - Inner dialog:  `data-testid="approval-dialog"` + `role="dialog"`
+ *
+ * The overlay selector is listed first because it is the outermost
+ * portal'd element (direct child of `<body>`) and therefore the first
+ * to become visible in the DOM. The inner-dialog testid wins on
+ * conformant integrations; the role / class fallbacks catch ports
+ * that lost both testids.
  */
 const APPROVAL_DIALOG_SELECTORS = [
+  '[data-testid="approval-dialog-overlay"]',
   '[data-testid="approval-dialog"]',
   '[data-testid="approval-prompt"]',
+  '[role="dialog"][aria-modal="true"]',
   '[role="dialog"]',
   ".hitl-approval",
 ] as const;
 
 const APPROVE_BUTTON_SELECTORS = [
   '[data-testid="approval-dialog-approve"]',
+  '[data-testid="approval-approve"]',
   '[data-testid="approve-button"]',
   'button:has-text("Approve")',
 ] as const;
 
 const REJECT_BUTTON_SELECTORS = [
   '[data-testid="approval-dialog-reject"]',
+  '[data-testid="approval-reject"]',
   '[data-testid="reject-button"]',
   '[data-testid="deny-button"]',
   'button:has-text("Reject")',
@@ -153,6 +172,7 @@ export async function approveOrDeny(
     page,
     APPROVAL_DIALOG_SELECTORS,
     "approval dialog",
+    APPROVAL_DIALOG_TIMEOUT_MS,
   );
   const buttonSelectors =
     action === "approve" ? APPROVE_BUTTON_SELECTORS : REJECT_BUTTON_SELECTORS;
@@ -332,22 +352,29 @@ async function readLatestAssistantText(page: Page): Promise<string> {
 
 /**
  * Race a list of selectors and return the first one that resolves
- * within `SELECTOR_PROBE_TIMEOUT_MS`. ALL selectors are probed
- * concurrently via `Promise.race`; whichever resolves first wins. On
- * full miss (every probe rejects within the shared timeout), throws an
- * Error with the supplied label and a consolidated reason listing each
- * tried selector's failure detail so the caller's failure surfaces
- * what was being looked for (e.g. "approval dialog not found").
+ * within `timeoutMs` (defaults to `SELECTOR_PROBE_TIMEOUT_MS`). ALL
+ * selectors are probed concurrently via `Promise.any`; whichever
+ * resolves first wins. On full miss (every probe rejects within the
+ * shared timeout), throws an Error with the supplied label and a
+ * consolidated reason listing each tried selector's failure detail so
+ * the caller's failure surfaces what was being looked for (e.g.
+ * "approval dialog not found").
  *
  * Concurrent probing matters: with N selectors and per-probe timeout
  * T, sequential probing wastes N*T on a full miss (12s for 4 selectors
  * at 3s each). True race caps total wait at T regardless of N — the
  * docstring's promise.
+ *
+ * The optional `timeoutMs` parameter allows callers to extend the
+ * per-probe window for elements that depend on an async chain before
+ * they appear (e.g. the approval dialog, which waits for
+ * aimock -> CopilotKit -> frontend tool -> React render -> portal).
  */
 export async function selectorCascade(
   page: Page,
   selectors: ReadonlyArray<string>,
   label: string,
+  timeoutMs: number = SELECTOR_PROBE_TIMEOUT_MS,
 ): Promise<string> {
   if (selectors.length === 0) {
     throw new Error(`${label} not found: no selectors provided`);
@@ -360,7 +387,7 @@ export async function selectorCascade(
         page
           .waitForSelector(selector, {
             state: "visible",
-            timeout: SELECTOR_PROBE_TIMEOUT_MS,
+            timeout: timeoutMs,
           })
           .then(() => resolve(selector))
           .catch((err: unknown) => {
