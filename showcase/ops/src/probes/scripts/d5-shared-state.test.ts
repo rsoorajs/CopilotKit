@@ -88,11 +88,14 @@ describe("d5-shared-state script registration", () => {
     const script = getD5Script("shared-state-read");
 
     expect(script?.preNavigateRoute).toBe(preNavigateRoute);
+    // Both feature types route to the shared-state-read-write demo
+    // page — the split read/write pages are stubs or recipe editors
+    // that don't match the D5 fixture.
     expect(script?.preNavigateRoute?.("shared-state-read")).toBe(
-      "/demos/shared-state-read",
+      "/demos/shared-state-read-write",
     );
     expect(script?.preNavigateRoute?.("shared-state-write")).toBe(
-      "/demos/shared-state-write",
+      "/demos/shared-state-read-write",
     );
   });
 });
@@ -200,15 +203,15 @@ describe("d5-shared-state turn 1 relevance check", () => {
 });
 
 describe("d5-shared-state preNavigateRoute", () => {
-  it("returns /demos/shared-state-read for shared-state-read", () => {
+  it("returns /demos/shared-state-read-write for shared-state-read", () => {
     expect(preNavigateRoute("shared-state-read")).toBe(
-      "/demos/shared-state-read",
+      "/demos/shared-state-read-write",
     );
   });
 
-  it("returns /demos/shared-state-write for shared-state-write", () => {
+  it("returns /demos/shared-state-read-write for shared-state-write", () => {
     expect(preNavigateRoute("shared-state-write")).toBe(
-      "/demos/shared-state-write",
+      "/demos/shared-state-read-write",
     );
   });
 
