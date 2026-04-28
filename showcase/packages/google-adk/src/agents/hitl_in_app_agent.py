@@ -16,7 +16,7 @@ from agents.shared_chat import get_model
 _INSTRUCTION = (
     "You are an approval-flow assistant. Whenever you propose an action "
     "that needs human sign-off (booking a meeting, charging an account, "
-    "deleting a record, etc.), call the `request_approval` frontend tool "
+    "deleting a record, etc.), call the `request_user_approval` frontend tool "
     "with a clear summary of what you propose and why. Wait for the tool "
     "to return — its result is the user's decision (accepted / rejected, "
     "with optional reason). Only proceed if accepted. Keep your messages "

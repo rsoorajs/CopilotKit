@@ -54,19 +54,31 @@ function DemoContent() {
   }, []);
 
   useFrontendTool({
-    name: "request_approval",
+    name: "request_user_approval",
     description:
-      "Request user approval before performing a sensitive action. Pass a short summary of the action and a reason. Returns { accepted, reason? }.",
+      "Ask the operator to approve or reject an action before you take it. " +
+      "The operator will respond via an in-app modal dialog that appears " +
+      "OUTSIDE the chat surface. The tool returns an object of the shape " +
+      "{ approved: boolean, reason?: string }.",
     parameters: z.object({
-      summary: z.string().describe("Short summary of the proposed action."),
-      reason: z.string().describe("Why the action is being proposed."),
+      message: z
+        .string()
+        .describe(
+          "Short summary of the action needing approval (include concrete numbers / IDs).",
+        ),
+      context: z
+        .string()
+        .optional()
+        .describe(
+          "Optional extra context — e.g. the ticket ID or policy rule.",
+        ),
     }),
     handler: async ({
-      summary,
-      reason,
+      message,
+      context,
     }: {
-      summary: string;
-      reason: string;
+      message: string;
+      context?: string;
     }) => {
       const requestId = crypto.randomUUID();
       const decision = await new Promise<{
@@ -77,8 +89,8 @@ function DemoContent() {
           ...prev,
           {
             id: requestId,
-            summary,
-            reason,
+            summary: message,
+            reason: context ?? "",
             resolve: (d) => {
               // Drop our own entry from the queue, then resolve. Filter
               // by id so concurrent resolves don't accidentally drop

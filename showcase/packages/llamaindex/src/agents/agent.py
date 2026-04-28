@@ -58,6 +58,14 @@ def generate_task_steps(
     return f"Generated {len(steps)} steps for review"
 
 
+def book_call(
+    topic: Annotated[str, "What the call is about (e.g. 'Onboarding call')"],
+    name: Annotated[str, "Name of the attendee"],
+) -> str:
+    """Ask the user to pick a time slot for a call. The picker UI presents fixed candidate slots; the user's choice is returned to the agent."""
+    return f"Booking call about {topic} with {name}"
+
+
 # --- Backend tools (executed server-side, using shared implementations) ---
 
 async def get_weather(
@@ -160,7 +168,7 @@ if os.environ.get("OPENAI_BASE_URL"):
 
 agent_router = get_ag_ui_workflow_router(
     llm=OpenAI(model="gpt-4.1", **_openai_kwargs),
-    frontend_tools=[change_background, generate_haiku, generate_task_steps],
+    frontend_tools=[change_background, generate_haiku, generate_task_steps, book_call],
     backend_tools=[get_weather, query_data, manage_sales_todos, get_sales_todos_tool, schedule_meeting, search_flights, generate_a2ui],
     system_prompt=(
         "You are a polished, professional demo assistant for CopilotKit. "
@@ -175,8 +183,10 @@ agent_router = get_ag_ui_workflow_router(
         "- Search flights and display rich A2UI cards (via search_flights tool)\n"
         "- Generate dynamic A2UI dashboards from conversation context (via generate_a2ui tool)\n"
         "- Generate step-by-step plans for user review (human-in-the-loop)\n"
+        "- Book calls with people (via book_call frontend tool)\n"
         "When asked about weather, always use the get_weather tool. "
-        "When asked about financial data or charts, use query_data first."
+        "When asked about financial data or charts, use query_data first. "
+        "When asked to book a call, use the book_call tool with topic and name."
     ),
     initial_state={
         "todos": [],

@@ -59,6 +59,7 @@ function Chat() {
     render: ({ args, status, respond }: any) => (
       <TimePickerCard
         topic={args?.topic ?? "a call"}
+        attendee={args?.name}
         slots={DEFAULT_SLOTS}
         status={status}
         onSubmit={(result) => respond?.(result)}
