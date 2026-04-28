@@ -81,14 +81,14 @@ def change_background(background: str):
     """
 
 @tool(external_execution=True)
-def book_call(topic: str, attendee: str):
+def book_call(topic: str, name: str):
     """
     Ask the user to pick a time slot for a call. The picker UI presents
     fixed candidate slots; the user's choice is returned to the agent.
 
     Args:
         topic (str): What the call is about (e.g. "Intro with sales").
-        attendee (str): Who the call is with (e.g. "Alice from Sales").
+        name (str): Name of the attendee (e.g. "Alice").
     """
 
 @tool(external_execution=True)
@@ -254,8 +254,8 @@ agent = Agent(
 
         BOOK CALL (HITL):
         When the user asks to book a call / schedule an intro / 1:1, call
-        book_call with the topic and attendee. The frontend renders a time
-        picker; the user's choice is returned as the tool result.
+        book_call with the topic and the person's name. The frontend renders a
+        time picker; the user's choice is returned as the tool result.
 
         TASK STEPS (HITL):
         When asked to plan something, use the generate_task_steps tool with a list of steps.

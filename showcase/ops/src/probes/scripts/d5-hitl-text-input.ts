@@ -32,7 +32,7 @@
  * rather than the modern `hitl-in-chat` id. We branch on which demo
  * id triggered this featureType (via `D5RouteContext.demos`): if the
  * integration declares any of the modern in-chat ids
- * (`hitl-in-chat`, `hitl-in-chat-booking`, `gen-ui-interrupt`) we use
+ * (`hitl-in-chat`, `hitl-in-chat-booking`) we use
  * `/demos/hitl-in-chat`; if it ONLY declares the legacy `hitl` id we
  * use `/demos/hitl`. When the driver passes no demos context (tests,
  * e2e-parity without registry context) we keep the modern default —
@@ -83,13 +83,15 @@ const ROUTE_PRECEDENCE: ReadonlyArray<readonly [string, string]> = [
   // registry id used by integrations whose example app frames the demo
   // around a booking flow.
   ["hitl-in-chat-booking", "/demos/hitl-in-chat"],
-  // Interrupt-only packages: integrations that expose a generative-UI
-  // interrupt demo at /demos/gen-ui-interrupt without a separate
-  // hitl-in-chat surface.
-  ["gen-ui-interrupt", "/demos/gen-ui-interrupt"],
   // Legacy hitl id — integrations that pre-date the modern split still
   // expose the demo at /demos/hitl.
   ["hitl", "/demos/hitl"],
+  // NOTE: gen-ui-interrupt is NOT listed here. That demo uses
+  // `useInterrupt` (LangGraph interrupt events), not
+  // `useHumanInTheLoop` (frontend tool calls). The hitl-text-input
+  // fixture sends a `book_call` tool call that `useInterrupt` pages
+  // never handle. gen-ui-interrupt was removed from the
+  // d5-feature-mapping so it never reaches this script.
 ];
 
 /**

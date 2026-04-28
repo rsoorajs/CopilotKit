@@ -188,11 +188,11 @@ describe("Catalog Generator", () => {
     expect(catalog.metadata.total_cells).toBe(737);
 
     // 18 integrations x 40 features + 17 starters = 737 total cells
-    // Wired = 482, Stub = 9, Unshipped = 246 (post-google-adk parity merge;
-    // manifest.yaml route presence determines wired vs unshipped)
-    expect(catalog.metadata.wired).toBe(482);
+    // Wired = 476, Stub = 9, Unshipped = 252 (post D5-all-green manifest cleanup;
+    // removed architecturally unsupported HITL features from 5 integrations)
+    expect(catalog.metadata.wired).toBe(476);
     expect(catalog.metadata.stub).toBe(9);
-    expect(catalog.metadata.unshipped).toBe(246);
+    expect(catalog.metadata.unshipped).toBe(252);
   });
 
   it("max_depth: D4 for wired/stub cells, D0 for unshipped", () => {

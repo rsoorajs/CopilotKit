@@ -11,6 +11,8 @@ from __future__ import annotations
 from google.adk.agents import LlmAgent
 from google.adk.tools import ToolContext
 
+from agents.shared_chat import get_model
+
 
 def set_steps(tool_context: ToolContext, steps: list[dict]) -> dict:
     """Publish the current plan + step statuses.
@@ -38,7 +40,7 @@ _INSTRUCTION = (
 
 gen_ui_agent = LlmAgent(
     name="GenUiAgent",
-    model="gemini-2.5-flash",
+    model=get_model(),
     instruction=_INSTRUCTION,
     tools=[set_steps],
 )

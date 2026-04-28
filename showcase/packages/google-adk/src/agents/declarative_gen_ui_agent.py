@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from google.adk.agents import LlmAgent
 
+from agents.shared_chat import get_model
 # `agents.main` defines `generate_a2ui` — reuse it here instead of cloning.
 from agents.main import generate_a2ui
 
@@ -24,7 +25,7 @@ _INSTRUCTION = (
 
 declarative_gen_ui_agent = LlmAgent(
     name="DeclarativeGenUiAgent",
-    model="gemini-2.5-flash",
+    model=get_model(),
     instruction=_INSTRUCTION,
     tools=[generate_a2ui],
 )

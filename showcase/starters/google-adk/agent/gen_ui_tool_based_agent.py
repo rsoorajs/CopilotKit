@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from google.adk.agents import LlmAgent
 
+from .shared_chat import get_model
+
 _INSTRUCTION = (
     "You are a helpful assistant that generates richly-formatted UI via "
     "frontend tools. When the user asks for a haiku, call the generate_haiku "
@@ -20,7 +22,7 @@ _INSTRUCTION = (
 
 gen_ui_tool_based_agent = LlmAgent(
     name="GenUiToolBasedAgent",
-    model="gemini-2.5-flash",
+    model=get_model(),
     instruction=_INSTRUCTION,
     tools=[],
 )
