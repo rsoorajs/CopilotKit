@@ -10,7 +10,7 @@ import { z } from "zod";
 
 export default function AgenticChat() {
   return (
-    <CopilotKitProvider runtimeUrl="/api/copilotkit">
+    <CopilotKitProvider runtimeUrl="/api/copilotkit" useSingleEndpoint>
       <Demo />
     </CopilotKitProvider>
   );

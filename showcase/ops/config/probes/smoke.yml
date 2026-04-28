@@ -32,9 +32,22 @@
 # red→green transitions and a cron-only heartbeat tick so silent
 # green runs still produce observable liveness.
 #
-# timeout_ms (10s) bounds the WHOLE driver invocation at the invoker
-# level; the driver re-applies the same bound inside each HTTP call
-# so one hung endpoint can't steal budget from its paired probes.
+# timeout_ms (30s) bounds BOTH the discovery enumerate phase AND each
+# per-target driver invocation at the invoker level. The driver also
+# re-applies the timeout inside each HTTP call so one hung endpoint
+# can't steal budget from its paired probes.
+#
+# This was originally 10s when the probe used a static target list.
+# After migrating to discovery-driven (railway-services), the same
+# timeout_ms governs the Railway enumerate call — a project-level
+# GraphQL query PLUS per-service variable lookups (bounded at
+# concurrency 8). With 35+ services, each variable round-trip ~1s,
+# enumerate alone takes ceil(35/8) × 1s ≈ 5s on a good tick, and
+# easily >10s on a slow one. The 10s cap caused persistent
+# discoveryFailed:true — enumerate timed out before reaching the
+# driver fan-out. 30s matches image-drift and qa (both Railway-
+# discovery probes that work reliably at this fleet size).
+#
 # max_concurrency (6) caps simultaneous per-tick driver invocations —
 # at 34 services the tick takes ≤ 6 pool-cycles and stays well under
 # any Railway edge rate limit. Per-tick socket bound:
@@ -42,7 +55,7 @@
 kind: smoke
 id: smoke
 schedule: "*/15 * * * *"
-timeout_ms: 10000
+timeout_ms: 30000
 max_concurrency: 6
 discovery:
   source: railway-services

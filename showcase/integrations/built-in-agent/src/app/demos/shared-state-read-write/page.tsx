@@ -25,7 +25,7 @@ const defaultRecipe: Recipe = {
 
 export default function SharedStateReadWrite() {
   return (
-    <CopilotKitProvider runtimeUrl="/api/copilotkit">
+    <CopilotKitProvider runtimeUrl="/api/copilotkit" useSingleEndpoint>
       <Demo />
     </CopilotKitProvider>
   );
