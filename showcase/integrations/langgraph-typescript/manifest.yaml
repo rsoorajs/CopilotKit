@@ -65,6 +65,8 @@ features:
   - byoc-json-render
   - open-gen-ui
   - open-gen-ui-advanced
+a2ui_pattern: schema-loading
+interrupt_pattern: native
 demos:
   - id: cli-start
     name: CLI Start Command

@@ -66,6 +66,7 @@ not_supported_features:
   - interrupt-headless
   - shared-state-streaming
   - byoc-json-render
+a2ui_pattern: schema-inline
 demos:
   - id: agentic-chat
     name: Agentic Chat

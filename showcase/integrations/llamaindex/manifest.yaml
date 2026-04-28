@@ -60,6 +60,7 @@ features:
 not_supported_features:
   - gen-ui-interrupt
   - interrupt-headless
+a2ui_pattern: schema-loading
 demos:
   - id: cli-start
     name: CLI Start Command

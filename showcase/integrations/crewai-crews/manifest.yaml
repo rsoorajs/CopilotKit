@@ -63,6 +63,7 @@ features:
 not_supported_features:
   - gen-ui-interrupt
   - interrupt-headless
+a2ui_pattern: schema-loading
 demos:
   - id: cli-start
     name: CLI Start Command
@@ -334,6 +335,9 @@ demos:
     highlight:
       - src/agents/a2ui_fixed.py
       - src/app/demos/a2ui-fixed-schema/page.tsx
+      - src/app/demos/a2ui-fixed-schema/a2ui/catalog.ts
+      - src/app/demos/a2ui-fixed-schema/a2ui/definitions.ts
+      - src/app/demos/a2ui-fixed-schema/a2ui/renderers.tsx
   - id: byoc-hashbrown
     name: BYOC (Hashbrown)
     description: Streaming structured output via @hashbrownai/react against a custom catalog
