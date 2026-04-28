@@ -653,168 +653,6 @@ describe("livenessDriver", () => {
     );
   });
 
-  it("discovery input: `showcase-starter-ag2` name strips prefix → slug=`starter-ag2`", async () => {
-    vi.stubGlobal(
-      "fetch",
-      fakeFetch({ smokeStatus: 200, healthStatus: 200, agentStatus: 200 }),
-    );
-    const { writer, writes } = mkWriter();
-    const r = await livenessDriver.run(mkCtx(writer), {
-      key: "smoke:starter-ag2",
-      name: "showcase-starter-ag2",
-      imageRef: "ghcr.io/copilotkit/showcase-starter-ag2:latest",
-      publicUrl: "https://showcase-starter-ag2.up.railway.app",
-      env: {},
-    });
-    expect(r.state).toBe("green");
-    expect(writes.map((w) => w.key).sort()).toEqual(
-      ["agent:starter-ag2", "health:starter-ag2"].sort(),
-    );
-  });
-
-  // -------------------------------------------------------------------
-  // Starter shape: probes hit `/api/health` instead of `/smoke` + `/health`.
-  // Starters are single-app Next.js integrations deployed from
-  // showcase/starters/*. They expose `/api/health` (returning JSON) but
-  // no `/smoke`, no `/health`, and no `/demos/*`. Without shape branching
-  // each starter emits one false-red row per probed endpoint per tick.
-  // -------------------------------------------------------------------
-
-  it("starter shape: primary smoke probe hits /api/health, green on 200", async () => {
-    const calls: string[] = [];
-    const fetchImpl: typeof fetch = (async (url: string | URL) => {
-      const href = typeof url === "string" ? url : url.toString();
-      calls.push(href);
-      // Starter only answers /api/health; everything else is 404.
-      if (/\/api\/health\b/.test(href)) {
-        return new Response('{"status":"ok","integration":"ag2"}', {
-          status: 200,
-        });
-      }
-      if (/\/api\/copilotkit/.test(href)) {
-        return new Response('{"error":"bad body"}', { status: 400 });
-      }
-      return new Response("", { status: 404 });
-    }) as unknown as typeof fetch;
-    vi.stubGlobal("fetch", fetchImpl);
-    const { writer, writes } = mkWriter();
-    const r = await livenessDriver.run(mkCtx(writer), {
-      key: "smoke:starter-ag2",
-      name: "showcase-starter-ag2",
-      publicUrl: "https://showcase-starter-ag2-production.up.railway.app",
-      shape: "starter",
-    });
-    expect(r.state).toBe("green");
-    expect(r.key).toBe("smoke:starter-ag2");
-    // Starter smoke probe MUST hit /api/health — the whole reason for
-    // shape detection. Seeing /smoke here is the primary regression.
-    expect(calls).toContain(
-      "https://showcase-starter-ag2-production.up.railway.app/api/health",
-    );
-    expect(calls).not.toContain(
-      "https://showcase-starter-ag2-production.up.railway.app/smoke",
-    );
-    expect(calls).not.toContain(
-      "https://showcase-starter-ag2-production.up.railway.app/health",
-    );
-    // Contract: two independent GETs on /api/health — see smoke.ts run() for rationale.
-    const healthCalls = calls.filter((c) => c.endsWith("/api/health"));
-    expect(healthCalls).toHaveLength(2);
-    // Health side-emit still produced (mirrors primary) so dashboards
-    // keyed on `health:<slug>` stay populated.
-    const health = writes.find((w) => w.key === "health:starter-ag2");
-    expect(health?.state).toBe("green");
-  });
-
-  it("starter shape: /api/health 404 → both smoke:<slug> and health:<slug> flip red", async () => {
-    // Distinct from the 503 case (service answering but degraded): a 404
-    // means the starter's /api/health route is not mounted at all. Both
-    // the primary smoke tick and the health side-emit must flip red so
-    // dashboards keyed on either dimension catch the outage.
-    const fetchImpl: typeof fetch = (async (url: string | URL) => {
-      const href = typeof url === "string" ? url : url.toString();
-      if (/\/api\/health\b/.test(href)) {
-        return new Response("", { status: 404 });
-      }
-      if (/\/api\/copilotkit/.test(href)) {
-        return new Response("{}", { status: 200 });
-      }
-      return new Response("", { status: 404 });
-    }) as unknown as typeof fetch;
-    vi.stubGlobal("fetch", fetchImpl);
-    const { writer, writes } = mkWriter();
-    const r = await livenessDriver.run(mkCtx(writer), {
-      key: "smoke:starter-ag2",
-      name: "showcase-starter-ag2",
-      publicUrl: "https://showcase-starter-ag2-production.up.railway.app",
-      shape: "starter",
-    });
-    expect(r.state).toBe("red");
-    expect(r.signal.errorDesc).toContain("404");
-    const health = writes.find((w) => w.key === "health:starter-ag2");
-    expect(health?.state).toBe("red");
-    expect((health?.signal as SmokeDriverSignal).errorDesc).toContain("404");
-  });
-
-  it("starter shape: /api/health 503 → primary smoke red with http 503", async () => {
-    const fetchImpl: typeof fetch = (async (url: string | URL) => {
-      const href = typeof url === "string" ? url : url.toString();
-      if (/\/api\/health\b/.test(href)) {
-        return new Response('{"status":"degraded"}', { status: 503 });
-      }
-      if (/\/api\/copilotkit/.test(href)) {
-        return new Response("{}", { status: 200 });
-      }
-      return new Response("", { status: 404 });
-    }) as unknown as typeof fetch;
-    vi.stubGlobal("fetch", fetchImpl);
-    const { writer, writes } = mkWriter();
-    const r = await livenessDriver.run(mkCtx(writer), {
-      key: "smoke:starter-ag2",
-      name: "showcase-starter-ag2",
-      publicUrl: "https://showcase-starter-ag2-production.up.railway.app",
-      shape: "starter",
-    });
-    expect(r.state).toBe("red");
-    expect(r.signal.errorDesc).toContain("503");
-    // The agent side-emit (L2) should still run + succeed.
-    const agent = writes.find((w) => w.key === "agent:starter-ag2");
-    expect(agent?.state).toBe("green");
-  });
-
-  it("starter shape: never probes /smoke (real starters 404 on it)", async () => {
-    // Regression guard: the previous contract fired GET /smoke which
-    // produced 17 false-red smoke alerts the first tick after deploy.
-    // Under the new shape contract, /smoke must NOT be called at all —
-    // the primary probe, the health side-emit, and the agent probe are
-    // all expected to use `/api/health` / `/api/copilotkit/`.
-    const calls: string[] = [];
-    const fetchImpl: typeof fetch = (async (url: string | URL) => {
-      const href = typeof url === "string" ? url : url.toString();
-      calls.push(href);
-      if (/\/api\/health\b/.test(href)) {
-        return new Response('{"status":"ok"}', { status: 200 });
-      }
-      if (/\/api\/copilotkit/.test(href)) {
-        return new Response("{}", { status: 200 });
-      }
-      return new Response("", { status: 404 });
-    }) as unknown as typeof fetch;
-    vi.stubGlobal("fetch", fetchImpl);
-    const { writer } = mkWriter();
-    await livenessDriver.run(mkCtx(writer), {
-      key: "smoke:starter-mastra",
-      name: "showcase-starter-mastra",
-      publicUrl: "https://showcase-starter-mastra.up.railway.app",
-      shape: "starter",
-    });
-    for (const c of calls) {
-      expect(c).not.toMatch(/\/smoke(\b|\?|$)/);
-      // `/health` without the `/api` prefix must also not appear.
-      expect(c).not.toMatch(/\.app\/health(\b|\?|$)/);
-    }
-  });
-
   it("package shape (explicit): hits /api/smoke + /api/health", async () => {
     const calls: string[] = [];
     const fetchImpl: typeof fetch = (async (url: string | URL) => {
@@ -927,61 +765,11 @@ describe("livenessDriver", () => {
     expect(sawRedirect).toBe(true);
   });
 
-  it("discovery + starter: agent POST carries `redirect: 'follow'`", async () => {
-    let sawRedirect = false;
-    const fetchImpl: typeof fetch = (async (
-      url: string | URL,
-      init?: RequestInit,
-    ) => {
-      const href = typeof url === "string" ? url : url.toString();
-      if (/\/api\/copilotkit/.test(href)) {
-        if ((init as RequestInit | undefined)?.redirect === "follow") {
-          sawRedirect = true;
-        }
-        return new Response("{}", { status: 200 });
-      }
-      if (/\/api\/health/.test(href)) {
-        return new Response('{"status":"ok"}', { status: 200 });
-      }
-      return new Response("", { status: 404 });
-    }) as unknown as typeof fetch;
-    vi.stubGlobal("fetch", fetchImpl);
-    const { writer } = mkWriter();
-    await livenessDriver.run(mkCtx(writer), {
-      key: "smoke:starter-ag2",
-      name: "showcase-starter-ag2",
-      publicUrl: "https://showcase-starter-ag2.up.railway.app",
-      shape: "starter",
-    });
-    expect(sawRedirect).toBe(true);
-  });
-
-  it("shape-mismatch throws: explicit input.shape disagrees with classifier", async () => {
-    // Silent-defaulting at the driver boundary inverts the whole fix.
-    // When discovery marks a service as `showcase-starter-*` (classifier
-    // → "starter") but the caller pins `shape: "package"`, the driver
-    // fails loud rather than pick one — silent drift is the exact
-    // failure mode this contract prevents.
-    vi.stubGlobal(
-      "fetch",
-      fakeFetch({ smokeStatus: 200, healthStatus: 200, agentStatus: 200 }),
-    );
-    const { writer } = mkWriter();
-    await expect(
-      livenessDriver.run(mkCtx(writer), {
-        key: "smoke:starter-ag2",
-        name: "showcase-starter-ag2",
-        publicUrl: "https://showcase-starter-ag2.up.railway.app",
-        shape: "package",
-      }),
-    ).rejects.toThrow(/Shape mismatch/);
-  });
-
   it("inputSchema rejects `url` + `shape` combo (shape only valid with publicUrl)", () => {
     const parsed = livenessDriver.inputSchema.safeParse({
       key: "smoke:mastra",
       url: "https://x.example/smoke",
-      shape: "starter",
+      shape: "package",
     });
     expect(parsed.success).toBe(false);
   });
@@ -1035,27 +823,6 @@ describe("livenessDriver", () => {
     expect(r.key).toBe("smoke:ag2");
   });
 
-  it("discovery starter: `smoke:showcase-starter-ag2` is rewritten to `smoke:starter-ag2`", async () => {
-    vi.stubGlobal("fetch", (async (url: string | URL) => {
-      const href = typeof url === "string" ? url : url.toString();
-      if (/\/api\/health/.test(href)) {
-        return new Response('{"status":"ok"}', { status: 200 });
-      }
-      if (/\/api\/copilotkit/.test(href)) {
-        return new Response("{}", { status: 200 });
-      }
-      return new Response("", { status: 404 });
-    }) as unknown as typeof fetch);
-    const { writer } = mkWriter();
-    const r = await livenessDriver.run(mkCtx(writer), {
-      key: "smoke:showcase-starter-ag2",
-      name: "showcase-starter-ag2",
-      publicUrl: "https://showcase-starter-ag2.up.railway.app",
-      shape: "starter",
-    });
-    expect(r.key).toBe("smoke:starter-ag2");
-  });
-
   it("static mode passes the YAML-authored key through verbatim", async () => {
     vi.stubGlobal(
       "fetch",
@@ -1067,44 +834,6 @@ describe("livenessDriver", () => {
       url: "https://x.example/smoke",
     });
     expect(r.key).toBe("smoke:custom-yaml-key");
-  });
-
-  it("mixed-driver wiring: spread of RailwayServiceInfo carries `shape` through .passthrough() end-to-end", async () => {
-    // Regression guard for the discovery → driver edge: the orchestrator
-    // builds driver input as `{ ...discoveryRecord, key, slug }`. If the
-    // driver schema stops carrying `shape` through `.passthrough()`, the
-    // field would be silently dropped and starters would fall back to
-    // `package` shape — producing the very false-red row flood this
-    // contract exists to prevent.
-    const calls: string[] = [];
-    const fetchImpl: typeof fetch = (async (url: string | URL) => {
-      const href = typeof url === "string" ? url : url.toString();
-      calls.push(href);
-      if (/\/api\/health/.test(href)) {
-        return new Response('{"status":"ok"}', { status: 200 });
-      }
-      if (/\/api\/copilotkit/.test(href)) {
-        return new Response("{}", { status: 200 });
-      }
-      return new Response("", { status: 404 });
-    }) as unknown as typeof fetch;
-    vi.stubGlobal("fetch", fetchImpl);
-    const { writer } = mkWriter();
-    const discoveryRecord = {
-      name: "showcase-starter-ag2",
-      imageRef: "ghcr.io/copilotkit/showcase-starter-ag2:latest",
-      publicUrl: "https://showcase-starter-ag2.up.railway.app",
-      env: { FOO: "bar" },
-      shape: "starter" as const,
-    };
-    await livenessDriver.run(mkCtx(writer), {
-      ...discoveryRecord,
-      key: "smoke:starter-ag2",
-    });
-    for (const c of calls) {
-      expect(c).not.toMatch(/\.app\/smoke(\b|\?|$)/);
-      expect(c).not.toMatch(/\.app\/health(\b|\?|$)/);
-    }
   });
 
   it("discovery input with trailing `/` on publicUrl strips it before appending paths", async () => {
