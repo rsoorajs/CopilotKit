@@ -214,7 +214,7 @@ demos:
       - src/app/demos/auth/auth-banner.tsx
       - src/app/demos/auth/use-demo-auth.ts
       - src/app/demos/auth/demo-token.ts
-      - src/app/api/copilotkit-auth/route.ts
+      - src/app/api/copilotkit-auth/[[...slug]]/route.ts
   - id: headless-complete
     name: Headless Chat (Complete)
     description: A full chat surface built from scratch on useAgent — no CopilotChat, hand-rolled message list + bubbles

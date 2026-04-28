@@ -288,7 +288,7 @@ demos:
     highlight:
       - src/app/demos/voice/page.tsx
       - src/app/demos/voice/sample-audio-button.tsx
-      - src/app/api/copilotkit-voice/route.ts
+      - src/app/api/copilotkit-voice/[[...slug]]/route.ts
   - id: agent-config
     name: Agent Config Object
     description: Forwarded props (tone / expertise / responseLength) flow from the provider into the agent's system prompt via `forwardedProps.config.configurable.properties`
@@ -314,7 +314,7 @@ demos:
       - src/app/demos/auth/auth-banner.tsx
       - src/app/demos/auth/use-demo-auth.ts
       - src/app/demos/auth/demo-token.ts
-      - src/app/api/copilotkit-auth/route.ts
+      - src/app/api/copilotkit-auth/[[...slug]]/route.ts
 starter:
   path: showcase/starters/claude-sdk-python
   name: Sales Dashboard

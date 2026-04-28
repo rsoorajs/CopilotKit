@@ -180,7 +180,7 @@ demos:
       - src/app/demos/auth/auth-banner.tsx
       - src/app/demos/auth/use-demo-auth.ts
       - src/app/demos/auth/demo-token.ts
-      - src/app/api/copilotkit-auth/route.ts
+      - src/app/api/copilotkit-auth/[[...slug]]/route.ts
   - id: open-gen-ui
     name: Open Generative UI (Minimal)
     description: Agent streams HTML + CSS into a sandboxed iframe via the built-in OpenGenerativeUIActivityRenderer
@@ -213,7 +213,7 @@ demos:
     highlight:
       - src/app/demos/voice/page.tsx
       - src/app/demos/voice/sample-audio-button.tsx
-      - src/app/api/copilotkit-voice/route.ts
+      - src/app/api/copilotkit-voice/[[...slug]]/route.ts
   - id: agent-config
     name: Agent Config Object
     description: Frontend forwards typed config (tone, expertise, responseLength) to Spring, which rebuilds the system prompt per request
