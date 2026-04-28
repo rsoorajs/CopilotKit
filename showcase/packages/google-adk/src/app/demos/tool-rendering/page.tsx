@@ -9,6 +9,15 @@ import {
 } from "@copilotkit/react-core/v2";
 import { z } from "zod";
 
+function parseJsonResult<T>(result: unknown): T {
+  if (!result) return {} as T;
+  try {
+    return (typeof result === "string" ? JSON.parse(result) : result) as T;
+  } catch {
+    return {} as T;
+  }
+}
+
 export default function ToolRenderingDemo() {
   return (
     <CopilotKit runtimeUrl="/api/copilotkit" agent="tool-rendering">
@@ -32,12 +41,13 @@ function Chat() {
         );
       }
 
+      const parsed = parseJsonResult<any>(result);
       const weatherResult: WeatherToolResult = {
-        temperature: result?.temperature || 0,
-        conditions: result?.conditions || "clear",
-        humidity: result?.humidity || 0,
-        windSpeed: result?.wind_speed || 0,
-        feelsLike: result?.feels_like || result?.temperature || 0,
+        temperature: parsed?.temperature || 0,
+        conditions: parsed?.conditions || "clear",
+        humidity: parsed?.humidity || 0,
+        windSpeed: parsed?.wind_speed || 0,
+        feelsLike: parsed?.feels_like || parsed?.temperature || 0,
       };
 
       const themeColor = getThemeColor(weatherResult.conditions);
