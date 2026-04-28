@@ -27,40 +27,44 @@ export default function ToolRenderingDemo() {
 }
 
 function Chat() {
-  useRenderTool({
-    name: "get_weather",
-    parameters: z.object({
-      location: z.string(),
-    }),
-    render: ({ args, result, status }: any) => {
-      if (status !== "complete") {
+  useRenderTool(
+    {
+      name: "get_weather",
+      parameters: z.object({
+        location: z.string(),
+      }),
+      render: ({ parameters, result, status }) => {
+        const loading = status !== "complete";
+        if (loading) {
+          return (
+            <div className="bg-[#667eea] text-white p-4 rounded-lg max-w-md">
+              <span className="animate-spin">Retrieving weather...</span>
+            </div>
+          );
+        }
+
+        const parsed = parseJsonResult<any>(result);
+        const weatherResult: WeatherToolResult = {
+          temperature: parsed?.temperature || 0,
+          conditions: parsed?.conditions || "clear",
+          humidity: parsed?.humidity || 0,
+          windSpeed: parsed?.wind_speed || 0,
+          feelsLike: parsed?.feels_like || parsed?.temperature || 0,
+        };
+
+        const themeColor = getThemeColor(weatherResult.conditions);
+
         return (
-          <div className="bg-[#667eea] text-white p-4 rounded-lg max-w-md">
-            <span className="animate-spin">Retrieving weather...</span>
-          </div>
+          <WeatherCard
+            location={parameters?.location ?? ""}
+            themeColor={themeColor}
+            result={weatherResult}
+          />
         );
-      }
-
-      const parsed = parseJsonResult<any>(result);
-      const weatherResult: WeatherToolResult = {
-        temperature: parsed?.temperature || 0,
-        conditions: parsed?.conditions || "clear",
-        humidity: parsed?.humidity || 0,
-        windSpeed: parsed?.wind_speed || 0,
-        feelsLike: parsed?.feels_like || parsed?.temperature || 0,
-      };
-
-      const themeColor = getThemeColor(weatherResult.conditions);
-
-      return (
-        <WeatherCard
-          location={args.location}
-          themeColor={themeColor}
-          result={weatherResult}
-        />
-      );
+      },
     },
-  });
+    [],
+  );
 
   useConfigureSuggestions({
     suggestions: [
