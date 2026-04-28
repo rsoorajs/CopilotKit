@@ -379,6 +379,12 @@ async def notes_state_from_args(context):
 # entry the moment the tool returns.
 
 
+# @region[subagent-setup]
+# Each sub-agent is a single-shot OpenAI completion driven by its own
+# system prompt. They don't share memory or tools with the supervisor —
+# the supervisor only sees the returned text. We keep the prompts in a
+# dict (rather than spinning up a full secondary Strands ``Agent`` per
+# delegation) because the demo only needs one round-trip per call.
 _SUBAGENT_SYSTEM_PROMPTS: dict[str, str] = {
     "research_agent": (
         "You are a research sub-agent. Given a topic, produce a concise "
@@ -394,6 +400,7 @@ _SUBAGENT_SYSTEM_PROMPTS: dict[str, str] = {
         "2-3 crisp, actionable critiques. No preamble."
     ),
 }
+# @endregion[subagent-setup]
 
 
 # Per-thread scratchpad of delegations. Keyed by ``thread_id``; the entry
@@ -521,6 +528,14 @@ def _run_subagent(name: str, task: str) -> str:
         return f"{_SUBAGENT_FAILURE_MARKER}{exc.__class__.__name__}"
 
 
+# @region[supervisor-delegation-tools]
+# Each @tool wraps a sub-agent invocation. The supervisor LLM "calls"
+# these tools to delegate work; ``_run_subagent`` synchronously runs the
+# matching sub-agent (a single-shot OpenAI completion), and the result
+# string is returned to the supervisor as the tool result. The matching
+# ``ToolBehavior(state_from_result=...)`` hook on each tool (registered
+# in ``build_showcase_agent``) appends a Delegation entry to shared
+# state so the UI's <DelegationLog/> reflects the call in real time.
 @tool
 def research_agent(task: str) -> str:
     """Delegate a research task to the research sub-agent.
@@ -557,6 +572,7 @@ def critique_agent(task: str) -> str:
         task: The draft to critique.
     """
     return _run_subagent("critique_agent", task)
+# @endregion[supervisor-delegation-tools]
 
 
 def _make_subagent_state_from_result(sub_agent_name: str):
