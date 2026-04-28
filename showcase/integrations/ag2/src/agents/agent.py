@@ -34,6 +34,7 @@ from tools.types import Flight
 # =====
 # Tools
 # =====
+# @region[weather-tool-backend]
 async def get_weather(
     location: Annotated[str, "City name to get weather for"],
 ) -> dict[str, str | float]:
@@ -47,6 +48,7 @@ async def get_weather(
         "wind_speed": result["wind_speed"],
         "conditions": result["conditions"],
     }
+# @endregion[weather-tool-backend]
 
 
 async def query_data(

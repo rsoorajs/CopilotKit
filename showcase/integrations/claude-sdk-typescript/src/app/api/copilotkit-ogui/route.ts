@@ -29,6 +29,8 @@ export const POST = async (req: NextRequest) => {
     const { handleRequest } = copilotRuntimeNextJSAppRouterEndpoint({
       endpoint: "/api/copilotkit-ogui",
       serviceAdapter: new ExperimentalEmptyAdapter(),
+      // @region[minimal-runtime-flag]
+      // @region[advanced-runtime-config]
       runtime: new CopilotRuntime({
         // @ts-ignore -- see main route.ts
         agents,
@@ -36,6 +38,8 @@ export const POST = async (req: NextRequest) => {
           agents: ["open-gen-ui", "open-gen-ui-advanced"],
         },
       }),
+      // @endregion[advanced-runtime-config]
+      // @endregion[minimal-runtime-flag]
     });
     return await handleRequest(req);
   } catch (error: unknown) {
