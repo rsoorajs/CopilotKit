@@ -47,7 +47,10 @@ export function validatePins({
           integration: entry.name,
           dep,
           pinned,
-          reason: pinned === "latest" || pinned === "next" ? "floating-tag" : "non-exact",
+          reason:
+            pinned === "latest" || pinned === "next"
+              ? "floating-tag"
+              : "non-exact",
         });
         continue;
       }

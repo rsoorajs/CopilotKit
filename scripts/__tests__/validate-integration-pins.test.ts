@@ -137,14 +137,26 @@ describe("formatViolations", () => {
   it("formats violations with reason, dep, and expected version", () => {
     const out = formatViolations(
       [
-        { integration: "adk", dep: "@copilotkit/react-core", pinned: "1.55.2", reason: "stale" },
-        { integration: "a2a-middleware", dep: "@copilotkit/runtime", pinned: "latest", reason: "floating-tag" },
+        {
+          integration: "adk",
+          dep: "@copilotkit/react-core",
+          pinned: "1.55.2",
+          reason: "stale",
+        },
+        {
+          integration: "a2a-middleware",
+          dep: "@copilotkit/runtime",
+          pinned: "latest",
+          reason: "floating-tag",
+        },
       ],
       "1.56.4",
     );
     expect(out).toContain("Found 2 stale pin(s)");
     expect(out).toContain("[stale] adk: @copilotkit/react-core@1.55.2");
-    expect(out).toContain("[floating-tag] a2a-middleware: @copilotkit/runtime@latest");
+    expect(out).toContain(
+      "[floating-tag] a2a-middleware: @copilotkit/runtime@latest",
+    );
     expect(out).toContain("expected 1.56.4");
   });
 });
