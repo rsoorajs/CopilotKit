@@ -1,10 +1,18 @@
 {
-  "_comment": "D5 multi-turn fixture for /demos/shared-state-read-write. Demonstrates the agent-write half of bidirectional shared state: turn 1 the user asks the agent to remember something, the agent calls the backend `set_notes` tool which mutates shared state. After the tool result is appended, the agent re-invokes the LLM — we match that second leg via sequenceIndex (not toolCallId, because Gemini's function_response format doesn't preserve tool call IDs and aimock synthesizes provider-specific IDs that would not match a fixed string). Turn 2 the user asks the agent to recall what it remembered. The UI-write half (preferences via agent.setState) does not flow through the LLM, so it is not part of this fixture. ORDER: the two sequenced fixtures share the same userMessage; sequenceIndex=0 fires on the first match (tool call), sequenceIndex=1 fires on the second match (text response after tool result).",
+  "_comment": "D5 multi-turn fixture for /demos/shared-state-read-write. Demonstrates the agent-write half of bidirectional shared state: turn 1 the user asks the agent to remember something, the agent calls the backend `set_notes` tool which mutates shared state. After the tool result is appended, the agent re-invokes the LLM — we match that second leg via toolCallId on the last tool message. Turn 2 the user asks the agent to recall what it remembered. The UI-write half (preferences via agent.setState) does not flow through the LLM, so it is not part of this fixture. ORDER: toolCallId fixture first (tried first, skips when no tool result), then userMessage-only fallback.",
   "fixtures": [
     {
       "match": {
         "userMessage": "remember that my favorite color is blue",
-        "sequenceIndex": 0
+        "toolCallId": "call_d5_set_notes_001"
+      },
+      "response": {
+        "content": "Got it — I have noted that your favorite color is blue."
+      }
+    },
+    {
+      "match": {
+        "userMessage": "remember that my favorite color is blue"
       },
       "response": {
         "toolCalls": [
@@ -14,15 +22,6 @@
             "arguments": "{\"notes\":[\"Favorite color: blue\"]}"
           }
         ]
-      }
-    },
-    {
-      "match": {
-        "userMessage": "remember that my favorite color is blue",
-        "sequenceIndex": 1
-      },
-      "response": {
-        "content": "Got it — I have noted that your favorite color is blue."
       }
     },
     {

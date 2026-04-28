@@ -1,10 +1,10 @@
 {
-  "_comment": "D5 fixture for /demos/hitl — step selection via generate_task_steps frontend tool. Uses sequenceIndex matching instead of toolCallId because Gemini's functionResponse does not preserve tool call IDs.",
+  "_comment": "D5 fixture for /demos/hitl — step selection via generate_task_steps frontend tool. Uses toolCallId matching: toolCallId fixture tried first, skips on initial request (no tool result), matches on second request when tool result is present.",
   "fixtures": [
     {
       "match": {
         "userMessage": "trip to mars",
-        "sequenceIndex": 1
+        "toolCallId": "call_d5_generate_steps_001"
       },
       "response": {
         "content": "Great choices! I will proceed with executing the selected steps for your trip to Mars. Let me work through each one."
@@ -12,8 +12,7 @@
     },
     {
       "match": {
-        "userMessage": "trip to mars",
-        "sequenceIndex": 0
+        "userMessage": "trip to mars"
       },
       "response": {
         "toolCalls": [

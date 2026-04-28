@@ -28,7 +28,7 @@
     {
       "match": {
         "userMessage": "Show me a pie chart of revenue by category",
-        "sequenceIndex": 1
+        "toolCallId": "call_d5_render_pie_chart_001"
       },
       "response": {
         "content": "Pie chart rendered above — Electronics is the largest slice, followed by Clothing, Food, and Books."
@@ -36,8 +36,7 @@
     },
     {
       "match": {
-        "userMessage": "Show me a pie chart of revenue by category",
-        "sequenceIndex": 0
+        "userMessage": "Show me a pie chart of revenue by category"
       },
       "response": {
         "toolCalls": [
@@ -52,7 +51,7 @@
     {
       "match": {
         "userMessage": "Write me a haiku about nature",
-        "sequenceIndex": 1
+        "toolCallId": "call_d5_generate_haiku_001"
       },
       "response": {
         "content": "Haiku generated above — a beautiful verse about nature with an accompanying image."
@@ -60,8 +59,7 @@
     },
     {
       "match": {
-        "userMessage": "Write me a haiku about nature",
-        "sequenceIndex": 0
+        "userMessage": "Write me a haiku about nature"
       },
       "response": {
         "toolCalls": [
@@ -76,7 +74,7 @@
     {
       "match": {
         "userMessage": "Show me a profile card for Ada Lovelace",
-        "sequenceIndex": 1
+        "toolCallId": "call_d5_show_card_001"
       },
       "response": {
         "content": "Here is a quick card for Ada Lovelace — the rendered card above shows a short biography. Let me know if you want a deeper dive on her work or a different historical figure."
@@ -84,8 +82,7 @@
     },
     {
       "match": {
-        "userMessage": "Show me a profile card for Ada Lovelace",
-        "sequenceIndex": 0
+        "userMessage": "Show me a profile card for Ada Lovelace"
       },
       "response": {
         "toolCalls": [
@@ -100,7 +97,7 @@
     {
       "match": {
         "userMessage": "Issue a $50 refund to customer #12345",
-        "sequenceIndex": 1
+        "toolCallId": "call_d5_request_approval_001"
       },
       "response": {
         "content": "Approved — processing the $50 refund to customer #12345 now."
@@ -108,8 +105,7 @@
     },
     {
       "match": {
-        "userMessage": "Issue a $50 refund to customer #12345",
-        "sequenceIndex": 0
+        "userMessage": "Issue a $50 refund to customer #12345"
       },
       "response": {
         "toolCalls": [
@@ -124,7 +120,7 @@
     {
       "match": {
         "userMessage": "trip to mars",
-        "sequenceIndex": 1
+        "toolCallId": "call_d5_generate_steps_001"
       },
       "response": {
         "content": "Great choices! I will proceed with executing the selected steps for your trip to Mars. Let me work through each one."
@@ -132,8 +128,7 @@
     },
     {
       "match": {
-        "userMessage": "trip to mars",
-        "sequenceIndex": 0
+        "userMessage": "trip to mars"
       },
       "response": {
         "toolCalls": [
@@ -148,7 +143,7 @@
     {
       "match": {
         "userMessage": "Book a 30-minute onboarding call for Alice",
-        "sequenceIndex": 1
+        "toolCallId": "call_d5_book_call_001"
       },
       "response": {
         "content": "Booked Alice's onboarding call for the time you selected — calendar invite is on its way."
@@ -156,8 +151,7 @@
     },
     {
       "match": {
-        "userMessage": "Book a 30-minute onboarding call for Alice",
-        "sequenceIndex": 0
+        "userMessage": "Book a 30-minute onboarding call for Alice"
       },
       "response": {
         "toolCalls": [
@@ -172,7 +166,7 @@
     {
       "match": {
         "userMessage": "Research the benefits of remote work and draft a one-paragraph summary",
-        "sequenceIndex": 3
+        "toolCallId": "call_d5_critique_agent_001"
       },
       "response": {
         "content": "Here is the summary, after research → drafting → critique:\n\nRemote work returns roughly ten hours a week to employees by eliminating the commute, and repeated surveys show meaningfully higher job satisfaction among remote workers. Employers benefit too: a geographically unbounded talent pool and lower office overhead. The honest counterweight is that ad-hoc collaboration, mentorship of junior staff, and cultural cohesion all degrade without intentional rituals to replace what an office provided implicitly."
@@ -181,7 +175,7 @@
     {
       "match": {
         "userMessage": "Research the benefits of remote work and draft a one-paragraph summary",
-        "sequenceIndex": 2
+        "toolCallId": "call_d5_writing_agent_001"
       },
       "response": {
         "toolCalls": [
@@ -196,7 +190,7 @@
     {
       "match": {
         "userMessage": "Research the benefits of remote work and draft a one-paragraph summary",
-        "sequenceIndex": 1
+        "toolCallId": "call_d5_research_agent_001"
       },
       "response": {
         "toolCalls": [
@@ -210,8 +204,7 @@
     },
     {
       "match": {
-        "userMessage": "Research the benefits of remote work and draft a one-paragraph summary",
-        "sequenceIndex": 0
+        "userMessage": "Research the benefits of remote work and draft a one-paragraph summary"
       },
       "response": {
         "toolCalls": [
@@ -226,7 +219,15 @@
     {
       "match": {
         "userMessage": "remember that my favorite color is blue",
-        "sequenceIndex": 0
+        "toolCallId": "call_d5_set_notes_001"
+      },
+      "response": {
+        "content": "Got it — I have noted that your favorite color is blue."
+      }
+    },
+    {
+      "match": {
+        "userMessage": "remember that my favorite color is blue"
       },
       "response": {
         "toolCalls": [
@@ -240,15 +241,6 @@
     },
     {
       "match": {
-        "userMessage": "remember that my favorite color is blue",
-        "sequenceIndex": 1
-      },
-      "response": {
-        "content": "Got it — I have noted that your favorite color is blue."
-      }
-    },
-    {
-      "match": {
         "userMessage": "favorite color"
       },
       "response": {
@@ -258,7 +250,7 @@
     {
       "match": {
         "userMessage": "weather in Tokyo",
-        "sequenceIndex": 1
+        "toolCallId": "call_d5_get_weather_001"
       },
       "response": {
         "content": "Tokyo is 22°C and partly cloudy."
@@ -266,8 +258,7 @@
     },
     {
       "match": {
-        "userMessage": "weather in Tokyo",
-        "sequenceIndex": 0
+        "userMessage": "weather in Tokyo"
       },
       "response": {
         "toolCalls": [
