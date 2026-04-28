@@ -11,9 +11,10 @@ import {
   envForCfg,
   createRailwayAdapter,
   registerAllProbeDrivers,
+  hydrateProbeLastRuns,
 } from "./orchestrator.js";
 import { createProbeRegistry } from "./probes/drivers/index.js";
-import { createScheduler } from "./scheduler/scheduler.js";
+import type { createScheduler } from "./scheduler/scheduler.js";
 import { createEventBus } from "./events/event-bus.js";
 import { logger } from "./logger.js";
 import type { CompiledRule } from "./rules/rule-loader.js";
@@ -1819,6 +1820,264 @@ describe("orchestrator.registerAllProbeDrivers (post-#4292 hotfix guard)", () =>
     const kinds = registry.list();
     expect(kinds).toContain("e2e_deep");
     expect(kinds).toContain("e2e_parity");
+  });
+});
+
+/**
+ * hydrateProbeLastRuns: reads the most recent completed probe_run from PB
+ * for each `probe:*` scheduler entry and seeds the scheduler's lastRun
+ * bookkeeping so the dashboard shows historical data immediately after
+ * restart (instead of "never run" until the first cron tick).
+ */
+describe("hydrateProbeLastRuns", () => {
+  function makeStubScheduler() {
+    const entries = new Map<
+      string,
+      {
+        id: string;
+        cron: string;
+        seeded: {
+          startedAt: number;
+          finishedAt: number;
+          durationMs: number;
+          summary: unknown;
+        } | null;
+      }
+    >();
+    return {
+      register(entry: { id: string; cron: string }) {
+        entries.set(entry.id, { ...entry, seeded: null });
+      },
+      unregister: vi.fn(async () => true),
+      hasEntry: (id: string) => entries.has(id),
+      list: () =>
+        Array.from(entries.values()).map((e) => ({
+          id: e.id,
+          cron: e.cron,
+          handler: async () => undefined,
+        })),
+      start: vi.fn(),
+      stop: vi.fn(async () => undefined),
+      isStarted: () => false,
+      isStopped: () => false,
+      getJobCount: () => entries.size,
+      getEntry: (id: string) => {
+        const e = entries.get(id);
+        if (!e) return undefined;
+        return {
+          id: e.id,
+          cron: e.cron,
+          inflight: 0,
+          lastRunStartedAt: e.seeded?.startedAt ?? null,
+          lastRunFinishedAt: e.seeded?.finishedAt ?? null,
+          lastRunDurationMs: e.seeded?.durationMs ?? null,
+          lastRunSummary: e.seeded?.summary ?? null,
+          triggeredRun: false,
+          tracker: null,
+        };
+      },
+      setEntryTracker: vi.fn(),
+      seedEntryLastRun: vi.fn(
+        (
+          id: string,
+          opts: {
+            startedAt: number;
+            finishedAt: number;
+            durationMs: number;
+            summary: unknown;
+          },
+        ) => {
+          const e = entries.get(id);
+          if (e) e.seeded = opts;
+        },
+      ),
+      trigger: vi.fn(),
+      nextRunAt: vi.fn(() => null),
+    };
+  }
+
+  function makeStubRunWriter() {
+    return {
+      start: vi.fn(),
+      finish: vi.fn(),
+      recent: vi.fn().mockResolvedValue([]),
+    };
+  }
+
+  function makeStubLogger() {
+    return {
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+      debug: vi.fn(),
+    };
+  }
+
+  it("seeds scheduler entries from completed probe_runs", async () => {
+    const scheduler = makeStubScheduler();
+    scheduler.register({ id: "probe:smoke-all", cron: "0 * * * *" });
+    scheduler.register({ id: "probe:pin-drift", cron: "0 9 * * 1" });
+    const runWriter = makeStubRunWriter();
+    runWriter.recent.mockImplementation(async (probeId: string) => {
+      if (probeId === "smoke-all") {
+        return [
+          {
+            id: "run1",
+            probeId: "smoke-all",
+            startedAt: "2025-01-01T00:00:00.000Z",
+            finishedAt: "2025-01-01T00:01:00.000Z",
+            durationMs: 60000,
+            triggered: false,
+            state: "completed",
+            summary: { total: 5, passed: 5, failed: 0 },
+          },
+        ];
+      }
+      return [];
+    });
+    const log = makeStubLogger();
+
+    await hydrateProbeLastRuns({
+      scheduler: scheduler as any,
+      runWriter: runWriter as any,
+      logger: log as any,
+    });
+
+    // smoke-all was seeded
+    expect(scheduler.seedEntryLastRun).toHaveBeenCalledWith("probe:smoke-all", {
+      startedAt: Date.parse("2025-01-01T00:00:00.000Z"),
+      finishedAt: Date.parse("2025-01-01T00:01:00.000Z"),
+      durationMs: 60000,
+      summary: { total: 5, passed: 5, failed: 0 },
+    });
+    // pin-drift had no runs — should NOT have been seeded
+    expect(scheduler.seedEntryLastRun).toHaveBeenCalledTimes(1);
+    // Info log emitted
+    expect(log.info).toHaveBeenCalledWith("orchestrator.hydrate-lastrun", {
+      seeded: 1,
+      total: 2,
+    });
+  });
+
+  it("skips non-probe entries (only fetches runs for probe:* ids)", async () => {
+    const scheduler = makeStubScheduler();
+    scheduler.register({ id: "internal:s3-backup", cron: "0 3 * * *" });
+    scheduler.register({ id: "probe:smoke", cron: "0 * * * *" });
+    scheduler.register({ id: "ruleA:cron:0", cron: "0 9 * * 1" });
+    const runWriter = makeStubRunWriter();
+    const log = makeStubLogger();
+
+    await hydrateProbeLastRuns({
+      scheduler: scheduler as any,
+      runWriter: runWriter as any,
+      logger: log as any,
+    });
+
+    // recent() called only for the probe entry's bare id
+    expect(runWriter.recent).toHaveBeenCalledTimes(1);
+    expect(runWriter.recent).toHaveBeenCalledWith("smoke", 1);
+  });
+
+  it("tolerates runWriter.recent() failures gracefully (never throws)", async () => {
+    const scheduler = makeStubScheduler();
+    scheduler.register({ id: "probe:broken", cron: "0 * * * *" });
+    const runWriter = makeStubRunWriter();
+    runWriter.recent.mockRejectedValue(new Error("PB is down"));
+    const log = makeStubLogger();
+
+    // Must NOT throw
+    await expect(
+      hydrateProbeLastRuns({
+        scheduler: scheduler as any,
+        runWriter: runWriter as any,
+        logger: log as any,
+      }),
+    ).resolves.toBeUndefined();
+
+    // Warn log emitted for the failure
+    expect(log.warn).toHaveBeenCalledWith(
+      "orchestrator.hydrate-lastrun-failed",
+      expect.objectContaining({ err: expect.stringContaining("PB is down") }),
+    );
+    // seedEntryLastRun NOT called
+    expect(scheduler.seedEntryLastRun).not.toHaveBeenCalled();
+  });
+
+  it("skips runs with malformed date strings (NaN guard)", async () => {
+    const scheduler = makeStubScheduler();
+    scheduler.register({ id: "probe:bad-dates", cron: "0 * * * *" });
+    const runWriter = makeStubRunWriter();
+    runWriter.recent.mockResolvedValue([
+      {
+        id: "run-bad",
+        probeId: "bad-dates",
+        startedAt: "not-a-date",
+        finishedAt: "also-bad",
+        durationMs: 1000,
+        triggered: false,
+        state: "completed",
+        summary: null,
+      },
+    ]);
+    const log = makeStubLogger();
+
+    await hydrateProbeLastRuns({
+      scheduler: scheduler as any,
+      runWriter: runWriter as any,
+      logger: log as any,
+    });
+
+    expect(scheduler.seedEntryLastRun).not.toHaveBeenCalled();
+  });
+
+  it("includes probeId in warn log when runWriter.recent() rejects", async () => {
+    const scheduler = makeStubScheduler();
+    scheduler.register({ id: "probe:broken", cron: "0 * * * *" });
+    const runWriter = makeStubRunWriter();
+    runWriter.recent.mockRejectedValue(new Error("PB is down"));
+    const log = makeStubLogger();
+
+    await hydrateProbeLastRuns({
+      scheduler: scheduler as any,
+      runWriter: runWriter as any,
+      logger: log as any,
+    });
+
+    expect(log.warn).toHaveBeenCalledWith(
+      "orchestrator.hydrate-lastrun-failed",
+      expect.objectContaining({
+        probeId: "probe:broken",
+        err: expect.stringContaining("PB is down"),
+      }),
+    );
+  });
+
+  it("skips runs with finishedAt=null (incomplete)", async () => {
+    const scheduler = makeStubScheduler();
+    scheduler.register({ id: "probe:in-progress", cron: "0 * * * *" });
+    const runWriter = makeStubRunWriter();
+    runWriter.recent.mockResolvedValue([
+      {
+        id: "run-incomplete",
+        probeId: "in-progress",
+        startedAt: "2025-01-01T00:00:00.000Z",
+        finishedAt: null,
+        durationMs: null,
+        triggered: false,
+        state: "running",
+        summary: null,
+      },
+    ]);
+    const log = makeStubLogger();
+
+    await hydrateProbeLastRuns({
+      scheduler: scheduler as any,
+      runWriter: runWriter as any,
+      logger: log as any,
+    });
+
+    // Entry stays un-seeded because the run is incomplete
+    expect(scheduler.seedEntryLastRun).not.toHaveBeenCalled();
   });
 });
 

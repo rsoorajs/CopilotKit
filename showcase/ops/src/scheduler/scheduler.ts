@@ -126,6 +126,22 @@ export interface Scheduler {
    */
   setEntryTracker(id: string, tracker: ProbeRunTracker | null): void;
   /**
+   * Inject historical run data from PocketBase at boot time so the
+   * dashboard doesn't show "never run" for probes that haven't ticked
+   * yet since the last restart. Only writes when `lastRunFinishedAt` is
+   * still null — if a cron tick already fired between register() and
+   * seed(), the real data takes priority.
+   */
+  seedEntryLastRun(
+    id: string,
+    opts: {
+      startedAt: number;
+      finishedAt: number;
+      durationMs: number;
+      summary: RunSummary | null;
+    },
+  ): void;
+  /**
    * Manually invoke the handler associated with `id`, off the cron
    * schedule. Throws `InflightConflictError` if a tick (cron or trigger)
    * is already running for that id. Returns immediately with a generated
@@ -446,6 +462,15 @@ export function createScheduler(opts: SchedulerOptions): Scheduler {
       const e = entries.get(id);
       if (!e) return;
       e.tracker = tracker;
+    },
+    seedEntryLastRun(id, opts) {
+      const e = entries.get(id);
+      if (!e) return;
+      if (e.lastRunFinishedAt !== null) return;
+      e.lastRunStartedAt = opts.startedAt;
+      e.lastRunFinishedAt = opts.finishedAt;
+      e.lastRunDurationMs = opts.durationMs;
+      e.lastRunSummary = opts.summary ?? null;
     },
     async trigger(id, triggerOpts) {
       const e = entries.get(id);

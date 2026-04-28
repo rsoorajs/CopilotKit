@@ -12,6 +12,7 @@ import { createRuleLoader, type CompiledRule } from "./rules/rule-loader.js";
 import { createRenderer } from "./render/renderer.js";
 import { createAlertEngine } from "./alerts/alert-engine.js";
 import { createScheduler } from "./scheduler/scheduler.js";
+import type { Scheduler } from "./scheduler/scheduler.js";
 import { createStatusWriter } from "./writers/status-writer.js";
 import { createSlackWebhookTarget } from "./targets/slack-webhook.js";
 import { createMetricsRegistry } from "./http/metrics.js";
@@ -30,6 +31,7 @@ import { buildProbeInvoker } from "./probes/loader/probe-invoker.js";
 import type { ProbeConfig } from "./probes/loader/schema.js";
 import type { ProbeRegistry } from "./probes/types.js";
 import { createProbeRunWriter } from "./probes/run-history.js";
+import type { ProbeRunWriter } from "./probes/run-history.js";
 import { aimockWiringDriver } from "./probes/drivers/aimock-wiring.js";
 import { pinDriftDriver } from "./probes/drivers/pin-drift.js";
 import { smokeDriver } from "./probes/drivers/smoke.js";
@@ -46,7 +48,7 @@ import { pnpmPackagesDiscoverySource } from "./probes/discovery/pnpm-packages.js
 import { logger, reloadLogLevel } from "./logger.js";
 import { logErrorWithStack } from "./probes/loader/probe-invoker.js";
 import { makeGql } from "./probes/discovery/railway-services.js";
-import type { State, StatusRecord, Target } from "./types/index.js";
+import type { Logger, State, StatusRecord, Target } from "./types/index.js";
 
 export interface BootOptions {
   configDir?: string;
@@ -691,6 +693,13 @@ export async function boot(opts: BootOptions = {}): Promise<{
   // probes accept callbacks that read scheduler liveness lazily), so the
   // reorder is safe and obviates needing a try/catch around start() to
   // close the server before rethrowing.
+
+  // Hydrate scheduler lastRun bookkeeping from PB probe_runs before the
+  // first cron tick fires, so the dashboard immediately reflects historical
+  // data instead of "never run" until each probe's first post-restart tick.
+  // Non-fatal — PB being down at boot logs a warn and continues.
+  await hydrateProbeLastRuns({ scheduler, runWriter, logger });
+
   scheduler.start();
   schedulerRunning = true;
   // R2-B.2: wrap serve() so a synchronous throw (EADDRINUSE, etc.) doesn't
@@ -1142,6 +1151,68 @@ export function buildCronProbeResolver(
  * Exported for unit-test access. Production callers go through
  * `buildCronProbeResolver`.
  */
+
+/**
+ * Hydrate scheduler `lastRun*` bookkeeping from the PocketBase `probe_runs`
+ * collection at boot time so the dashboard doesn't show "never run" for
+ * probes that haven't ticked since the last restart.
+ *
+ * Non-fatal: PB being down at boot must NOT prevent the orchestrator from
+ * starting. Individual fetch failures are logged at warn level and skipped.
+ */
+export async function hydrateProbeLastRuns(deps: {
+  scheduler: Scheduler;
+  runWriter: ProbeRunWriter;
+  logger: Logger;
+}): Promise<void> {
+  const { scheduler, runWriter, logger: log } = deps;
+  const entries = scheduler.list();
+  const probeIds = entries
+    .filter((e) => e.id.startsWith("probe:"))
+    .map((e) => e.id);
+
+  const results = await Promise.allSettled(
+    probeIds.map(async (schedulerId) => {
+      const probeId = schedulerId.slice("probe:".length);
+      const runs = await runWriter.recent(probeId, 1);
+      return { schedulerId, runs };
+    }),
+  );
+
+  let seeded = 0;
+  for (let i = 0; i < results.length; i++) {
+    const result = results[i];
+    if (result.status === "rejected") {
+      log.warn("orchestrator.hydrate-lastrun-failed", {
+        probeId: probeIds[i],
+        err: String(result.reason),
+      });
+      continue;
+    }
+    const { schedulerId, runs } = result.value;
+    if (runs.length === 0) continue;
+    const run = runs[0];
+    if (!run.finishedAt || run.durationMs === null) continue;
+    const startedMs = Date.parse(run.startedAt);
+    const finishedMs = Date.parse(run.finishedAt);
+    if (!Number.isFinite(startedMs) || !Number.isFinite(finishedMs)) continue;
+    scheduler.seedEntryLastRun(schedulerId, {
+      startedAt: startedMs,
+      finishedAt: finishedMs,
+      durationMs: run.durationMs,
+      summary: run.summary ?? null,
+    });
+    seeded++;
+  }
+
+  if (seeded > 0) {
+    log.info("orchestrator.hydrate-lastrun", {
+      seeded,
+      total: probeIds.length,
+    });
+  }
+}
+
 export function createRailwayAdapter(
   opts: {
     token: string;

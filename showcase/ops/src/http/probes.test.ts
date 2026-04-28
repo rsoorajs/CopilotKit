@@ -1,17 +1,14 @@
 import { Hono } from "hono";
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import {
-  registerProbesRoutes,
-  TRIGGER_RATE_LIMIT_MS,
-  type ProbesRouteDeps,
-} from "./probes.js";
-import {
-  type Scheduler,
-  type EntryStatus,
-  type ScheduleEntry,
-  type TriggerOptions,
-  type TriggerResult,
-  InflightConflictError,
+import { registerProbesRoutes, TRIGGER_RATE_LIMIT_MS } from "./probes.js";
+import type { ProbesRouteDeps } from "./probes.js";
+import { InflightConflictError } from "../scheduler/scheduler.js";
+import type {
+  Scheduler,
+  EntryStatus,
+  ScheduleEntry,
+  TriggerOptions,
+  TriggerResult,
 } from "../scheduler/scheduler.js";
 import { ProbeRunTracker } from "../probes/run-tracker.js";
 import type { ProbeRunRecord, ProbeRunWriter } from "../probes/run-history.js";
@@ -37,6 +34,8 @@ interface FakeScheduler extends Scheduler {
   setTriggerBehavior(behavior: { throw?: Error; result?: TriggerResult }): void;
   /** Test-only: capture last trigger() invocation. */
   lastTriggerOpts: TriggerOptions | undefined;
+  /** Test-only: direct access to entries map for seedEntryLastRun verification. */
+  _entries: Map<string, FakeEntryRow>;
 }
 
 function makeFakeScheduler(): FakeScheduler {
@@ -70,12 +69,24 @@ function makeFakeScheduler(): FakeScheduler {
     // no-op — kept structural so a future test that wants to assert the
     // invoker called it can override on the fake instance.
     setEntryTracker: () => {},
+    // Mirror the real scheduler's seedEntryLastRun: only writes when
+    // lastRunFinishedAt is still null (race guard), no-op for unknown ids.
+    seedEntryLastRun: (id, opts) => {
+      const row = entries.get(id);
+      if (!row) return;
+      if (row.status.lastRunFinishedAt !== null) return;
+      row.status.lastRunStartedAt = opts.startedAt;
+      row.status.lastRunFinishedAt = opts.finishedAt;
+      row.status.lastRunDurationMs = opts.durationMs;
+      row.status.lastRunSummary = opts.summary;
+    },
     setEntry: (row) => entries.set(row.entry.id, row),
     setTriggerBehavior: ({ throw: t, result }) => {
       triggerThrow = t;
       triggerResult = result;
     },
     lastTriggerOpts: undefined,
+    _entries: entries,
   };
   return fake;
 }
@@ -303,6 +314,46 @@ describe("GET /api/probes", () => {
     expect(config.discovery).toEqual({
       source: "railway-services",
       key_template: "{slug}",
+    });
+  });
+
+  it("returns seeded lastRun after seedEntryLastRun (hydrate-on-boot path)", async () => {
+    const sched = makeFakeScheduler();
+    const writer = makeFakeWriter();
+    const configs = new Map<string, ProbeConfig>([
+      ["smoke", baseConfig("smoke", "smoke")],
+    ]);
+    // Register with no lastRun data (simulates fresh boot before any tick).
+    sched.setEntry({
+      entry: { id: "smoke", cron: "*/5 * * * *", handler: async () => {} },
+      status: baseStatus({ id: "smoke", cron: "*/5 * * * *" }),
+      nextRunAt: new Date("2026-04-28T10:05:00Z"),
+    });
+
+    // Seed historical run data (mirrors what hydrateProbeLastRuns does).
+    sched.seedEntryLastRun("smoke", {
+      startedAt: Date.parse("2026-04-28T10:00:00.000Z"),
+      finishedAt: Date.parse("2026-04-28T10:00:30.000Z"),
+      durationMs: 30000,
+      summary: { total: 34, passed: 34, failed: 0 },
+    });
+
+    const app = buildApp(sched, writer, configs);
+    const res = await app.request("/api/probes");
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      probes: Array<Record<string, unknown>>;
+    };
+    expect(body.probes).toHaveLength(1);
+    const smoke = body.probes[0];
+    expect(smoke.id).toBe("smoke");
+    expect(smoke.lastRun).not.toBeNull();
+    expect(smoke.lastRun).toEqual({
+      startedAt: "2026-04-28T10:00:00.000Z",
+      finishedAt: "2026-04-28T10:00:30.000Z",
+      durationMs: 30000,
+      state: "completed",
+      summary: { total: 34, passed: 34, failed: 0 },
     });
   });
 });

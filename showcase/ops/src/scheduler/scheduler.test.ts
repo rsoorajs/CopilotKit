@@ -526,6 +526,86 @@ describe("scheduler", () => {
     expect(entered).toBeGreaterThanOrEqual(1);
   }, 10_000);
 
+  // ---------------------------------------------------------------------
+  // seedEntryLastRun: boot-time hydration from PocketBase
+  // ---------------------------------------------------------------------
+  it("seedEntryLastRun populates all four fields on a registered entry", () => {
+    const s = createScheduler({ logger });
+    s.register({ id: "seed", cron: "* * * * *", handler: () => {} });
+    s.seedEntryLastRun("seed", {
+      startedAt: 1000,
+      finishedAt: 2000,
+      durationMs: 1000,
+      summary: { total: 5, passed: 3, failed: 2 },
+    });
+    const status = s.getEntry("seed")!;
+    expect(status.lastRunStartedAt).toBe(1000);
+    expect(status.lastRunFinishedAt).toBe(2000);
+    expect(status.lastRunDurationMs).toBe(1000);
+    expect(status.lastRunSummary).toEqual({ total: 5, passed: 3, failed: 2 });
+  });
+
+  it("seedEntryLastRun is a no-op for unknown entry id (no throw)", () => {
+    const s = createScheduler({ logger });
+    expect(() =>
+      s.seedEntryLastRun("does-not-exist", {
+        startedAt: 1000,
+        finishedAt: 2000,
+        durationMs: 1000,
+        summary: null,
+      }),
+    ).not.toThrow();
+  });
+
+  it("seedEntryLastRun accepts null summary", () => {
+    const s = createScheduler({ logger });
+    s.register({ id: "seed-null", cron: "* * * * *", handler: () => {} });
+    s.seedEntryLastRun("seed-null", {
+      startedAt: 500,
+      finishedAt: 600,
+      durationMs: 100,
+      summary: null,
+    });
+    const status = s.getEntry("seed-null")!;
+    expect(status.lastRunStartedAt).toBe(500);
+    expect(status.lastRunFinishedAt).toBe(600);
+    expect(status.lastRunDurationMs).toBe(100);
+    expect(status.lastRunSummary).toBeNull();
+  });
+
+  it("seedEntryLastRun does NOT overwrite when lastRunFinishedAt is already set (race guard)", async () => {
+    const s = createScheduler({ logger });
+    s.register({
+      id: "race",
+      cron: "0 0 1 1 *",
+      handler: async () => ({ total: 10, passed: 10, failed: 0 }),
+    });
+    s.start();
+    // Fire a manual trigger to populate real run data.
+    await s.trigger("race");
+    await new Promise((r) => setTimeout(r, 100));
+    const realStatus = s.getEntry("race")!;
+    expect(realStatus.lastRunFinishedAt).not.toBeNull();
+    const realFinishedAt = realStatus.lastRunFinishedAt;
+    const realDurationMs = realStatus.lastRunDurationMs;
+    // Now attempt to seed — should be a no-op because real data exists.
+    s.seedEntryLastRun("race", {
+      startedAt: 1,
+      finishedAt: 2,
+      durationMs: 1,
+      summary: { total: 1, passed: 0, failed: 1 },
+    });
+    const afterSeed = s.getEntry("race")!;
+    expect(afterSeed.lastRunFinishedAt).toBe(realFinishedAt);
+    expect(afterSeed.lastRunDurationMs).toBe(realDurationMs);
+    expect(afterSeed.lastRunSummary).toEqual({
+      total: 10,
+      passed: 10,
+      failed: 0,
+    });
+    await s.stop();
+  }, 10_000);
+
   // CR-C-sched.1: runId counter must be per-instance, not module-scoped.
   // Two independent Scheduler instances must each start their counter at 1
   // so test fixtures (and any future multi-instance use case) get isolated
