@@ -545,9 +545,9 @@ describe("TanStack AI converter — reasoning", () => {
     const types = events.map((e) => e.type);
 
     // Two complete START → MSG_START → ... → MSG_END → END sequences
-    expect(
-      types.filter((t) => t === EventType.REASONING_START),
-    ).toHaveLength(2);
+    expect(types.filter((t) => t === EventType.REASONING_START)).toHaveLength(
+      2,
+    );
     expect(types.filter((t) => t === EventType.REASONING_END)).toHaveLength(2);
     expect(
       types.filter((t) => t === EventType.REASONING_MESSAGE_END),
