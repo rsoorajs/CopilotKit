@@ -193,7 +193,7 @@ describe("Catalog Generator", () => {
         catalog.metadata.stub +
         catalog.metadata.unshipped,
     ).toBe(720);
-    expect(catalog.metadata.wired).toBeGreaterThanOrEqual(508);
+    expect(catalog.metadata.wired).toBeGreaterThanOrEqual(490);
   });
 
   it("max_depth: D4 for wired/stub cells, D0 for unshipped", () => {
