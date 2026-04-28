@@ -4,6 +4,7 @@ import { z } from "zod";
  * Host-side functions that agent-authored, sandboxed UIs can invoke from
  * inside the iframe via `Websandbox.connection.remote.<name>(args)`.
  */
+// @region[sandbox-function-registration]
 export const openGenUiSandboxFunctions = [
   {
     name: "evaluateExpression",
@@ -55,3 +56,4 @@ export const openGenUiSandboxFunctions = [
     },
   },
 ];
+// @endregion[sandbox-function-registration]
