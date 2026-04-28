@@ -48,6 +48,7 @@ const STATUS_STYLE: Record<Delegation["status"], string> = {
   failed: "text-[#FA5F67] bg-[#FA5F67]/10 border-[#FA5F6766]",
 };
 
+// @region[delegation-log-frontend]
 /**
  * Live delegation log — renders the `delegations` slot of agent state.
  *
@@ -140,3 +141,4 @@ export function DelegationLog({ delegations, isRunning }: DelegationLogProps) {
     </div>
   );
 }
+// @endregion[delegation-log-frontend]
