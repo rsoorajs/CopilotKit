@@ -98,6 +98,27 @@ export const ASSISTANT_MESSAGE_FALLBACK_SELECTOR =
 export const ASSISTANT_MESSAGE_HEADLESS_SELECTOR =
   '[data-message-role="assistant"]';
 
+/**
+ * User-message selector cascade for the send-verification retry loop.
+ * Mirrors the assistant-message cascade pattern: try the most specific
+ * CopilotKit testid first, fall back to generic ARIA / data-attribute
+ * selectors. The runner uses these to detect whether a user message
+ * actually appeared in the DOM after pressing Enter — if it didn't,
+ * the hydration race likely ate the keypress.
+ */
+const USER_MESSAGE_SELECTORS = [
+  '[data-testid="copilot-user-message"]',
+  '[role="article"][data-message-role="user"]',
+  '[data-message-role="user"]',
+] as const;
+
+/** Max attempts for the fill+press verify-and-retry loop. */
+const SEND_VERIFY_MAX_ATTEMPTS = 3;
+/** How long to wait after pressing Enter before checking for a user message. */
+const SEND_VERIFY_INITIAL_DELAY_MS = 500;
+/** Total time budget per attempt to see a user message appear. */
+const SEND_VERIFY_TIMEOUT_MS = 2_000;
+
 const DEFAULT_RESPONSE_TIMEOUT_MS = 30_000;
 const DEFAULT_SETTLE_MS = 1500;
 const SELECTOR_PROBE_TIMEOUT_MS = 2_000;
@@ -243,8 +264,7 @@ export async function runConversation(
     const startedAt = Date.now();
 
     try {
-      await page.fill(chatInputSelector, turn.input);
-      await page.press(chatInputSelector, "Enter");
+      await fillAndVerifySend(page, chatInputSelector, turn.input);
 
       // Wait for the assistant-message count to grow past the baseline
       // and then stay stable for `settleMs`. If the deadline passes
@@ -285,6 +305,99 @@ export async function runConversation(
     total_turns: total,
     turn_durations_ms: durations,
   };
+}
+
+/**
+ * Read the current count of user-message DOM nodes via `page.evaluate`.
+ * Mirrors `readMessageCount` but targets user bubbles instead of
+ * assistant bubbles. Used by `fillAndVerifySend` to detect whether a
+ * user message actually appeared after pressing Enter — if the count
+ * hasn't grown, the React hydration race likely swallowed the keypress.
+ *
+ * Returns 0 on any read error (same resilience strategy as
+ * `readMessageCount`).
+ */
+export async function readUserMessageCount(page: Page): Promise<number> {
+  try {
+    return await page.evaluate(() => {
+      const win = globalThis as unknown as {
+        document: {
+          querySelectorAll(sel: string): { length: number };
+        };
+      };
+      // Try selectors in preference order — first non-zero wins.
+      const canonical = win.document.querySelectorAll(
+        '[data-testid="copilot-user-message"]',
+      );
+      if (canonical.length > 0) return canonical.length;
+      const tagged = win.document.querySelectorAll(
+        '[role="article"][data-message-role="user"]',
+      );
+      if (tagged.length > 0) return tagged.length;
+      const fallback = win.document.querySelectorAll(
+        '[data-message-role="user"]',
+      );
+      return fallback.length;
+    });
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * Fill the chat input and press Enter, then verify that a user message
+ * actually appeared in the DOM. If no user message is detected (the
+ * React hydration race swallowed the keypress), retry up to
+ * `SEND_VERIFY_MAX_ATTEMPTS` times.
+ *
+ * After all retries are exhausted without a user message appearing, the
+ * function returns silently — the downstream `waitForAssistantSettled`
+ * timeout will catch the failure with better diagnostics than we can
+ * provide here.
+ */
+export async function fillAndVerifySend(
+  page: Page,
+  chatInputSelector: string,
+  input: string,
+  overrides?: {
+    maxAttempts?: number;
+    initialDelayMs?: number;
+    timeoutMs?: number;
+  },
+): Promise<void> {
+  const maxAttempts = overrides?.maxAttempts ?? SEND_VERIFY_MAX_ATTEMPTS;
+  const initialDelay = overrides?.initialDelayMs ?? SEND_VERIFY_INITIAL_DELAY_MS;
+  const timeout = overrides?.timeoutMs ?? SEND_VERIFY_TIMEOUT_MS;
+
+  const baseline = await readUserMessageCount(page);
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    await page.fill(chatInputSelector, input);
+    await page.press(chatInputSelector, "Enter");
+
+    // Wait briefly for React to process the event and render the
+    // user message bubble.
+    await sleep(initialDelay);
+
+    // Poll until the user message count grows past baseline, or
+    // until the per-attempt timeout expires.
+    const remainingMs = Math.max(0, timeout - initialDelay);
+    const attemptDeadline = Date.now() + remainingMs;
+    while (Date.now() < attemptDeadline) {
+      const current = await readUserMessageCount(page);
+      if (current > baseline) {
+        // User message appeared — send succeeded.
+        return;
+      }
+      await sleep(POLL_INTERVAL_MS);
+    }
+
+    // If this wasn't the last attempt, we'll retry the fill+press.
+    // No log needed — the retry is silent.
+  }
+
+  // All attempts exhausted. Proceed anyway — the downstream timeout
+  // will produce a clear failure message.
 }
 
 /**
