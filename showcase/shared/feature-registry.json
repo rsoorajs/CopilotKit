@@ -362,15 +362,13 @@
       "id": "byoc-hashbrown",
       "name": "BYOC Hashbrown",
       "category": "byoc",
-      "description": "Hashbrown-style generative UI",
-      "shell_docs_path": "/generative-ui/hashbrown"
+      "description": "Hashbrown-style generative UI"
     },
     {
       "id": "byoc-json-render",
       "name": "BYOC json-render",
       "category": "byoc",
-      "description": "Streaming structured-output generative UI via @json-render/react",
-      "shell_docs_path": "/generative-ui/json-render"
+      "description": "Streaming structured-output generative UI via @json-render/react"
     }
   ]
 }
