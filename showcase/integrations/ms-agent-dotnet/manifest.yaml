@@ -37,6 +37,7 @@ features:
   - frontend-tools-async
   - hitl
   - hitl-in-app
+  - hitl-in-chat
   - gen-ui-tool-based
   - gen-ui-interrupt
   - interrupt-headless
@@ -154,6 +155,18 @@ demos:
       - agent/HitlInAppAgent.cs
       - src/app/demos/hitl-in-app/page.tsx
       - src/app/demos/hitl-in-app/approval-dialog.tsx
+      - src/app/api/copilotkit/route.ts
+  - id: hitl-in-chat
+    name: In-Chat HITL (useHumanInTheLoop — ergonomic API)
+    description: Interactive approval/decision surface rendered inline in the chat via the high-level `useHumanInTheLoop` hook
+    tags:
+      - interactivity
+    route: /demos/hitl-in-chat
+    animated_preview_url:
+    highlight:
+      - agent/HitlInChatAgent.cs
+      - src/app/demos/hitl-in-chat/page.tsx
+      - src/app/demos/hitl-in-chat/time-picker-card.tsx
       - src/app/api/copilotkit/route.ts
   - id: gen-ui-tool-based
     name: Tool-Based Generative UI
