@@ -2,33 +2,24 @@
 
 ## What This Demo Shows
 
-MCP Apps are MCP servers that expose tools with associated UI resources.
-The CopilotKit runtime is wired with `mcpApps: { servers: [...] }` (see
-`src/app/api/copilotkit-mcp-apps/route.ts`) which auto-applies the MCP
-Apps middleware: when the agent calls an MCP tool, the middleware
-fetches the associated UI resource and emits an activity event; the
-built-in `MCPAppsActivityRenderer` registered by `CopilotKitProvider`
-renders the sandboxed iframe inline.
+MCP Apps are MCP servers that expose tools _with_ associated UI resources. The agent has zero local tools — it talks to a remote MCP server (Excalidraw), and CopilotKit renders the server's UI inline as a sandboxed iframe.
 
-This cell points at the public Excalidraw MCP server
-(`https://mcp.excalidraw.com`).
+- **Remote tools**: tools are fetched at request time from `https://mcp.excalidraw.com`
+- **Auto-rendered UI**: the built-in `MCPAppsActivityRenderer` handles the iframe — no frontend renderer registration needed
+- **Drawing agent**: the system prompt constrains output to a single `create_view` call with 3-5 Excalidraw elements
 
 ## How to Interact
 
+Click a suggestion chip, or try:
+
 - "Use Excalidraw to draw a simple flowchart with three steps."
 - "Open Excalidraw and sketch a system diagram with a client, server, and database."
+- "Draw a sequence of boxes: Idea → Design → Build → Ship."
+
+An Excalidraw canvas appears inline in the chat with the agent's drawing.
 
 ## Technical Details
 
-- Backend agent: `src/agents/mcp_apps_agent.py` — a no-tools
-  ConversableAgent. MCP server tools are injected by the runtime
-  middleware at request time.
-- Runtime route: `src/app/api/copilotkit-mcp-apps/route.ts` —
-  `mcpApps.servers` lists the Excalidraw MCP server with a pinned
-  `serverId` so persisted threads survive URL changes.
-- Frontend: a plain `<CopilotChat />` — no app-side activity-renderer
-  registration; the built-in `MCPAppsActivityRenderer` handles render.
-
-## Reference
-
-- https://docs.copilotkit.ai/integrations/langgraph/generative-ui/mcp-apps
+- The runtime at `/api/copilotkit-mcp-apps` is configured with `mcpApps: { servers: [...] }`, which auto-applies the MCP Apps middleware. Tools and UI resources are discovered from the remote MCP server at request time.
+- `src/agents/mcp_apps_agent.py` declares `tools=[]` — the middleware injects `create_view` (and siblings) from Excalidraw dynamically.
+- The frontend is just `<CopilotKit runtimeUrl="/api/copilotkit-mcp-apps" agent="mcp-apps">` wrapping `<CopilotChat />`. The `CopilotKitProvider` ships with `MCPAppsActivityRenderer` pre-registered, so the iframe mounts automatically when the MCP tool call emits its UI resource event.

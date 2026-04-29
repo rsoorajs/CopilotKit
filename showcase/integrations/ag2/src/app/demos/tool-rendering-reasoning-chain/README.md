@@ -1,33 +1,28 @@
-# Tool Rendering (Reasoning Chain)
+# Tool Rendering + Reasoning Chain (testing)
 
 ## What This Demo Shows
 
-A single cell that composes two patterns:
+A deep-agent travel/lifestyle concierge that chains multiple tool calls per turn, with custom renderers for each tool and a custom reasoning-block slot for the agent's chain-of-thought.
 
-1. **Reasoning tokens** rendered via a custom `reasoningMessage` slot
-   — the same approach as the `agentic-chat-reasoning` cell.
-2. **Sequential tool calls** rendered with:
-   - `get_weather` → `<WeatherCard />`
-   - `search_flights` → `<FlightListCard />`
-   - everything else → `<CustomCatchallRenderer />`
+- **Per-tool renderers**: `get_weather` renders as `WeatherCard`, `search_flights` renders as `FlightListCard`
+- **Catch-all renderer**: `get_stock_price`, `roll_dice`, and any other tool flow through `useDefaultRenderTool` to a generic `CustomCatchallRenderer`
+- **Reasoning block**: the agent's reasoning tokens render via a custom `reasoningMessage` slot on `CopilotChat`
+- **Sequential tool calls**: the system prompt pushes the model to call 2+ tools in succession when relevant
 
 ## How to Interact
 
+Try asking:
+
 - "What's the weather in Tokyo?"
-- "Find flights from SFO to JFK."
 - "How is AAPL doing?"
-- "Roll a 20-sided die for me."
+- "Roll a 20-sided die for me"
+- "Find flights from SFO to JFK"
+
+Prompts that imply multiple tools (e.g. "flights to Tokyo and the weather there") will trigger a chain of calls, each rendering its own card.
 
 ## Technical Details
 
-- Backend agent: `src/agents/tool_rendering_reasoning_chain.py` — a
-  travel & lifestyle concierge with `get_weather`, `search_flights`,
-  `get_stock_price`, and `roll_dice`. Mounted at
-  `/tool-rendering-reasoning-chain/` on the agent server.
-- Frontend: `useRenderTool` for `get_weather` and `search_flights`,
-  `useDefaultRenderTool` for the catch-all, and a custom
-  `reasoningMessage` slot.
-- Note: AG2's `ConversableAgent` does not natively emit AG-UI
-  `REASONING_MESSAGE_*` events the way LangGraph's `deepagents` does,
-  so the reasoning slot may render empty until/if a reasoning event
-  arrives. The tool chain still exercises end-to-end.
+- `useRenderTool({ name, parameters, render })` binds a React component to a specific backend tool; `render` receives `{ parameters, result, status }` and switches on `status !== "complete"` for loading states
+- `useDefaultRenderTool({ render })` registers a fallback renderer used for any tool without a dedicated binding
+- `CopilotChat`'s `messageView={{ reasoningMessage: ReasoningBlock }}` overrides the default reasoning display
+- Backend is a `create_deep_agent(...)` (from `deepagents`) with four `@tool`s; `agent="tool-rendering-reasoning-chain"`
