@@ -585,9 +585,7 @@ describe("zodState", () => {
 
   it("works on optional / array / default-wrapped schemas (state-field shapes)", () => {
     const todos = zodState(
-      z
-        .array(z.object({ id: z.string(), text: z.string() }))
-        .default(() => []),
+      z.array(z.object({ id: z.string(), text: z.string() })).default(() => []),
     );
 
     const std = standardOf(todos);
