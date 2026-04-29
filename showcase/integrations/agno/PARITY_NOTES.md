@@ -101,6 +101,19 @@ See `manifest.yaml` for the authoritative list.
   as a sibling for when the SDK exposes per-button action handlers
   for fixed-schema surfaces.
 
+### Seventh pass (A2UI dynamic schema)
+
+- `declarative-gen-ui` — dedicated `/api/copilotkit-declarative-gen-ui`
+  runtime with `injectA2UITool: false`. New `a2ui_dynamic_agent.py`
+  mounted at `/declarative-gen-ui/agui` owns its own `generate_a2ui`
+  tool. Unlike the main agent's hardcoded-catalog `generate_a2ui`, this
+  agent's tool reads the registered client catalog from
+  `run_context.session_state["copilotkit"]["context"]` and feeds it to
+  the secondary OpenAI client, so the rendered components stay in sync
+  with whatever catalog the frontend registers via `<CopilotKit
+  a2ui={{ catalog }}>`. See `src/app/demos/declarative-gen-ui/README.md`
+  for the differences vs. the main-agent path.
+
 ### Third pass (state + multi-agent recovery)
 
 - `shared-state-read-write` — bidirectional shared state with the UI
