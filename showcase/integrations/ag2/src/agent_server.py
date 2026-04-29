@@ -22,6 +22,7 @@ from agents.agent import stream as default_stream
 from agents.a2ui_dynamic import a2ui_dynamic_app
 from agents.a2ui_fixed import a2ui_fixed_app
 from agents.agent_config_agent import agent_config_app
+from agents.beautiful_chat import beautiful_chat_app
 from agents.byoc_hashbrown_agent import byoc_hashbrown_app
 from agents.byoc_json_render_agent import byoc_json_render_app
 from agents.headless_complete import headless_complete_app
@@ -73,6 +74,7 @@ app.mount("/subagents", subagents_app)
 app.mount("/headless-complete", headless_complete_app)
 app.mount("/declarative-gen-ui", a2ui_dynamic_app)
 app.mount("/a2ui-fixed-schema", a2ui_fixed_app)
+app.mount("/beautiful-chat", beautiful_chat_app)
 app.mount("/mcp-apps", mcp_apps_app)
 app.mount("/open-gen-ui", open_gen_ui_app)
 app.mount("/open-gen-ui-advanced", open_gen_ui_advanced_app)
