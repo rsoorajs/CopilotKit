@@ -14,6 +14,9 @@ copilotkit_version: 2.0.0
 backend_url: https://showcase-google-adk-production.up.railway.app
 deployed: true
 sort_order: 15
+not_supported_features:
+  - gen-ui-interrupt
+  - interrupt-headless
 generative_ui:
   - constrained-explicit
   - a2ui-fixed-schema
