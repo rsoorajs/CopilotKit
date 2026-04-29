@@ -16,8 +16,11 @@ import { SidebarNav } from "@/components/sidebar-nav";
 import { SidebarLink } from "@/components/sidebar-link";
 import { SidebarFrameworkSelector } from "@/components/sidebar-framework-selector";
 import { Snippet } from "@/components/snippet";
+import { WhenFrameworkHas } from "@/components/when-framework-has";
 import { DocsToc } from "@/components/docs-toc";
+import { Tabs as DocsTabs } from "@/components/docs-tabs";
 import { docsComponents } from "@/lib/mdx-registry";
+import { getIntegration, getTabDefault } from "@/lib/registry";
 import {
   NavNode,
   buildBreadcrumbs,
@@ -33,6 +36,14 @@ export interface DocsPageViewProps {
   /** Slug path relative to `CONTENT_DIR` (no leading slash). */
   slugPath: string;
   /**
+   * Optional content path to load the MDX from, when it differs from
+   * `slugPath`. Used by the framework-scoped router when falling back
+   * from a missing root page to a per-framework override (e.g. BIA
+   * serves `integrations/built-in-agent/server-tools.mdx` at the URL
+   * `/built-in-agent/server-tools`). Defaults to `slugPath`.
+   */
+  contentSlugPath?: string;
+  /**
    * Prefix used to build sidebar + breadcrumb hrefs.
    * - `/docs` for the classic docs route
    * - `/<framework>` for framework-scoped pages
@@ -40,10 +51,6 @@ export interface DocsPageViewProps {
   slugHrefPrefix: string;
   /** Optional framework slug to thread into <Snippet> as a default. */
   frameworkOverride?: string | null;
-  /** Label for the sidebar's root link. */
-  sidebarTitle?: string;
-  /** Optional "back" link shown above the sidebar title. */
-  backLink?: { label: string; href: string } | null;
   /** Pre-built nav tree. When omitted, defaults to the full docs tree. */
   navTree?: NavNode[];
   /** Banner slot rendered above the main content column. */
@@ -61,16 +68,15 @@ export interface DocsPageViewProps {
 
 export async function DocsPageView({
   slugPath,
+  contentSlugPath,
   slugHrefPrefix,
   frameworkOverride,
-  sidebarTitle = "CopilotKit Docs",
-  backLink = null,
   navTree,
   bannerSlot,
   hideBody = false,
   ContentWrapper,
 }: DocsPageViewProps) {
-  const doc = loadDoc(slugPath);
+  const doc = loadDoc(contentSlugPath ?? slugPath);
   if (!doc) {
     return (
       <div className="mx-auto max-w-3xl px-6 py-16 text-center">
@@ -98,8 +104,15 @@ export async function DocsPageView({
   const defaultCell = doc.fm.defaultCell;
 
   const tree = navTree ?? buildNavTree(CONTENT_DIR);
+  // Breadcrumb root label tracks the framework whose content is being
+  // rendered. On framework-scoped pages this reads "LangGraph (Python)";
+  // on unscoped pages it falls back to "Docs". The sidebar no longer
+  // surfaces this label as a separate link — the selector pill at the
+  // top of the sidebar already names the framework.
+  const rootLabel =
+    (frameworkOverride && getIntegration(frameworkOverride)?.name) || "Docs";
   const breadcrumbs = buildBreadcrumbs(slugPath, {
-    rootLabel: sidebarTitle,
+    rootLabel,
     rootHref: slugHrefPrefix || "/",
     slugHrefPrefix,
   });
@@ -142,12 +155,14 @@ export async function DocsPageView({
     }
     return (
       <div key={`group-${node.slug}`} className="mt-1">
-        <div
-          className="py-[5px] text-[13px] font-medium text-[var(--text-secondary)]"
-          style={{ paddingLeft: `${indent}px` }}
-        >
-          {node.title}
-        </div>
+        {node.title && (
+          <div
+            className="py-[5px] text-[13px] font-medium text-[var(--text-secondary)]"
+            style={{ paddingLeft: `${indent}px` }}
+          >
+            {node.title}
+          </div>
+        )}
         {node.children.map((child) => renderNavItem(child, depth + 1))}
       </div>
     );
@@ -157,20 +172,7 @@ export async function DocsPageView({
     <div className="flex" style={{ height: "calc(100vh - 53px)" }}>
       <SidebarNav className="w-[240px] shrink-0 border-r border-[var(--border)] bg-[var(--bg)] overflow-y-auto p-4">
         <SidebarFrameworkSelector />
-        {backLink && (
-          <Link
-            href={backLink.href}
-            className="block text-xs text-[var(--text-muted)] hover:text-[var(--text-secondary)] mb-3 transition-colors"
-          >
-            {backLink.label}
-          </Link>
-        )}
-        <Link
-          href={slugHrefPrefix || "/"}
-          className="block text-xs font-mono uppercase tracking-widest text-[var(--accent)] mb-4"
-        >
-          {sidebarTitle}
-        </Link>
+        <div className="mb-4" />
         {tree.map((node) => renderNavItem(node))}
       </SidebarNav>
 
@@ -226,6 +228,48 @@ export async function DocsPageView({
                           defaultCell={defaultCell}
                         />
                       ),
+                      WhenFrameworkHas: (props: Record<string, unknown>) => (
+                        <WhenFrameworkHas
+                          {...(props as {
+                            flag: "a2ui_pattern" | "interrupt_pattern";
+                            equals: string;
+                            framework?: string;
+                            children?: React.ReactNode;
+                          })}
+                          defaultFramework={defaultFramework}
+                        />
+                      ),
+                      // MDX pages author in-page variant selectors as
+                      // `<Tabs groupId="language_langgraph_agent" default="Python">`.
+                      // When the URL scope is a specific variant (e.g.
+                      // `/langgraph-typescript/*`), pre-select the
+                      // matching tab instead of the author's hardcoded
+                      // default so the code visible on arrival matches
+                      // the URL the user followed. Slugs without a
+                      // mapping (or tabs whose groupId isn't listed in
+                      // TAB_DEFAULTS_BY_SLUG) fall through to the MDX
+                      // `default` and the component's first-label
+                      // fallback unchanged.
+                      Tabs: (props: {
+                        groupId?: string;
+                        default?: string;
+                        items?: string[];
+                        children?: React.ReactNode;
+                        persist?: boolean;
+                      }) => {
+                        const urlDefault = getTabDefault(
+                          frameworkOverride ?? null,
+                          props.groupId,
+                        );
+                        return (
+                          <DocsTabs
+                            {...props}
+                            default={urlDefault ?? props.default}
+                          >
+                            {props.children}
+                          </DocsTabs>
+                        );
+                      },
                       InlineDemo: (props: Record<string, unknown>) => {
                         const InlineDemoComp = docsComponents.InlineDemo;
                         return (

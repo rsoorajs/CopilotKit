@@ -14,9 +14,15 @@ import {
 import { Callout as DocsCallout } from "@/components/docs-callout";
 import { Steps as DocsSteps, Step as DocsStep } from "@/components/docs-steps";
 import { Tabs as DocsTabs, Tab as DocsTab } from "@/components/docs-tabs";
+import {
+  TailoredContent as RealTailoredContent,
+  TailoredContentOption as RealTailoredContentOption,
+} from "@/components/react/tailored-content";
 import { FrameworkTabs } from "@/components/framework-tabs";
 import { PropertyReference } from "@/components/property-reference";
 import { IntegrationGrid } from "@/components/integration-grid";
+import { DocsLandingNext } from "@/components/docs-landing-next";
+import { WhenFrameworkHas } from "@/components/when-framework-has";
 import { getRegistry } from "@/lib/registry";
 
 const Callout = DocsCallout;
@@ -210,6 +216,12 @@ export const docsComponents = {
     </div>
   ),
   IntegrationGrid,
+  DocsLandingNext,
+  // The base registration here works whenever the consumer passes
+  // `framework` explicitly. The framework-scoped renderer (DocsPageView)
+  // overrides this to inject `defaultFramework` from the URL — same
+  // pattern as <Snippet>.
+  WhenFrameworkHas,
   FeatureGrid: ({ children }: { children?: React.ReactNode }) => (
     <div
       style={{
@@ -279,12 +291,8 @@ export const docsComponents = {
   Caution: ({ children }: { children: React.ReactNode }) => (
     <Callout type="warn">{children}</Callout>
   ),
-  TailoredContent: ({ children }: { children: React.ReactNode }) => (
-    <div>{children}</div>
-  ),
-  TailoredContentOption: ({ children }: { children: React.ReactNode }) => (
-    <div>{children}</div>
-  ),
+  TailoredContent: RealTailoredContent,
+  TailoredContentOption: RealTailoredContentOption,
   SharedContent: ({ children }: { children: React.ReactNode }) => (
     <div>{children}</div>
   ),
@@ -672,11 +680,33 @@ export const docsComponents = {
   CopilotRuntime: ({ children }: { children?: React.ReactNode }) => (
     <div>{children}</div>
   ),
-  Image: ({ src, alt }: Record<string, unknown>) => (
+  // <Image> honours className/width/height so MDX-side authors can
+  // swap light/dark variants via Tailwind's `block dark:hidden` /
+  // `hidden dark:block` pattern. The previous shape destructured only
+  // `src`/`alt` and silently dropped className, so every page that
+  // ships dual diagrams (agentic-protocols, ag-ui, a2a, mcp, etc.)
+  // rendered both versions stacked — the user-visible "duplicate
+  // image" reports.
+  Image: ({
+    src,
+    alt,
+    className,
+    width,
+    height,
+  }: {
+    src?: string;
+    alt?: string;
+    className?: string;
+    width?: number | string;
+    height?: number | string;
+  }) => (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src={src as string}
-      alt={(alt as string) || ""}
+      src={src ?? ""}
+      alt={alt ?? ""}
+      width={width}
+      height={height}
+      className={className}
       style={{ borderRadius: "0.5rem", maxWidth: "100%", marginBottom: "1rem" }}
     />
   ),

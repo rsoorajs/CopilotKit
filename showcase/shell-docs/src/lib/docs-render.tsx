@@ -15,28 +15,12 @@ import { resolveWithinDir } from "./safe-fs";
 export const CONTENT_DIR = path.join(process.cwd(), "src/content/docs");
 export const SNIPPETS_DIR = path.join(CONTENT_DIR, "..", "snippets");
 
-/**
- * Canonical category ordering for the framework picker / integrations
- * grid / sidebar framework selector. Defined here so every consumer
- * imports the same source of truth.
- *
- * Consumer files (sidebar-framework-selector.tsx, [[...slug]]/page.tsx)
- * previously defined this constant independently — any drift between
- * the copies would show up as divergent category ordering across the
- * UI. Follow-up: once all consumers import from here, remove their
- * local duplicates (owned by later blitz agents / registry refactor).
- */
-export const FRAMEWORK_CATEGORY_ORDER = [
-  "popular",
-  "agent-framework",
-  "provider-sdk",
-  "enterprise-platform",
-  "protocol",
-  "emerging",
-  "starter",
-] as const;
-
-export type FrameworkCategory = (typeof FRAMEWORK_CATEGORY_ORDER)[number];
+// Re-exported from lib/framework-categories so client components can
+// pull the constant without dragging fs through the bundle.
+export {
+  FRAMEWORK_CATEGORY_ORDER,
+  type FrameworkCategory,
+} from "./framework-categories";
 
 // ---------------------------------------------------------------------------
 // Nav tree types
@@ -78,13 +62,19 @@ export function escapeHtml(s: string): string {
 // Process-scoped memoization for frequently-called filesystem readers.
 // buildNavTree walks the entire content tree on every page render and
 // calls readTitle / readMeta O(pages) times per request. Without this
-// cache each call reopens and re-parses the file from disk. We accept
-// stale-during-process semantics: the cache lives for the life of the
-// Node process, which matches Next.js build-time and server runtime
-// lifetimes. Caches are keyed by absolute path.
+// cache each call reopens and re-parses the file from disk.
 //
-// Memory footprint: titles are tiny strings, meta is a small JSON
-// object — negligible even with hundreds of docs files.
+// Production / build: cache the entire process lifetime — content is
+// frozen at deploy time so stale reads aren't possible.
+//
+// Development: skip the cache so meta.json / frontmatter edits show up
+// in the sidebar nav without restarting the dev server. The
+// performance hit is acceptable for local dev (the request path
+// already does plenty of fs work for MDX rendering).
+//
+// Memory footprint in production: titles are tiny strings, meta is a
+// small JSON object — negligible even with hundreds of docs files.
+const isDev = process.env.NODE_ENV === "development";
 const titleCache = new Map<string, string | null>();
 const metaCache = new Map<
   string,
@@ -93,7 +83,7 @@ const metaCache = new Map<
 
 export function readTitle(filePath: string): string | null {
   const cacheKey = path.resolve(filePath);
-  if (titleCache.has(cacheKey)) return titleCache.get(cacheKey)!;
+  if (!isDev && titleCache.has(cacheKey)) return titleCache.get(cacheKey)!;
 
   if (!fs.existsSync(filePath)) {
     titleCache.set(cacheKey, null);
@@ -132,7 +122,7 @@ export function readMeta(
 ): { title?: string; pages?: string[]; root?: boolean } | null {
   const metaPath = path.join(dir, "meta.json");
   const cacheKey = path.resolve(metaPath);
-  if (metaCache.has(cacheKey)) return metaCache.get(cacheKey)!;
+  if (!isDev && metaCache.has(cacheKey)) return metaCache.get(cacheKey)!;
 
   if (!fs.existsSync(metaPath)) {
     metaCache.set(cacheKey, null);
@@ -182,12 +172,25 @@ export function buildNavTree(dir: string, prefix: string = ""): NavNode[] {
         if (subMeta?.root) continue;
         const subChildren = buildNavTree(subDir, subPrefix);
         if (subChildren.length > 0) {
-          const groupTitle =
+          const rawGroupTitle =
             subMeta?.title ||
             spreadMatch[1].replace(/[()-]/g, " ").replace(/\s+/g, " ").trim();
+          const groupTitle =
+            rawGroupTitle.charAt(0).toUpperCase() + rawGroupTitle.slice(1);
+          // If the previous emitted node is a section header with the
+          // same title as this group's title, the section header
+          // already labels this content. Suppress the group title
+          // (empty string) so the renderer skips rendering it — the
+          // group still wraps its children for indentation/nesting.
+          // Without this dedup the sidebar shows "BUILD GENERATIVE UI"
+          // (section, uppercase) followed immediately by "Build
+          // Generative UI" (group, regular case) — same text, doubled.
+          const prev = nodes[nodes.length - 1];
+          const isDuplicateOfSection =
+            prev?.type === "section" && prev.title === groupTitle;
           nodes.push({
             type: "group",
-            title: groupTitle.charAt(0).toUpperCase() + groupTitle.slice(1),
+            title: isDuplicateOfSection ? "" : groupTitle,
             slug: subPrefix,
             children: subChildren,
           });
@@ -286,6 +289,124 @@ export function buildNavTreeFromFilesystem(
     }
   }
   return nodes;
+}
+
+/**
+ * Walk `content/docs/integrations/<folder>/` and return NavNodes for
+ * pages that have NO root equivalent. These are framework-specific
+ * topics (e.g. Built-in Agent's `copilot-runtime`, LangGraph's `auth`
+ * and `subgraphs`) that live only in the per-framework tree and need
+ * their own sidebar entries. Pages that duplicate root files are
+ * skipped — root wins, and the framework view already renders the
+ * root MDX with a framework override.
+ *
+ * Takes the resolved folder name (not the URL slug). Callers should
+ * use `getDocsFolder(slug)` from lib/registry to map language/runtime
+ * variants to their shared folder (e.g. langgraph-python / typescript
+ * / fastapi → `langgraph/`).
+ */
+export function buildFrameworkOverridesNav(folder: string): NavNode[] {
+  const frameworkDir = path.join(CONTENT_DIR, "integrations", folder);
+  if (!fs.existsSync(frameworkDir)) return [];
+  const nodes = buildNavTree(frameworkDir, `integrations/${folder}`);
+
+  // Drop entries whose equivalent root file exists. Root wins when
+  // both are present — the per-framework tree is only an escape hatch
+  // for framework-specific topics, not an alternative rendering.
+  const prefix = `integrations/${folder}/`;
+  const filtered: NavNode[] = [];
+  for (const node of nodes) {
+    if (node.type === "page") {
+      // node.slug looks like `integrations/<folder>/<topic>`. Strip
+      // the prefix to check the root-level equivalent.
+      const rootSlug = node.slug.replace(prefix, "");
+      const rootMdx = path.join(CONTENT_DIR, `${rootSlug}.mdx`);
+      const rootIndex = path.join(CONTENT_DIR, rootSlug, "index.mdx");
+      if (fs.existsSync(rootMdx) || fs.existsSync(rootIndex)) continue;
+      // Rewrite the slug so the link points at /<framework>/<topic>,
+      // which the router resolves via its fallback to the same MDX.
+      filtered.push({ ...node, slug: rootSlug });
+    } else if (node.type === "group") {
+      // Recursively filter children of a group.
+      const children = node.children
+        .filter((c) => {
+          if (c.type !== "page") return true;
+          const rootSlug = c.slug.replace(prefix, "");
+          const rootMdx = path.join(CONTENT_DIR, `${rootSlug}.mdx`);
+          const rootIndex = path.join(CONTENT_DIR, rootSlug, "index.mdx");
+          return !fs.existsSync(rootMdx) && !fs.existsSync(rootIndex);
+        })
+        .map((c) =>
+          c.type === "page" ? { ...c, slug: c.slug.replace(prefix, "") } : c,
+        );
+      if (children.length > 0) {
+        filtered.push({ ...node, children });
+      }
+    }
+    // Intentionally drop section nodes. Per-framework meta.json files
+    // tend to mirror the root tree's sections ("Getting Started",
+    // "Basics", etc.) and flowing them through here would (a) collide
+    // with root sections of the same name on React keys and (b) double
+    // up the visual hierarchy — the override block is already wrapped
+    // in a single `{frameworkName}` section by mergeFrameworkNav.
+  }
+
+  // Flatten empty-title wrapper groups. buildNavTree clears the title on
+  // a spread-derived group when the preceding section header has the
+  // same name (so the renderer doesn't double-print "Generative UI").
+  // After we drop section headers above, those wrappers are left as
+  // titleless containers that only add an extra indent step around
+  // their children. Inline the children at the wrapper's level instead.
+  const flattened: NavNode[] = [];
+  for (const node of filtered) {
+    if (node.type === "group" && node.title === "") {
+      flattened.push(...node.children);
+    } else {
+      flattened.push(node);
+    }
+  }
+  return flattened;
+}
+
+/**
+ * Return the list of framework slugs whose `integrations/<folder>/`
+ * tree contains an MDX file for `slugPath`. Matches either
+ * `<slug>.mdx` or `<slug>/index.mdx`. Used by the framework-scoped
+ * router to detect that a topic is available in *some* framework but
+ * not the one the user is currently viewing, so we can render a
+ * helpful "not available for <X>" page instead of a bare 404.
+ *
+ * Most slugs map 1:1 to their folder, but language/runtime variants
+ * share one folder (langgraph-python/typescript/fastapi → `langgraph/`,
+ * ms-agent-dotnet/python → `microsoft-agent-framework/`) and two
+ * legacy slugs were renamed after the folder existed (google-adk →
+ * `adk/`, strands → `aws-strands/`). The caller supplies the
+ * slug→folder resolver so this module stays registry-free.
+ */
+export function findFrameworksWithPage(
+  slugPath: string,
+  integrationSlugs: readonly string[],
+  slugToFolder: (slug: string) => string,
+): string[] {
+  const matches: string[] = [];
+  for (const slug of integrationSlugs) {
+    const folder = slugToFolder(slug);
+    const mdx = path.join(
+      CONTENT_DIR,
+      "integrations",
+      folder,
+      `${slugPath}.mdx`,
+    );
+    const indexMdx = path.join(
+      CONTENT_DIR,
+      "integrations",
+      folder,
+      slugPath,
+      "index.mdx",
+    );
+    if (fs.existsSync(mdx) || fs.existsSync(indexMdx)) matches.push(slug);
+  }
+  return matches;
 }
 
 // ---------------------------------------------------------------------------

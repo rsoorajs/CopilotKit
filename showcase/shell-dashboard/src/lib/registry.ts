@@ -10,7 +10,7 @@ export interface Feature {
   description: string;
   kind?: FeatureKind;
   og_docs_url?: string;
-  shell_docs_url?: string;
+  shell_docs_path?: string;
 }
 
 export interface FeatureCategory {
@@ -47,8 +47,15 @@ export interface Integration {
   features: string[];
   demos: Demo[];
   /**
+   * Feature IDs the integration's framework cannot architecturally support
+   * (e.g. lacks a graph-interrupt primitive or MCP tool runtime). Cells for
+   * these IDs render as "Not supported" rather than the unshipped "no demo"
+   * marker. Source: `not_supported_features:` in the integration's manifest.
+   */
+  not_supported_features?: string[];
+  /**
    * Per-column docs link overrides sourced from
-   * `showcase/packages/<slug>/docs-links.json`. The `shell_docs_path` is a
+   * `showcase/integrations/<slug>/docs-links.json`. The `shell_docs_path` is a
    * path relative to the shell root; callers combine it with the framework
    * slug to build framework-scoped URLs.
    */

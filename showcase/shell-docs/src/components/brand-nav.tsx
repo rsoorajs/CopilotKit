@@ -89,6 +89,49 @@ function CopilotKitIcon({ className }: { className?: string }) {
   );
 }
 
+function CloudIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="14"
+      height="14"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M17.5 19a4.5 4.5 0 1 0-1.5-8.74A6 6 0 1 0 6.5 19h11Z" />
+    </svg>
+  );
+}
+
+function ExternalArrowIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="11"
+      height="11"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.25"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M7 17 17 7M9 7h8v8" />
+    </svg>
+  );
+}
+
+const CLOUD_CTA = {
+  href: "https://cloud.copilotkit.ai",
+  label: "Free Developer Access",
+};
+
 function AgUiIcon({ className }: { className?: string }) {
   return (
     <svg
@@ -212,8 +255,20 @@ export function BrandNav(_props: BrandNavProps = {}) {
           ))}
         </div>
 
-        {/* Desktop search */}
-        <div className="hidden sm:block">
+        {/* Desktop: Cloud CTA + search */}
+        <div className="hidden sm:flex items-center gap-2">
+          <Link
+            href={CLOUD_CTA.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[13px] font-medium text-[var(--text-secondary)] hover:text-[var(--text)] hover:bg-[var(--bg-elevated)] transition-all"
+          >
+            <CloudIcon />
+            <span className="[@media(width<1100px)]:hidden">
+              {CLOUD_CTA.label}
+            </span>
+            <ExternalArrowIcon className="[@media(width<1100px)]:hidden opacity-70" />
+          </Link>
           <SearchTrigger />
         </div>
 
@@ -292,6 +347,17 @@ export function BrandNav(_props: BrandNavProps = {}) {
                   {label}
                 </Link>
               ))}
+              <Link
+                href={CLOUD_CTA.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center gap-2 rounded-md px-3 py-2.5 text-[14px] font-medium text-[var(--text-secondary)] hover:text-[var(--text)] hover:bg-[var(--bg-elevated)] transition-all"
+              >
+                <CloudIcon />
+                {CLOUD_CTA.label}
+                <ExternalArrowIcon className="opacity-70" />
+              </Link>
             </div>
             {/* AG-UI link at bottom */}
             <div className="mt-auto px-4 py-4 border-t border-[var(--border)]">

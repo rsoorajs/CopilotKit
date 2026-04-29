@@ -4,17 +4,28 @@ import {
   getIntegrations,
   getFeatures,
   getFeatureCategories,
-  type Integration,
-  type Feature,
-  type Demo,
 } from "@/lib/registry";
-import {
-  keyFor,
-  resolveCell,
-  type ConnectionStatus,
-  type LiveStatusMap,
-} from "@/lib/live-status";
+import type {
+  Integration,
+  Feature,
+  Demo,
+  FeatureCategory,
+} from "@/lib/registry";
+import { keyFor, resolveCell } from "@/lib/live-status";
+import type { ConnectionStatus, LiveStatusMap } from "@/lib/live-status";
 import { LevelStrip } from "@/components/level-strip";
+import { OverlayColumnHeader } from "@/components/overlay-column-header";
+import { RefDepthHeader, RefDepthCell } from "@/components/ref-depth-column";
+import { deriveDepth } from "@/components/depth-utils";
+import type { CatalogCell } from "@/components/depth-utils";
+import type { Overlay } from "@/lib/overlay-types";
+import type { ParityTier } from "@/components/parity-badge";
+import type { CatalogData } from "@/data/catalog-types";
+import type { TallyDetail, TallyItem } from "@/components/tally-types";
+import {
+  useCollapsible,
+  CategoryHeaderRow,
+} from "@/components/collapsible-category";
 
 export interface CellContext {
   integration: Integration;
@@ -36,7 +47,7 @@ export type CellRenderer = (ctx: CellContext) => React.ReactNode;
  * all features.
  *
  * Signal scoping (spec §5.4):
- *   - Feature-level dimensions (`e2e_smoke`) are counted per feature.
+ *   - Feature-level dimensions (`e2e`) are counted per feature.
  *   - Integration-level dimensions (`health`) are counted EXACTLY ONCE
  *     per integration — the health row keyed `health:<slug>` is a single
  *     signal for the whole column, not one signal per feature.
@@ -82,7 +93,7 @@ export function computeColumnTally(
     }
   }
 
-  // Feature-level dimensions: e2e_smoke per feature-with-demo.
+  // Feature-level dimensions: e2e per feature-with-demo.
   for (const feature of features) {
     const demo = integration.demos.find((d) => d.id === feature.id);
     if (!demo) continue;
@@ -92,6 +103,67 @@ export function computeColumnTally(
     });
 
     tallyTone(cell.e2e.tone);
+  }
+
+  return { green, amber, red, unknown: false };
+}
+
+/**
+ * Per-bucket feature lists for a single integration column — companion to
+ * `computeColumnTally()` that returns `TallyItem[]` arrays instead of counts.
+ *
+ * Logic mirrors `computeColumnTally()` exactly: same signal scoping (health
+ * counted once, e2e per feature-with-demo) and same connection-error guard.
+ */
+export function computeColumnTallyDetail(
+  integration: Integration,
+  features: Feature[],
+  liveStatus: LiveStatusMap,
+  connection: ConnectionStatus,
+): TallyDetail {
+  if (connection === "error") {
+    return { green: [], amber: [], red: [], unknown: true };
+  }
+
+  const green: TallyItem[] = [];
+  const amber: TallyItem[] = [];
+  const red: TallyItem[] = [];
+
+  // Integration-level health — counted once per integration.
+  const healthRow = liveStatus.get(keyFor("health", integration.slug)) ?? null;
+  if (healthRow) {
+    const item: TallyItem = { label: "Health (Up)", dimension: "health" };
+    switch (healthRow.state) {
+      case "green":
+        green.push(item);
+        break;
+      case "red":
+        red.push(item);
+        break;
+      case "degraded":
+        amber.push(item);
+        break;
+    }
+  }
+
+  // Feature-level dimensions: e2e per feature-with-demo.
+  for (const feature of features) {
+    const demo = integration.demos.find((d) => d.id === feature.id);
+    if (!demo) continue;
+
+    const cell = resolveCell(liveStatus, integration.slug, feature.id, {
+      connection,
+    });
+
+    const item: TallyItem = {
+      label: feature.name,
+      dimension: "e2e",
+      featureId: feature.id,
+    };
+
+    if (cell.e2e.tone === "green") green.push(item);
+    else if (cell.e2e.tone === "amber") amber.push(item);
+    else if (cell.e2e.tone === "red") red.push(item);
   }
 
   return { green, amber, red, unknown: false };
@@ -126,6 +198,164 @@ function resolveShellUrl(): string {
   return "http://localhost:3000";
 }
 
+/* ------------------------------------------------------------------ */
+/*  CategorySection — one collapsible group of feature rows            */
+/* ------------------------------------------------------------------ */
+
+interface CategorySectionProps {
+  cat: FeatureCategory & { features: Feature[] };
+  integrations: Integration[];
+  renderCell: CellRenderer;
+  shellUrl: string;
+  liveStatus: LiveStatusMap;
+  connection: ConnectionStatus;
+  showRefDepth: boolean;
+  refCellsByFeature: Map<string, CatalogCell>;
+  categoryColSpan: number;
+}
+
+function CategorySection({
+  cat,
+  integrations,
+  renderCell,
+  shellUrl,
+  liveStatus,
+  connection,
+  showRefDepth,
+  refCellsByFeature,
+  categoryColSpan,
+}: CategorySectionProps) {
+  const { isOpen, toggle } = useCollapsible({
+    name: cat.name,
+    defaultOpen: true,
+  });
+
+  const wiredCount = cat.features.reduce((acc, feature) => {
+    return (
+      acc +
+      integrations.filter((int) => int.demos.some((d) => d.id === feature.id))
+        .length
+    );
+  }, 0);
+  const totalCount = cat.features.length * integrations.length;
+  const countString = `${wiredCount}/${totalCount}`;
+
+  return (
+    <Fragment>
+      <CategoryHeaderRow
+        name={cat.name}
+        count={countString}
+        colSpan={categoryColSpan}
+        isOpen={isOpen}
+        onToggle={toggle}
+      />
+      {isOpen &&
+        cat.features.map((feature, idx) => {
+          const testing = feature.kind === "testing";
+          const stripe = idx % 2 === 1;
+          const refCell = showRefDepth
+            ? refCellsByFeature.get(feature.id)
+            : undefined;
+          const refDepth = refCell
+            ? deriveDepth(refCell, liveStatus)
+            : undefined;
+          return (
+            <tr
+              key={feature.id}
+              className="border-t border-[var(--border)] hover:bg-[var(--bg-hover)]"
+              style={stripe ? { backgroundColor: "color-mix(in srgb, var(--bg-surface) 50%, var(--bg-muted))" } : undefined}
+            >
+              <td
+                className="sticky left-0 z-10 px-1 py-1 border-r border-[var(--border)] align-top"
+                style={{ backgroundColor: stripe ? "color-mix(in srgb, var(--bg-surface) 50%, var(--bg-muted))" : "var(--bg-surface)" }}
+              >
+                <div
+                  className={
+                    testing
+                      ? "font-normal text-[var(--text-muted)] italic"
+                      : "font-medium text-[var(--text)]"
+                  }
+                  title={feature.description}
+                >
+                  {feature.name}
+                  {testing && (
+                    <span className="ml-2 text-[9px] uppercase tracking-wider text-[var(--text-muted)]">
+                      testing
+                    </span>
+                  )}
+                </div>
+              </td>
+              {showRefDepth &&
+                (refCell && refDepth ? (
+                  <RefDepthCell
+                    depth={refDepth.achieved}
+                    status={refCell.status}
+                    regression={refDepth.isRegression}
+                  />
+                ) : (
+                  <td
+                    className="sticky left-[160px] z-10 px-1 py-1 border-r-2 border-r-[#c4b5fd] border-l border-[var(--border)] align-top"
+                    style={{ backgroundColor: "#f5f0ff" }}
+                  >
+                    <span className="text-[var(--text-muted)] text-[10px]">
+                      --
+                    </span>
+                  </td>
+                ))}
+              {integrations.map((integration) => {
+                const demo = integration.demos.find((d) => d.id === feature.id);
+                const isNotSupported =
+                  integration.not_supported_features?.includes(feature.id) ??
+                  false;
+                return (
+                  <td
+                    key={integration.slug}
+                    className="border-l border-[var(--border)] px-1 py-1 align-top text-center"
+                  >
+                    {demo ? (
+                      renderCell({
+                        integration,
+                        feature,
+                        demo,
+                        hostedUrl: demo.route
+                          ? `${integration.backend_url}${demo.route}`
+                          : "",
+                        shellUrl,
+                        liveStatus,
+                        connection,
+                      })
+                    ) : isNotSupported ? (
+                      // Architectural limit — framework cannot support this
+                      // feature. Distinct from the unshipped "no demo" ✗ so
+                      // viewers can tell "won't be done" apart from "to do".
+                      <span
+                        className="inline-flex items-center justify-center px-1.5 py-0.5 rounded text-base border border-slate-500/40 bg-slate-500/10 text-slate-400"
+                        title="Not supported by this framework"
+                      >
+                        🚫
+                      </span>
+                    ) : (
+                      <div
+                        className="text-center text-base text-[var(--danger)]"
+                        title="No demo"
+                      >
+                        ✗
+                      </div>
+                    )}
+                  </td>
+                );
+              })}
+            </tr>
+          );
+        })}
+    </Fragment>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  FeatureGrid                                                        */
+/* ------------------------------------------------------------------ */
+
 export interface FeatureGridProps {
   title: string;
   subtitle?: string;
@@ -135,6 +365,10 @@ export interface FeatureGridProps {
   liveStatus: LiveStatusMap;
   /** Aggregated SSE connection status (lifted to page). */
   connection: ConnectionStatus;
+  /** When provided, use overlay-aware column headers and ref-depth column. */
+  overlays?: Set<Overlay>;
+  /** Catalog data — required when overlays is provided, for ref-depth and parity. */
+  catalog?: CatalogData;
 }
 
 export function FeatureGrid({
@@ -144,6 +378,8 @@ export function FeatureGrid({
   minColWidth = 220,
   liveStatus,
   connection,
+  overlays,
+  catalog,
 }: FeatureGridProps) {
   const shellUrl = resolveShellUrl();
   // `getIntegrations()` / `getFeatures()` call `.sort()` / array spread on
@@ -168,6 +404,48 @@ export function FeatureGrid({
     return out;
   }, [integrations, features, liveStatus, connection]);
 
+  // Per-bucket feature lists — mirrors tallies but with TallyItem arrays.
+  const tallyDetails = useMemo(() => {
+    const out = new Map<string, TallyDetail>();
+    for (const integration of integrations) {
+      out.set(
+        integration.slug,
+        computeColumnTallyDetail(integration, features, liveStatus, connection),
+      );
+    }
+    return out;
+  }, [integrations, features, liveStatus, connection]);
+
+  // Whether to show the parity ref-depth column
+  const showRefDepth = overlays ? overlays.has("parity") : false;
+
+  // Build parity tier map for overlay column headers (integration slug -> ParityTier)
+  const parityTierMap = useMemo(() => {
+    if (!catalog) return new Map<string, ParityTier>();
+    const map = new Map<string, ParityTier>();
+    const seen = new Set<string>();
+    for (const cell of catalog.cells) {
+      if (!seen.has(cell.integration)) {
+        seen.add(cell.integration);
+        map.set(cell.integration, cell.parity_tier as ParityTier);
+      }
+    }
+    return map;
+  }, [catalog]);
+
+  // Build catalog cell lookup for ref-depth column
+  const refCellsByFeature = useMemo(() => {
+    if (!catalog || !showRefDepth) return new Map<string, CatalogCell>();
+    const referenceSlug = catalog.metadata.reference;
+    const map = new Map<string, CatalogCell>();
+    for (const cell of catalog.cells) {
+      if (cell.integration === referenceSlug && cell.feature !== null) {
+        map.set(cell.feature, cell);
+      }
+    }
+    return map;
+  }, [catalog, showRefDepth]);
+
   const featuresByCategory = categories
     .map((cat) => ({
       ...cat,
@@ -175,8 +453,11 @@ export function FeatureGrid({
     }))
     .filter((cat) => cat.features.length > 0);
 
+  // Colspan for category separator row: base (Feature col) + integrations + optional ref-depth
+  const categoryColSpan = integrations.length + 1 + (showRefDepth ? 1 : 0);
+
   return (
-    <div className="p-8 max-w-[100vw]">
+    <div className="p-8">
       <header className="mb-6">
         <div className="flex items-center gap-3">
           <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
@@ -190,15 +471,19 @@ export function FeatureGrid({
 
       {connection === "error" && <OfflineBanner />}
 
-      <div className="overflow-auto rounded-lg border border-[var(--border)] bg-[var(--bg-surface)]">
+      <div
+        className="rounded-lg border border-[var(--border)] bg-[var(--bg-surface)]"
+        style={{ width: "fit-content", minWidth: "100%" }}
+      >
         <table className="border-collapse text-sm">
           <thead>
             <tr>
-              <th className="sticky left-0 top-0 z-30 bg-[var(--bg-muted)] px-4 py-3 text-left min-w-[260px] border-b border-[var(--border)]">
+              <th className="sticky left-0 top-0 z-30 bg-[var(--bg-muted)] px-1 py-1.5 text-left min-w-[160px] border-b border-[var(--border)]">
                 <span className="text-[10px] font-medium uppercase tracking-wider text-[var(--text-muted)]">
                   Feature
                 </span>
               </th>
+              {showRefDepth && <RefDepthHeader />}
               {integrations.map((integration) => {
                 const tally = tallies.get(integration.slug) ?? {
                   green: 0,
@@ -206,6 +491,25 @@ export function FeatureGrid({
                   red: 0,
                   unknown: false,
                 };
+
+                // Overlay-aware header when overlays prop is provided
+                if (overlays) {
+                  return (
+                    <OverlayColumnHeader
+                      key={integration.slug}
+                      integration={integration}
+                      tally={tally}
+                      tallyDetail={tallyDetails.get(integration.slug)}
+                      overlays={overlays}
+                      liveStatus={liveStatus}
+                      connection={connection}
+                      parityTier={parityTierMap.get(integration.slug)}
+                      minWidth={minColWidth}
+                    />
+                  );
+                }
+
+                // Legacy header rendering (backwards compat when overlays not provided)
                 const total = tally.green + tally.amber + tally.red;
                 const tallyTitle = tally.unknown
                   ? "dashboard offline — live signal unavailable (§5.3)"
@@ -215,7 +519,7 @@ export function FeatureGrid({
                 return (
                   <th
                     key={integration.slug}
-                    className="sticky top-0 z-20 bg-[var(--bg-muted)] px-3 py-3 text-left border-b border-l border-[var(--border)] font-normal"
+                    className="sticky top-0 z-20 bg-[var(--bg-muted)] px-1 py-1.5 text-center border-b border-l border-[var(--border)] font-normal"
                     style={{ minWidth: `${minColWidth}px` }}
                   >
                     <div className="text-xs font-semibold text-[var(--text)]">
@@ -265,75 +569,18 @@ export function FeatureGrid({
           </thead>
           <tbody>
             {featuresByCategory.map((cat) => (
-              <Fragment key={cat.id}>
-                <tr>
-                  <td
-                    colSpan={integrations.length + 1}
-                    className="sticky left-0 px-4 pt-5 pb-1.5 text-[10px] font-medium uppercase tracking-wider text-[var(--text-muted)] bg-[var(--bg-surface)]"
-                  >
-                    {cat.name}
-                  </td>
-                </tr>
-                {cat.features.map((feature) => {
-                  const testing = feature.kind === "testing";
-                  return (
-                    <tr
-                      key={feature.id}
-                      className="border-t border-[var(--border)] hover:bg-[var(--bg-hover)]"
-                    >
-                      <td className="sticky left-0 z-10 bg-[var(--bg-surface)] px-4 py-2 border-r border-[var(--border)] align-top">
-                        <div
-                          className={
-                            testing
-                              ? "font-normal text-[var(--text-muted)] italic"
-                              : "font-medium text-[var(--text)]"
-                          }
-                          title={feature.description}
-                        >
-                          {feature.name}
-                          {testing && (
-                            <span className="ml-2 text-[9px] uppercase tracking-wider text-[var(--text-muted)]">
-                              testing
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      {integrations.map((integration) => {
-                        const demo = integration.demos.find(
-                          (d) => d.id === feature.id,
-                        );
-                        return (
-                          <td
-                            key={integration.slug}
-                            className="border-l border-[var(--border)] px-3 py-2 align-top text-left"
-                          >
-                            {demo ? (
-                              renderCell({
-                                integration,
-                                feature,
-                                demo,
-                                hostedUrl: demo.route
-                                  ? `${integration.backend_url}${demo.route}`
-                                  : "",
-                                shellUrl,
-                                liveStatus,
-                                connection,
-                              })
-                            ) : (
-                              <div
-                                className="text-center text-base text-[var(--danger)]"
-                                title="No demo"
-                              >
-                                ✗
-                              </div>
-                            )}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  );
-                })}
-              </Fragment>
+              <CategorySection
+                key={cat.id}
+                cat={cat}
+                integrations={integrations}
+                renderCell={renderCell}
+                shellUrl={shellUrl}
+                liveStatus={liveStatus}
+                connection={connection}
+                showRefDepth={showRefDepth}
+                refCellsByFeature={refCellsByFeature}
+                categoryColSpan={categoryColSpan}
+              />
             ))}
           </tbody>
         </table>

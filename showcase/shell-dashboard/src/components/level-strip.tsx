@@ -5,6 +5,7 @@
  */
 import { ToneChip } from "@/components/badges";
 import { keyFor, type LiveStatusMap, type BadgeTone } from "@/lib/live-status";
+import { formatTs } from "@/lib/format-ts";
 import type { Integration } from "@/lib/registry";
 
 interface LevelBadge {
@@ -34,7 +35,7 @@ function resolveBadge(
   return {
     name: label,
     tone,
-    title: `${label}: ${row.state} since ${row.observed_at}`,
+    title: `${label}: ${row.state} since ${formatTs(row.observed_at)}`,
   };
 }
 
@@ -66,7 +67,7 @@ export function LevelStrip({
 
   return (
     <div
-      className="flex items-center gap-1"
+      className="flex items-center justify-center gap-1"
       data-testid="level-strip"
       data-slug={slug}
     >

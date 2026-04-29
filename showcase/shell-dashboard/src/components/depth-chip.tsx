@@ -1,18 +1,21 @@
 "use client";
 /**
- * DepthChip — colored chip showing achieved depth D0-D4.
+ * DepthChip — colored chip showing achieved depth D0-D6.
  *
  * Color mapping:
+ *   D5-D6 = emerald — deep multi-turn e2e + parity coverage
  *   D3-D4 = blue (accent) — meaningful e2e + interaction coverage
  *   D1-D2 = amber — basic health and agent checks
  *   D0    = gray — exists but no live probe data
  *   unshipped = transparent + dashed border, displays "--"
+ *   unsupported = slate border + slate fill, displays "🚫"
+ *                 (architectural limit — framework cannot support feature)
  *   regression = red (danger)
  */
 
 export interface DepthChipProps {
-  depth: 0 | 1 | 2 | 3 | 4;
-  status: "wired" | "stub" | "unshipped";
+  depth: 0 | 1 | 2 | 3 | 4 | 5 | 6;
+  status: "wired" | "stub" | "unshipped" | "unsupported";
   /** When true, chip renders in red regardless of depth. */
   regression?: boolean;
 }
@@ -23,6 +26,9 @@ function depthColorClass(depth: number, regression?: boolean): string {
     return "bg-[var(--danger)] text-white";
   }
   switch (depth) {
+    case 5:
+    case 6:
+      return "bg-emerald-600 text-white";
     case 3:
     case 4:
       return "bg-[var(--accent)] text-white";
@@ -40,10 +46,27 @@ export function DepthChip({ depth, status, regression }: DepthChipProps) {
     return (
       <span
         data-testid="depth-chip"
+        data-status="unshipped"
         className="inline-flex items-center justify-center min-w-[32px] h-5 px-1.5 rounded text-[10px] font-semibold tabular-nums border border-dashed border-[var(--text-muted)]/40 text-[var(--text-muted)]/60"
         title="unshipped"
       >
         --
+      </span>
+    );
+  }
+
+  if (status === "unsupported") {
+    // Distinct from "unshipped": architectural limit, not undone work.
+    // A slate border + slate fill + 🚫 emoji + descriptive tooltip
+    // signals "cannot be supported" rather than "to be done".
+    return (
+      <span
+        data-testid="depth-chip"
+        data-status="unsupported"
+        className="inline-flex items-center justify-center min-w-[32px] h-5 px-1.5 rounded text-[10px] font-semibold tabular-nums border border-slate-500/40 bg-slate-500/10 text-slate-400"
+        title="Not supported by this framework"
+      >
+        🚫
       </span>
     );
   }

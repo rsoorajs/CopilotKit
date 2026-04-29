@@ -68,12 +68,8 @@ describe("Registry Generator", () => {
     expect(langgraph.name).toBe("LangGraph (Python)");
     expect(langgraph.category).toBe("popular");
     expect(langgraph.language).toBe("python");
-    // Count matches current manifest after Wave 1 re-wired open-gen-ui +
-    // open-gen-ui-advanced (30→32). Waves 2a (voice) + 2b (multimodal) +
-    // 3a (auth) + 3b (agent-config) + 4a (byoc-hashbrown) + 4b
-    // (byoc-json-render) consolidated → 32 + 6 = 38.
-    expect(langgraph.features.length).toBe(38);
-    expect(langgraph.demos.length).toBe(38);
+    expect(langgraph.features.length).toBe(40);
+    expect(langgraph.demos.length).toBe(40);
   });
 
   it("sorts integrations by sort_order", () => {
@@ -118,7 +114,7 @@ describe("Registry Generator", () => {
     const manifestPath = path.resolve(
       SCRIPTS_DIR,
       "..",
-      "packages",
+      "integrations",
       "langgraph-python",
       "manifest.yaml",
     );

@@ -1,3 +1,0 @@
-# Audio clips bundled with demos (e.g. the voice demo's sample.wav) are
-# binary — prevent autocrlf / line-ending rewrites on Windows checkouts.
-*.wav binary

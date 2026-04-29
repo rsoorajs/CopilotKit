@@ -57,7 +57,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const ROOT = path.resolve(__dirname, "..");
-const PACKAGES_DIR = path.join(ROOT, "packages");
+const PACKAGES_DIR = path.join(ROOT, "integrations");
 // demo-content is consumed by ALL shells:
 //   - shell: integration pages + demo drawer read the bundle at runtime
 //   - shell-docs: <Snippet> (docs routes) imports directly at build time
@@ -118,10 +118,12 @@ function detectLanguage(filename: string): string {
     ".js": "javascript",
     ".py": "python",
     ".cs": "csharp",
+    ".java": "java",
     ".css": "css",
     ".json": "json",
     ".yaml": "yaml",
     ".yml": "yaml",
+    ".xml": "xml",
     ".md": "markdown",
     ".mdx": "markdown",
   };
@@ -573,7 +575,7 @@ if (process.argv.includes("--watch")) {
       }
     }, 200);
   };
-  console.log("[watch] watching packages/ for changes...\n");
+  console.log("[watch] watching integrations/ for changes...\n");
   fs.watch(PACKAGES_DIR, { recursive: true }, (_event, filename) => {
     if (!filename) return;
     // Rebundle for demo sources, agent sources, READMEs, and — critically —

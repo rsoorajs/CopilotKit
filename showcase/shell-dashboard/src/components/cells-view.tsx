@@ -8,6 +8,7 @@
 import { useMemo, useState } from "react";
 import { StatsBar } from "./stats-bar";
 import { CoverageBar } from "./coverage-bar";
+import { ChipsExplainer } from "./chips-explainer";
 import { FilterChips, type FilterMode } from "./filter-chips";
 import {
   CellMatrix,
@@ -15,6 +16,7 @@ import {
   type FeatureInfo,
 } from "./cell-matrix";
 import { deriveDepth } from "./depth-utils";
+import { resolveCell } from "@/lib/live-status";
 import type { LiveStatusMap, ConnectionStatus } from "@/lib/live-status";
 import type { FeatureCategory } from "@/lib/registry";
 import type { CatalogData } from "@/data/catalog-types";
@@ -119,17 +121,42 @@ export function CellsView({ catalog, liveStatus, connection }: CellsViewProps) {
     const unshipped = catalog.cells.filter(
       (c) => c.status === "unshipped",
     ).length;
+    const unsupported = catalog.cells.filter(
+      (c) => c.status === "unsupported",
+    ).length;
 
-    // Max achieved depth across all cells
+    // Max achieved depth + regression count + failure count across all cells.
+    // Skip statuses that have no probes attached (unshipped, unsupported) —
+    // they contribute nothing to depth/regression/failure metrics.
     let maxDepth = 0;
+    let regressions = 0;
+    let failures = 0;
     for (const cell of catalog.cells) {
-      if (cell.status !== "unshipped") {
+      if (cell.status !== "unshipped" && cell.status !== "unsupported") {
         const d = deriveDepth(cell, liveStatus);
         if (d.achieved > maxDepth) maxDepth = d.achieved;
+        if (d.isRegression) regressions++;
+        // Count cells with red rollup as failures
+        if (cell.feature !== null) {
+          const cellState = resolveCell(
+            liveStatus,
+            cell.integration,
+            cell.feature,
+          );
+          if (cellState.rollup === "red") failures++;
+        }
       }
     }
 
-    return { wired, stub, unshipped, maxDepth, regressions: 0 };
+    return {
+      wired,
+      stub,
+      unshipped,
+      unsupported,
+      maxDepth,
+      regressions,
+      failures,
+    };
   }, [catalog.cells, liveStatus]);
 
   const defaultOpenCategories = useMemo(
@@ -139,18 +166,22 @@ export function CellsView({ catalog, liveStatus, connection }: CellsViewProps) {
 
   return (
     <div data-testid="cells-view" className="p-8">
+      <ChipsExplainer />
       <StatsBar
         wired={stats.wired}
         stub={stats.stub}
         unshipped={stats.unshipped}
+        unsupported={stats.unsupported}
         maxDepth={stats.maxDepth}
         regressions={stats.regressions}
+        failures={stats.failures}
       />
       <div className="my-4 px-4">
         <CoverageBar
           wired={stats.wired}
           stub={stats.stub}
           unshipped={stats.unshipped}
+          unsupported={stats.unsupported}
         />
       </div>
       <div className="mb-4 px-4">
@@ -173,6 +204,7 @@ export function CellsView({ catalog, liveStatus, connection }: CellsViewProps) {
         defaultOpenCategories={defaultOpenCategories}
         filter={filter}
         referenceSlug={referenceSlug}
+        connection={connection}
       />
     </div>
   );

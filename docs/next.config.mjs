@@ -150,6 +150,11 @@ const config = {
           source: `/${integration}/:path*`,
           destination: `/integrations/${integration}/:path*`,
         })),
+        // Map deploy section URLs
+        {
+          source: '/agentcore/:path*',
+          destination: '/deploy/agentcore/:path*',
+        },
       ],
     };
   },
@@ -470,6 +475,11 @@ const config = {
         source: '/ag-ui-protocol',
         destination: '/learn/ag-ui-protocol',
         permanent: true,
+      },
+      {
+        source: '/ag-ui',
+        destination: 'https://docs.ag-ui.com/',
+        permanent: false,
       },
       {
         source: '/connect-mcp-servers',
