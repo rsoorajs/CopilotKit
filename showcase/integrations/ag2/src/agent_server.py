@@ -19,11 +19,19 @@ from starlette.responses import JSONResponse
 from dotenv import load_dotenv
 
 from agents.agent import stream as default_stream
+from agents.a2ui_dynamic import a2ui_dynamic_app
+from agents.a2ui_fixed import a2ui_fixed_app
 from agents.headless_complete import headless_complete_app
+from agents.mcp_apps_agent import mcp_apps_app
+from agents.open_gen_ui_advanced_agent import open_gen_ui_advanced_app
+from agents.open_gen_ui_agent import open_gen_ui_app
 from agents.shared_state_read_write import (
     shared_state_read_write_app,
 )
 from agents.subagents import subagents_app
+from agents.tool_rendering_reasoning_chain import (
+    tool_rendering_reasoning_chain_app,
+)
 
 load_dotenv()
 
@@ -59,6 +67,15 @@ app.add_middleware(
 app.mount("/shared-state-read-write", shared_state_read_write_app)
 app.mount("/subagents", subagents_app)
 app.mount("/headless-complete", headless_complete_app)
+app.mount("/declarative-gen-ui", a2ui_dynamic_app)
+app.mount("/a2ui-fixed-schema", a2ui_fixed_app)
+app.mount("/mcp-apps", mcp_apps_app)
+app.mount("/open-gen-ui", open_gen_ui_app)
+app.mount("/open-gen-ui-advanced", open_gen_ui_advanced_app)
+app.mount(
+    "/tool-rendering-reasoning-chain",
+    tool_rendering_reasoning_chain_app,
+)
 
 
 # Mount the default AG2 AG-UI endpoint at the root.

@@ -57,6 +57,7 @@ const dedicatedAgents: Record<string, string> = {
   "shared-state-read-write": "/shared-state-read-write/",
   subagents: "/subagents/",
   "headless-complete": "/headless-complete/",
+  "tool-rendering-reasoning-chain": "/tool-rendering-reasoning-chain/",
 };
 
 const agents: Record<string, AbstractAgent> = {};

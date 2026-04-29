@@ -28,7 +28,7 @@ all pointing to the same HTTP backend.
 - `agentic-chat`, `hitl-in-chat`, `tool-rendering`, `gen-ui-tool-based`,
   `gen-ui-agent`, `shared-state-streaming`
 
-### Batch 3 — Headless complete + manifest-only entries (this batch)
+### Batch 3 — Headless complete + manifest-only entries
 
 - `cli-start` — informational manifest entry (copy-paste starter command).
 - `gen-ui-tool-based` — already shipped; manifest entry added.
@@ -38,6 +38,47 @@ all pointing to the same HTTP backend.
   `ConversableAgent` (`agents/headless_complete.py`) mounted at
   `/headless-complete/` with `get_weather` + `get_stock_price` tools;
   `highlight_note` is registered on the frontend via `useComponent`.
+
+### Batch 4 — A2UI / OGUI / MCP + reasoning ports (this batch)
+
+Each demo gets its own AG2 sub-app mounted at a named path, plus
+(where required) its own dedicated `/api/copilotkit-*` runtime route so
+the runtime middleware config doesn't leak into other cells.
+
+- `declarative-gen-ui` — A2UI Dynamic Schema. Backend
+  (`src/agents/a2ui_dynamic.py`) owns the `generate_a2ui` tool, which
+  invokes a secondary OpenAI client bound to `render_a2ui` and returns
+  an `a2ui_operations` container. Runtime route at
+  `api/copilotkit-declarative-gen-ui/route.ts` with
+  `a2ui.injectA2UITool: false`.
+- `a2ui-fixed-schema` — A2UI Fixed Schema. Backend
+  (`src/agents/a2ui_fixed.py`) ships `flight_schema.json` and exposes a
+  `display_flight(origin, destination, airline, price)` tool that emits
+  `a2ui_operations` directly. Runtime route at
+  `api/copilotkit-a2ui-fixed-schema/route.ts` with
+  `a2ui.injectA2UITool: false`.
+- `mcp-apps` — Backend (`src/agents/mcp_apps_agent.py`) is a no-tools
+  ConversableAgent; the runtime route at
+  `api/copilotkit-mcp-apps/route.ts` configures
+  `mcpApps.servers` pointing at the public Excalidraw MCP server, and
+  the runtime middleware injects MCP tools at request time.
+- `open-gen-ui`, `open-gen-ui-advanced` — Backends are no-tools
+  ConversableAgents (`src/agents/open_gen_ui_agent.py` and
+  `src/agents/open_gen_ui_advanced_agent.py`). Shared runtime route at
+  `api/copilotkit-ogui/route.ts` enables
+  `openGenerativeUI: { agents: [...] }` so the runtime middleware
+  converts streamed `generateSandboxedUi` tool calls into
+  `open-generative-ui` activity events.
+- `agentic-chat-reasoning`, `tool-rendering-reasoning-chain` — Frontend
+  ports of the LangGraph reasoning cells. The custom `reasoningMessage`
+  slot is wired exactly as in the canonical reference. Backend caveat:
+  AG2's `ConversableAgent` does not natively emit AG-UI
+  `REASONING_MESSAGE_*` events the way LangGraph's `deepagents` does,
+  so the reasoning slot may render empty on every turn until a future
+  AG2 release adds reasoning emission. The tool chain
+  (`tool-rendering-reasoning-chain` backend at
+  `src/agents/tool_rendering_reasoning_chain.py`, mounted at
+  `/tool-rendering-reasoning-chain/`) still exercises end-to-end.
 
 ### Batch 2 — Dedicated AG2 sub-apps
 
@@ -72,11 +113,6 @@ of the langgraph-python cell.
 The following demos fall into that bucket and are **deferred**, not
 strictly "missing primitive" skips:
 
-- `agentic-chat-reasoning`, `tool-rendering-reasoning-chain`
-  — need a reasoning-forward AG2 agent (o1-style model config).
-- `declarative-gen-ui`, `a2ui-fixed-schema` — need A2UI middleware parity
-  with the langgraph-python `CopilotKitMiddleware` + `a2ui_dynamic` / `a2ui_fixed`
-  graphs and a dedicated `/api/copilotkit-*` route per demo.
 - `agent-config` — needs the agent to re-materialize system prompt from
   forwardedProps on every turn (AG2 ConversableAgent supports this but a
   dedicated runtime wiring is required).
@@ -90,8 +126,6 @@ strictly "missing primitive" skips:
 - `multimodal` — vision-capable AG2 agent + dedicated `/api/copilotkit-multimodal`.
 - `voice` — frontend voice STT; needs dedicated `/api/copilotkit-voice` and
   the lazy-init agent shape from langgraph-python.
-- `open-gen-ui`, `open-gen-ui-advanced` — OGUI runtime with frontend sandbox.
-- `mcp-apps` — MCP server-driven UI. AG2 has MCP support; needs wiring.
 
 ## Skipped (missing primitive)
 

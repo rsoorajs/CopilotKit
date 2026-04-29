@@ -29,8 +29,14 @@ features:
   - tool-rendering
   - tool-rendering-default-catchall
   - tool-rendering-custom-catchall
+  - tool-rendering-reasoning-chain
   - gen-ui-agent
   - gen-ui-tool-based
+  - declarative-gen-ui
+  - a2ui-fixed-schema
+  - mcp-apps
+  - open-gen-ui
+  - open-gen-ui-advanced
   - shared-state-streaming
   - prebuilt-sidebar
   - prebuilt-popup
@@ -40,6 +46,7 @@ features:
   - headless-complete
   - readonly-state-agent-context
   - reasoning-default-render
+  - agentic-chat-reasoning
   - frontend-tools
   - frontend-tools-async
   - shared-state-read-write
@@ -303,6 +310,97 @@ demos:
       - src/agents/subagents.py
       - src/app/demos/subagents/page.tsx
       - src/app/demos/subagents/delegation-log.tsx
+      - src/app/api/copilotkit/route.ts
+  - id: declarative-gen-ui
+    name: Declarative Generative UI (A2UI Dynamic Schema)
+    description: Agent dynamically composes UI from a registered catalog of branded components via the A2UI middleware
+    tags:
+      - generative-ui
+    route: /demos/declarative-gen-ui
+    animated_preview_url:
+    highlight:
+      - src/agents/a2ui_dynamic.py
+      - src/app/demos/declarative-gen-ui/page.tsx
+      - src/app/demos/declarative-gen-ui/a2ui/catalog.ts
+      - src/app/demos/declarative-gen-ui/a2ui/definitions.ts
+      - src/app/demos/declarative-gen-ui/a2ui/renderers.tsx
+      - src/app/api/copilotkit-declarative-gen-ui/route.ts
+  - id: a2ui-fixed-schema
+    name: A2UI (Fixed Schema)
+    description: Agent streams data into a frontend-authored fixed component schema; backend ships JSON, agent fills in values
+    tags:
+      - generative-ui
+    route: /demos/a2ui-fixed-schema
+    animated_preview_url:
+    highlight:
+      - src/agents/a2ui_fixed.py
+      - src/agents/a2ui_schemas/flight_schema.json
+      - src/app/demos/a2ui-fixed-schema/page.tsx
+      - src/app/demos/a2ui-fixed-schema/a2ui/catalog.ts
+      - src/app/demos/a2ui-fixed-schema/a2ui/definitions.ts
+      - src/app/demos/a2ui-fixed-schema/a2ui/renderers.tsx
+      - src/app/api/copilotkit-a2ui-fixed-schema/route.ts
+  - id: mcp-apps
+    name: MCP Apps
+    description: Runtime mcpApps middleware injects an MCP server's tools and renders associated UI resources inline
+    tags:
+      - generative-ui
+    route: /demos/mcp-apps
+    animated_preview_url:
+    highlight:
+      - src/agents/mcp_apps_agent.py
+      - src/app/demos/mcp-apps/page.tsx
+      - src/app/api/copilotkit-mcp-apps/route.ts
+  - id: open-gen-ui
+    name: Open Generative UI (Minimal)
+    description: Agent streams a single generateSandboxedUi tool call; the runtime renders agent-authored HTML/CSS in a sandboxed iframe
+    tags:
+      - generative-ui
+    route: /demos/open-gen-ui
+    animated_preview_url:
+    highlight:
+      - src/agents/open_gen_ui_agent.py
+      - src/app/demos/open-gen-ui/page.tsx
+      - src/app/api/copilotkit-ogui/route.ts
+  - id: open-gen-ui-advanced
+    name: Open Generative UI (Advanced)
+    description: Sandboxed iframe UIs invoke host-page sandbox functions via Websandbox.connection.remote
+    tags:
+      - generative-ui
+    route: /demos/open-gen-ui-advanced
+    animated_preview_url:
+    highlight:
+      - src/agents/open_gen_ui_advanced_agent.py
+      - src/app/demos/open-gen-ui-advanced/page.tsx
+      - src/app/demos/open-gen-ui-advanced/sandbox-functions.ts
+      - src/app/demos/open-gen-ui-advanced/suggestions.ts
+      - src/app/api/copilotkit-ogui/route.ts
+  - id: agentic-chat-reasoning
+    name: Agentic Chat (Reasoning)
+    description: Custom reasoningMessage slot renders the agent's thinking chain visibly above each answer
+    tags:
+      - generative-ui
+    route: /demos/agentic-chat-reasoning
+    animated_preview_url:
+    highlight:
+      - src/agents/agent.py
+      - src/app/demos/agentic-chat-reasoning/page.tsx
+      - src/app/demos/agentic-chat-reasoning/reasoning-block.tsx
+      - src/app/api/copilotkit/route.ts
+  - id: tool-rendering-reasoning-chain
+    name: Tool Rendering (Reasoning Chain)
+    description: Sequential tool calls combined with a custom reasoningMessage slot — weather, flights, custom catch-all
+    tags:
+      - generative-ui
+    route: /demos/tool-rendering-reasoning-chain
+    animated_preview_url:
+    highlight:
+      - src/agents/tool_rendering_reasoning_chain.py
+      - src/app/demos/tool-rendering-reasoning-chain/page.tsx
+      - src/app/demos/tool-rendering-reasoning-chain/weather-card.tsx
+      - src/app/demos/tool-rendering-reasoning-chain/flight-list-card.tsx
+      - src/app/demos/tool-rendering-reasoning-chain/custom-catchall-renderer.tsx
+      - src/app/demos/tool-rendering-reasoning-chain/reasoning-block.tsx
       - src/app/api/copilotkit/route.ts
 managed_platform:
   name: Agent OS
