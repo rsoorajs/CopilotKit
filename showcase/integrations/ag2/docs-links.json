@@ -32,6 +32,10 @@
     "subagents": {
       "og_docs_url": "https://docs.copilotkit.ai/ag2",
       "shell_docs_path": "/multi-agent/subagents"
+    },
+    "auth": {
+      "og_docs_url": "https://docs.copilotkit.ai/ag2/auth",
+      "shell_docs_path": "/auth"
     }
   },
   "missing": [

@@ -32,6 +32,10 @@
     "subagents": {
       "og_docs_url": "https://docs.copilotkit.ai/microsoft-agent-framework",
       "shell_docs_path": "/multi-agent/subagents"
+    },
+    "auth": {
+      "og_docs_url": "https://docs.copilotkit.ai/microsoft-agent-framework/auth",
+      "shell_docs_path": "/auth"
     }
   }
 }

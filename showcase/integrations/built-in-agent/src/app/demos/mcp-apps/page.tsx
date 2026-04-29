@@ -18,6 +18,10 @@
 import { CopilotKitProvider, CopilotChat } from "@copilotkit/react-core/v2";
 
 export default function MCPAppsDemo() {
+  // @region[no-frontend-renderer-needed]
+  // No `renderActivityMessages`, no `useRenderActivityMessage` — the
+  // CopilotKitProvider auto-registers the built-in `MCPAppsActivityRenderer`
+  // for the "mcp-apps" activity type. A plain <CopilotChat /> is enough.
   return (
     <CopilotKitProvider runtimeUrl="/api/copilotkit-mcp-apps" useSingleEndpoint>
       <main className="p-8">
@@ -31,4 +35,5 @@ export default function MCPAppsDemo() {
       </main>
     </CopilotKitProvider>
   );
+  // @endregion[no-frontend-renderer-needed]
 }

@@ -12,6 +12,14 @@ import { createOguiAgent } from "@/lib/factory/ogui-factory";
 // CopilotKit provider's setTools effect to behave differently from the
 // default tools-only runtime. Keeping it on its own basePath avoids
 // cross-talk with other demos.
+//
+// Server-side config is identical for the minimal and advanced cells —
+// the advanced behaviour (sandbox -> host function calls) is wired
+// entirely on the frontend via `openGenerativeUI.sandboxFunctions` on
+// the provider. The single `openGenerativeUI` flag below turns on
+// Open Generative UI for the listed agent(s).
+// @region[minimal-runtime-flag]
+// @region[advanced-runtime-config]
 const runtime = new CopilotRuntime({
   agents: { default: createOguiAgent() },
   runner: new InMemoryAgentRunner(),
@@ -19,6 +27,8 @@ const runtime = new CopilotRuntime({
     agents: ["default"],
   },
 });
+// @endregion[advanced-runtime-config]
+// @endregion[minimal-runtime-flag]
 
 const handler = createCopilotRuntimeHandler({
   runtime,

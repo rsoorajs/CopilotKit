@@ -61,6 +61,7 @@ class _A2uiError(TypedDict):
 # ---- Tools --------------------------------------------------------------
 
 
+# @region[weather-tool-backend]
 @tool
 def get_weather(location: str):
     """Get current weather for a location.
@@ -72,6 +73,7 @@ def get_weather(location: str):
         Weather information as JSON string
     """
     return json.dumps(get_weather_impl(location))
+# @endregion[weather-tool-backend]
 
 
 @tool
