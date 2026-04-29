@@ -127,13 +127,9 @@ The agent emits a `{ root, elements }` JSON object as the assistant message cont
 
 Anything else (free-form text, code fences around the JSON, a "Here's your dashboard:" preamble) is stripped by the renderer's tolerant parser before validation. The agent doesn't need to be perfectly clean.
 
-## Not supported on Spring AI
+## Comparing the two patterns
 
-Spring AI's manifest marks `byoc-json-render` as `not_supported`. The Java backend doesn't expose the streaming structured-output channel that `@json-render/react` expects on the frontend. Use [BYOC — Hashbrown](/byoc-hashbrown) on Spring AI instead, or pick a different framework if json-render is required.
-
-## Comparing the two BYOC patterns
-
-Both `byoc-json-render` and [`byoc-hashbrown`](/byoc-hashbrown) solve the same problem with two different rendering libraries. The agent contract is similar; the React glue, validation strategy, and rendering behaviour differ.
+Both `byoc-json-render` and [`byoc-hashbrown`](/generative-ui/hashbrown) solve the same problem with two different rendering libraries. The agent contract is similar; the React glue, validation strategy, and rendering behaviour differ.
 
 <FeatureIntegrations feature="byoc-json-render" />
 
