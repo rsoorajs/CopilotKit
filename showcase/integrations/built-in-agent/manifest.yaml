@@ -41,6 +41,11 @@ features:
   - subagents
   - mcp-apps
   - open-gen-ui
+  - open-gen-ui-advanced
+  - tool-rendering-default-catchall
+  - tool-rendering-custom-catchall
+  - frontend-tools
+  - frontend-tools-async
 demos:
   - id: cli-start
     name: CLI Start Command
@@ -186,6 +191,52 @@ demos:
       - src/app/demos/open-gen-ui/page.tsx
       - src/app/api/copilotkit-ogui/route.ts
       - src/lib/factory/ogui-factory.ts
+  - id: open-gen-ui-advanced
+    name: Open-Ended Generative UI (Advanced)
+    description: Sandboxed iframe UI calls back into host-defined functions
+    tags: [generative-ui]
+    route: /demos/open-gen-ui-advanced
+    highlight:
+      - src/app/demos/open-gen-ui-advanced/page.tsx
+      - src/app/demos/open-gen-ui-advanced/sandbox-functions.ts
+      - src/app/demos/open-gen-ui-advanced/suggestions.ts
+      - src/app/api/copilotkit-ogui/route.ts
+      - src/lib/factory/ogui-factory.ts
+  - id: tool-rendering-default-catchall
+    name: "Tool Rendering: Default Catch-all"
+    description: Built-in DefaultToolCallRenderer wired with no config
+    tags: [agent-capabilities]
+    route: /demos/tool-rendering-default-catchall
+    highlight:
+      - src/app/demos/tool-rendering-default-catchall/page.tsx
+      - src/lib/factory/server-tools.ts
+      - src/lib/factory/tanstack-factory.ts
+  - id: tool-rendering-custom-catchall
+    name: "Tool Rendering: Custom Catch-all"
+    description: Single branded wildcard renderer for every tool call
+    tags: [agent-capabilities]
+    route: /demos/tool-rendering-custom-catchall
+    highlight:
+      - src/app/demos/tool-rendering-custom-catchall/page.tsx
+      - src/app/demos/tool-rendering-custom-catchall/custom-catchall-renderer.tsx
+      - src/lib/factory/server-tools.ts
+  - id: frontend-tools
+    name: Frontend Tools
+    description: Tool defined in React, executed in the browser, invoked by the agent
+    tags: [agent-capabilities]
+    route: /demos/frontend-tools
+    highlight:
+      - src/app/demos/frontend-tools/page.tsx
+      - src/lib/factory/tanstack-factory.ts
+  - id: frontend-tools-async
+    name: Frontend Tools (Async)
+    description: Async frontend-tool handler with branded per-tool render
+    tags: [agent-capabilities]
+    route: /demos/frontend-tools-async
+    highlight:
+      - src/app/demos/frontend-tools-async/page.tsx
+      - src/app/demos/frontend-tools-async/notes-card.tsx
+      - src/lib/factory/tanstack-factory.ts
 # NOTE: starter omitted intentionally for v1 of this column. The
 # `showcase/scripts/generate-starters.ts` generator expects every package
 # to have a separate `src/agent/` backend; built-in-agent runs in-process
