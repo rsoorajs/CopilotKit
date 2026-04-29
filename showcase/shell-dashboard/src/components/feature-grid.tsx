@@ -299,6 +299,9 @@ function CategorySection({
                 ))}
               {integrations.map((integration) => {
                 const demo = integration.demos.find((d) => d.id === feature.id);
+                const isNotSupported =
+                  integration.not_supported_features?.includes(feature.id) ??
+                  false;
                 return (
                   <td
                     key={integration.slug}
@@ -316,6 +319,16 @@ function CategorySection({
                         liveStatus,
                         connection,
                       })
+                    ) : isNotSupported ? (
+                      // Architectural limit — framework cannot support this
+                      // feature. Distinct from the unshipped "no demo" ✗ so
+                      // viewers can tell "won't be done" apart from "to do".
+                      <span
+                        className="inline-flex items-center justify-center px-1.5 py-0.5 rounded text-base border border-slate-500/40 bg-slate-500/10 text-slate-400"
+                        title="Not supported by this framework"
+                      >
+                        🚫
+                      </span>
                     ) : (
                       <div
                         className="text-center text-base text-[var(--danger)]"
@@ -453,7 +466,10 @@ export function FeatureGrid({
 
       {connection === "error" && <OfflineBanner />}
 
-      <div className="rounded-lg border border-[var(--border)] bg-[var(--bg-surface)]" style={{ width: 'fit-content', minWidth: '100%' }}>
+      <div
+        className="rounded-lg border border-[var(--border)] bg-[var(--bg-surface)]"
+        style={{ width: "fit-content", minWidth: "100%" }}
+      >
         <table className="border-collapse text-sm">
           <thead>
             <tr>
