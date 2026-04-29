@@ -30,6 +30,7 @@ features:
   - frontend-tools
   - frontend-tools-async
   - hitl-in-chat
+  - hitl-in-chat-booking
   - hitl-in-app
   - hitl
   - tool-rendering
@@ -56,6 +57,9 @@ features:
   - headless-simple
   - headless-complete
   - readonly-state-agent-context
+not_supported_features:
+  - gen-ui-interrupt
+  - interrupt-headless
 demos:
   - id: cli-start
     name: CLI Start Command
@@ -135,6 +139,18 @@ demos:
   - id: hitl-in-chat
     name: In-Chat HITL (useHumanInTheLoop)
     description: Interactive approval/decision surface rendered inline in the chat via the high-level `useHumanInTheLoop` hook
+    tags:
+      - interactivity
+    route: /demos/hitl-in-chat
+    animated_preview_url:
+    highlight:
+      - src/app/demos/hitl-in-chat/agent.py
+      - src/app/demos/hitl-in-chat/page.tsx
+      - src/app/demos/hitl-in-chat/time-picker-card.tsx
+      - src/app/api/copilotkit/route.ts
+  - id: hitl-in-chat-booking
+    name: In-Chat HITL (Booking)
+    description: Time-picker card rendered inline via useHumanInTheLoop for a booking flow
     tags:
       - interactivity
     route: /demos/hitl-in-chat
