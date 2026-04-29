@@ -63,6 +63,8 @@ const agentNames = [
   "beautiful_chat",
   // auth
   "auth",
+  // mcp apps (also wired via separate runtime route copilotkit-mcp-apps)
+  "mcp_apps",
 ];
 
 const agents: Record<string, AbstractAgent> = {};

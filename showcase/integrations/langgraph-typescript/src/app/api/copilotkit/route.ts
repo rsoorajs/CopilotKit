@@ -63,6 +63,8 @@ const demoAgents: Record<string, string> = {
   frontend_tools: "frontend_tools",
   "frontend-tools-async": "frontend_tools_async",
   "hitl-in-app": "hitl_in_app",
+  // In-Chat HITL — useHumanInTheLoop with frontend-rendered time-picker.
+  "hitl-in-chat": "hitl_in_chat",
   "readonly-state-agent-context": "readonly_state_agent_context",
   "shared-state-read-write": "shared_state_read_write",
   subagents: "subagents",

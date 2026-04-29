@@ -7,6 +7,15 @@ are **not** ported to the PydanticAI showcase, with the reason for each
 skip. See `manifest.yaml` for the full list of demos that **are** shipped
 in this package.
 
+## Recently ported demos
+
+- `gen-ui-tool-based` — Tool-based generative UI with frontend-registered
+  `render_bar_chart` and `render_pie_chart` components. The PydanticAI
+  agent uses a chart-viz system prompt and relies on the runtime to
+  surface frontend-registered tool definitions on each run; no backend
+  tool implementations are required because the components handle
+  rendering directly on the client.
+
 ## New demos (post-PR #4271)
 
 The following demos introduced on main via PR #4271 are now ported:
@@ -58,11 +67,15 @@ The following demos introduced on main via PR #4271 are now ported:
   through `agent.to_ag_ui()`. Skipped until that bridge exists; a faked
   version would not reflect the real integration.
 
-- `gen-ui-interrupt`, `interrupt-headless` — Both demos are built on
-  LangGraph's `interrupt()` primitive (pauses graph execution mid-tool-
-  call and surfaces the payload to the client via `useInterrupt`).
-  PydanticAI does not have an equivalent interrupt/resume primitive —
-  its tools run to completion. Skipped as framework-specific.
+- `gen-ui-interrupt`, `interrupt-headless`, `hitl-in-chat`,
+  `hitl-in-chat-booking` — All four demos are built on LangGraph's
+  `interrupt()` primitive (pauses graph execution mid-tool-call and
+  surfaces the payload to the client via `useInterrupt`). PydanticAI
+  does not have an equivalent interrupt/resume primitive — its tools
+  run to completion. Skipped as framework-specific. (The HITL
+  experience in this package is delivered via the `hitl` and
+  `hitl-in-app` cells, which use a frontend-tool-driven approval
+  pattern that does not require backend interrupts.)
 
 ## Parked for future parity
 

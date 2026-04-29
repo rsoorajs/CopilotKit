@@ -54,6 +54,7 @@ const agentNames = [
   "reasoning-default-render",
   "tool-rendering-reasoning-chain",
   "mcp-apps",
+  "byoc-hashbrown",
 ];
 
 const agents: Record<string, AbstractAgent> = {};

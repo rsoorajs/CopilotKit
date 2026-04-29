@@ -30,7 +30,7 @@ export function RefDepthHeader() {
 
 export interface RefDepthCellProps {
   depth: 0 | 1 | 2 | 3 | 4 | 5 | 6;
-  status: "wired" | "stub" | "unshipped";
+  status: "wired" | "stub" | "unshipped" | "unsupported";
   /** When true, chip renders in red regardless of depth. */
   regression?: boolean;
 }

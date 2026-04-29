@@ -26,7 +26,9 @@ from agents.agent_config_agent import create_agent_config_agent
 from agents.beautiful_chat import create_beautiful_chat_agent
 from agents.byoc_hashbrown_agent import create_byoc_hashbrown_agent
 from agents.byoc_json_render_agent import create_byoc_json_render_agent
+from agents.gen_ui_tool_based_agent import create_gen_ui_tool_based_agent
 from agents.hitl_in_app_agent import create_hitl_in_app_agent
+from agents.hitl_in_chat_agent import create_hitl_in_chat_agent
 from agents.interrupt_agent import create_interrupt_agent
 from agents.mcp_apps_agent import create_mcp_apps_agent
 from agents.multimodal_agent import create_multimodal_agent
@@ -74,7 +76,9 @@ open_gen_ui_advanced_agent = create_open_gen_ui_advanced_agent(chat_client)
 byoc_hashbrown_agent = create_byoc_hashbrown_agent(chat_client)
 byoc_json_render_agent = create_byoc_json_render_agent(chat_client)
 mcp_apps_agent = create_mcp_apps_agent(chat_client)
+gen_ui_tool_based_agent = create_gen_ui_tool_based_agent(chat_client)
 hitl_in_app_agent = create_hitl_in_app_agent(chat_client)
+hitl_in_chat_agent = create_hitl_in_chat_agent(chat_client)
 interrupt_agent = create_interrupt_agent(chat_client)
 shared_state_read_write_agent = create_shared_state_read_write_agent(chat_client)
 subagents_agent = create_subagents_agent(chat_client)
@@ -132,6 +136,10 @@ add_agent_framework_fastapi_endpoint(app=app, agent=byoc_hashbrown_agent, path="
 add_agent_framework_fastapi_endpoint(app=app, agent=byoc_json_render_agent, path="/byoc-json-render")
 add_agent_framework_fastapi_endpoint(app=app, agent=mcp_apps_agent, path="/mcp-apps")
 add_agent_framework_fastapi_endpoint(app=app, agent=hitl_in_app_agent, path="/hitl-in-app")
+add_agent_framework_fastapi_endpoint(app=app, agent=hitl_in_chat_agent, path="/hitl-in-chat")
+add_agent_framework_fastapi_endpoint(
+    app=app, agent=gen_ui_tool_based_agent, path="/gen-ui-tool-based"
+)
 add_agent_framework_fastapi_endpoint(app=app, agent=interrupt_agent, path="/interrupt-adapted")
 add_agent_framework_fastapi_endpoint(
     app=app, agent=shared_state_read_write_agent, path="/shared-state-read-write"

@@ -21,9 +21,11 @@ interaction_modalities:
   - embedded
   - chat
 features:
+  - cli-start
   - agentic-chat
   - tool-rendering
   - gen-ui-agent
+  - gen-ui-tool-based
   - shared-state-streaming
   - shared-state-read-write
   - subagents
@@ -36,8 +38,17 @@ features:
   - frontend-tools-async
   - hitl
   - hitl-in-chat
+  - hitl-in-chat-booking
   - hitl-in-app
   - readonly-state-agent-context
+  - mcp-apps
+  - open-gen-ui
+  - open-gen-ui-advanced
+  - agent-config
+  - voice
+  - multimodal
+  - byoc-hashbrown
+  - byoc-json-render
   - tool-rendering-default-catchall
   - tool-rendering-custom-catchall
   - agentic-chat-reasoning
@@ -45,7 +56,19 @@ features:
   - tool-rendering-reasoning-chain
   - headless-complete
   - auth
+  - beautiful-chat
+  - a2ui-fixed-schema
+  - declarative-gen-ui
+not_supported_features:
+  - gen-ui-interrupt
+  - interrupt-headless
 demos:
+  - id: cli-start
+    name: CLI Start Command
+    description: Copy-paste command to clone the canonical starter
+    tags:
+      - chat-ui
+    command: "npx copilotkit@latest init --framework agno"
   - id: agentic-chat
     name: Agentic Chat
     description: Natural conversation with frontend tool execution
@@ -339,6 +362,169 @@ demos:
       - src/app/demos/auth/use-demo-auth.ts
       - src/app/demos/auth/demo-token.ts
       - src/app/api/copilotkit-auth/[[...slug]]/route.ts
+  - id: gen-ui-tool-based
+    name: Tool-Based Generative UI
+    description: Agent uses tools to trigger UI generation — frontend renders a haiku card from a generate_haiku tool call
+    tags:
+      - generative-ui
+    route: /demos/gen-ui-tool-based
+    animated_preview_url:
+    highlight:
+      - src/app/demos/gen-ui-tool-based/page.tsx
+      - src/app/api/copilotkit/route.ts
+  - id: hitl-in-chat-booking
+    name: In-Chat HITL (Booking)
+    description: Time-picker card rendered inline via useHumanInTheLoop for a booking flow — same surface as hitl-in-chat, branded for the booking scenario
+    tags:
+      - interactivity
+    route: /demos/hitl-in-chat
+    animated_preview_url:
+    highlight:
+      - src/agents/main.py
+      - src/app/demos/hitl-in-chat/page.tsx
+      - src/app/demos/hitl-in-chat/time-picker-card.tsx
+      - src/app/api/copilotkit/route.ts
+  - id: mcp-apps
+    name: MCP Apps
+    description: MCP-provided tools rendered inline as sandboxed UI via the runtime's mcpApps middleware
+    tags:
+      - generative-ui
+    route: /demos/mcp-apps
+    animated_preview_url:
+    highlight:
+      - src/agents/mcp_apps_agent.py
+      - src/app/demos/mcp-apps/page.tsx
+      - src/app/api/copilotkit-mcp-apps/route.ts
+  - id: open-gen-ui
+    name: Open Generative UI
+    description: Agent-authored HTML + CSS streamed into a sandboxed iframe via the runtime's openGenerativeUI middleware
+    tags:
+      - generative-ui
+    route: /demos/open-gen-ui
+    animated_preview_url:
+    highlight:
+      - src/app/demos/open-gen-ui/page.tsx
+      - src/app/api/copilotkit-ogui/route.ts
+  - id: open-gen-ui-advanced
+    name: Open Generative UI (Advanced)
+    description: Sandboxed iframe with host-side sandbox functions the agent's UI can call back into via Websandbox.connection.remote
+    tags:
+      - generative-ui
+    route: /demos/open-gen-ui-advanced
+    animated_preview_url:
+    highlight:
+      - src/app/demos/open-gen-ui-advanced/page.tsx
+      - src/app/demos/open-gen-ui-advanced/sandbox-functions.ts
+      - src/app/demos/open-gen-ui-advanced/suggestions.ts
+      - src/app/api/copilotkit-ogui/route.ts
+  - id: agent-config
+    name: Agent Config Object
+    description: Frontend forwards a typed config object (tone, expertise, response length) the Agno agent reads per turn to compose its system prompt
+    tags:
+      - runtime
+    route: /demos/agent-config
+    animated_preview_url:
+    highlight:
+      - src/agents/agent_config_agent.py
+      - src/app/demos/agent-config/page.tsx
+      - src/app/demos/agent-config/config-card.tsx
+      - src/app/api/copilotkit-agent-config/route.ts
+  - id: voice
+    name: Voice Input
+    description: Microphone + sample-audio button → /transcribe endpoint → text injected into the chat composer
+    tags:
+      - chat-ui
+    route: /demos/voice
+    animated_preview_url:
+    highlight:
+      - src/app/demos/voice/page.tsx
+      - src/app/demos/voice/sample-audio-button.tsx
+      - src/app/api/copilotkit-voice/[[...slug]]/route.ts
+  - id: multimodal
+    name: Multimodal Attachments
+    description: Image + PDF attachments forwarded to a vision-capable Agno agent via CopilotChat's attachments config
+    tags:
+      - chat-ui
+    route: /demos/multimodal
+    animated_preview_url:
+    highlight:
+      - src/agents/multimodal_agent.py
+      - src/app/demos/multimodal/page.tsx
+      - src/app/demos/multimodal/sample-attachment-buttons.tsx
+      - src/app/api/copilotkit-multimodal/route.ts
+  - id: byoc-hashbrown
+    name: "BYOC: Hashbrown"
+    description: Streaming structured output rendered progressively via @hashbrownai/react useUiKit + useJsonParser
+    tags:
+      - generative-ui
+      - byoc
+    route: /demos/byoc-hashbrown
+    animated_preview_url:
+    highlight:
+      - src/app/demos/byoc-hashbrown/page.tsx
+      - src/app/demos/byoc-hashbrown/hashbrown-renderer.tsx
+      - src/app/demos/byoc-hashbrown/charts/pie-chart.tsx
+      - src/app/demos/byoc-hashbrown/charts/bar-chart.tsx
+      - src/app/api/copilotkit-byoc-hashbrown/route.ts
+  - id: byoc-json-render
+    name: "BYOC: JSON Render"
+    description: Agent emits a json-render spec; the page renders it against a Zod-validated catalog (MetricCard, BarChart, PieChart)
+    tags:
+      - generative-ui
+      - byoc
+    route: /demos/byoc-json-render
+    animated_preview_url:
+    highlight:
+      - src/app/demos/byoc-json-render/page.tsx
+      - src/app/demos/byoc-json-render/json-render-renderer.tsx
+      - src/app/demos/byoc-json-render/registry.tsx
+      - src/app/demos/byoc-json-render/catalog.ts
+      - src/app/api/copilotkit-byoc-json-render/route.ts
+  - id: beautiful-chat
+    name: Beautiful Chat
+    description: Polished landing-style chat shell over the shared Agno agent — gradient background, suggestion pills, and an example dashboard surface
+    tags:
+      - chat-ui
+    route: /demos/beautiful-chat
+    animated_preview_url:
+    highlight:
+      - src/agents/main.py
+      - src/app/demos/beautiful-chat/page.tsx
+      - src/app/demos/byoc-json-render/charts/bar-chart.tsx
+      - src/app/demos/byoc-json-render/charts/pie-chart.tsx
+      - src/app/api/copilotkit/route.ts
+  - id: declarative-gen-ui
+    name: "Declarative Generative UI (A2UI Dynamic)"
+    description: Agent dynamically composes UI per turn from a registered frontend catalog — secondary LLM call inside the backend `generate_a2ui` tool emits an a2ui_operations container that the A2UI middleware forwards to the catalog renderer
+    tags:
+      - generative-ui
+      - a2ui
+    route: /demos/declarative-gen-ui
+    animated_preview_url:
+    highlight:
+      - src/agents/a2ui_dynamic_agent.py
+      - src/app/demos/declarative-gen-ui/page.tsx
+      - src/app/demos/declarative-gen-ui/a2ui/catalog.ts
+      - src/app/demos/declarative-gen-ui/a2ui/definitions.ts
+      - src/app/demos/declarative-gen-ui/a2ui/renderers.tsx
+      - src/app/api/copilotkit-declarative-gen-ui/route.ts
+  - id: a2ui-fixed-schema
+    name: "A2UI Fixed Schema"
+    description: Schema is authored ahead of time as JSON; the agent only streams data into the data model. `display_flight` emits an a2ui_operations container directly with no secondary LLM call
+    tags:
+      - generative-ui
+      - a2ui
+    route: /demos/a2ui-fixed-schema
+    animated_preview_url:
+    highlight:
+      - src/agents/a2ui_fixed_agent.py
+      - src/agents/a2ui_schemas/flight_schema.json
+      - src/agents/a2ui_schemas/booked_schema.json
+      - src/app/demos/a2ui-fixed-schema/page.tsx
+      - src/app/demos/a2ui-fixed-schema/a2ui/catalog.ts
+      - src/app/demos/a2ui-fixed-schema/a2ui/definitions.ts
+      - src/app/demos/a2ui-fixed-schema/a2ui/renderers.tsx
+      - src/app/api/copilotkit-a2ui-fixed-schema/route.ts
 managed_platform:
   name: Agent OS
   url: https://os.agno.com

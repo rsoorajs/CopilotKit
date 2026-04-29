@@ -48,10 +48,23 @@ const cell = (
   category_name: "Dev Ex",
 });
 
-
 describe("deriveDepth", () => {
   it("returns D0 for unshipped cells regardless of live data", () => {
     const c = cell("lgp", "voice", "unshipped");
+    const live = mapOf([
+      row("health:lgp", "health", "green"),
+      row("agent:lgp", "agent", "green"),
+      row("chat:lgp", "chat", "green"),
+    ]);
+    const result = deriveDepth(c, live);
+    expect(result.achieved).toBe(0);
+    expect(result.isRegression).toBe(false);
+  });
+
+  it("returns D0 with no regression for unsupported cells regardless of live data", () => {
+    // Unsupported cells have no probes — even if probes for the same
+    // integration are green, the cell stays at D0 with no regression.
+    const c = cell("lgp", "voice", "unsupported");
     const live = mapOf([
       row("health:lgp", "health", "green"),
       row("agent:lgp", "agent", "green"),
@@ -298,5 +311,4 @@ describe("deriveDepth", () => {
     const result = deriveDepth(c, live);
     expect(result.achieved).toBe(4);
   });
-
 });

@@ -26,13 +26,24 @@ expose at this time:
   into the LangGraph interrupt lifecycle. Strands does not provide an
   equivalent first-class interrupt primitive. The ergonomic replacement is
   `hitl-in-chat` (implemented), which uses `useHumanInTheLoop` on top of a
-  regular frontend tool — Strands supports that natively.
+  regular frontend tool — Strands supports that natively. Surfaced as a stub
+  page (`src/app/demos/gen-ui-interrupt/`) and as
+  `not_supported_features.gen-ui-interrupt` in the manifest.
 - **interrupt-headless** — Same rationale as `gen-ui-interrupt`. Requires
   `useLangGraphInterrupt`'s resolve/respond primitive. Not portable.
-- **mcp-apps** — Requires MCP server-driven UI routed through a LangGraph
-  tool node. The MCP plumbing (StreamableHttp transport + the
-  `useConfigureMcpClient` wiring) is LangGraph-specific in our current
-  runtime glue. Not portable without new Strands-side integration work.
+  Surfaced as a stub page (`src/app/demos/interrupt-headless/`) and as
+  `not_supported_features.interrupt-headless` in the manifest.
+
+## MCP Apps — now ported (wave-2 follow-up)
+
+- **mcp-apps** — **shipped (simplified)**. Dedicated
+  `/api/copilotkit-mcp-apps` route configures
+  `mcpApps.servers: [{ type: "http", url: ..., serverId: "excalidraw" }]`.
+  The Strands shared agent has no bespoke MCP tools — the runtime
+  middleware advertises the MCP server's tools to the agent at request
+  time and emits the activity events that CopilotKit's built-in
+  `MCPAppsActivityRenderer` paints inline as a sandboxed iframe. Mirrors
+  the langgraph-python sibling pattern.
 
 Wave-2 port status for the previously deferred demos:
 
@@ -56,13 +67,16 @@ Wave-2 port status for the previously deferred demos:
   `openGenerativeUI.sandboxFunctions` (evaluateExpression, notifyHost) so
   the agent-authored iframe can invoke host functions via
   `Websandbox.connection.remote.<name>(...)`.
-- **beautiful-chat** — **skipped** (truthfully). Porting fully requires
-  dozens of starter-level sub-components (UI primitives, todo board,
-  meeting-time picker, headless chat, theme toggle, a2ui catalog, etc.)
-  AND a dedicated runtime that enables `openGenerativeUI` + `a2ui` +
-  `mcpApps` simultaneously. That is more work than all four other wave-2
-  demos combined and deserves its own blitz. See the LangGraph-Python
-  reference in `showcase/integrations/langgraph-python/src/app/demos/beautiful-chat/`
+- **beautiful-chat** — **shipped (simplified)** in the wave-2 follow-up.
+  Polished landing-style chat shell with brand theming and seeded
+  suggestions, sitting on top of the shared Strands agent. Pattern
+  mirrors the spring-ai sibling
+  (`showcase/integrations/spring-ai/src/app/demos/beautiful-chat/`).
+  Porting the full canonical surface (ExampleCanvas, GenerativeUIExamples,
+  declarative A2UI catalog, theme provider, dedicated runtime that
+  enables `openGenerativeUI` + `a2ui` + `mcpApps` simultaneously) remains
+  out-of-scope future work — see the LangGraph-Python reference in
+  `showcase/integrations/langgraph-python/src/app/demos/beautiful-chat/`
   for the full surface area.
 
 ### Per-demo prompt specialization caveat
@@ -111,6 +125,17 @@ Added in this blitz:
 - `auth` — bearer-token gated runtime.
 - `voice` — voice input via `@copilotkit/voice`.
 - `agent-config` — typed config object forwarded to agent.
+- `gen-ui-tool-based` — tool-triggered generative UI (haiku generator) via
+  `useFrontendTool` with a custom render. Manifest entry added; the page
+  was already in place from a prior wave.
+- `tool-rendering-default-catchall` — zero-config wildcard tool render via
+  `useDefaultRenderTool()`. Manifest entry added; page already shipped.
+- `tool-rendering-custom-catchall` — branded wildcard render. Manifest
+  entry added; page already shipped.
+- `hitl-in-chat-booking` — manifest alias of `hitl-in-chat`; both feature
+  ids point to the same `/demos/hitl-in-chat` route, mirroring the
+  langgraph-python manifest topology so the harness's per-feature live
+  status surfaces the booking flow as its own row.
 
 The Strands shared agent (`src/agents/agent.py`) already exposes the tools
 all of the above need (weather, flights, query_data, schedule_meeting,
