@@ -58,6 +58,7 @@ from agents.tool_rendering_reasoning_chain_agent import (
     agent as tool_rendering_reasoning_chain_agent,
 )
 from agents.mcp_apps_agent import agent as mcp_apps_agent
+from agents.hitl_in_chat_agent import agent as hitl_in_chat_agent
 
 load_dotenv()
 
@@ -143,6 +144,11 @@ app.mount(
 
 # ── MCP Apps — no-tools agent; runtime mcpApps middleware injects tools
 app.mount("/mcp_apps", mcp_apps_agent.to_ag_ui())
+
+# ── In-Chat HITL — frontend-defined `book_call` tool via useHumanInTheLoop
+# The agent has no backend tools; the AG-UI bridge surfaces the
+# frontend-registered tool to the model on each run.
+app.mount("/hitl_in_chat", hitl_in_chat_agent.to_ag_ui())
 
 # ── Main sales agent — mounted at root (catch-all) ───────────────────
 # Mounted LAST so the sub-path mounts above win for their specific paths.

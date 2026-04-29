@@ -42,6 +42,7 @@ const agentNames = [
   "frontend-tools",
   "frontend-tools-async",
   "hitl-in-app",
+  "hitl-in-chat",
   // Generative UI demos
   "declarative-gen-ui",
   "a2ui-fixed-schema",
@@ -75,6 +76,13 @@ agents["subagents"] = new HttpAgent({
 });
 agents["gen-ui-tool-based"] = new HttpAgent({
   url: `${AGENT_URL}/gen_ui_tool_based/`,
+});
+
+// In-Chat HITL — chat-only agent; the `book_call` tool is defined on the
+// frontend via `useHumanInTheLoop`. Backed by the dedicated mount at
+// `/hitl_in_chat` (see src/agent_server.py).
+agents["hitl-in-chat"] = new HttpAgent({
+  url: `${AGENT_URL}/hitl_in_chat/`,
 });
 
 // Reasoning trio — both reasoning cells share the same backend agent
