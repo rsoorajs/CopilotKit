@@ -19,6 +19,7 @@ from starlette.responses import JSONResponse
 from dotenv import load_dotenv
 
 from agents.agent import stream as default_stream
+from agents.headless_complete import headless_complete_app
 from agents.shared_state_read_write import (
     shared_state_read_write_app,
 )
@@ -57,6 +58,7 @@ app.add_middleware(
 # under it, so the named mounts must come first.
 app.mount("/shared-state-read-write", shared_state_read_write_app)
 app.mount("/subagents", subagents_app)
+app.mount("/headless-complete", headless_complete_app)
 
 
 # Mount the default AG2 AG-UI endpoint at the root.
