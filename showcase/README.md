@@ -94,22 +94,21 @@ The showcase harness includes a CLI that runs the same probe drivers (liveness, 
 ### Quick start
 
 ```sh
-# All commands run from showcase/harness
-cd showcase/harness
+# from the repo root — all examples below use showcase/bin/showcase
 
 # 1. Make sure Docker is running (Colima, Docker Desktop, or OrbStack)
 
 # 2. Start infra + one integration
-npx tsx src/cli.ts up langgraph-python
+./showcase/bin/showcase up langgraph-python
 
 # 3. Run smoke probes
-npx tsx src/cli.ts test langgraph-python --smoke
+./showcase/bin/showcase test langgraph-python --smoke
 
 # 4. Run full D5 depth
-npx tsx src/cli.ts test langgraph-python --d5 --headed
+./showcase/bin/showcase test langgraph-python --d5 --headed
 
 # 5. Tear down when done
-npx tsx src/cli.ts down
+./showcase/bin/showcase down
 ```
 
 ### Commands
