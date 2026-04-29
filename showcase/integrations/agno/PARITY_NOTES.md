@@ -41,6 +41,20 @@ See `manifest.yaml` for the authoritative list.
   `onRequest` hook that rejects requests lacking a static Bearer token.
   Authenticated target is the Agno main agent at `/agui`.
 
+### Fourth pass (manifest fill — first half)
+
+- `cli-start` — informational demo entry (no route/agent) advertising the
+  copy-paste starter command for Agno. Mirrors the canonical
+  `langgraph-python` cli-start cell.
+- `gen-ui-tool-based` — already shipped as a haiku-renderer demo (frontend-only
+  via `useFrontendTool` + `render`); now declared in `manifest.yaml` so the
+  showcase picks it up. Wired to the main agent under the `gen-ui-tool-based`
+  alias in `src/app/api/copilotkit/route.ts`.
+- `hitl-in-chat-booking` — manifest entry pointing at the existing
+  `hitl-in-chat` time-picker booking surface (same files, distinct cell). The
+  Agno main agent's `book_call` external-execution tool already drives this
+  flow.
+
 ### Third pass (state + multi-agent recovery)
 
 - `shared-state-read-write` — bidirectional shared state with the UI

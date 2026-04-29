@@ -21,9 +21,11 @@ interaction_modalities:
   - embedded
   - chat
 features:
+  - cli-start
   - agentic-chat
   - tool-rendering
   - gen-ui-agent
+  - gen-ui-tool-based
   - shared-state-streaming
   - shared-state-read-write
   - subagents
@@ -36,6 +38,7 @@ features:
   - frontend-tools-async
   - hitl
   - hitl-in-chat
+  - hitl-in-chat-booking
   - hitl-in-app
   - readonly-state-agent-context
   - tool-rendering-default-catchall
@@ -46,6 +49,12 @@ features:
   - headless-complete
   - auth
 demos:
+  - id: cli-start
+    name: CLI Start Command
+    description: Copy-paste command to clone the canonical starter
+    tags:
+      - chat-ui
+    command: "npx copilotkit@latest init --framework agno"
   - id: agentic-chat
     name: Agentic Chat
     description: Natural conversation with frontend tool execution
@@ -339,6 +348,28 @@ demos:
       - src/app/demos/auth/use-demo-auth.ts
       - src/app/demos/auth/demo-token.ts
       - src/app/api/copilotkit-auth/[[...slug]]/route.ts
+  - id: gen-ui-tool-based
+    name: Tool-Based Generative UI
+    description: Agent uses tools to trigger UI generation — frontend renders a haiku card from a generate_haiku tool call
+    tags:
+      - generative-ui
+    route: /demos/gen-ui-tool-based
+    animated_preview_url:
+    highlight:
+      - src/app/demos/gen-ui-tool-based/page.tsx
+      - src/app/api/copilotkit/route.ts
+  - id: hitl-in-chat-booking
+    name: In-Chat HITL (Booking)
+    description: Time-picker card rendered inline via useHumanInTheLoop for a booking flow — same surface as hitl-in-chat, branded for the booking scenario
+    tags:
+      - interactivity
+    route: /demos/hitl-in-chat
+    animated_preview_url:
+    highlight:
+      - src/agents/main.py
+      - src/app/demos/hitl-in-chat/page.tsx
+      - src/app/demos/hitl-in-chat/time-picker-card.tsx
+      - src/app/api/copilotkit/route.ts
 managed_platform:
   name: Agent OS
   url: https://os.agno.com
