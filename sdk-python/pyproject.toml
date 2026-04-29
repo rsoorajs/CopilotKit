@@ -36,6 +36,9 @@ ag-ui-protocol = ">=0.1.15"
 fastapi = ">=0.115.0,<1.0.0"
 partialjson = "^0.0.8"
 toml = "^0.10.2"
+# Pin transitive: cp314 wheels first appear in 2.35.0; older versions
+# would force a Rust source build that fails on PyO3 0.24 (capped at 3.13).
+pydantic-core = ">=2.35.0"
 
 [tool.poetry.extras]
 crewai = ["crewai"]
