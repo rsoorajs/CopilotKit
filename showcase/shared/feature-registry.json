@@ -245,7 +245,8 @@
       "category": "operational-generative-ui",
       "description": "Sequential tool calls with reasoning tokens rendered side-by-side",
       "kind": "testing",
-      "og_docs_url": "https://docs.copilotkit.ai/generative-ui/tool-rendering"
+      "og_docs_url": "https://docs.copilotkit.ai/generative-ui/tool-rendering",
+      "shell_docs_path": "/generative-ui/tool-rendering"
     },
     {
       "id": "agentic-chat-reasoning",
@@ -365,7 +366,8 @@
       "name": "BYOC json-render",
       "category": "byoc",
       "description": "Hashbrown-style generative UI built on json-render",
-      "og_docs_url": "https://docs.copilotkit.ai/generative-ui/your-components/display-only"
+      "og_docs_url": "https://docs.copilotkit.ai/generative-ui/your-components/display-only",
+      "shell_docs_path": "/generative-ui/your-components/display-only"
     }
   ]
 }
