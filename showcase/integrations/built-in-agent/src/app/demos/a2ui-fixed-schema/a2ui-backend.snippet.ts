@@ -26,14 +26,20 @@ const FLIGHT_SCHEMA = [
     type: "Card",
     children: [
       { type: "Title", text: "Flight" },
-      { type: "Row", children: [
-        { type: "Label", bind: "origin" },
-        { type: "Label", bind: "destination" },
-      ]},
-      { type: "Row", children: [
-        { type: "Label", bind: "airline" },
-        { type: "Label", bind: "price" },
-      ]},
+      {
+        type: "Row",
+        children: [
+          { type: "Label", bind: "origin" },
+          { type: "Label", bind: "destination" },
+        ],
+      },
+      {
+        type: "Row",
+        children: [
+          { type: "Label", bind: "airline" },
+          { type: "Label", bind: "price" },
+        ],
+      },
     ],
   },
 ];
