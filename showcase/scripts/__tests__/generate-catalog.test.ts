@@ -128,10 +128,10 @@ describe("Catalog Generator", () => {
     const stub = lgpCells.filter((c: any) => c.status === "stub");
     const unshipped = lgpCells.filter((c: any) => c.status === "unshipped");
 
-    // LGP has 40 features: 37 wired + 1 stub (cli-start) + 2 unshipped
-    expect(wired.length).toBe(37);
+    // LGP has 40 features: 39 wired + 1 stub (cli-start) + 0 unshipped
+    expect(wired.length).toBe(39);
     expect(stub.length).toBe(1);
-    expect(unshipped.length).toBe(2);
+    expect(unshipped.length).toBe(0);
   });
 
   it("stub detection: LGP/cli-start has stub status (demo exists, no route)", () => {
@@ -172,7 +172,7 @@ describe("Catalog Generator", () => {
         c.integration === "crewai-crews" && c.manifestation === "integrated",
     );
     const crewaiWired = crewaiCells.filter((c: any) => c.status === "wired");
-    expect(crewaiWired.length).toBe(30);
+    expect(crewaiWired.length).toBe(32);
 
     // All cells for crewai should have parity_tier = "partial"
     for (const cell of crewaiCells) {
