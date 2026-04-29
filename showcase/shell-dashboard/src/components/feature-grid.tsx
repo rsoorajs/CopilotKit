@@ -289,7 +289,7 @@ function CategorySection({
                   />
                 ) : (
                   <td
-                    className="sticky left-[260px] z-10 px-1 py-1 border-r-2 border-r-[#c4b5fd] border-l border-[var(--border)] align-top"
+                    className="sticky left-[160px] z-10 px-1 py-1 border-r-2 border-r-[#c4b5fd] border-l border-[var(--border)] align-top"
                     style={{ backgroundColor: "#f5f0ff" }}
                   >
                     <span className="text-[var(--text-muted)] text-[10px]">
