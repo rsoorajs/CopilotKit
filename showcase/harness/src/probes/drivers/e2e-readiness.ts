@@ -162,12 +162,39 @@ export interface E2eDemoEntry {
 }
 
 /**
- * Resolver that maps a service slug to its declared demos (registry
- * lookup). Returns the richer `E2eDemoEntry` shape so the driver can
- * distinguish demos that should be navigated to from informational cells
- * that have no UI route.
+ * Result envelope for the demos resolver. Keyed presence flag distinguishes
+ * "registry knows this slug and it has zero demos" (legitimately empty —
+ * brand-new package being scaffolded) from "registry has no entry for this
+ * slug at all" (operational fault — manifest absent from registry.json,
+ * stale registry mount, slug rename without registry refresh).
+ *
+ * Why this matters (fail-loud discipline): collapsing the two cases into
+ * `[]` lets the driver emit aggregate-green / no-side-rows for a service
+ * that was supposed to fan out across N demo cells. The dashboard then
+ * shows GREEN `agent:<slug>` (the integration is up) but MISSING
+ * `e2e:<slug>/<featureId>` rows for every cell — silent loss of signal.
+ * Returning the presence flag lets the driver emit a synthetic red side
+ * row keyed `e2e:<slug>/__missing-registry` when the slug isn't in the
+ * registry, so operators see the broken wiring at-a-glance.
+ *
+ * `entries` carries the demo list when `present === true` (may still be
+ * `[]` for a brand-new package); is always `[]` when `present === false`.
  */
-export type E2eDemosResolver = (slug: string) => Promise<E2eDemoEntry[]>;
+export interface E2eDemosResolverResult {
+  present: boolean;
+  entries: E2eDemoEntry[];
+}
+
+/**
+ * Resolver that maps a service slug to its declared demos (registry
+ * lookup). Returns the richer envelope so the driver can distinguish
+ * "registry knows this slug" from "slug missing from registry" — the
+ * latter must surface a synthetic red row on the dashboard rather than
+ * fail silently.
+ */
+export type E2eDemosResolver = (
+  slug: string,
+) => Promise<E2eDemosResolverResult>;
 
 export interface E2eDemosDriverDeps {
   launcher?: E2eDemosBrowserLauncher;
@@ -334,7 +361,15 @@ function createDefaultDemosResolver(
   logger: Logger,
 ): E2eDemosResolver {
   let cache: Map<string, E2eDemoEntry[]> | null = null;
-  return async (slug: string): Promise<E2eDemoEntry[]> => {
+  // Track read/parse/shape failures separately from "registry parsed but
+  // slug missing". When the registry can't be read at all, `present` is
+  // forced true so we don't emit a synthetic-missing row for every slug
+  // on every tick — the read-failure is a single global condition (logged
+  // separately at warn) and decorating every service's dashboard cell
+  // with a red dot would hide the actual signal of "registry not
+  // mounted yet" behind a flood of per-cell noise.
+  let readFailed = false;
+  return async (slug: string): Promise<E2eDemosResolverResult> => {
     if (cache === null) {
       const override = env.REGISTRY_JSON_PATH;
       // Production fallback path. Previously wrapped in `path.resolve()`,
@@ -365,7 +400,8 @@ function createDefaultDemosResolver(
           logger.warn("probe.e2e-demos.registry-read-failed", meta);
         }
         cache = new Map();
-        return cache.get(slug) ?? [];
+        readFailed = true;
+        return { present: true, entries: [] };
       }
       let parsedUnknown: unknown;
       try {
@@ -380,7 +416,8 @@ function createDefaultDemosResolver(
           err: err instanceof Error ? err.message : String(err),
         });
         cache = new Map();
-        return cache.get(slug) ?? [];
+        readFailed = true;
+        return { present: true, entries: [] };
       }
       // Shape guard: `JSON.parse("null")` returns null, `JSON.parse("42")`
       // returns 42, `JSON.parse("[]")` returns an array. Any of these
@@ -399,7 +436,8 @@ function createDefaultDemosResolver(
           isArray: Array.isArray(parsedUnknown),
         });
         cache = new Map();
-        return cache.get(slug) ?? [];
+        readFailed = true;
+        return { present: true, entries: [] };
       }
       const parsed = parsedUnknown as {
         integrations?: Array<{
@@ -422,7 +460,19 @@ function createDefaultDemosResolver(
       }
       cache = map;
     }
-    return cache.get(slug) ?? [];
+    // After the cache is populated successfully, distinguish "slug present
+    // with possibly-empty entries" from "slug absent from registry". When
+    // the cache load failed (readFailed=true), every lookup returns
+    // present:true so we don't synth-red every cell — the global
+    // failure is already logged at warn.
+    if (readFailed) {
+      return { present: true, entries: [] };
+    }
+    const entries = cache.get(slug);
+    if (entries === undefined) {
+      return { present: false, entries: [] };
+    }
+    return { present: true, entries };
   };
 }
 
@@ -477,8 +527,21 @@ export function createE2eDemosDriver(
       // to in-band `input.demos` synthesis ONLY when the resolver returns
       // an empty list AND the caller provided demos (test injection path).
       let demos: E2eDemoEntry[];
+      // `slugPresentInRegistry` distinguishes "registry knows this slug
+      // and it has zero demos" (legitimately green, brand-new package
+      // being scaffolded) from "slug missing from the registry entirely"
+      // (operational fault — manifest absent from registry.json, stale
+      // mount, slug rename). Without this distinction, the dashboard
+      // shows GREEN agent:<slug> + MISSING e2e:<slug>/<feature> for
+      // every cell of the affected service — silent loss of signal.
+      // Fail-loud per the discipline: emit a synthetic red side row when
+      // the slug isn't in the registry so operators see the broken
+      // wiring at-a-glance.
+      let slugPresentInRegistry = true;
       try {
-        demos = await demosResolver(slug);
+        const resolved = await demosResolver(slug);
+        demos = [...resolved.entries];
+        slugPresentInRegistry = resolved.present;
       } catch (err) {
         // C12: a custom resolver throw (or default-resolver bug not
         // already caught at the read/parse/shape layer) used to fall
@@ -513,14 +576,59 @@ export function createE2eDemosDriver(
       }
       // Fall back to in-band demos ONLY when the registry has no entries
       // for this slug (test injection path). Production always goes through
-      // the registry which carries accurate route info.
+      // the registry which carries accurate route info. The in-band path
+      // is a deliberate test-injection escape hatch; treat its presence as
+      // equivalent to "the slug was found" so unit tests that bypass the
+      // registry entirely don't trip the missing-registry red row.
       if (demos.length === 0 && Array.isArray(input.demos)) {
         demos = input.demos.map((id) => ({ id, route: `/demos/${id}` }));
+        slugPresentInRegistry = true;
+      }
+
+      // Fail-loud branch: slug is genuinely missing from the registry.
+      // Emit a synthetic red `e2e:<slug>/__missing-registry` side row so
+      // the dashboard shows ONE distinct red dot for the configuration
+      // mistake (rather than a flood of N green-by-default dots that hide
+      // the broken wiring). The aggregate also flips red so alert rules
+      // pattern-matching `e2e-demos:*` surface the fault. Chromium is NOT
+      // launched — there's nothing to navigate.
+      if (!slugPresentInRegistry) {
+        ctx.logger.warn("probe.e2e-demos.slug-missing-from-registry", {
+          slug,
+          key: input.key,
+        });
+        await sideEmit({
+          key: `e2e:${slug}/__missing-registry`,
+          state: "red",
+          signal: {
+            slug,
+            featureId: "__missing-registry",
+            backendUrl,
+            errorClass: "registry-missing",
+            errorDesc: `slug '${slug}' has no entry in registry.json`,
+          },
+          observedAt: ctx.now().toISOString(),
+        });
+        return {
+          key: input.key,
+          state: "red",
+          signal: {
+            shape: "package",
+            slug,
+            backendUrl,
+            total: 0,
+            passed: 0,
+            failed: [],
+            errorDesc: "registry-missing",
+            failureSummary: `slug '${slug}' has no entry in registry.json`,
+          },
+          observedAt,
+        };
       }
 
       // Empty demos set → nothing to check, aggregate green, chromium NOT
-      // launched. Brand-new packages still
-      // being scaffolded land here.
+      // launched. Brand-new packages still being scaffolded land here
+      // (registry knows the slug but no demos declared yet).
       if (demos.length === 0) {
         return {
           key: input.key,
