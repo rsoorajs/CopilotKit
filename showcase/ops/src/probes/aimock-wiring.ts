@@ -60,6 +60,25 @@ const EXCLUDE_SERVICES: ReadonlySet<string> = new Set([
   "showcase-shell-dojo",
   "showcase-pocketbase",
   "showcase-ops",
+  // Decommissioned starters — Railway services stopped, deployments
+  // halted (PR #4390). Keep in sync with nameExcludes in probe YAMLs.
+  "showcase-starter-ag2",
+  "showcase-starter-agno",
+  "showcase-starter-claude-sdk-python",
+  "showcase-starter-claude-sdk-typescript",
+  "showcase-starter-crewai-crews",
+  "showcase-starter-google-adk",
+  "showcase-starter-langgraph-fastapi",
+  "showcase-starter-langgraph-python",
+  "showcase-starter-langgraph-typescript",
+  "showcase-starter-langroid",
+  "showcase-starter-llamaindex",
+  "showcase-starter-mastra",
+  "showcase-starter-ms-agent-dotnet",
+  "showcase-starter-ms-agent-python",
+  "showcase-starter-pydantic-ai",
+  "showcase-starter-spring-ai",
+  "showcase-starter-strands",
 ]);
 
 export interface AimockWiringInput {

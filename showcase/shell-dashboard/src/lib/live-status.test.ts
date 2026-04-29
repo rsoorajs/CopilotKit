@@ -7,6 +7,7 @@ import {
   type LiveStatusMap,
   type StatusRow,
 } from "./live-status";
+import { formatTs } from "./format-ts";
 
 function row(
   key: string,
@@ -350,7 +351,7 @@ describe("formatTooltip behaviour (via resolveCell)", () => {
     const c = resolveCell(live, "a", "b");
     expect(c.e2e.tooltip).not.toMatch(/>6h/);
     expect(c.e2e.tooltip).toContain("stale");
-    expect(c.e2e.tooltip).toContain("2026-04-22T08:00:00Z");
+    expect(c.e2e.tooltip).toContain(formatTs("2026-04-22T08:00:00Z"));
   });
 
   // D1: `observed_at` on a degraded row is when the dim was last *seen*
@@ -365,7 +366,7 @@ describe("formatTooltip behaviour (via resolveCell)", () => {
       }),
     ]);
     const c = resolveCell(live, "a", "b");
-    expect(c.e2e.tooltip).toContain("last seen @ 2026-04-22T08:00:00Z");
+    expect(c.e2e.tooltip).toContain(`last seen @ ${formatTs("2026-04-22T08:00:00Z")}`);
     expect(c.e2e.tooltip).not.toContain("last pass");
   });
 
@@ -411,7 +412,7 @@ describe("formatTooltip behaviour (via resolveCell)", () => {
     expect(c.e2e.tooltip).toContain("dashboard offline (§5.3)");
     expect(c.e2e.tooltip).toContain("last observed");
     expect(c.e2e.tooltip).toContain("e2e red");
-    expect(c.e2e.tooltip).toContain("2026-04-22T09:00:00Z");
+    expect(c.e2e.tooltip).toContain(formatTs("2026-04-22T09:00:00Z"));
   });
 
   it("connection=error + green row: plain offline tooltip (no last-observed context)", () => {

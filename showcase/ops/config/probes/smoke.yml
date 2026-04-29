@@ -60,6 +60,25 @@ discovery:
       - "showcase-shell-dashboard"
       - "showcase-shell-docs"
       - "showcase-shell-dojo"
+      # Decommissioned starters — Railway services stopped, deployments
+      # halted (PR #4390). Excluded so probes don't scan dead endpoints.
+      - "showcase-starter-ag2"
+      - "showcase-starter-agno"
+      - "showcase-starter-claude-sdk-python"
+      - "showcase-starter-claude-sdk-typescript"
+      - "showcase-starter-crewai-crews"
+      - "showcase-starter-google-adk"
+      - "showcase-starter-langgraph-fastapi"
+      - "showcase-starter-langgraph-python"
+      - "showcase-starter-langgraph-typescript"
+      - "showcase-starter-langroid"
+      - "showcase-starter-llamaindex"
+      - "showcase-starter-mastra"
+      - "showcase-starter-ms-agent-dotnet"
+      - "showcase-starter-ms-agent-python"
+      - "showcase-starter-pydantic-ai"
+      - "showcase-starter-spring-ai"
+      - "showcase-starter-strands"
   # key_template is interpolated against each RailwayServiceInfo record.
   # `${name}` is the full Railway service name (`showcase-ag2`). The
   # driver re-derives the slug by stripping the `showcase-` prefix, so

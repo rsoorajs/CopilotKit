@@ -14,6 +14,7 @@ import type {
   LiveStatusMap,
   ConnectionStatus,
 } from "@/lib/live-status";
+import { formatTs } from "@/lib/format-ts";
 import { TONE_CLASS, DOT_BG } from "./badges";
 
 export interface CellDrilldownProps {
@@ -40,16 +41,7 @@ const DIMENSIONS: Array<{
 
 function formatTimestamp(ts: string | null): string {
   if (!ts) return "n/a";
-  try {
-    return new Date(ts).toLocaleString(undefined, {
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  } catch {
-    return ts;
-  }
+  return formatTs(ts);
 }
 
 function formatSignal(signal: unknown): string | null {
