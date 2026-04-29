@@ -25,14 +25,18 @@ interaction_modalities:
   - embedded
   - chat
 features:
+  - cli-start
   - agentic-chat
   - agentic-chat-reasoning
   - reasoning-default-render
   - tool-rendering-reasoning-chain
+  - tool-rendering-default-catchall
+  - tool-rendering-custom-catchall
   - chat-customization-css
   - frontend-tools
   - frontend-tools-async
   - gen-ui-agent
+  - gen-ui-tool-based
   - open-gen-ui
   - open-gen-ui-advanced
   - declarative-gen-ui
@@ -51,9 +55,12 @@ features:
   - multimodal
   - agent-config
   - hitl-in-chat
+  - hitl-in-chat-booking
   - hitl-in-app
   - hitl
   - tool-rendering
+  - mcp-apps
+  - byoc-hashbrown
 demos:
   - id: agentic-chat
     name: Agentic Chat
@@ -388,4 +395,82 @@ demos:
     highlight:
       - src/app/demos/tool-rendering/agent.ts
       - src/app/demos/tool-rendering/page.tsx
+      - src/app/api/copilotkit/route.ts
+  - id: cli-start
+    name: CLI Start Command
+    description: Copy-paste command to clone the canonical Spring AI starter
+    tags:
+      - chat-ui
+    command: "npx copilotkit@latest init --framework spring-ai"
+  - id: gen-ui-tool-based
+    name: Tool-Based Generative UI
+    description: Frontend registers per-tool component renderers via useComponent; the Spring agent calls render tools that paint chart components inline in the chat
+    tags:
+      - generative-ui
+    route: /demos/gen-ui-tool-based
+    animated_preview_url:
+    highlight:
+      - src/app/demos/gen-ui-tool-based/page.tsx
+      - src/app/demos/gen-ui-tool-based/bar-chart.tsx
+      - src/app/demos/gen-ui-tool-based/pie-chart.tsx
+      - src/app/api/copilotkit/route.ts
+  - id: tool-rendering-default-catchall
+    name: Tool Rendering (Default Catch-all)
+    description: Out-of-the-box tool rendering — the Spring backend defines tools; the frontend adds zero custom renderers and relies on CopilotKit's built-in default UI
+    tags:
+      - generative-ui
+    route: /demos/tool-rendering-default-catchall
+    animated_preview_url:
+    highlight:
+      - src/app/demos/tool-rendering-default-catchall/page.tsx
+      - src/main/java/com/copilotkit/showcase/springai/AgentConfig.java
+      - src/app/api/copilotkit/route.ts
+  - id: tool-rendering-custom-catchall
+    name: Tool Rendering (Custom Catch-all)
+    description: Single branded wildcard renderer via useDefaultRenderTool — the same app-designed card paints every Spring tool call
+    tags:
+      - generative-ui
+    route: /demos/tool-rendering-custom-catchall
+    animated_preview_url:
+    highlight:
+      - src/app/demos/tool-rendering-custom-catchall/page.tsx
+      - src/app/demos/tool-rendering-custom-catchall/custom-catchall-renderer.tsx
+      - src/main/java/com/copilotkit/showcase/springai/AgentConfig.java
+      - src/app/api/copilotkit/route.ts
+  - id: hitl-in-chat-booking
+    name: In-Chat HITL (Booking)
+    description: Time-picker card rendered inline via useHumanInTheLoop for a booking flow against the Spring AI agent
+    tags:
+      - interactivity
+    route: /demos/hitl-in-chat
+    animated_preview_url:
+    highlight:
+      - src/app/demos/hitl-in-chat/page.tsx
+      - src/app/demos/hitl-in-chat/time-picker-card.tsx
+      - src/app/api/copilotkit/route.ts
+  - id: mcp-apps
+    name: MCP Apps
+    description: MCP server-driven UI via the runtime mcpApps middleware; sandboxed iframe rendered via the built-in MCPAppsActivityRenderer
+    tags:
+      - generative-ui
+    route: /demos/mcp-apps
+    animated_preview_url:
+    highlight:
+      - src/app/demos/mcp-apps/page.tsx
+      - src/app/api/copilotkit-mcp-apps/route.ts
+  - id: byoc-hashbrown
+    name: BYOC Hashbrown
+    description: Streaming hashbrown UI kit (MetricCard + PieChart + BarChart + DealCard) rendered by @hashbrownai/react against the Spring AI ChatClient stream
+    tags:
+      - generative-ui
+    route: /demos/byoc-hashbrown
+    animated_preview_url:
+    highlight:
+      - src/app/demos/byoc-hashbrown/page.tsx
+      - src/app/demos/byoc-hashbrown/hashbrown-renderer.tsx
+      - src/app/demos/byoc-hashbrown/metric-card.tsx
+      - src/app/demos/byoc-hashbrown/charts/bar-chart.tsx
+      - src/app/demos/byoc-hashbrown/charts/pie-chart.tsx
+      - src/app/demos/byoc-hashbrown/types.ts
+      - src/app/demos/byoc-hashbrown/suggestions.ts
       - src/app/api/copilotkit/route.ts
