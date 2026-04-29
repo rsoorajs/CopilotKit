@@ -74,7 +74,6 @@ class GuardedOpenAITranscriptionService extends TranscriptionService {
 }
 // @endregion[transcription-service-guard]
 
-
 // Cache the runtime + handler across invocations so the transcription service
 // is constructed once per Node process instead of per request. The guarded
 // service reads OPENAI_API_KEY lazily in its transcribeFile call path, so
@@ -84,7 +83,7 @@ let cachedHandler: ((req: Request) => Promise<Response>) | null = null;
 function getHandler(): (req: Request) => Promise<Response> {
   if (cachedHandler) return cachedHandler;
 
-// @region[voice-runtime]
+  // @region[voice-runtime]
   const runtime = new CopilotRuntime({
     // @ts-ignore -- Published CopilotRuntime agents type wraps Record in
     // MaybePromise<NonEmptyRecord<...>> which rejects plain Records; fixed in

@@ -22,8 +22,7 @@ export function SampleAudioButton({
   runtimeUrl,
   audioSrc,
   sampleLabel,
-}
-: SampleAudioButtonProps) {
+}: SampleAudioButtonProps) {
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
 
   async function handleClick() {

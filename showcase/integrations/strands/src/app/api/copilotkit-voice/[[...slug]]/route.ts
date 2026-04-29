@@ -90,7 +90,6 @@ class GuardedOpenAITranscriptionService extends TranscriptionService {
 }
 // @endregion[transcription-service-guard]
 
-
 // Construct the runtime + transcription service lazily on first request so
 // the Next.js build step (which imports and page-data-collects every route
 // module) can complete even when OPENAI_API_KEY is not set in the Docker
@@ -101,7 +100,7 @@ let cachedRuntime: CopilotRuntime | null = null;
 function getRuntime(): CopilotRuntime {
   if (cachedRuntime) return cachedRuntime;
 
-// @region[voice-runtime]
+  // @region[voice-runtime]
   const runtime = new CopilotRuntime({
     // @ts-ignore -- Published CopilotRuntime agents type wraps Record in MaybePromise<NonEmptyRecord<...>>; HttpAgent is structurally compatible with AbstractAgent but misses the private `_debug*` fields in the published .d.ts. Mirrors the main route's ts-ignore.
     agents: {

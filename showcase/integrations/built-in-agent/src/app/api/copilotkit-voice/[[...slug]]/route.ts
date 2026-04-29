@@ -48,12 +48,11 @@ class GuardedOpenAITranscriptionService extends TranscriptionService {
 }
 // @endregion[transcription-service-guard]
 
-
 let cachedHandler: ((req: Request) => Promise<Response>) | null = null;
 function getHandler(): (req: Request) => Promise<Response> {
   if (cachedHandler) return cachedHandler;
 
-// @region[voice-runtime]
+  // @region[voice-runtime]
   const runtime = new CopilotRuntime({
     agents: { default: createBuiltInAgent() },
     runner: new InMemoryAgentRunner(),

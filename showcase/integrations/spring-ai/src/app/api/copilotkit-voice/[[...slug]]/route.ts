@@ -96,7 +96,6 @@ class GuardedOpenAITranscriptionService extends TranscriptionService {
 }
 // @endregion[transcription-service-guard]
 
-
 // Lazy-init so the NextJS build step doesn't crash when OPENAI_API_KEY is
 // not set in the Docker build context. Whisper calls only fire at runtime.
 let cachedRuntime: CopilotRuntime | null = null;
@@ -108,7 +107,7 @@ function getRuntime(): CopilotRuntime {
     "voice-demo": voiceAgent,
     default: voiceAgent,
   };
-// @region[voice-runtime]
+  // @region[voice-runtime]
   const runtime = new CopilotRuntime({
     // @ts-ignore -- see main route.ts
     agents,
@@ -129,7 +128,7 @@ function getRuntime(): CopilotRuntime {
 }
 
 export const POST = async (req: NextRequest) => {
-// @endregion[voice-runtime]
+  // @endregion[voice-runtime]
   try {
     const { handleRequest } = copilotRuntimeNextJSAppRouterEndpoint({
       endpoint: "/api/copilotkit-voice",

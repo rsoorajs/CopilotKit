@@ -87,7 +87,6 @@ class GuardedOpenAITranscriptionService extends TranscriptionService {
 }
 // @endregion[transcription-service-guard]
 
-
 // Lazily construct the runtime + transcription service on first
 // request. Next.js build-time page-data collection imports every route
 // module; deferring construction keeps OPENAI_API_KEY out of the build
@@ -105,7 +104,7 @@ function getRuntime(): CopilotRuntime {
     default: agent,
   };
 
-// @region[voice-runtime]
+  // @region[voice-runtime]
   const runtime = new CopilotRuntime({
     // @ts-ignore -- see main route.ts
     agents,

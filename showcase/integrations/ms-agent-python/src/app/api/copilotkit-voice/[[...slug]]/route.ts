@@ -89,7 +89,6 @@ class GuardedOpenAITranscriptionService extends TranscriptionService {
 }
 // @endregion[transcription-service-guard]
 
-
 // Construct the runtime + transcription service lazily on first request so
 // the Next.js build step can complete even when OPENAI_API_KEY is not set.
 // Whisper calls only fire at runtime where the env var is set (or, if it
@@ -107,7 +106,7 @@ function getRuntime(): CopilotRuntime {
     default: createAgent(),
   };
 
-// @region[voice-runtime]
+  // @region[voice-runtime]
   const runtime = new CopilotRuntime({
     // @ts-ignore -- Published CopilotRuntime agents type wraps Record in
     // MaybePromise<NonEmptyRecord<...>> which rejects plain Records; fixed
