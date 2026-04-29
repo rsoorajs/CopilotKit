@@ -33,11 +33,13 @@ features:
   - headless-complete
   - hitl-in-chat
   - hitl-in-chat-booking
+  - hitl-in-app
   - tool-rendering
   - gen-ui-tool-based
   - gen-ui-agent
   - shared-state-read-write
   - shared-state-streaming
+  - readonly-state-agent-context
   - subagents
   - mcp-apps
   - open-gen-ui
@@ -46,6 +48,12 @@ features:
   - tool-rendering-custom-catchall
   - frontend-tools
   - frontend-tools-async
+  - auth
+  - agent-config
+  - voice
+  - multimodal
+  - byoc-hashbrown
+  - byoc-json-render
 demos:
   - id: cli-start
     name: CLI Start Command
@@ -237,6 +245,83 @@ demos:
       - src/app/demos/frontend-tools-async/page.tsx
       - src/app/demos/frontend-tools-async/notes-card.tsx
       - src/lib/factory/tanstack-factory.ts
+  - id: hitl-in-app
+    name: In-App Human in the Loop
+    description: Async frontend-tool handler resolved by an app-level approval modal
+    tags: [interactivity]
+    route: /demos/hitl-in-app
+    highlight:
+      - src/app/demos/hitl-in-app/page.tsx
+      - src/app/demos/hitl-in-app/approval-dialog.tsx
+  - id: readonly-state-agent-context
+    name: Readonly Agent Context
+    description: Frontend publishes structured read-only context to the agent via useAgentContext
+    tags: [agent-state]
+    route: /demos/readonly-state-agent-context
+    highlight:
+      - src/app/demos/readonly-state-agent-context/page.tsx
+  - id: auth
+    name: Authentication
+    description: Bearer-token gate on the runtime via the V2 onRequest hook
+    tags: [agent-capabilities]
+    route: /demos/auth
+    highlight:
+      - src/app/demos/auth/page.tsx
+      - src/app/demos/auth/use-demo-auth.ts
+      - src/app/demos/auth/auth-banner.tsx
+      - src/app/demos/auth/demo-token.ts
+      - src/app/api/copilotkit-auth/[[...slug]]/route.ts
+  - id: agent-config
+    name: Agent Config Object
+    description: Typed config (tone / expertise / responseLength) forwarded via provider properties
+    tags: [agent-capabilities]
+    route: /demos/agent-config
+    highlight:
+      - src/app/demos/agent-config/page.tsx
+      - src/app/demos/agent-config/config-card.tsx
+      - src/app/demos/agent-config/use-agent-config.ts
+      - src/app/demos/agent-config/config-types.ts
+      - src/app/api/copilotkit-agent-config/route.ts
+  - id: voice
+    name: Voice Input
+    description: Speech-to-text via @copilotkit/voice with sample-audio button
+    tags: [chat-ui]
+    route: /demos/voice
+    highlight:
+      - src/app/demos/voice/page.tsx
+      - src/app/demos/voice/sample-audio-button.tsx
+      - src/app/api/copilotkit-voice/[[...slug]]/route.ts
+  - id: multimodal
+    name: Multimodal Attachments
+    description: Image and PDF uploads answered by the vision-capable gpt-4o agent
+    tags: [chat-ui]
+    route: /demos/multimodal
+    highlight:
+      - src/app/demos/multimodal/page.tsx
+      - src/app/demos/multimodal/sample-attachment-buttons.tsx
+      - src/app/api/copilotkit-multimodal/route.ts
+  - id: byoc-hashbrown
+    name: "BYOC: Hashbrown"
+    description: Streaming structured output via @hashbrownai/react
+    tags: [generative-ui]
+    route: /demos/byoc-hashbrown
+    highlight:
+      - src/app/demos/byoc-hashbrown/page.tsx
+      - src/app/demos/byoc-hashbrown/hashbrown-renderer.tsx
+      - src/lib/factory/byoc-hashbrown-factory.ts
+      - src/app/api/copilotkit-byoc-hashbrown/route.ts
+  - id: byoc-json-render
+    name: "BYOC: json-render"
+    description: Streaming structured output via @json-render/react
+    tags: [generative-ui]
+    route: /demos/byoc-json-render
+    highlight:
+      - src/app/demos/byoc-json-render/page.tsx
+      - src/app/demos/byoc-json-render/json-render-renderer.tsx
+      - src/app/demos/byoc-json-render/registry.tsx
+      - src/app/demos/byoc-json-render/catalog.ts
+      - src/lib/factory/byoc-json-render-factory.ts
+      - src/app/api/copilotkit-byoc-json-render/route.ts
 # NOTE: starter omitted intentionally for v1 of this column. The
 # `showcase/scripts/generate-starters.ts` generator expects every package
 # to have a separate `src/agent/` backend; built-in-agent runs in-process
