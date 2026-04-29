@@ -8,8 +8,10 @@
  *   D1-D2 = amber — basic health and agent checks
  *   D0    = gray — exists but no live probe data
  *   unshipped = transparent + dashed border, displays "--"
- *   unsupported = transparent + dashed gray border, displays "🚫"
- *                 (architectural limit — framework cannot support feature)
+ *   unsupported = slate border + slate fill, displays "N/A"
+ *                 (architectural limit — framework cannot support feature;
+ *                  text label avoids 🚫 emoji which falls back to tofu/X
+ *                  glyphs on systems without color emoji support)
  *   regression = red (danger)
  */
 
@@ -57,16 +59,19 @@ export function DepthChip({ depth, status, regression }: DepthChipProps) {
 
   if (status === "unsupported") {
     // Distinct from "unshipped": architectural limit, not undone work.
-    // A solid dashed border + dimmed prohibited glyph + descriptive
-    // tooltip signals "cannot be supported" rather than "to be done".
+    // A solid (not dashed) border in a slate hue + the explicit "N/A"
+    // text label signals "cannot be supported" rather than "to be done".
+    // We deliberately avoid the 🚫 emoji here because it falls back to a
+    // tofu/X-shaped glyph on systems without color emoji support, which
+    // makes the cell read like an unshipped X to viewers.
     return (
       <span
         data-testid="depth-chip"
         data-status="unsupported"
-        className="inline-flex items-center justify-center min-w-[32px] h-5 px-1.5 rounded text-[10px] font-semibold tabular-nums border border-dashed border-[var(--text-muted)]/60 bg-[var(--text-muted)]/5 text-[var(--text-muted)]/70"
+        className="inline-flex items-center justify-center min-w-[32px] h-5 px-1.5 rounded text-[9px] font-semibold uppercase tracking-wider border border-slate-500/40 bg-slate-500/10 text-slate-400"
         title="Not supported by this framework"
       >
-        🚫
+        N/A
       </span>
     );
   }
