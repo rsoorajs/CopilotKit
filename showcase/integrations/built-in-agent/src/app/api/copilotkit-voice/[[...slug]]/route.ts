@@ -23,6 +23,7 @@ import { TranscriptionServiceOpenAI } from "@copilotkit/voice";
 import OpenAI from "openai";
 import { createBuiltInAgent } from "@/lib/factory/tanstack-factory";
 
+// @region[transcription-service-guard]
 class GuardedOpenAITranscriptionService extends TranscriptionService {
   private delegate: TranscriptionServiceOpenAI | null;
 
@@ -45,11 +46,14 @@ class GuardedOpenAITranscriptionService extends TranscriptionService {
     return this.delegate.transcribeFile(options);
   }
 }
+// @endregion[transcription-service-guard]
+
 
 let cachedHandler: ((req: Request) => Promise<Response>) | null = null;
 function getHandler(): (req: Request) => Promise<Response> {
   if (cachedHandler) return cachedHandler;
 
+// @region[voice-runtime]
   const runtime = new CopilotRuntime({
     agents: { default: createBuiltInAgent() },
     runner: new InMemoryAgentRunner(),
@@ -67,3 +71,4 @@ export const POST = (req: NextRequest) => getHandler()(req);
 export const GET = (req: NextRequest) => getHandler()(req);
 export const PUT = (req: NextRequest) => getHandler()(req);
 export const DELETE = (req: NextRequest) => getHandler()(req);
+// @endregion[voice-runtime]

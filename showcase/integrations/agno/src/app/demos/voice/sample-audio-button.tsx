@@ -17,12 +17,14 @@ export interface SampleAudioButtonProps {
   sampleLabel: string;
 }
 
+// @region[sample-audio-button]
 export function SampleAudioButton({
   onTranscribed,
   runtimeUrl,
   audioSrc,
   sampleLabel,
-}: SampleAudioButtonProps) {
+}// @endregion[sample-audio-button]
+: SampleAudioButtonProps) {
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
 
   async function handleClick() {

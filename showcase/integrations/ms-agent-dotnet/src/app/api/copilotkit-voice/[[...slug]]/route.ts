@@ -58,6 +58,7 @@ function createAgent() {
  * funnels the missing-key case into that 4xx path instead of leaking an
  * opaque 500/503.
  */
+// @region[transcription-service-guard]
 class GuardedOpenAITranscriptionService extends TranscriptionService {
   private delegate: TranscriptionServiceOpenAI | null;
 
@@ -83,6 +84,8 @@ class GuardedOpenAITranscriptionService extends TranscriptionService {
     return this.delegate.transcribeFile(options);
   }
 }
+// @endregion[transcription-service-guard]
+
 
 // Construct the runtime + transcription service lazily on first request so
 // the Next.js build step can complete even when OPENAI_API_KEY is not set.
@@ -101,6 +104,7 @@ function getRuntime(): CopilotRuntime {
     default: createAgent(),
   };
 
+// @region[voice-runtime]
   const runtime = new CopilotRuntime({
     // @ts-ignore -- Published CopilotRuntime agents type wraps Record in
     // MaybePromise<NonEmptyRecord<...>> which rejects plain Records; fixed in
@@ -139,3 +143,4 @@ export const POST = async (req: NextRequest) => {
 };
 
 export const GET = POST;
+// @endregion[voice-runtime]

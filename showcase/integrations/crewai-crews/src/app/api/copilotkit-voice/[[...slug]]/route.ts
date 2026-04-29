@@ -74,6 +74,7 @@ const agents: Record<string, AbstractAgent> = {
  * If the key is present we delegate to the real OpenAI-backed service; any
  * upstream Whisper error keeps its natural categorization.
  */
+// @region[transcription-service-guard]
 class GuardedOpenAITranscriptionService extends TranscriptionService {
   private delegate: TranscriptionServiceOpenAI | null;
 
@@ -102,6 +103,8 @@ class GuardedOpenAITranscriptionService extends TranscriptionService {
     return this.delegate.transcribeFile(options);
   }
 }
+// @endregion[transcription-service-guard]
+
 
 // Construct the runtime + transcription service lazily on first request so
 // the Next.js build step (which imports and page-data-collects every route
@@ -113,6 +116,7 @@ let cachedRuntime: CopilotRuntime | null = null;
 function getRuntime(): CopilotRuntime {
   if (cachedRuntime) return cachedRuntime;
 
+// @region[voice-runtime]
   const runtime = new CopilotRuntime({
     // @ts-ignore -- see main route.ts: published CopilotRuntime agents type
     // wraps Record in MaybePromise<NonEmptyRecord<...>> which rejects plain
@@ -155,3 +159,4 @@ export const POST = async (req: NextRequest) => {
 // otherwise return from being treated as a server error in logs; the v2
 // auto-detect ignores the 405 and moves on to the working POST path.
 export const GET = POST;
+// @endregion[voice-runtime]
