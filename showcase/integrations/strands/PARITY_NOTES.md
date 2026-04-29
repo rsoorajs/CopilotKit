@@ -26,9 +26,13 @@ expose at this time:
   into the LangGraph interrupt lifecycle. Strands does not provide an
   equivalent first-class interrupt primitive. The ergonomic replacement is
   `hitl-in-chat` (implemented), which uses `useHumanInTheLoop` on top of a
-  regular frontend tool — Strands supports that natively.
+  regular frontend tool — Strands supports that natively. Surfaced as a stub
+  page (`src/app/demos/gen-ui-interrupt/`) and as
+  `not_supported_features.gen-ui-interrupt` in the manifest.
 - **interrupt-headless** — Same rationale as `gen-ui-interrupt`. Requires
   `useLangGraphInterrupt`'s resolve/respond primitive. Not portable.
+  Surfaced as a stub page (`src/app/demos/interrupt-headless/`) and as
+  `not_supported_features.interrupt-headless` in the manifest.
 ## MCP Apps — now ported (wave-2 follow-up)
 
 - **mcp-apps** — **shipped (simplified)**. Dedicated

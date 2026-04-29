@@ -60,6 +60,9 @@ features:
   - open-gen-ui-advanced
   - mcp-apps
   - beautiful-chat
+not_supported_features:
+  - gen-ui-interrupt
+  - interrupt-headless
 demos:
   - id: cli-start
     name: CLI Start Command
