@@ -22,6 +22,7 @@ managed_platform:
   name: LangGraph Platform
   url: https://langsmith.com
 features:
+  - cli-start
   - agentic-chat
   - tool-rendering
   - tool-rendering-default-catchall
@@ -53,6 +54,8 @@ features:
   - frontend-tools
   - frontend-tools-async
   - hitl-in-app
+  - hitl-in-chat
+  - hitl-in-chat-booking
   - readonly-state-agent-context
   - voice
   - byoc-hashbrown
@@ -60,6 +63,12 @@ features:
   - open-gen-ui
   - open-gen-ui-advanced
 demos:
+  - id: cli-start
+    name: CLI Start Command
+    description: Copy-paste command to clone the canonical starter
+    tags:
+      - chat-ui
+    command: "npx copilotkit@latest init --framework langgraph-fastapi"
   - id: agentic-chat
     name: Agentic Chat
     description: Natural conversation with frontend tool execution
@@ -417,6 +426,30 @@ demos:
       - src/agents/src/hitl_in_app.py
       - src/app/demos/hitl-in-app/page.tsx
       - src/app/demos/hitl-in-app/approval-dialog.tsx
+      - src/app/api/copilotkit/route.ts
+  - id: hitl-in-chat
+    name: In-Chat HITL (useHumanInTheLoop — ergonomic API)
+    description: Interactive approval/decision surface rendered inline in the chat via the high-level `useHumanInTheLoop` hook
+    tags:
+      - interactivity
+    route: /demos/hitl-in-chat
+    animated_preview_url:
+    highlight:
+      - src/agents/src/hitl_in_chat_agent.py
+      - src/app/demos/hitl-in-chat/page.tsx
+      - src/app/demos/hitl-in-chat/time-picker-card.tsx
+      - src/app/api/copilotkit/route.ts
+  - id: hitl-in-chat-booking
+    name: In-Chat HITL (Booking)
+    description: Time-picker card rendered inline via useHumanInTheLoop for a booking flow
+    tags:
+      - interactivity
+    route: /demos/hitl-in-chat
+    animated_preview_url:
+    highlight:
+      - src/agents/src/hitl_in_chat_agent.py
+      - src/app/demos/hitl-in-chat/page.tsx
+      - src/app/demos/hitl-in-chat/time-picker-card.tsx
       - src/app/api/copilotkit/route.ts
   - id: readonly-state-agent-context
     name: Readonly State (Agent Context)
