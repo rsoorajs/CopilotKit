@@ -171,7 +171,11 @@ export function TallyTrigger({ items, tone, children }: TallyTriggerProps) {
         {children}
       </button>
       {open && (
-        <TallyBreakdownPopover items={items} tone={tone} onClose={handleClose} />
+        <TallyBreakdownPopover
+          items={items}
+          tone={tone}
+          onClose={handleClose}
+        />
       )}
     </div>
   );

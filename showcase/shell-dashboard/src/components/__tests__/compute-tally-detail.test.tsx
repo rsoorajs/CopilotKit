@@ -12,9 +12,10 @@ vi.mock("@/lib/registry", () => ({
 
 // Mock live-status module before importing the function under test
 vi.mock("@/lib/live-status", async () => {
-  const actual = await vi.importActual<typeof import("@/lib/live-status")>(
-    "@/lib/live-status",
-  );
+  const actual =
+    await vi.importActual<typeof import("@/lib/live-status")>(
+      "@/lib/live-status",
+    );
   return {
     ...actual,
     keyFor: vi.fn(actual.keyFor),
@@ -67,10 +68,7 @@ function makeCellState(e2eTone: string): CellState {
   };
 }
 
-function makeIntegration(
-  slug: string,
-  demoIds: string[],
-): Integration {
+function makeIntegration(slug: string, demoIds: string[]): Integration {
   return {
     slug,
     name: slug,
@@ -260,9 +258,7 @@ describe("computeColumnTallyDetail", () => {
       "live",
     );
 
-    expect(result.red).toEqual([
-      { label: "Health (Up)", dimension: "health" },
-    ]);
+    expect(result.red).toEqual([{ label: "Health (Up)", dimension: "health" }]);
     expect(result.green).toEqual([]);
     expect(result.amber).toEqual([]);
     expect(result.unknown).toBe(false);
