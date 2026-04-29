@@ -55,7 +55,6 @@ function ctx(partial: Partial<TemplateContext>): TemplateContext {
 }
 
 const YAMLS = [
-  "smoke-red-tick.yml",
   "agent-red-tick.yml",
   "chat-red-tick.yml",
   "tools-red-tick.yml",
@@ -116,36 +115,6 @@ describe("red-tick YAML rendering — Items 2 & 3", () => {
     });
   });
 
-  // Smoke has the only dimension with `signal.links.*` references — verify
-  // the present-link path emits the expected Slack-link shape after the guard
-  // wrap.
-  it("smoke: renders_link_when_present — <url|label> shape preserved", () => {
-    const text = loadTemplate("smoke-red-tick.yml");
-    const r = createRenderer();
-    const flags = { ...emptyTriggerFlags(), green_to_red: true };
-    const out = r.render(
-      { text },
-      ctx({
-        trigger: flags,
-        signal: {
-          slug: "mastra",
-          failCount: 1,
-          errorDesc: "http 503",
-          firstFailureAt: "2026-04-20T00:00:00Z",
-          url: "https://example.test/smoke",
-        },
-      }),
-    );
-    const rendered = String(out.payload.text);
-    // A3: smoke template now references `signal.url` directly (driver signal
-    // has no `links` object). Render label "endpoint" since the linked URL is
-    // the smoke endpoint that was actually probed.
-    expect(rendered).toContain("<https://example.test/smoke|endpoint>");
-    // Guard-wrap must not introduce empty/dangling artifacts even with links
-    // present.
-    expect(rendered).not.toMatch(/<\|/);
-  });
-
   // A2: the dashboard Run link must be wrapped in a `{{#event.runId}}…{{/event.runId}}`
   // section so a missing runId doesn't render a broken `/runs/|Run` link every
   // alert. Parametrize across all 4 red-tick YAMLs.
@@ -197,29 +166,4 @@ describe("red-tick YAML rendering — Items 2 & 3", () => {
     });
   });
 
-  // A3: the smoke template historically referenced `signal.links.smoke` /
-  // `signal.links.health` — the DRIVER signal (probes/drivers/liveness.ts) has
-  // `slug, url, status, errorDesc, latencyMs` and no `links` object, so those
-  // section-guards were always empty. The template should pull `signal.url`
-  // directly and render an "endpoint" link.
-  it("smoke: renders_endpoint_link_from_signal_url (A3)", () => {
-    const text = loadTemplate("smoke-red-tick.yml");
-    const r = createRenderer();
-    const flags = { ...emptyTriggerFlags(), green_to_red: true };
-    const out = r.render(
-      { text },
-      ctx({
-        trigger: flags,
-        signal: {
-          slug: "mastra",
-          failCount: 1,
-          errorDesc: "http 503",
-          firstFailureAt: "2026-04-20T00:00:00Z",
-          url: "https://starter.example/smoke",
-        },
-      }),
-    );
-    const rendered = String(out.payload.text);
-    expect(rendered).toContain("<https://starter.example/smoke|endpoint>");
-  });
 });
