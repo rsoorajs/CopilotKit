@@ -32,12 +32,15 @@ features:
   - headless-simple
   - headless-complete
   - hitl-in-chat
+  - hitl-in-chat-booking
   - tool-rendering
   - gen-ui-tool-based
   - gen-ui-agent
   - shared-state-read-write
   - shared-state-streaming
   - subagents
+  - mcp-apps
+  - open-gen-ui
 demos:
   - id: cli-start
     name: CLI Start Command
@@ -156,6 +159,33 @@ demos:
     description: Multiple agents with visible task delegation
     tags: [multi-agent]
     route: /demos/subagents
+  - id: hitl-in-chat-booking
+    name: In-Chat HITL (Booking)
+    description: Time-picker card rendered inline via useHumanInTheLoop for a booking flow
+    tags: [interactivity]
+    route: /demos/hitl-in-chat-booking
+    highlight:
+      - src/app/demos/hitl-in-chat-booking/page.tsx
+      - src/app/demos/hitl-in-chat-booking/time-picker-card.tsx
+      - src/lib/factory/tanstack-factory.ts
+  - id: mcp-apps
+    name: MCP Apps
+    description: MCP server-driven UI via activity renderers
+    tags: [generative-ui]
+    route: /demos/mcp-apps
+    highlight:
+      - src/app/demos/mcp-apps/page.tsx
+      - src/app/api/copilotkit-mcp-apps/route.ts
+      - src/lib/factory/mcp-apps-factory.ts
+  - id: open-gen-ui
+    name: Fully Open-Ended Generative UI
+    description: Agent generates UI from an arbitrary component library
+    tags: [generative-ui]
+    route: /demos/open-gen-ui
+    highlight:
+      - src/app/demos/open-gen-ui/page.tsx
+      - src/app/api/copilotkit-ogui/route.ts
+      - src/lib/factory/ogui-factory.ts
 # NOTE: starter omitted intentionally for v1 of this column. The
 # `showcase/scripts/generate-starters.ts` generator expects every package
 # to have a separate `src/agent/` backend; built-in-agent runs in-process
