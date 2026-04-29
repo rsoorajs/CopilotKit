@@ -37,6 +37,7 @@ features:
   - frontend-tools-async
   - hitl
   - hitl-in-app
+  - gen-ui-tool-based
   - gen-ui-interrupt
   - interrupt-headless
   - declarative-gen-ui
@@ -153,6 +154,17 @@ demos:
       - agent/HitlInAppAgent.cs
       - src/app/demos/hitl-in-app/page.tsx
       - src/app/demos/hitl-in-app/approval-dialog.tsx
+      - src/app/api/copilotkit/route.ts
+  - id: gen-ui-tool-based
+    name: Tool-Based Generative UI
+    description: Agent uses tools to trigger UI generation
+    tags:
+      - generative-ui
+    route: /demos/gen-ui-tool-based
+    animated_preview_url:
+    highlight:
+      - agent/Program.cs
+      - src/app/demos/gen-ui-tool-based/page.tsx
       - src/app/api/copilotkit/route.ts
   - id: tool-rendering
     name: Tool Rendering
