@@ -6,6 +6,8 @@
 import { LevelStrip } from "@/components/level-strip";
 import { ParityBadge } from "@/components/parity-badge";
 import type { ParityTier } from "@/components/parity-badge";
+import { TallyTrigger } from "@/components/tally-breakdown";
+import type { TallyDetail } from "@/components/tally-types";
 import type { Integration } from "@/lib/registry";
 import type { ConnectionStatus, LiveStatusMap } from "@/lib/live-status";
 
@@ -15,6 +17,7 @@ type Overlay = "links" | "depth" | "health" | "parity" | "docs";
 export interface OverlayColumnHeaderProps {
   integration: Integration;
   tally?: { green: number; amber: number; red: number; unknown: boolean };
+  tallyDetail?: TallyDetail;
   overlays: Set<Overlay>;
   liveStatus: LiveStatusMap;
   connection: ConnectionStatus;
@@ -26,6 +29,7 @@ export interface OverlayColumnHeaderProps {
 export function OverlayColumnHeader({
   integration,
   tally,
+  tallyDetail,
   overlays,
   liveStatus,
   connection: _connection,
@@ -81,15 +85,21 @@ export function OverlayColumnHeader({
             <span className="text-[var(--text-muted)]">? offline</span>
           ) : (
             <>
-              <span className="text-[var(--ok)]">
-                {"\u2713"} {tally.green}
-              </span>
+              <TallyTrigger items={tallyDetail?.green ?? []} tone="green">
+                <span className="text-[var(--ok)]">
+                  {"\u2713"} {tally.green}
+                </span>
+              </TallyTrigger>
               <span className="mx-1 text-[var(--text-muted)]">{"\u00b7"}</span>
-              <span className="text-[var(--amber)]">~ {tally.amber}</span>
+              <TallyTrigger items={tallyDetail?.amber ?? []} tone="amber">
+                <span className="text-[var(--amber)]">~ {tally.amber}</span>
+              </TallyTrigger>
               <span className="mx-1 text-[var(--text-muted)]">{"\u00b7"}</span>
-              <span className="text-[var(--danger)]">
-                {"\u2717"} {tally.red}
-              </span>
+              <TallyTrigger items={tallyDetail?.red ?? []} tone="red">
+                <span className="text-[var(--danger)]">
+                  {"\u2717"} {tally.red}
+                </span>
+              </TallyTrigger>
             </>
           )}
         </div>
