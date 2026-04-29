@@ -65,6 +65,7 @@ describe("Catalog Generator", () => {
       "stub",
       "total_cells",
       "unshipped",
+      "unsupported",
       "wired",
     ]);
 
@@ -191,12 +192,14 @@ describe("Catalog Generator", () => {
     expect(
       catalog.metadata.wired +
         catalog.metadata.stub +
-        catalog.metadata.unshipped,
+        catalog.metadata.unshipped +
+        catalog.metadata.unsupported,
     ).toBe(720);
     expect(catalog.metadata.wired).toBeGreaterThanOrEqual(490);
+    expect(catalog.metadata.unsupported).toBeGreaterThanOrEqual(0);
   });
 
-  it("max_depth: D4 for wired/stub cells, D0 for unshipped", () => {
+  it("max_depth: D4 for wired/stub cells, D0 for unshipped/unsupported", () => {
     runGenerator();
     const catalog = readCatalog();
 
@@ -204,6 +207,9 @@ describe("Catalog Generator", () => {
     const stub = catalog.cells.filter((c: any) => c.status === "stub");
     const unshipped = catalog.cells.filter(
       (c: any) => c.status === "unshipped",
+    );
+    const unsupported = catalog.cells.filter(
+      (c: any) => c.status === "unsupported",
     );
 
     for (const cell of wired) {
@@ -213,6 +219,10 @@ describe("Catalog Generator", () => {
       expect(cell.max_depth).toBe(4);
     }
     for (const cell of unshipped) {
+      expect(cell.max_depth).toBe(0);
+    }
+    for (const cell of unsupported) {
+      // Unsupported shares max_depth=0 with unshipped — neither has probes.
       expect(cell.max_depth).toBe(0);
     }
   });

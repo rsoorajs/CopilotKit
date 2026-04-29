@@ -285,8 +285,11 @@ export function CellMatrix({
     if (filter === "gaps") {
       return visibleIntegrations.some((int) => {
         const cell = cellIndex.get(`${int.slug}/${featureId}`);
-        // Unshipped = structural gap
+        // Unshipped = structural gap. Unsupported is NOT a gap — the
+        // framework architecturally cannot support it, so it's not work
+        // we expect to do.
         if (!cell || cell.status === "unshipped") return true;
+        if (cell.status === "unsupported") return false;
         // Red probes = functional gap (cell exists but failing)
         if (cell.feature !== null) {
           const cellState = resolveCell(liveStatus, int.slug, cell.feature);

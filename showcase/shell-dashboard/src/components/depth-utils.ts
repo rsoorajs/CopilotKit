@@ -22,7 +22,7 @@ export interface CatalogCell {
   integration_name: string;
   feature: string | null;
   feature_name: string | null;
-  status: "wired" | "stub" | "unshipped";
+  status: "wired" | "stub" | "unshipped" | "unsupported";
   /** Historical high-water mark for this cell's depth. */
   max_depth: number;
   category: string | null;
@@ -70,8 +70,10 @@ export function deriveDepth(
   cell: CatalogCell,
   live: LiveStatusMap,
 ): DepthResult {
-  // Unshipped cells never advance past D0.
-  if (cell.status === "unshipped") {
+  // Unshipped and unsupported cells never advance past D0 — neither has any
+  // probes attached, so there is no possibility of regression. (Unsupported
+  // is a hard architectural floor; unshipped is "just unbuilt".)
+  if (cell.status === "unshipped" || cell.status === "unsupported") {
     return { achieved: 0, isRegression: false };
   }
 
