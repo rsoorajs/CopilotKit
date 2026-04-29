@@ -57,6 +57,10 @@ const WELL_KNOWN_EXCLUDES = new Set<string>([
   // therefore does not — and must not — appear in the main `demoAgentNames`
   // registry, which gates the `/api/copilotkit` route.
   "auth-demo",
+  // The mcp-apps demo points at `/api/copilotkit-mcp-apps` (its own route
+  // with `mcpApps.servers` config). Its agent name lives in that route, not
+  // in the main `demoAgentNames` registry.
+  "mcp-apps",
 ]);
 
 function dirExists(p: string): boolean {
