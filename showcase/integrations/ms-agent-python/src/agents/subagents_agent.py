@@ -142,6 +142,10 @@ async def capture_current_state(
 # ---------------------------------------------------------------------------
 
 
+# @region[subagent-setup]
+# Each sub-agent is a full-fledged `Agent(...)` with its own system
+# prompt. They don't share memory or tools with the supervisor — the
+# supervisor only sees their return value (final text content).
 _RESEARCH_INSTRUCTIONS = (
     "You are a research sub-agent. Given a topic, produce a concise "
     "bulleted list of 3-5 key facts. No preamble, no closing."
@@ -166,6 +170,7 @@ def _make_sub_agent(
         instructions=instructions,
         tools=[],
     )
+# @endregion[subagent-setup]
 
 
 # Module-level holder so the delegation tools can reach the
@@ -291,6 +296,14 @@ def _delegate(sub_agent_name: str, task: str) -> Content:
 # ---------------------------------------------------------------------------
 
 
+# @region[supervisor-delegation-tools]
+# Each @tool wraps a sub-agent invocation. The supervisor LLM "calls"
+# these tools to delegate work; each call synchronously runs the
+# matching sub-agent (via `_delegate`), appends the entry to the
+# `delegations` shared-state slot, and returns a `state_update(...)` so
+# the AG-UI emitter pushes a deterministic StateSnapshotEvent — both
+# surfacing the result to the supervisor and refreshing the live
+# delegation log in the UI.
 @tool(
     name="research_agent",
     description=(
@@ -352,6 +365,7 @@ def critique_agent(
 ) -> Content:
     """Delegate a critique task to the critique sub-agent."""
     return _delegate("critique_agent", task)
+# @endregion[supervisor-delegation-tools]
 
 
 # ---------------------------------------------------------------------------

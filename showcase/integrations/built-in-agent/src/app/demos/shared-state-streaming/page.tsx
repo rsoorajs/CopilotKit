@@ -16,10 +16,12 @@ export default function SharedStateStreaming() {
 }
 
 function Demo() {
+  // @region[frontend-use-coagent-state]
   const { agent } = useAgent({
     agentId: "default",
     updates: [UseAgentUpdate.OnStateChanged],
   });
+  // @endregion[frontend-use-coagent-state]
 
   const document = (agent.state as { document?: string }).document ?? "";
 

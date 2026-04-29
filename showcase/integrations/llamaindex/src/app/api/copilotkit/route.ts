@@ -28,7 +28,6 @@ const sharedAgentNames = [
   "tool-rendering",
   "tool-rendering-default-catchall",
   "tool-rendering-custom-catchall",
-  "gen-ui-tool-based",
   "gen-ui-agent",
   "shared-state-read",
   "shared-state-write",
@@ -54,6 +53,8 @@ const specializedAgents: Record<string, string> = {
   "reasoning-default-render": "/reasoning",
   "tool-rendering-reasoning-chain": "/tool-rendering-reasoning-chain",
   "shared-state-read-write": "/shared-state-read-write",
+  "gen-ui-tool-based": "/gen-ui-tool-based",
+  "beautiful-chat": "/beautiful-chat",
   subagents: "/subagents",
 };
 

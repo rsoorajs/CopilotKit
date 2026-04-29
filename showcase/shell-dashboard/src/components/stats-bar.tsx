@@ -8,6 +8,7 @@ export interface StatsBarProps {
   wired: number;
   stub: number;
   unshipped: number;
+  unsupported?: number;
   maxDepth: number;
   regressions: number;
   failures: number;
@@ -43,6 +44,7 @@ export function StatsBar({
   wired,
   stub,
   unshipped,
+  unsupported = 0,
   maxDepth,
   regressions,
   failures,
@@ -54,6 +56,11 @@ export function StatsBar({
       <Stat
         value={unshipped}
         label="Unshipped"
+        colorClass="text-[var(--text-muted)]"
+      />
+      <Stat
+        value={unsupported}
+        label="Unsupported"
         colorClass="text-[var(--text-muted)]"
       />
       <Stat

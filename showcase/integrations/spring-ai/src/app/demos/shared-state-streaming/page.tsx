@@ -1,44 +1,40 @@
 "use client";
 
 import React from "react";
-import { CopilotKit } from "@copilotkit/react-core";
-import {
-  CopilotChat,
-  useConfigureSuggestions,
-} from "@copilotkit/react-core/v2";
 
-export default function SharedStateStreamingDemo() {
+export default function SharedStateStreamingUnsupported() {
   return (
-    <CopilotKit runtimeUrl="/api/copilotkit" agent="shared-state-streaming">
-      <DemoContent />
-    </CopilotKit>
-  );
-}
-
-function DemoContent() {
-  // TODO: Implement State Streaming demo
-  // See the LangGraph Python reference implementation for patterns
-  //
-  // Key hooks available:
-  //   useFrontendTool({ name, description, parameters: z.object({...}), handler })
-  //   useRenderTool({ name: "tool_name", render: ({ args }) => <Component /> })
-  //   useHumanInTheLoop({ name, description, parameters, handler: ({ args, respond }) => ... })
-  //   useAgentContext({ description, value })
-  //   useConfigureSuggestions({ suggestions: [{ title, message }] })
-  //   useInterrupt({ render: ({ event, resolve }) => <Component /> })
-
-  useConfigureSuggestions({
-    suggestions: [{ title: "Get started", message: "Hello! What can you do?" }],
-  });
-
-  return (
-    <div style={{ height: "100vh", display: "flex", flexDirection: "column" }}>
-      <CopilotChat
-        labels={{
-          title: "State Streaming",
-          placeholder: "Type a message...",
-        }}
-      />
+    <div
+      style={{
+        height: "100vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "24px",
+        textAlign: "center",
+      }}
+    >
+      <div style={{ maxWidth: 560 }}>
+        <h1 style={{ fontSize: 24, fontWeight: 600, marginBottom: 12 }}>
+          Shared State Streaming — Not Supported by Spring AI
+        </h1>
+        <p style={{ color: "#555", lineHeight: 1.55, marginBottom: 16 }}>
+          The ag-ui Spring AI adapter has no mid-stream state-delta API
+          analogous to <code>copilotkit_emit_state</code>, so the agent cannot
+          push partial state snapshots between tokens.
+        </p>
+        <p style={{ color: "#555", lineHeight: 1.55 }}>
+          See{" "}
+          <a
+            href="https://github.com/CopilotKit/CopilotKit/tree/main/showcase/integrations/spring-ai/src/app/demos/shared-state-streaming/README.md"
+            style={{ color: "#2563eb", textDecoration: "underline" }}
+          >
+            this demo&apos;s README
+          </a>{" "}
+          for details, and the LangGraph Python integration for a working
+          implementation.
+        </p>
+      </div>
     </div>
   );
 }

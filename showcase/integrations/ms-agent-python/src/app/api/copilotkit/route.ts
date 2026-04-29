@@ -26,7 +26,6 @@ const agentNames = [
   "agentic_chat",
   "human_in_the_loop",
   "tool-rendering",
-  "gen-ui-tool-based",
   "gen-ui-agent",
   "shared-state-read",
   "shared-state-write",
@@ -57,6 +56,18 @@ for (const name of agentNames) {
 // FastAPI backend; the agent has tools=[] and a system prompt tailored to
 // the frontend-provided `request_user_approval` tool.
 agents["hitl-in-app"] = new HttpAgent({ url: `${AGENT_URL}/hitl-in-app/` });
+
+// In-Chat HITL -- frontend-defined `book_call` tool rendered inline in the
+// chat via `useHumanInTheLoop`. Backend agent has tools=[] and routes to
+// /hitl-in-chat on the FastAPI backend. The booking-flow alias
+// (`hitl-in-chat-booking`) reuses the same backend.
+agents["hitl-in-chat"] = createAgent("/hitl-in-chat");
+agents["hitl-in-chat-booking"] = createAgent("/hitl-in-chat");
+
+// Tool-Based Generative UI -- frontend registers `render_bar_chart` and
+// `render_pie_chart` via `useComponent`; backend agent has tools=[] and a
+// system prompt that picks the right chart type for the user's request.
+agents["gen-ui-tool-based"] = createAgent("/gen-ui-tool-based");
 
 // Shared State (Read + Write) — bidirectional state via state_schema +
 // state_update. Backend exposes a dedicated agent at /shared-state-read-write

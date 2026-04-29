@@ -57,6 +57,7 @@ const STATUS_STYLE: Record<Delegation["status"], string> = {
  * The header shows how many sub-agents have been called and whether
  * the supervisor flow is still running.
  */
+// @region[delegation-log-frontend]
 export function DelegationLog({ delegations, isRunning }: DelegationLogProps) {
   return (
     <div
@@ -141,3 +142,4 @@ export function DelegationLog({ delegations, isRunning }: DelegationLogProps) {
     </div>
   );
 }
+// @endregion[delegation-log-frontend]

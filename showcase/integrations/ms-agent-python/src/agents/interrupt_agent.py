@@ -24,6 +24,7 @@ from agent_framework import Agent, BaseChatClient
 from agent_framework_ag_ui import AgentFrameworkAgent
 
 
+# @region[backend-tool-call]
 SYSTEM_PROMPT = dedent(
     """
     You are a scheduling assistant. Whenever the user asks you to book a call
@@ -52,6 +53,10 @@ def create_interrupt_agent(chat_client: BaseChatClient) -> AgentFrameworkAgent:
         instructions=SYSTEM_PROMPT,
         # No backend tools. `schedule_meeting` is registered on the frontend
         # via `useFrontendTool` and dispatched through the CopilotKit runtime.
+        # When the agent calls `schedule_meeting`, the request is routed to
+        # the frontend handler, which returns a Promise that only resolves
+        # once the user picks a slot — equivalent to `interrupt()` in the
+        # LangGraph reference.
         tools=[],
     )
 
@@ -64,3 +69,4 @@ def create_interrupt_agent(chat_client: BaseChatClient) -> AgentFrameworkAgent:
         ),
         require_confirmation=False,
     )
+# @endregion[backend-tool-call]

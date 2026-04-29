@@ -65,7 +65,7 @@ function Chat() {
     available: "always",
   });
 
-  // @region[ms-agent-frontend-tool-interrupt]
+  // @region[frontend-promise-handler]
   useFrontendTool({
     name: "schedule_meeting",
     description:
@@ -114,7 +114,7 @@ function Chat() {
       );
     },
   });
-  // @endregion[ms-agent-frontend-tool-interrupt]
+  // @endregion[frontend-promise-handler]
 
   return (
     <CopilotChat agentId="gen-ui-interrupt" className="h-full rounded-2xl" />

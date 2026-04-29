@@ -64,6 +64,7 @@ class AgentState(BaseAgentState):
 # Sub-agents (real LLM agents under the hood)
 # ---------------------------------------------------------------------------
 
+# @region[subagent-setup]
 # Each sub-agent is a full-fledged `create_agent(...)` with its own
 # system prompt. They don't share memory or tools with the supervisor —
 # the supervisor only sees their return value.
@@ -96,6 +97,7 @@ _critique_agent = create_agent(
         "2-3 crisp, actionable critiques. No preamble."
     ),
 )
+# @endregion[subagent-setup]
 
 
 def _invoke_sub_agent(agent, task: str) -> str:
@@ -181,6 +183,7 @@ def _delegate(
 # ---------------------------------------------------------------------------
 
 
+# @region[supervisor-delegation-tools]
 # Each @tool wraps a sub-agent invocation. The supervisor LLM "calls"
 # these tools to delegate work; each call synchronously runs the
 # matching sub-agent, records the delegation into shared state, and
@@ -219,6 +222,7 @@ def critique_agent(task: str, runtime: ToolRuntime) -> Command:
     return _delegate(
         "critique_agent", _critique_agent, task, runtime.tool_call_id
     )
+# @endregion[supervisor-delegation-tools]
 
 
 # ---------------------------------------------------------------------------

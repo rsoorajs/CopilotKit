@@ -71,6 +71,8 @@ const agentNames = [
   // Open Generative UI (wave 2)
   "open-gen-ui",
   "open-gen-ui-advanced",
+  // Polished chat shell (simplified port — wave 2 follow-up)
+  "beautiful-chat",
 ];
 
 const agents: Record<string, AbstractAgent> = {};

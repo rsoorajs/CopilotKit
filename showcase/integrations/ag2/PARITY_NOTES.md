@@ -28,6 +28,58 @@ all pointing to the same HTTP backend.
 - `agentic-chat`, `hitl-in-chat`, `tool-rendering`, `gen-ui-tool-based`,
   `gen-ui-agent`, `shared-state-streaming`
 
+### Batch 3 — Headless complete + manifest-only entries
+
+- `cli-start` — informational manifest entry (copy-paste starter command).
+- `gen-ui-tool-based` — already shipped; manifest entry added.
+- `headless-complete` — TRULY headless chat re-composed from low-level
+  hooks (`useRenderToolCall`, `useRenderActivityMessage`,
+  `useRenderCustomMessages`). Backend: dedicated AG2
+  `ConversableAgent` (`agents/headless_complete.py`) mounted at
+  `/headless-complete/` with `get_weather` + `get_stock_price` tools;
+  `highlight_note` is registered on the frontend via `useComponent`.
+
+### Batch 4 — A2UI / OGUI / MCP + reasoning ports (this batch)
+
+Each demo gets its own AG2 sub-app mounted at a named path, plus
+(where required) its own dedicated `/api/copilotkit-*` runtime route so
+the runtime middleware config doesn't leak into other cells.
+
+- `declarative-gen-ui` — A2UI Dynamic Schema. Backend
+  (`src/agents/a2ui_dynamic.py`) owns the `generate_a2ui` tool, which
+  invokes a secondary OpenAI client bound to `render_a2ui` and returns
+  an `a2ui_operations` container. Runtime route at
+  `api/copilotkit-declarative-gen-ui/route.ts` with
+  `a2ui.injectA2UITool: false`.
+- `a2ui-fixed-schema` — A2UI Fixed Schema. Backend
+  (`src/agents/a2ui_fixed.py`) ships `flight_schema.json` and exposes a
+  `display_flight(origin, destination, airline, price)` tool that emits
+  `a2ui_operations` directly. Runtime route at
+  `api/copilotkit-a2ui-fixed-schema/route.ts` with
+  `a2ui.injectA2UITool: false`.
+- `mcp-apps` — Backend (`src/agents/mcp_apps_agent.py`) is a no-tools
+  ConversableAgent; the runtime route at
+  `api/copilotkit-mcp-apps/route.ts` configures
+  `mcpApps.servers` pointing at the public Excalidraw MCP server, and
+  the runtime middleware injects MCP tools at request time.
+- `open-gen-ui`, `open-gen-ui-advanced` — Backends are no-tools
+  ConversableAgents (`src/agents/open_gen_ui_agent.py` and
+  `src/agents/open_gen_ui_advanced_agent.py`). Shared runtime route at
+  `api/copilotkit-ogui/route.ts` enables
+  `openGenerativeUI: { agents: [...] }` so the runtime middleware
+  converts streamed `generateSandboxedUi` tool calls into
+  `open-generative-ui` activity events.
+- `agentic-chat-reasoning`, `tool-rendering-reasoning-chain` — Frontend
+  ports of the LangGraph reasoning cells. The custom `reasoningMessage`
+  slot is wired exactly as in the canonical reference. Backend caveat:
+  AG2's `ConversableAgent` does not natively emit AG-UI
+  `REASONING_MESSAGE_*` events the way LangGraph's `deepagents` does,
+  so the reasoning slot may render empty on every turn until a future
+  AG2 release adds reasoning emission. The tool chain
+  (`tool-rendering-reasoning-chain` backend at
+  `src/agents/tool_rendering_reasoning_chain.py`, mounted at
+  `/tool-rendering-reasoning-chain/`) still exercises end-to-end.
+
 ### Batch 2 — Dedicated AG2 sub-apps
 
 These demos own their own `ConversableAgent(s)` plus FastAPI sub-app
@@ -61,11 +113,6 @@ of the langgraph-python cell.
 The following demos fall into that bucket and are **deferred**, not
 strictly "missing primitive" skips:
 
-- `agentic-chat-reasoning`, `headless-complete`, `tool-rendering-reasoning-chain`
-  — need a reasoning-forward AG2 agent (o1-style model config).
-- `declarative-gen-ui`, `a2ui-fixed-schema` — need A2UI middleware parity
-  with the langgraph-python `CopilotKitMiddleware` + `a2ui_dynamic` / `a2ui_fixed`
-  graphs and a dedicated `/api/copilotkit-*` route per demo.
 - `agent-config` — needs the agent to re-materialize system prompt from
   forwardedProps on every turn (AG2 ConversableAgent supports this but a
   dedicated runtime wiring is required).
@@ -74,18 +121,34 @@ strictly "missing primitive" skips:
 - `byoc-hashbrown`, `byoc-json-render` — streaming structured-output BYOC
   with Zod-validated catalogs; each has its own runtime route, catalog,
   renderer, and supporting components.
-- `beautiful-chat` — branded starter chat with OGUI + A2UI + MCP combined
-  runtime; large cross-cutting port.
 - `multimodal` — vision-capable AG2 agent + dedicated `/api/copilotkit-multimodal`.
 - `voice` — frontend voice STT; needs dedicated `/api/copilotkit-voice` and
   the lazy-init agent shape from langgraph-python.
-- `open-gen-ui`, `open-gen-ui-advanced` — OGUI runtime with frontend sandbox.
-- `mcp-apps` — MCP server-driven UI. AG2 has MCP support; needs wiring.
+
+## Shipped — wave 2 follow-up
+
+- `beautiful-chat` — simplified port: combines A2UI Dynamic + Open
+  Generative UI on a dedicated runtime (`/api/copilotkit-beautiful-chat`).
+  MCP Apps is intentionally out-of-scope (covered separately by
+  `/demos/mcp-apps`); the canonical reference's app-mode toggle / todos
+  canvas is also not ported. Frontend reuses the catalog from
+  `/demos/declarative-gen-ui` to avoid duplication.
+- `hitl-in-chat-booking` — manifest alias to the existing `hitl-in-chat`
+  cell. The langgraph reference itself aliases the booking variant to
+  the same `/demos/hitl-in-chat` route; AG2's `useHumanInTheLoop`
+  surface (TimePickerCard) is functionally equivalent for the booking
+  flow. NOT a missing-primitive case — the earlier "skipped" entry was
+  incorrect (it conflated `hitl-in-chat-booking` with the
+  `useInterrupt`-driven flow, which it isn't).
 
 ## Skipped (missing primitive)
 
 - `gen-ui-interrupt` — requires a LangGraph-style `interrupt()` that
   round-trips a resumable graph pause through the event stream. AG2's
   `human_input_mode` is a synchronous request/reply; it does not resume
-  the same run from a persisted checkpoint.
+  the same run from a persisted checkpoint. Marked as
+  `not_supported_features` in `manifest.yaml`; the route renders a stub
+  page pointing at `hitl-in-chat` / `hitl-in-app`.
 - `interrupt-headless` — same underlying primitive as `gen-ui-interrupt`.
+  Marked `not_supported_features`; stub page points at `hitl-in-app` /
+  `frontend-tools-async`.

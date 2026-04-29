@@ -11,6 +11,12 @@
  * each delegation as a tool call whose result is the sub-agent's reply.
  */
 
+// @region[subagent-setup]
+// Each sub-agent is defined by its own system prompt. The supervisor
+// invokes them as tools; on each call the agent server issues a single
+// Anthropic Messages API request with the matching prompt below. They
+// don't share memory or tools with the supervisor — the supervisor only
+// ever sees what the sub-agent returns as a tool result.
 export const RESEARCH_SUBAGENT_SYSTEM =
   "You are a research sub-agent. Given a topic, produce a concise " +
   "bulleted list of 3-5 key facts. No preamble, no closing.";
@@ -50,7 +56,15 @@ export const SUBAGENT_SYSTEM_BY_NAME: Record<SubAgentName, string> = {
   writing_agent: WRITING_SUBAGENT_SYSTEM,
   critique_agent: CRITIQUE_SUBAGENT_SYSTEM,
 };
+// @endregion[subagent-setup]
 
+// @region[supervisor-delegation-tools]
+// The supervisor delegates by calling tools. Each entry below is an
+// Anthropic tool schema that the supervisor LLM "calls" to delegate
+// work; the run loop in `agent_server.ts` runs the matching sub-agent
+// synchronously, records the delegation into shared agent state, and
+// returns the sub-agent's output as a tool_result the supervisor can
+// read on its next step.
 export const SUBAGENT_TOOL_SCHEMAS = [
   {
     name: "research_agent" as const,
@@ -105,3 +119,4 @@ export const SUBAGENT_TOOL_SCHEMAS = [
     },
   },
 ];
+// @endregion[supervisor-delegation-tools]

@@ -16,14 +16,18 @@ export default function ToolRendering() {
 }
 
 function Demo() {
+  // @region[render-weather-tool]
   useComponent({
     name: "weather",
     render: WeatherCard,
   });
+  // @endregion[render-weather-tool]
 
+  // @region[catchall-renderer]
   useDefaultRenderTool({
     render: GenericToolCard,
   });
+  // @endregion[catchall-renderer]
 
   return (
     <main className="p-8">

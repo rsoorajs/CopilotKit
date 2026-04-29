@@ -103,6 +103,9 @@ function BaseSection({ totalCells }: { totalCells: number }) {
 
 function DepthSection({ catalog }: { catalog: CatalogData }) {
   const { wired, stub, unshipped } = catalog.metadata;
+  // Older catalog.json snapshots may predate the unsupported field; default
+  // to 0 so the dashboard renders cleanly against legacy data.
+  const unsupported = catalog.metadata.unsupported ?? 0;
   return (
     <div className="flex items-center gap-4">
       <Stat value={wired} label="Wired" colorClass="text-[var(--ok)]" />
@@ -112,8 +115,18 @@ function DepthSection({ catalog }: { catalog: CatalogData }) {
         label="Unshipped"
         colorClass="text-[var(--text-muted)]"
       />
+      <Stat
+        value={unsupported}
+        label="Unsupported"
+        colorClass="text-[var(--text-muted)]"
+      />
       <div className="w-24">
-        <CoverageBar wired={wired} stub={stub} unshipped={unshipped} />
+        <CoverageBar
+          wired={wired}
+          stub={stub}
+          unshipped={unshipped}
+          unsupported={unsupported}
+        />
       </div>
     </div>
   );

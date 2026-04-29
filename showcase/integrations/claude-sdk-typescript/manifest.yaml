@@ -18,9 +18,14 @@ interaction_modalities:
   - sidebar
   - embedded
   - chat
+not_supported_features:
+  - gen-ui-interrupt
+  - interrupt-headless
 features:
   - cli-start
   - agentic-chat
+  - agentic-chat-reasoning
+  - beautiful-chat
   - prebuilt-sidebar
   - prebuilt-popup
   - chat-slots
@@ -30,9 +35,17 @@ features:
   - frontend-tools-async
   - hitl
   - hitl-in-app
+  - hitl-in-chat
+  - hitl-in-chat-booking
+  - headless-complete
   - tool-rendering
+  - tool-rendering-default-catchall
+  - tool-rendering-custom-catchall
+  - tool-rendering-reasoning-chain
+  - reasoning-default-render
   - declarative-gen-ui
   - gen-ui-agent
+  - gen-ui-tool-based
   - shared-state-streaming
   - shared-state-read-write
   - subagents
@@ -41,10 +54,12 @@ features:
   - open-gen-ui-advanced
   - byoc-json-render
   - byoc-hashbrown
+  - mcp-apps
   - multimodal
   - voice
   - agent-config
   - auth
+  - a2ui-fixed-schema
 demos:
   - id: cli-start
     name: CLI Start Command
@@ -202,6 +217,18 @@ demos:
       - src/agent_server.ts
       - src/app/demos/gen-ui-agent/page.tsx
       - src/app/api/copilotkit/route.ts
+  - id: gen-ui-tool-based
+    name: Tool-Based Generative UI
+    description: Agent uses frontend tools to trigger UI generation — useFrontendTool with a render function paints structured haiku output as a styled card alongside the chat
+    tags:
+      - generative-ui
+    route: /demos/gen-ui-tool-based
+    animated_preview_url:
+    highlight:
+      - src/agent_server.ts
+      - src/app/demos/gen-ui-tool-based/page.tsx
+      - src/app/demos/gen-ui-tool-based/agent.ts
+      - src/app/api/copilotkit/route.ts
   - id: shared-state-streaming
     name: State Streaming
     description: Per-token state delta streaming from agent to UI
@@ -303,6 +330,16 @@ demos:
       - src/app/demos/byoc-hashbrown/page.tsx
       - src/app/demos/byoc-hashbrown/hashbrown-renderer.tsx
       - src/app/api/copilotkit-byoc-hashbrown/route.ts
+  - id: mcp-apps
+    name: MCP Apps
+    description: MCP server-driven UI via activity renderers — runtime auto-applies the MCP Apps middleware and the built-in MCPAppsActivityRenderer paints sandboxed iframes inline in the chat
+    tags:
+      - generative-ui
+    route: /demos/mcp-apps
+    animated_preview_url:
+    highlight:
+      - src/app/demos/mcp-apps/page.tsx
+      - src/app/api/copilotkit-mcp-apps/route.ts
   - id: multimodal
     name: Multimodal Attachments
     description: Image and PDF attachments forwarded to Claude's vision-capable model
@@ -354,3 +391,139 @@ demos:
       - src/app/demos/auth/use-demo-auth.ts
       - src/app/demos/auth/demo-token.ts
       - src/app/api/copilotkit-auth/[[...slug]]/route.ts
+  - id: tool-rendering-default-catchall
+    name: "Tool Rendering: Default Catch-all"
+    description: Zero-config wildcard renderer via useDefaultRenderTool — built-in tool-call card paints every tool
+    tags:
+      - agent-capabilities
+    route: /demos/tool-rendering-default-catchall
+    animated_preview_url:
+    highlight:
+      - src/app/demos/tool-rendering-default-catchall/page.tsx
+      - src/app/api/copilotkit/route.ts
+  - id: tool-rendering-custom-catchall
+    name: "Tool Rendering: Custom Catch-all"
+    description: Single branded wildcard renderer registered via useDefaultRenderTool({ render })
+    tags:
+      - agent-capabilities
+    route: /demos/tool-rendering-custom-catchall
+    animated_preview_url:
+    highlight:
+      - src/app/demos/tool-rendering-custom-catchall/page.tsx
+      - src/app/demos/tool-rendering-custom-catchall/custom-catchall-renderer.tsx
+      - src/app/api/copilotkit/route.ts
+  - id: agentic-chat-reasoning
+    name: "Agentic Chat (Reasoning)"
+    description: Custom reasoningMessage slot renders Claude extended-thinking deltas as AG-UI REASONING_MESSAGE_* events
+    tags:
+      - agent-capabilities
+    route: /demos/agentic-chat-reasoning
+    animated_preview_url:
+    highlight:
+      - src/agent_server.ts
+      - src/app/demos/agentic-chat-reasoning/page.tsx
+      - src/app/demos/agentic-chat-reasoning/reasoning-block.tsx
+      - src/app/api/copilotkit-reasoning/route.ts
+  - id: reasoning-default-render
+    name: Reasoning (Default Render)
+    description: Built-in CopilotChatReasoningMessage card paints Claude extended-thinking output — zero custom slots
+    tags:
+      - agent-capabilities
+    route: /demos/reasoning-default-render
+    animated_preview_url:
+    highlight:
+      - src/agent_server.ts
+      - src/app/demos/reasoning-default-render/page.tsx
+      - src/app/api/copilotkit-reasoning/route.ts
+  - id: tool-rendering-reasoning-chain
+    name: "Tool Rendering: Reasoning Chain"
+    description: Reasoning slot + per-tool renderers + wildcard catch-all in one cell
+    tags:
+      - agent-capabilities
+    route: /demos/tool-rendering-reasoning-chain
+    animated_preview_url:
+    highlight:
+      - src/agent_server.ts
+      - src/app/demos/tool-rendering-reasoning-chain/page.tsx
+      - src/app/demos/tool-rendering-reasoning-chain/reasoning-block.tsx
+      - src/app/demos/tool-rendering-reasoning-chain/weather-card.tsx
+      - src/app/demos/tool-rendering-reasoning-chain/flight-list-card.tsx
+      - src/app/api/copilotkit-reasoning/route.ts
+  - id: beautiful-chat
+    name: Beautiful Chat
+    description: Polished brand-themed chat surface over the shared Claude SDK agent with seeded suggestion pills
+    tags:
+      - chat-ui
+    route: /demos/beautiful-chat
+    animated_preview_url:
+    highlight:
+      - src/app/demos/beautiful-chat/page.tsx
+      - src/app/api/copilotkit/route.ts
+  - id: gen-ui-interrupt
+    name: Generative UI (Interrupt)
+    description: Unsupported in this integration — the Claude SDK pass-through does not expose interrupt-driven UI primitives
+    tags:
+      - generative-ui
+    route: /demos/gen-ui-interrupt
+    animated_preview_url:
+    highlight:
+      - src/app/demos/gen-ui-interrupt/page.tsx
+  - id: interrupt-headless
+    name: Interrupt (Headless)
+    description: Unsupported in this integration — the Claude SDK pass-through does not expose interrupt-driven UI primitives
+    tags:
+      - chat-ui
+    route: /demos/interrupt-headless
+    animated_preview_url:
+    highlight:
+      - src/app/demos/interrupt-headless/page.tsx
+  - id: hitl-in-chat
+    name: In-Chat HITL (useHumanInTheLoop — ergonomic API)
+    description: Interactive approval/decision surface rendered inline in the chat via the high-level `useHumanInTheLoop` hook
+    tags:
+      - interactivity
+    route: /demos/hitl-in-chat
+    animated_preview_url:
+    highlight:
+      - src/app/demos/hitl-in-chat/page.tsx
+      - src/app/demos/hitl-in-chat/time-picker-card.tsx
+      - src/app/api/copilotkit/route.ts
+  - id: hitl-in-chat-booking
+    name: In-Chat HITL (Booking)
+    description: Time-picker card rendered inline via useHumanInTheLoop for a booking flow
+    tags:
+      - interactivity
+    route: /demos/hitl-in-chat
+    animated_preview_url:
+    highlight:
+      - src/app/demos/hitl-in-chat/page.tsx
+      - src/app/demos/hitl-in-chat/time-picker-card.tsx
+      - src/app/api/copilotkit/route.ts
+  - id: headless-complete
+    name: Headless Chat (Complete)
+    description: Full custom chat surface built on `useAgent` — exercises the full rendering stack (text, per-tool renderers, frontend components) with backend get_weather / get_stock_price tools and a frontend highlight_note tool
+    tags:
+      - chat-ui
+    route: /demos/headless-complete
+    animated_preview_url:
+    highlight:
+      - src/agent/headless-complete-prompt.ts
+      - src/app/demos/headless-complete/page.tsx
+      - src/app/demos/headless-complete/tool-renderers.tsx
+      - src/app/demos/headless-complete/use-rendered-messages.tsx
+      - src/app/api/copilotkit-headless-complete/route.ts
+  - id: a2ui-fixed-schema
+    name: A2UI (Fixed Schema)
+    description: Fixed-schema A2UI — backend display_flight tool emits an a2ui_operations container that ships a JSON component tree plus per-call data; frontend catalog binds component names to React renderers
+    tags:
+      - generative-ui
+    route: /demos/a2ui-fixed-schema
+    animated_preview_url:
+    highlight:
+      - src/agent/a2ui-fixed-prompt.ts
+      - src/agent/a2ui_schemas/flight_schema.json
+      - src/app/demos/a2ui-fixed-schema/page.tsx
+      - src/app/demos/a2ui-fixed-schema/a2ui/catalog.ts
+      - src/app/demos/a2ui-fixed-schema/a2ui/definitions.ts
+      - src/app/demos/a2ui-fixed-schema/a2ui/renderers.tsx
+      - src/app/api/copilotkit-a2ui-fixed-schema/route.ts

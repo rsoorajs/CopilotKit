@@ -13,7 +13,11 @@
  * Achieved depth = highest D where ALL lower depths are also green.
  * Short-circuits: if any level is not green, stop there.
  */
-import { keyFor, CATALOG_TO_D5_KEY, type LiveStatusMap } from "@/lib/live-status";
+import {
+  keyFor,
+  CATALOG_TO_D5_KEY,
+  type LiveStatusMap,
+} from "@/lib/live-status";
 
 /** Minimal catalog cell shape consumed by depth derivation. */
 export interface CatalogCell {
@@ -22,7 +26,7 @@ export interface CatalogCell {
   integration_name: string;
   feature: string | null;
   feature_name: string | null;
-  status: "wired" | "stub" | "unshipped";
+  status: "wired" | "stub" | "unshipped" | "unsupported";
   /** Historical high-water mark for this cell's depth. */
   max_depth: number;
   category: string | null;
@@ -70,8 +74,10 @@ export function deriveDepth(
   cell: CatalogCell,
   live: LiveStatusMap,
 ): DepthResult {
-  // Unshipped cells never advance past D0.
-  if (cell.status === "unshipped") {
+  // Unshipped and unsupported cells never advance past D0 — neither has any
+  // probes attached, so there is no possibility of regression. (Unsupported
+  // is a hard architectural floor; unshipped is "just unbuilt".)
+  if (cell.status === "unshipped" || cell.status === "unsupported") {
     return { achieved: 0, isRegression: false };
   }
 

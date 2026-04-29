@@ -206,3 +206,15 @@ samp {
   border-top: 1px solid var(--border);
   margin: 1.5rem 0;
 }
+
+/* <Steps> / <Step> — CSS counters so numbering survives WhenFrameworkHas
+ * gating. The Steps wrapper resets the counter; each visible Step
+ * increments and renders its number via ::before. Hidden gates render
+ * nothing, so the counter doesn't advance across them. */
+.docs-steps {
+  counter-reset: docs-step;
+}
+.docs-step__badge::before {
+  counter-increment: docs-step;
+  content: counter(docs-step);
+}
