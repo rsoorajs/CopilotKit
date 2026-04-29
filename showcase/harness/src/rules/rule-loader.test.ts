@@ -14,7 +14,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const FIXTURES = path.resolve(__dirname, "../../test/fixtures/rules");
 
 describe("rule-loader: valid fixtures", () => {
-  it("loads smoke-red-tick.yml with merged defaults + escalation + guards", async () => {
+  it("loads agent-red-tick.yml with merged defaults + escalation + guards", async () => {
     const loader = createRuleLoader({
       dir: path.join(FIXTURES, "valid"),
       logger,
@@ -22,7 +22,7 @@ describe("rule-loader: valid fixtures", () => {
     const rules = await loader.load();
     expect(rules).toHaveLength(1);
     const r = rules[0]!;
-    expect(r.id).toBe("smoke-red-tick");
+    expect(r.id).toBe("agent-red-tick");
     expect(r.severity).toBe("warn");
     expect(r.stringTriggers).toEqual([
       "green_to_red",
@@ -579,8 +579,8 @@ describe("rule-loader: invalid fixtures (skipped, not fatal)", () => {
       path.join(tmp, "_defaults.yml"),
     );
     await fs.copyFile(
-      path.join(FIXTURES, "valid", "smoke-red-tick.yml"),
-      path.join(tmp, "smoke-red-tick.yml"),
+      path.join(FIXTURES, "valid", "agent-red-tick.yml"),
+      path.join(tmp, "agent-red-tick.yml"),
     );
     // Drop a broken file alongside.
     await fs.copyFile(
@@ -590,7 +590,7 @@ describe("rule-loader: invalid fixtures (skipped, not fatal)", () => {
     const loader = createRuleLoader({ dir: tmp, logger });
     const { rules, errors } = await loader.loadWithErrors();
     expect(rules).toHaveLength(1);
-    expect(rules[0]!.id).toBe("smoke-red-tick");
+    expect(rules[0]!.id).toBe("agent-red-tick");
     expect(errors).toHaveLength(1);
     expect(errors[0]!.file).toBe("missing-id.yml");
   });
@@ -612,8 +612,8 @@ describe("rule-loader: reload error propagation", () => {
       path.join(tmp, "_defaults.yml"),
     );
     await fs.copyFile(
-      path.join(FIXTURES, "valid", "smoke-red-tick.yml"),
-      path.join(tmp, "smoke-red-tick.yml"),
+      path.join(FIXTURES, "valid", "agent-red-tick.yml"),
+      path.join(tmp, "agent-red-tick.yml"),
     );
     await fs.copyFile(
       path.join(FIXTURES, "invalid", "missing-id.yml"),
@@ -621,7 +621,7 @@ describe("rule-loader: reload error propagation", () => {
     );
     const loader = createRuleLoader({ dir: tmp, logger });
     const { rules, errors } = await loader.loadWithErrors();
-    expect(rules.map((r) => r.id)).toEqual(["smoke-red-tick"]);
+    expect(rules.map((r) => r.id)).toEqual(["agent-red-tick"]);
     expect(errors.map((e) => e.file)).toEqual(["missing-id.yml"]);
   });
 
@@ -1418,108 +1418,6 @@ describe("rule-loader + renderer: full YAML contract coverage", () => {
     });
   });
 
-  // ---- smoke-red-tick.yml -------------------------------------------
-  describe("smoke-red-tick", () => {
-    it("green_to_red branch renders slug, errorDesc and endpoint link", async () => {
-      const { rules, errors, renderer } = await loadRealRules();
-      expect(
-        errors.find((e) => e.file.startsWith("smoke-red-tick")),
-      ).toBeUndefined();
-      const rule = rules.find((r) => r.id === "smoke-red-tick");
-      expect(rule).toBeDefined();
-      expect(rule!.stringTriggers).toEqual([
-        "green_to_red",
-        "sustained_red",
-        "red_to_green",
-      ]);
-      const ctx = makeCtx(
-        rule!,
-        {
-          slug: "coagents-starter",
-          errorDesc: "http 503",
-          // A3: driver signal carries `url` (endpoint that was probed)
-          // instead of a `links` object — the template now renders a single
-          // endpoint link rather than separate smoke/health pair.
-          url: "https://svc.example/smoke",
-          failCount: 1,
-        },
-        { trigger: { green_to_red: true, isRedTick: true } },
-      );
-      const text = (
-        renderer.render({ text: rule!.template!.text }, ctx).payload as {
-          text: string;
-        }
-      ).text;
-      expect(text).toContain("coagents-starter");
-      expect(text).toContain("down, error: http 503");
-      // Triple-brace signal.url (marked slackSafe in LIVENESS_SLACK_SAFE_FIELDS)
-      // preserves the raw URL inside `<URL|label>` Slack link markup; prior
-      // double-brace would HTML-escape `/` → `&#x2F;` and break the link at
-      // Slack render time.
-      expect(text).toContain("<https://svc.example/smoke|endpoint>");
-    });
-
-    it("sustained_red branch renders failCount (attempt: N) and error", async () => {
-      const { rules, renderer } = await loadRealRules();
-      const rule = rules.find((r) => r.id === "smoke-red-tick")!;
-      const ctx = makeCtx(
-        rule,
-        {
-          slug: "mastra-starter",
-          errorDesc: "timeout after 15000ms",
-          // A3: endpoint URL lives under `signal.url` now.
-          url: "https://m.example/smoke",
-          failCount: 3,
-        },
-        { trigger: { sustained_red: true, isRedTick: true } },
-      );
-      const text = (
-        renderer.render({ text: rule.template!.text }, ctx).payload as {
-          text: string;
-        }
-      ).text;
-      expect(text).toContain("mastra-starter");
-      expect(text).toContain("attempt: 3");
-      expect(text).toContain("timeout after 15000ms");
-    });
-
-    it("red_to_green branch renders recovery + firstFailureAt", async () => {
-      const { rules, renderer } = await loadRealRules();
-      const rule = rules.find((r) => r.id === "smoke-red-tick")!;
-      const ctx = makeCtx(
-        rule,
-        {
-          slug: "langgraph-starter",
-          firstFailureAt: "2026-04-19T23:00:00Z",
-        },
-        { trigger: { red_to_green: true } },
-      );
-      const text = (
-        renderer.render({ text: rule.template!.text }, ctx).payload as {
-          text: string;
-        }
-      ).text;
-      expect(text).toContain("langgraph-starter");
-      expect(text).toContain("recovered");
-      expect(text).toContain("was down since 2026-04-19T23:00:00Z");
-    });
-
-    it("fleet rule owns <!channel> escalation (migrated from per-service red-tick)", async () => {
-      // Plan Item 4: <!channel> moved off smoke-red-tick onto smoke-red-fleet.
-      // The per-service rule still fires per-match via its own targets; the
-      // fleet rule is the single pager for cross-service outages. Per-service
-      // red-tick template must NOT contain <!channel>; fleet rule template
-      // MUST. Both invariants asserted together so a future refactor can't
-      // silently drop one without the other surfacing.
-      const { rules } = await loadRealRules();
-      const perService = rules.find((r) => r.id === "smoke-red-tick")!;
-      const fleet = rules.find((r) => r.id === "smoke-red-fleet")!;
-      expect(perService.template!.text).not.toContain("<!channel>");
-      expect(fleet.aggregation).toBeDefined();
-      expect(fleet.aggregation!.template).toContain("<!channel>");
-    });
-  });
-
   // ---- deploy-result.yml (remaining branches R20 didn't cover) ------
   describe("deploy-result (R20 follow-up branches)", () => {
     it("green_to_red partial branch renders failed/succeeded lists", async () => {
@@ -1680,8 +1578,8 @@ describe("rule-loader: initial load emits rules.reload.failed on errors (R24 buc
       path.join(tmp, "_defaults.yml"),
     );
     await fs.copyFile(
-      path.join(FIXTURES, "valid", "smoke-red-tick.yml"),
-      path.join(tmp, "smoke-red-tick.yml"),
+      path.join(FIXTURES, "valid", "agent-red-tick.yml"),
+      path.join(tmp, "agent-red-tick.yml"),
     );
     // One malformed rule (missing id, fails schema).
     await fs.copyFile(
@@ -1707,7 +1605,7 @@ describe("rule-loader: initial load emits rules.reload.failed on errors (R24 buc
 
     // Good rule still loads.
     expect(rules).toHaveLength(1);
-    expect(rules[0]!.id).toBe("smoke-red-tick");
+    expect(rules[0]!.id).toBe("agent-red-tick");
     // Bad rule surfaces via errors.
     expect(errors).toHaveLength(1);
     expect(errors[0]!.file).toBe("missing-id.yml");

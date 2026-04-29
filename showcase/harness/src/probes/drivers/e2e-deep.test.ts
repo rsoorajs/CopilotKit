@@ -336,7 +336,12 @@ describe("e2e-deep driver", () => {
     expect(fsig.failure_turn).toBe(1);
     expect(fsig.errorClass).toBe("conversation-error");
     expect(fsig.errorDesc).toMatch(/timeout/i);
-  });
+    // Timeout budget: fillAndVerifySend retries up to
+    // SEND_VERIFY_MAX_ATTEMPTS (3) × (SEND_VERIFY_INITIAL_DELAY_MS +
+    // remaining poll window) ≈ 6s when stallEvaluate prevents the user
+    // message count from growing, plus the 200ms responseTimeoutMs
+    // deadline. 15s absorbs CI variance without masking real hangs.
+  }, 15_000);
 
   it("emits red with goto-error when navigation fails", async () => {
     registerD5Script(
