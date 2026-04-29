@@ -59,6 +59,7 @@ features:
   - open-gen-ui
   - open-gen-ui-advanced
   - mcp-apps
+  - beautiful-chat
 demos:
   - id: cli-start
     name: CLI Start Command
@@ -479,3 +480,14 @@ demos:
       - src/agents/agent.py
       - src/app/demos/mcp-apps/page.tsx
       - src/app/api/copilotkit-mcp-apps/route.ts
+  - id: beautiful-chat
+    name: Beautiful Chat
+    description: Polished landing-style chat surface with brand theming and suggestion pills
+    tags:
+      - chat-ui
+    route: /demos/beautiful-chat
+    animated_preview_url:
+    highlight:
+      - src/agents/agent.py
+      - src/app/demos/beautiful-chat/page.tsx
+      - src/app/api/copilotkit/route.ts

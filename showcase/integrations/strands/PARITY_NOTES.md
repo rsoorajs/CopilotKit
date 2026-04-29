@@ -62,13 +62,16 @@ Wave-2 port status for the previously deferred demos:
   `openGenerativeUI.sandboxFunctions` (evaluateExpression, notifyHost) so
   the agent-authored iframe can invoke host functions via
   `Websandbox.connection.remote.<name>(...)`.
-- **beautiful-chat** — **skipped** (truthfully). Porting fully requires
-  dozens of starter-level sub-components (UI primitives, todo board,
-  meeting-time picker, headless chat, theme toggle, a2ui catalog, etc.)
-  AND a dedicated runtime that enables `openGenerativeUI` + `a2ui` +
-  `mcpApps` simultaneously. That is more work than all four other wave-2
-  demos combined and deserves its own blitz. See the LangGraph-Python
-  reference in `showcase/integrations/langgraph-python/src/app/demos/beautiful-chat/`
+- **beautiful-chat** — **shipped (simplified)** in the wave-2 follow-up.
+  Polished landing-style chat shell with brand theming and seeded
+  suggestions, sitting on top of the shared Strands agent. Pattern
+  mirrors the spring-ai sibling
+  (`showcase/integrations/spring-ai/src/app/demos/beautiful-chat/`).
+  Porting the full canonical surface (ExampleCanvas, GenerativeUIExamples,
+  declarative A2UI catalog, theme provider, dedicated runtime that
+  enables `openGenerativeUI` + `a2ui` + `mcpApps` simultaneously) remains
+  out-of-scope future work — see the LangGraph-Python reference in
+  `showcase/integrations/langgraph-python/src/app/demos/beautiful-chat/`
   for the full surface area.
 
 ### Per-demo prompt specialization caveat
