@@ -26,6 +26,7 @@
     "category": {
       "type": "string",
       "enum": [
+        "built-in",
         "popular",
         "agent-framework",
         "enterprise-platform",
@@ -91,6 +92,13 @@
       },
       "minItems": 1,
       "description": "List of supported feature IDs from the feature registry"
+    },
+    "not_supported_features": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "List of feature IDs that this integration's framework cannot architecturally support (e.g., framework lacks graph-interrupt API or MCP tool runtime). These are excluded from parity computation."
     },
     "demos": {
       "type": "array",

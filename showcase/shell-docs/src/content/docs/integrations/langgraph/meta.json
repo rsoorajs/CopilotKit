@@ -2,9 +2,6 @@
   "title": "LangGraph",
   "root": true,
   "pages": [
-    "---Getting Started---",
-    "index",
-    "quickstart",
     "---Basics---",
     "prebuilt-components",
     "custom-look-and-feel",
@@ -22,6 +19,8 @@
     "deep-agents",
     "auth",
     "advanced",
+    "---Threads---",
+    "threads",
     "---Premium Features---",
     "...premium",
     "---Tutorials & Videos---",
@@ -29,8 +28,6 @@
     "...videos",
     "---Troubleshooting---",
     "...coagent-troubleshooting",
-    "...troubleshooting",
-    "---Other---",
-    "...(other)"
+    "...troubleshooting"
   ]
 }

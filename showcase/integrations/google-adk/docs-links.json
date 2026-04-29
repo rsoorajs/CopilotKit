@@ -1,0 +1,151 @@
+{
+  "framework": "google-adk",
+  "features": {
+    "agentic-chat": {
+      "og_docs_url": "https://docs.copilotkit.ai/adk",
+      "shell_docs_path": null
+    },
+    "beautiful-chat": {
+      "og_docs_url": "https://docs.copilotkit.ai/adk",
+      "shell_docs_path": null
+    },
+    "cli-start": {
+      "og_docs_url": "https://docs.copilotkit.ai/adk/quickstart",
+      "shell_docs_path": null
+    },
+    "prebuilt-sidebar": {
+      "og_docs_url": "https://docs.copilotkit.ai/adk",
+      "shell_docs_path": null
+    },
+    "prebuilt-popup": {
+      "og_docs_url": "https://docs.copilotkit.ai/adk",
+      "shell_docs_path": null
+    },
+    "chat-slots": {
+      "og_docs_url": "https://docs.copilotkit.ai/adk",
+      "shell_docs_path": null
+    },
+    "chat-customization-css": {
+      "og_docs_url": null,
+      "shell_docs_path": null
+    },
+    "headless-simple": {
+      "og_docs_url": "https://docs.copilotkit.ai/adk",
+      "shell_docs_path": null
+    },
+    "headless-complete": {
+      "og_docs_url": "https://docs.copilotkit.ai/adk",
+      "shell_docs_path": null
+    },
+    "agentic-chat-reasoning": {
+      "og_docs_url": "https://docs.copilotkit.ai/custom-look-and-feel/reasoning-messages",
+      "shell_docs_path": null
+    },
+    "reasoning-default-render": {
+      "og_docs_url": "https://docs.copilotkit.ai/custom-look-and-feel/reasoning-messages",
+      "shell_docs_path": null
+    },
+    "frontend-tools": {
+      "og_docs_url": "https://docs.copilotkit.ai/adk/frontend-tools",
+      "shell_docs_path": null
+    },
+    "frontend-tools-async": {
+      "og_docs_url": "https://docs.copilotkit.ai/adk/frontend-tools",
+      "shell_docs_path": null
+    },
+    "gen-ui-tool-based": {
+      "og_docs_url": "https://docs.copilotkit.ai/adk/generative-ui/your-components/display-only",
+      "shell_docs_path": null
+    },
+    "hitl-in-chat": {
+      "og_docs_url": "https://docs.copilotkit.ai/adk/human-in-the-loop",
+      "shell_docs_path": null
+    },
+    "hitl-in-app": {
+      "og_docs_url": "https://docs.copilotkit.ai/adk/frontend-tools",
+      "shell_docs_path": null
+    },
+    "declarative-gen-ui": {
+      "og_docs_url": "https://docs.copilotkit.ai/adk/generative-ui/a2ui/dynamic-schema",
+      "shell_docs_path": null
+    },
+    "a2ui-fixed-schema": {
+      "og_docs_url": "https://docs.copilotkit.ai/adk/generative-ui/a2ui/fixed-schema",
+      "shell_docs_path": null
+    },
+    "open-gen-ui": {
+      "og_docs_url": "https://docs.copilotkit.ai/generative-ui/open-generative-ui",
+      "shell_docs_path": null
+    },
+    "open-gen-ui-advanced": {
+      "og_docs_url": "https://docs.copilotkit.ai/generative-ui/open-generative-ui",
+      "shell_docs_path": null
+    },
+    "gen-ui-agent": {
+      "og_docs_url": "https://docs.copilotkit.ai/adk/generative-ui/state-rendering",
+      "shell_docs_path": null
+    },
+    "tool-rendering-default-catchall": {
+      "og_docs_url": "https://docs.copilotkit.ai/adk/generative-ui/tool-rendering",
+      "shell_docs_path": null
+    },
+    "tool-rendering-custom-catchall": {
+      "og_docs_url": "https://docs.copilotkit.ai/adk/generative-ui/tool-rendering",
+      "shell_docs_path": null
+    },
+    "tool-rendering": {
+      "og_docs_url": "https://docs.copilotkit.ai/adk/generative-ui/tool-rendering",
+      "shell_docs_path": null
+    },
+    "tool-rendering-reasoning-chain": {
+      "og_docs_url": "https://docs.copilotkit.ai/adk/generative-ui/tool-rendering",
+      "shell_docs_path": null
+    },
+    "shared-state-read-write": {
+      "og_docs_url": "https://docs.copilotkit.ai/adk/shared-state/in-app-agent-write",
+      "shell_docs_path": null
+    },
+    "shared-state-streaming": {
+      "og_docs_url": "https://docs.copilotkit.ai/adk/shared-state/predictive-state-updates",
+      "shell_docs_path": null
+    },
+    "readonly-state-agent-context": {
+      "og_docs_url": "https://docs.copilotkit.ai/adk/shared-state/in-app-agent-read",
+      "shell_docs_path": null
+    },
+    "subagents": {
+      "og_docs_url": null,
+      "shell_docs_path": null
+    },
+    "voice": {
+      "og_docs_url": "https://docs.copilotkit.ai/adk",
+      "shell_docs_path": null
+    },
+    "multimodal": {
+      "og_docs_url": null,
+      "shell_docs_path": null
+    },
+    "auth": {
+      "og_docs_url": "https://docs.copilotkit.ai/adk",
+      "shell_docs_path": null
+    },
+    "agent-config": {
+      "og_docs_url": null,
+      "shell_docs_path": null
+    },
+    "byoc-hashbrown": {
+      "og_docs_url": null,
+      "shell_docs_path": null
+    },
+    "byoc-json-render": {
+      "og_docs_url": null,
+      "shell_docs_path": null
+    }
+  },
+  "missing": [
+    {
+      "feature": "all",
+      "reason": "4085 shell does not have a google-adk-scoped docs tree. Shell paths set to null rather than linking to framework-agnostic pages that would be misleading under the google-adk URL. OG URLs point at the real /adk/... pages on docs.copilotkit.ai where they exist; null where there's no canonical ADK page (subagents, multimodal, agent-config, byoc-*, chat-customization-css)."
+    }
+  ]
+}

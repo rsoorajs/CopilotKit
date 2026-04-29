@@ -76,6 +76,9 @@ export function validate(
       if (!matchedSuggestion) continue;
 
       const registered = new Set(demo.tools);
+      // Wildcard renderers (useDefaultRenderTool — represented as "*" in
+      // the tool set) match every fixture tool — skip all checks for this demo.
+      if (registered.has("*")) continue;
       for (const tc of toolCalls) {
         if (registered.has(tc.name)) continue;
         violations.push({
@@ -119,6 +122,9 @@ const SUGGESTION_MESSAGE_RE =
 const USE_COMPONENT_BLOCK_RE =
   /use(?:Component|HumanInTheLoop|FrontendTool|RenderTool|DefaultRenderTool)\s*\(\s*\{[\s\S]*?name:\s*["']([^"']+)["']/g;
 const AGENT_PROP_RE = /<CopilotKit[^>]*\bagent\s*=\s*["']([^"']+)["']/;
+// Detects useDefaultRenderTool({ ... }) — the wildcard catch-all renderer
+// that matches ALL tool calls. No `name:` property needed.
+const USE_DEFAULT_RENDER_TOOL_RE = /useDefaultRenderTool\s*\(/;
 
 function extractStringLiteral(rawLiteral: string): string {
   // Strip outer quotes and unescape — conservative: only \" \' \\ \n
@@ -144,6 +150,11 @@ function parseDemoPage(pageTsxPath: string): {
   const frontendTools: string[] = [];
   for (const m of src.matchAll(USE_COMPONENT_BLOCK_RE)) {
     frontendTools.push(m[1]);
+  }
+  // useDefaultRenderTool is a wildcard renderer — it registers "*" which
+  // matches every fixture tool, so no drift violation can occur.
+  if (USE_DEFAULT_RENDER_TOOL_RE.test(src)) {
+    frontendTools.push("*");
   }
   return {
     agentId: agentMatch ? agentMatch[1] : null,
@@ -180,7 +191,7 @@ function parseBackendTools(agentFilePath: string): string[] {
 }
 
 /**
- * Parse packages/<slug>/src/app/api/copilotkit/route.ts for the
+ * Parse integrations/<slug>/src/app/api/copilotkit/route.ts for the
  * agentId→graphId map. Recognizes the two patterns the showcase uses:
  *   agents["agent-id"] = createAgent("graph_id")
  *   agents["agent-id"] = createAgent()         // defaults to sample_agent
@@ -277,16 +288,16 @@ function loadGraphs(packagesDir: string, slug: string): Record<string, string> {
 /**
  * Scan the showcase tree and produce a DemoSurface per discovered demo page.
  *
- * Conventions assumed (see showcase/packages/*):
- *   - One demo per directory under packages/<slug>/src/app/demos/<demoId>/
+ * Conventions assumed (see showcase/integrations/*):
+ *   - One demo per directory under integrations/<slug>/src/app/demos/<demoId>/
  *   - The demo's entry is page.tsx with `<CopilotKit agent="..." ...>`
  *   - Suggestions live in a useConfigureSuggestions({ suggestions: [...] }) call
  *     in the same file (or one of its hook imports — we walk hooks/*.tsx too)
- *   - Backend tools for each agentId live in packages/<slug>/src/agents/<agentId>.py
+ *   - Backend tools for each agentId live in integrations/<slug>/src/agents/<agentId>.py
  *     with hyphens mapped to underscores
  */
 export function collectDemoSurfaces(showcaseRoot: string): DemoSurface[] {
-  const packagesDir = path.join(showcaseRoot, "packages");
+  const packagesDir = path.join(showcaseRoot, "integrations");
   if (!fs.existsSync(packagesDir)) return [];
 
   const surfaces: DemoSurface[] = [];
