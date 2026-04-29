@@ -1,10 +1,10 @@
 {
-  "_comment": "D5 fixture for /demos/subagents against LangGraph Python (LGP). The supervisor agent in src/agents/subagents.py exposes three sub-agents as tools — research_agent, writing_agent, critique_agent — with a delegations log in shared state. A typical chained run: supervisor calls research_agent → gets facts → calls writing_agent → gets a draft → calls critique_agent → gets a review → composes a final reply. Each delegation appends a Delegation entry to shared state which the UI renders live in DelegationLog. We model the chain as four sequential fixtures (one per turn through the agent loop) disambiguated by sequenceIndex. Uses sequenceIndex instead of toolCallId because Gemini's functionResponse does not preserve tool call IDs. ORDER: sequenceIndex:3 → 2 → 1 → 0 so higher-index fixtures win on later loop iterations.",
+  "_comment": "D5 fixture for /demos/subagents against LangGraph Python (LGP). The supervisor agent in src/agents/subagents.py exposes three sub-agents as tools — research_agent, writing_agent, critique_agent — with a delegations log in shared state. A typical chained run: supervisor calls research_agent -> gets facts -> calls writing_agent -> gets a draft -> calls critique_agent -> gets a review -> composes a final reply. Each delegation appends a Delegation entry to shared state which the UI renders live in DelegationLog. We model the chain as four sequential fixtures disambiguated by toolCallId matching on the LAST tool message. ORDER: most-specific (critique) first, then writing, then research, then fallback (no toolCallId = initial request).",
   "fixtures": [
     {
       "match": {
         "userMessage": "Research the benefits of remote work and draft a one-paragraph summary",
-        "sequenceIndex": 3
+        "toolCallId": "call_d5_critique_agent_001"
       },
       "response": {
         "content": "Here is the summary, after research → drafting → critique:\n\nRemote work returns roughly ten hours a week to employees by eliminating the commute, and repeated surveys show meaningfully higher job satisfaction among remote workers. Employers benefit too: a geographically unbounded talent pool and lower office overhead. The honest counterweight is that ad-hoc collaboration, mentorship of junior staff, and cultural cohesion all degrade without intentional rituals to replace what an office provided implicitly."
@@ -13,7 +13,7 @@
     {
       "match": {
         "userMessage": "Research the benefits of remote work and draft a one-paragraph summary",
-        "sequenceIndex": 2
+        "toolCallId": "call_d5_writing_agent_001"
       },
       "response": {
         "toolCalls": [
@@ -28,7 +28,7 @@
     {
       "match": {
         "userMessage": "Research the benefits of remote work and draft a one-paragraph summary",
-        "sequenceIndex": 1
+        "toolCallId": "call_d5_research_agent_001"
       },
       "response": {
         "toolCalls": [
@@ -42,8 +42,7 @@
     },
     {
       "match": {
-        "userMessage": "Research the benefits of remote work and draft a one-paragraph summary",
-        "sequenceIndex": 0
+        "userMessage": "Research the benefits of remote work and draft a one-paragraph summary"
       },
       "response": {
         "toolCalls": [
