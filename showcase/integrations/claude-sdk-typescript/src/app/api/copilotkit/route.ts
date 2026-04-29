@@ -46,6 +46,7 @@ const agentNames = [
   "frontend_tools",
   "frontend-tools-async",
   "hitl-in-chat",
+  "hitl-in-chat-booking",
   "hitl-in-app",
   "readonly-state-agent-context",
   // runtime-injected demos (A2UI, open-gen-ui, mcp-apps live on dedicated

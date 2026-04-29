@@ -36,6 +36,18 @@ import {
   SUPERVISOR_SYSTEM_PROMPT,
   type SubAgentName,
 } from "./agent/subagents-prompts";
+import {
+  A2UI_FIXED_SYSTEM_PROMPT,
+  DISPLAY_FLIGHT_TOOL_SCHEMA,
+  buildDisplayFlightOperations,
+} from "./agent/a2ui-fixed-prompt";
+import {
+  HEADLESS_COMPLETE_SYSTEM_PROMPT,
+  HEADLESS_GET_STOCK_PRICE_TOOL_SCHEMA,
+  HEADLESS_GET_WEATHER_TOOL_SCHEMA,
+  getStockPriceImpl,
+  getWeatherImpl,
+} from "./agent/headless-complete-prompt";
 
 dotenv.config({ path: ".env.local" });
 dotenv.config();
@@ -595,6 +607,42 @@ async function executeBackendTool(
   state: Record<string, unknown>,
   emit: (event: object) => void,
 ): Promise<ExecuteToolResult> {
+  if (toolName === "display_flight") {
+    const origin = typeof toolInput.origin === "string" ? toolInput.origin : "";
+    const destination =
+      typeof toolInput.destination === "string" ? toolInput.destination : "";
+    const airline =
+      typeof toolInput.airline === "string" ? toolInput.airline : "";
+    const price = typeof toolInput.price === "string" ? toolInput.price : "";
+    const ops = buildDisplayFlightOperations({
+      origin,
+      destination,
+      airline,
+      price,
+    });
+    return {
+      resultText: JSON.stringify(ops),
+      state: null,
+    };
+  }
+
+  if (toolName === "get_weather") {
+    const location =
+      typeof toolInput.location === "string" ? toolInput.location : "";
+    return {
+      resultText: JSON.stringify(getWeatherImpl(location)),
+      state: null,
+    };
+  }
+
+  if (toolName === "get_stock_price") {
+    const ticker = typeof toolInput.ticker === "string" ? toolInput.ticker : "";
+    return {
+      resultText: JSON.stringify(getStockPriceImpl(ticker)),
+      state: null,
+    };
+  }
+
   if (toolName === "set_notes") {
     const notes = Array.isArray(toolInput.notes)
       ? (toolInput.notes as unknown[]).filter(
@@ -1079,6 +1127,40 @@ app.post("/subagents", async (req: Request, res: Response): Promise<void> => {
     initialState: { delegations },
   });
 });
+
+// A2UI Fixed Schema — backend ships flight_schema.json and exposes a
+// single `display_flight` tool that emits an `a2ui_operations` container.
+// The dedicated runtime route at `/api/copilotkit-a2ui-fixed-schema` runs
+// the A2UI middleware with `injectA2UITool: false` because this backend
+// owns the rendering tool itself.
+app.post(
+  "/a2ui-fixed-schema",
+  async (req: Request, res: Response): Promise<void> => {
+    await runAgenticLoop(req, res, {
+      systemPrompt: A2UI_FIXED_SYSTEM_PROMPT,
+      toolSchemas: [DISPLAY_FLIGHT_TOOL_SCHEMA] as Anthropic.Tool[],
+      initialState: {},
+    });
+  },
+);
+
+// Headless Chat (Complete) — backend exposes get_weather + get_stock_price
+// tools the frontend renders via per-tool useRenderTool renderers, plus
+// participates in the frontend `highlight_note` tool flow (forwarded as
+// a passthrough).
+app.post(
+  "/headless-complete",
+  async (req: Request, res: Response): Promise<void> => {
+    await runAgenticLoop(req, res, {
+      systemPrompt: HEADLESS_COMPLETE_SYSTEM_PROMPT,
+      toolSchemas: [
+        HEADLESS_GET_WEATHER_TOOL_SCHEMA,
+        HEADLESS_GET_STOCK_PRICE_TOOL_SCHEMA,
+      ] as Anthropic.Tool[],
+      initialState: {},
+    });
+  },
+);
 
 // ---------------------------------------------------------------------------
 // Health check
