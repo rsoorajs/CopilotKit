@@ -94,7 +94,7 @@ The showcase harness includes a CLI that runs the same probe drivers (liveness, 
 ### Quick start
 
 ```sh
-# from the repo root — all examples below use showcase/bin/showcase
+# runs from any directory — all paths are resolved relative to the script itself
 
 # 1. Make sure Docker is running (Colima, Docker Desktop, or OrbStack)
 
