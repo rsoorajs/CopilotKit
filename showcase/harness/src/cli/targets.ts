@@ -44,6 +44,7 @@ export interface SmokeInput {
   name: string;
   publicUrl: string;
   shape: "package";
+  [k: string]: unknown;
 }
 
 /**
@@ -59,6 +60,7 @@ export interface ChatToolsInput {
   name: string;
   demos: string[];
   shape: "package";
+  [k: string]: unknown;
 }
 
 /**
