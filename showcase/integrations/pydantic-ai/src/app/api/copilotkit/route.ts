@@ -73,6 +73,21 @@ agents["shared-state-read-write"] = new HttpAgent({
 agents["subagents"] = new HttpAgent({
   url: `${AGENT_URL}/subagents/`,
 });
+agents["gen-ui-tool-based"] = new HttpAgent({
+  url: `${AGENT_URL}/gen_ui_tool_based/`,
+});
+
+// Reasoning trio — both reasoning cells share the same backend agent
+// (custom-slot vs default-slot is a frontend-only distinction).
+agents["agentic-chat-reasoning"] = new HttpAgent({
+  url: `${AGENT_URL}/reasoning/`,
+});
+agents["reasoning-default-render"] = new HttpAgent({
+  url: `${AGENT_URL}/reasoning/`,
+});
+agents["tool-rendering-reasoning-chain"] = new HttpAgent({
+  url: `${AGENT_URL}/tool_rendering_reasoning_chain/`,
+});
 
 console.log(
   `[copilotkit/route] Registered ${Object.keys(agents).length} agent names: ${Object.keys(agents).join(", ")}`,

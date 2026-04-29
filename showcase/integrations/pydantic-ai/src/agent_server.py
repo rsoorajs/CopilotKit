@@ -52,6 +52,12 @@ from agents.shared_state_read_write import SharedStateRWState
 from agents.shared_state_read_write import agent as shared_state_read_write_agent
 from agents.subagents import SubagentsState
 from agents.subagents import agent as subagents_agent
+from agents.gen_ui_tool_based import agent as gen_ui_tool_based_agent
+from agents.reasoning_agent import agent as reasoning_agent
+from agents.tool_rendering_reasoning_chain_agent import (
+    agent as tool_rendering_reasoning_chain_agent,
+)
+from agents.mcp_apps_agent import agent as mcp_apps_agent
 
 load_dotenv()
 
@@ -122,6 +128,21 @@ app.mount(
     "/subagents",
     subagents_agent.to_ag_ui(deps=StateDeps(SubagentsState())),
 )
+
+# ── Tool-Based Generative UI — chart-viz system prompt ───────────────
+app.mount("/gen_ui_tool_based", gen_ui_tool_based_agent.to_ag_ui())
+
+# ── Reasoning trio (gpt-5 reasoning model) ───────────────────────────
+# Same reasoning agent backs both `agentic-chat-reasoning` and
+# `reasoning-default-render` (custom slot vs built-in slot).
+app.mount("/reasoning", reasoning_agent.to_ag_ui())
+app.mount(
+    "/tool_rendering_reasoning_chain",
+    tool_rendering_reasoning_chain_agent.to_ag_ui(),
+)
+
+# ── MCP Apps — no-tools agent; runtime mcpApps middleware injects tools
+app.mount("/mcp_apps", mcp_apps_agent.to_ag_ui())
 
 # ── Main sales agent — mounted at root (catch-all) ───────────────────
 # Mounted LAST so the sub-path mounts above win for their specific paths.
