@@ -81,7 +81,7 @@ export function DocsRow({
     : probed.shell;
 
   return (
-    <div className="flex items-center gap-2.5">
+    <div className="flex items-center justify-center gap-2.5">
       <DocsLink
         label="docs-og"
         href={ogHref}
@@ -299,7 +299,7 @@ export function CellStatus({ ctx }: { ctx: CellContext }) {
   // worktree) and is tracked in the cross-worktree concerns of this fix.
 
   return (
-    <div className="flex items-center gap-2.5">
+    <div className="flex items-center justify-center gap-2.5">
       <LiveBadge
         name="E2E"
         badge={cell.e2e}

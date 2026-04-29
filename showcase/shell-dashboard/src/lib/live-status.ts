@@ -104,7 +104,7 @@ export function keyFor(
  *
  * Mirrors `REGISTRY_TO_D5` in `harness/src/probes/helpers/d5-feature-mapping.ts`.
  */
-const CATALOG_TO_D5_KEY: Readonly<Record<string, readonly string[]>> = {
+export const CATALOG_TO_D5_KEY: Readonly<Record<string, readonly string[]>> = {
   "agentic-chat": ["agentic-chat"],
   "tool-rendering": ["tool-rendering"],
   "tool-rendering-default-catchall": ["tool-rendering"],
@@ -127,7 +127,9 @@ function resolveD5Row(
   featureId: string,
 ): StatusRow | null {
   const d5Keys = CATALOG_TO_D5_KEY[featureId];
-  if (!d5Keys) return null;
+  if (!d5Keys) {
+    return live.get(keyFor("d5", slug, featureId)) ?? null;
+  }
   let worst: StatusRow | null = null;
   for (const d5Key of d5Keys) {
     const row = live.get(keyFor("d5", slug, d5Key)) ?? null;

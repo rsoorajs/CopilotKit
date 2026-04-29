@@ -48,7 +48,7 @@ export function OverlayColumnHeader({
 
   return (
     <th
-      className="sticky top-0 z-20 bg-[var(--bg-muted)] px-3 py-3 text-left border-b border-l border-[var(--border)] font-normal"
+      className="sticky top-0 z-20 bg-[var(--bg-muted)] px-1 py-1.5 text-center border-b border-l border-[var(--border)] font-normal"
       style={{ minWidth: `${minWidth}px` }}
     >
       {/* Always: integration name */}

@@ -471,8 +471,8 @@ export function ports(): string {
   const infraEntries = Object.entries(INFRA_PORTS).sort(([a], [b]) =>
     a.localeCompare(b),
   );
-  const integrationEntries = Object.entries(integrationPorts).sort(
-    ([a], [b]) => a.localeCompare(b),
+  const integrationEntries = Object.entries(integrationPorts).sort(([a], [b]) =>
+    a.localeCompare(b),
   );
 
   for (const [slug, port] of infraEntries) {
@@ -556,18 +556,14 @@ export async function diffLogs(
     }
 
     child.on("error", (err) => {
-      reject(
-        new Error(`Failed to get logs for ${slug}: ${err.message}`),
-      );
+      reject(new Error(`Failed to get logs for ${slug}: ${err.message}`));
     });
 
     child.on("close", (code) => {
       if (code === 0 || code === null) {
         resolve();
       } else {
-        reject(
-          new Error(`Log retrieval for ${slug} exited with code ${code}`),
-        );
+        reject(new Error(`Log retrieval for ${slug} exited with code ${code}`));
       }
     });
   });

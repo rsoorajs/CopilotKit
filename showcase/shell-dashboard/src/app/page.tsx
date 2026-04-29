@@ -140,9 +140,9 @@ export default function Page() {
   );
 
   return (
-    <div data-testid="tab-shell" className="pb-20">
-      {/* 2-tab bar: Matrix | Ops */}
-      <div className="flex items-center gap-0 border-b border-[var(--border)] px-8">
+    <div data-testid="tab-shell" className="h-dvh flex flex-col">
+      {/* Tab bar — pinned above scroll area */}
+      <div className="flex-shrink-0 flex items-center gap-0 border-b border-[var(--border)] px-8">
         <button
           type="button"
           data-testid="tab-matrix"
@@ -169,39 +169,46 @@ export default function Page() {
         </button>
       </div>
 
-      {/* Tab content */}
       {activeTab === "matrix" && (
         <>
-          <div className="sticky top-0 z-30 px-8 py-3 flex flex-col gap-3 bg-[var(--bg-surface)] border-b border-[var(--border)]">
+          {/* Overlay toggle — pinned below tab bar */}
+          <div className="flex-shrink-0 px-8 py-3 bg-[var(--bg-surface)] border-b border-[var(--border)]">
             <OverlayToggleBar
               overlays={overlays}
               onToggle={toggle}
               onApplyPreset={applyPreset}
               activePreset={activePreset}
             />
-            <AdaptiveStatsBar
+          </div>
+          {/* Single scroll area — stats bar and title scroll away, table headers stick */}
+          <div className="flex-1 min-h-0 overflow-auto pb-12">
+            <div className="px-8 py-3 border-b border-[var(--border)]">
+              <AdaptiveStatsBar
+                overlays={overlays}
+                catalog={catalogData}
+                healthStats={healthStats}
+                parityStats={parityStats}
+                docsStats={docsStats}
+              />
+            </div>
+            <FeatureGrid
+              title="Feature Matrix"
+              renderCell={renderCell}
+              minColWidth={180}
+              liveStatus={liveStatus}
+              connection={connection}
               overlays={overlays}
               catalog={catalogData}
-              healthStats={healthStats}
-              parityStats={parityStats}
-              docsStats={docsStats}
             />
+            <AdaptiveLegend overlays={overlays} />
           </div>
-          <FeatureGrid
-            title="Feature Matrix"
-            renderCell={renderCell}
-            minColWidth={260}
-            liveStatus={liveStatus}
-            connection={connection}
-            overlays={overlays}
-            catalog={catalogData}
-          />
-          <AdaptiveLegend overlays={overlays} />
         </>
       )}
 
       {activeTab === "ops" && (
-        <StatusTab entries={probeEntries} onTrigger={handleTrigger} />
+        <div className="flex-1 min-h-0 overflow-auto">
+          <StatusTab entries={probeEntries} onTrigger={handleTrigger} />
+        </div>
       )}
     </div>
   );

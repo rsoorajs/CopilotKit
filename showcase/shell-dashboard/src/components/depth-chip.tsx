@@ -1,8 +1,9 @@
 "use client";
 /**
- * DepthChip — colored chip showing achieved depth D0-D4.
+ * DepthChip — colored chip showing achieved depth D0-D6.
  *
  * Color mapping:
+ *   D5-D6 = emerald — deep multi-turn e2e + parity coverage
  *   D3-D4 = blue (accent) — meaningful e2e + interaction coverage
  *   D1-D2 = amber — basic health and agent checks
  *   D0    = gray — exists but no live probe data
@@ -11,7 +12,7 @@
  */
 
 export interface DepthChipProps {
-  depth: 0 | 1 | 2 | 3 | 4;
+  depth: 0 | 1 | 2 | 3 | 4 | 5 | 6;
   status: "wired" | "stub" | "unshipped";
   /** When true, chip renders in red regardless of depth. */
   regression?: boolean;
@@ -23,6 +24,9 @@ function depthColorClass(depth: number, regression?: boolean): string {
     return "bg-[var(--danger)] text-white";
   }
   switch (depth) {
+    case 5:
+    case 6:
+      return "bg-emerald-600 text-white";
     case 3:
     case 4:
       return "bg-[var(--accent)] text-white";
