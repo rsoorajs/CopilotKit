@@ -22,7 +22,7 @@ export function SampleAudioButton({
   runtimeUrl,
   audioSrc,
   sampleLabel,
-}// @endregion[sample-audio-button]
+}
 : SampleAudioButtonProps) {
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
 
@@ -82,3 +82,4 @@ export function SampleAudioButton({
     </div>
   );
 }
+// @endregion[sample-audio-button]
