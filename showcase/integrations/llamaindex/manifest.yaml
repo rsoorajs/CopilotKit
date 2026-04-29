@@ -19,8 +19,12 @@ interaction_modalities:
   - embedded
   - chat
 features:
+  - beautiful-chat
+  - cli-start
   - agentic-chat
   - agentic-chat-reasoning
+  - gen-ui-tool-based
+  - mcp-apps
   - reasoning-default-render
   - tool-rendering-reasoning-chain
   - frontend-tools
@@ -53,6 +57,47 @@ features:
   - headless-complete
   - readonly-state-agent-context
 demos:
+  - id: cli-start
+    name: CLI Start Command
+    description: Copy-paste command to clone the canonical starter
+    tags:
+      - chat-ui
+    command: "npx copilotkit@latest init --framework llamaindex"
+  - id: beautiful-chat
+    name: Beautiful Chat
+    description: Polished starter chat with brand-styled CopilotChat surface
+    tags:
+      - chat-ui
+    route: /demos/beautiful-chat
+    animated_preview_url:
+    highlight:
+      - src/agents/beautiful_chat_agent.py
+      - src/app/demos/beautiful-chat/page.tsx
+      - src/app/api/copilotkit/route.ts
+  - id: gen-ui-tool-based
+    name: Tool-Based Generative UI
+    description: Agent uses tools to trigger UI generation (bar / pie chart components)
+    tags:
+      - generative-ui
+    route: /demos/gen-ui-tool-based
+    animated_preview_url:
+    highlight:
+      - src/agents/gen_ui_tool_based_agent.py
+      - src/app/demos/gen-ui-tool-based/page.tsx
+      - src/app/demos/gen-ui-tool-based/bar-chart.tsx
+      - src/app/demos/gen-ui-tool-based/pie-chart.tsx
+      - src/app/api/copilotkit/route.ts
+  - id: mcp-apps
+    name: MCP Apps
+    description: MCP server-driven UI via activity renderers
+    tags:
+      - generative-ui
+    route: /demos/mcp-apps
+    animated_preview_url:
+    highlight:
+      - src/agents/mcp_apps_agent.py
+      - src/app/demos/mcp-apps/page.tsx
+      - src/app/api/copilotkit-mcp-apps/route.ts
   - id: agentic-chat
     name: Agentic Chat
     description: Natural conversation with frontend tool execution
