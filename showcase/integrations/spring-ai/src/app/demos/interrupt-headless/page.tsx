@@ -2,7 +2,7 @@
 
 import React from "react";
 
-export default function SharedStateStreamingUnsupported() {
+export default function InterruptHeadlessUnsupported() {
   return (
     <div
       style={{
@@ -16,17 +16,17 @@ export default function SharedStateStreamingUnsupported() {
     >
       <div style={{ maxWidth: 560 }}>
         <h1 style={{ fontSize: 24, fontWeight: 600, marginBottom: 12 }}>
-          Shared State Streaming — Not Supported by Spring AI
+          Headless Interrupt — Not Supported by Spring AI
         </h1>
         <p style={{ color: "#555", lineHeight: 1.55, marginBottom: 16 }}>
-          The ag-ui Spring AI adapter has no mid-stream state-delta API
-          analogous to <code>copilotkit_emit_state</code>, so the agent cannot
-          push partial state snapshots between tokens.
+          Spring AI&apos;s <code>ChatClient</code> has no graph-interrupt primitive,
+          so <code>useAgent</code>&apos;s interrupt channel never fires against this
+          backend.
         </p>
         <p style={{ color: "#555", lineHeight: 1.55 }}>
           See{" "}
           <a
-            href="https://github.com/CopilotKit/CopilotKit/tree/main/showcase/integrations/spring-ai/src/app/demos/shared-state-streaming/README.md"
+            href="https://github.com/CopilotKit/CopilotKit/tree/main/showcase/integrations/spring-ai/src/app/demos/interrupt-headless/README.md"
             style={{ color: "#2563eb", textDecoration: "underline" }}
           >
             this demo&apos;s README
