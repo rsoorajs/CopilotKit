@@ -34,6 +34,12 @@ Typography: system-ui sans-serif. Title 16-18px/600. Axis labels 11-12px.
 Output contract: Emit initialHeight first (480-560), then placeholderMessages (2-3 short lines), then css, then html with ONE root container.`;
 
 export default function OpenGenUiDemo() {
+  // @region[minimal-provider-setup]
+  // Minimal Open Generative UI frontend: the built-in activity renderer is
+  // registered by CopilotKitProvider, so a plain <CopilotChat /> is enough —
+  // no custom tool renderers, no activity-renderer registration.
+  // We DO pass `openGenerativeUI.designSkill` to swap in visualisation-tuned
+  // guidance in place of the default shadcn design skill.
   return (
     <CopilotKitProvider
       runtimeUrl="/api/copilotkit-ogui"
@@ -51,4 +57,5 @@ export default function OpenGenUiDemo() {
       </main>
     </CopilotKitProvider>
   );
+  // @endregion[minimal-provider-setup]
 }

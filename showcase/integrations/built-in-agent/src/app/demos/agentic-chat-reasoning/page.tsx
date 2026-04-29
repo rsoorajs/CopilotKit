@@ -35,6 +35,7 @@ export default function AgenticChatReasoningDemo() {
 }
 
 function Chat() {
+  // @region[reasoning-block-render]
   return (
     <CopilotChat
       agentId="agentic-chat-reasoning"
@@ -44,4 +45,5 @@ function Chat() {
       }}
     />
   );
+  // @endregion[reasoning-block-render]
 }

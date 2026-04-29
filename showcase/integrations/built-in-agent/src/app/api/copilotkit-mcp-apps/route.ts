@@ -5,6 +5,7 @@ import {
 } from "@copilotkit/runtime/v2";
 import { createMcpAppsAgent } from "@/lib/factory/mcp-apps-factory";
 
+// @region[runtime-mcpapps-config]
 // Dedicated runtime for the MCP Apps demo.
 //
 // `mcpApps.servers` auto-applies the MCP Apps middleware to every registered
@@ -26,6 +27,7 @@ const runtime = new CopilotRuntime({
     ],
   },
 });
+// @endregion[runtime-mcpapps-config]
 
 const handler = createCopilotRuntimeHandler({
   runtime,
