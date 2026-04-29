@@ -43,6 +43,20 @@ Canonical list: 36 demos (excluding `cli-start`).
   `forwardedProps.config.configurable.properties` steers the agent's
   system prompt per run)
 
+### Wave 4 (showcase-fill-186)
+
+- cli-start (informational manifest entry — `npx copilotkit@latest init
+  --framework langroid`)
+- gen-ui-tool-based (manifest entry only — frontend already shipped in
+  Wave 1; the agent's `generate_haiku` frontend tool was the missing
+  manifest link)
+- hitl-in-chat (frontend-only — `useHumanInTheLoop` with a `book_call`
+  tool defined client-side; the Langroid agent calls it via the same
+  AG-UI runtime path as any other tool)
+- hitl-in-chat-booking (alias of hitl-in-chat, identical route — mirrors
+  the langgraph-python manifest where both demos point at the same
+  page)
+
 ## Skipped — Langroid lacks the framework primitive
 
 - **gen-ui-interrupt** — uses `useLangGraphInterrupt` + LangGraph's
@@ -50,6 +64,13 @@ Canonical list: 36 demos (excluding `cli-start`).
   equivalent interrupt primitive and the current AG-UI adapter emits no
   interrupt events.
 - **interrupt-headless** — same reason as `gen-ui-interrupt`.
+- **mcp-apps** — the LangGraph showcase relies on the runtime
+  `mcpApps: { servers: [...] }` middleware to inject MCP-server-backed
+  tools into the agent at request time. Langroid's custom AG-UI adapter
+  goes directly to the OpenAI Chat Completions API with a static tool
+  list built from `ALL_TOOLS`, so the runtime-level tool injection
+  never reaches the LLM. Porting requires a Langroid-aware AG-UI
+  adapter that consumes the runtime-injected tool descriptors per turn.
 
 ## Deferred — portable in principle, requires additional agent or runtime work
 
