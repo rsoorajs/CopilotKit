@@ -161,8 +161,7 @@ describe("Catalog Generator", () => {
     expect(ref).toBeTruthy();
 
     const refCells = catalog.cells.filter(
-      (c: any) =>
-        c.integration === ref && c.manifestation === "integrated",
+      (c: any) => c.integration === ref && c.manifestation === "integrated",
     );
     for (const cell of refCells) {
       expect(cell.parity_tier).toBe("reference");
