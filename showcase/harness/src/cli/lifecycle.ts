@@ -1,4 +1,9 @@
-import { execSync, execFileSync, spawn, type SpawnOptions } from "node:child_process";
+import {
+  execSync,
+  execFileSync,
+  spawn,
+  type SpawnOptions,
+} from "node:child_process";
 import path from "node:path";
 import fs from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -54,8 +59,14 @@ function compose(...args: string[]): string {
       cwd: SHOWCASE_DIR,
     }).trim();
   } catch (err: unknown) {
-    if (err instanceof Error && "code" in err && (err as NodeJS.ErrnoException).code === "ENOENT") {
-      throw new Error("Docker not found. Please install Docker Desktop and ensure 'docker' is on your PATH.");
+    if (
+      err instanceof Error &&
+      "code" in err &&
+      (err as NodeJS.ErrnoException).code === "ENOENT"
+    ) {
+      throw new Error(
+        "Docker not found. Please install Docker Desktop and ensure 'docker' is on your PATH.",
+      );
     }
     const e = err as { stderr?: string; status?: number };
     const stderr = typeof e.stderr === "string" ? e.stderr.trim() : "";
@@ -255,7 +266,7 @@ export async function down(
     compose("--profile", "all", "down");
   } else {
     log.info("stopping services", { slugs });
-    const profileArgs = slugs.flatMap(s => ["--profile", s]);
+    const profileArgs = slugs.flatMap((s) => ["--profile", s]);
     compose(...profileArgs, "stop", ...slugs);
   }
 }
@@ -290,7 +301,7 @@ export async function rebuild(
     });
 
     if (slugs.length > 0) {
-      const profileArgs = slugs.flatMap(s => ["--profile", s]);
+      const profileArgs = slugs.flatMap((s) => ["--profile", s]);
       compose(...profileArgs, "build", ...slugs);
     } else {
       compose("--profile", "all", "build");
@@ -300,7 +311,7 @@ export async function rebuild(
       log.info("restarting previously-running services", {
         services: runningBefore,
       });
-      const restartProfiles = runningBefore.flatMap(s => ["--profile", s]);
+      const restartProfiles = runningBefore.flatMap((s) => ["--profile", s]);
       compose(...restartProfiles, "up", "-d", ...runningBefore);
     }
   } finally {
@@ -334,9 +345,7 @@ export async function logs(
     );
 
     child.on("error", (err) => {
-      reject(
-        new Error(`Failed to stream logs for ${slug}: ${err.message}`),
-      );
+      reject(new Error(`Failed to stream logs for ${slug}: ${err.message}`));
     });
 
     child.on("close", (code) => {
@@ -393,7 +402,10 @@ export async function healthCheck(
           status: response.status,
         });
       } catch (err) {
-        log.debug("health check not ready yet", { service, error: err instanceof Error ? err.message : String(err) });
+        log.debug("health check not ready yet", {
+          service,
+          error: err instanceof Error ? err.message : String(err),
+        });
       }
 
       await sleep(intervalMs);
@@ -416,7 +428,14 @@ export async function healthCheck(
  */
 export async function isRunning(slug: string): Promise<boolean> {
   try {
-    const output = compose("--profile", "all", "ps", "--status", "running", slug);
+    const output = compose(
+      "--profile",
+      "all",
+      "ps",
+      "--status",
+      "running",
+      slug,
+    );
     const lines = output.split("\n").filter((l) => l.trim().length > 0);
     return lines.length > 1;
   } catch (err) {

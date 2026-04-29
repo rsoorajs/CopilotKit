@@ -27,7 +27,6 @@ import {
   buildDeepInputs,
 } from "./targets.js";
 
-
 import { up, down, rebuild, isRunning } from "./lifecycle.js";
 
 import {
@@ -216,9 +215,8 @@ export async function run(
   const deepDriver = options.headed
     ? createE2eDeepDriver({
         launcher: async (): Promise<E2eDeepBrowser> => {
-          const mod = (await import(
-            "playwright"
-          )) as typeof import("playwright");
+          const mod =
+            (await import("playwright")) as typeof import("playwright");
           const browser = await mod.chromium.launch({
             headless: false,
             args: ["--no-sandbox", "--disable-dev-shm-usage"],
@@ -231,19 +229,29 @@ export async function run(
                   const page = await bCtx.newPage();
                   const consoleLogs: string[] = [];
                   const requestFailures: string[] = [];
-                  page.on("console", (msg: { type(): string; text(): string }) => {
-                    const t = msg.type();
-                    if (t === "error" || t === "warning") {
-                      consoleLogs.push(`[${t}] ${msg.text().slice(0, 200)}`);
-                    }
-                  });
-                  page.on("requestfailed", (request: { method(): string; url(): string; failure(): { errorText: string } | null }) => {
-                    requestFailures.push(
-                      `${request.method()} ${request.url().slice(0, 200)} => ${
-                        request.failure()?.errorText || "unknown"
-                      }`,
-                    );
-                  });
+                  page.on(
+                    "console",
+                    (msg: { type(): string; text(): string }) => {
+                      const t = msg.type();
+                      if (t === "error" || t === "warning") {
+                        consoleLogs.push(`[${t}] ${msg.text().slice(0, 200)}`);
+                      }
+                    },
+                  );
+                  page.on(
+                    "requestfailed",
+                    (request: {
+                      method(): string;
+                      url(): string;
+                      failure(): { errorText: string } | null;
+                    }) => {
+                      requestFailures.push(
+                        `${request.method()} ${request.url().slice(0, 200)} => ${
+                          request.failure()?.errorText || "unknown"
+                        }`,
+                      );
+                    },
+                  );
                   return Object.assign(page, {
                     getDiagnostics: () => ({
                       consoleLogs: consoleLogs.slice(-20),
@@ -378,10 +386,7 @@ async function runLevel(
 
   switch (depth) {
     case "smoke": {
-      const inputs = buildSmokeInputs(
-        testTarget,
-        config,
-      );
+      const inputs = buildSmokeInputs(testTarget, config);
       for (const input of inputs) {
         if (ctx.abortSignal?.aborted) break;
         const startedAt = Date.now();
@@ -405,10 +410,7 @@ async function runLevel(
     }
 
     case "d4": {
-      const inputs = buildChatToolsInputs(
-        testTarget,
-        config,
-      );
+      const inputs = buildChatToolsInputs(testTarget, config);
       for (const input of inputs) {
         if (ctx.abortSignal?.aborted) break;
         const startedAt = Date.now();
@@ -432,10 +434,7 @@ async function runLevel(
     }
 
     case "d5": {
-      const inputs = buildDeepInputs(
-        testTarget,
-        config,
-      );
+      const inputs = buildDeepInputs(testTarget, config);
       for (const input of inputs) {
         if (ctx.abortSignal?.aborted) break;
         const startedAt = Date.now();

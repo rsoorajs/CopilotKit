@@ -33,12 +33,14 @@ program
 // ── test ────────────────────────────────────────────────────────────────
 program
   .command("test <target>")
-  .description(
-    "Run probe tests (target: <slug>, <slug>:<demo>, or all)",
-  )
+  .description("Run probe tests (target: <slug>, <slug>:<demo>, or all)")
   .addOption(
-    new Option("--level <level>", "probe depth (smoke|d4|d5|all)")
-      .choices(["smoke", "d4", "d5", "all"]),
+    new Option("--level <level>", "probe depth (smoke|d4|d5|all)").choices([
+      "smoke",
+      "d4",
+      "d5",
+      "all",
+    ]),
   )
   .option("--d5", "shorthand for --level d5")
   .option("--d4", "shorthand for --level d4")
@@ -79,12 +81,21 @@ program
         process.exit(1);
       }
 
-      const shorthand = opts.smoke ? "smoke" : opts.d4 ? "d4" : opts.d5 ? "d5" : null;
+      const shorthand = opts.smoke
+        ? "smoke"
+        : opts.d4
+          ? "d4"
+          : opts.d5
+            ? "d5"
+            : null;
       if (shorthand && opts.level) {
-        console.error("Error: --level and shorthand flags (--smoke, --d4, --d5) are mutually exclusive");
+        console.error(
+          "Error: --level and shorthand flags (--smoke, --d4, --d5) are mutually exclusive",
+        );
         process.exit(1);
       }
-      const level: TestLevel = shorthand ?? (opts.level as TestLevel) ?? "smoke";
+      const level: TestLevel =
+        shorthand ?? (opts.level as TestLevel) ?? "smoke";
 
       const result = await run(target, { ...opts, level }, config);
 

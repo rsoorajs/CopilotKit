@@ -133,22 +133,22 @@ export function loadManifest(slug: string, config: LocalConfig): Manifest {
   const parsed = yaml.load(raw, { schema: yaml.JSON_SCHEMA });
 
   if (!parsed || typeof parsed !== "object") {
-    throw new Error(
-      `Invalid manifest for ${slug}: expected YAML mapping`,
-    );
+    throw new Error(`Invalid manifest for ${slug}: expected YAML mapping`);
   }
 
   const manifest = parsed as Record<string, unknown>;
 
   if (typeof manifest.slug !== "string") {
-    throw new Error(
-      `Manifest for ${slug} missing required "slug" field`,
-    );
+    throw new Error(`Manifest for ${slug} missing required "slug" field`);
   }
 
   if (Array.isArray(manifest.demos)) {
     for (const demo of manifest.demos) {
-      if (typeof demo !== "object" || demo === null || typeof (demo as Record<string, unknown>).id !== "string") {
+      if (
+        typeof demo !== "object" ||
+        demo === null ||
+        typeof (demo as Record<string, unknown>).id !== "string"
+      ) {
         throw new Error(
           `Invalid demo entry in manifest for ${slug}: each demo must have a string "id" field`,
         );
@@ -246,29 +246,30 @@ export function buildDeepInputs(
 ): DeepInput[] {
   const slugs = [target.slug];
 
-  return slugs.map((slug) => {
-    const manifest = loadManifest(slug, config);
-    let features = manifest.features ?? [];
+  return slugs
+    .map((slug) => {
+      const manifest = loadManifest(slug, config);
+      let features = manifest.features ?? [];
 
-    if (target.demo) {
-      features = features.filter((f) => f === target.demo);
-      if (features.length === 0) {
-        const available = (manifest.features ?? []).join(", ");
-        throw new Error(
-          `Feature "${target.demo}" not found in ${slug}. Available: ${available}`,
-        );
+      if (target.demo) {
+        features = features.filter((f) => f === target.demo);
+        if (features.length === 0) {
+          const available = (manifest.features ?? []).join(", ");
+          throw new Error(
+            `Feature "${target.demo}" not found in ${slug}. Available: ${available}`,
+          );
+        }
       }
-    }
 
-    return {
-      key: `e2e-deep:${slug}`,
-      backendUrl: getPackageUrl(slug, config),
-      name: manifest.name,
-      features,
-      shape: "package" as const,
-    };
-  })
-  .filter((input) => input.features.length > 0);
+      return {
+        key: `e2e-deep:${slug}`,
+        backendUrl: getPackageUrl(slug, config),
+        name: manifest.name,
+        features,
+        shape: "package" as const,
+      };
+    })
+    .filter((input) => input.features.length > 0);
 }
 
 /**
