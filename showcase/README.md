@@ -113,39 +113,39 @@ The showcase harness includes a CLI that runs the same probe drivers (liveness, 
 
 ### Commands
 
-| Command | Description |
-|---------|-------------|
-| `test <target>` | Run probes. Target is a slug (`langgraph-python`), slug:demo (`langgraph-python:chat`), or `all` |
-| `up [slugs...]` | Start infra (aimock, pocketbase, dashboard) + named packages. No args = infra only |
-| `down [slugs...]` | Stop services. No args = stop everything |
-| `rebuild [slugs...]` | Rebuild Docker images |
-| `ps` | Show running services |
-| `logs <slug>` | Tail logs for a service |
-| `status` | Print dashboard URL for full results |
+| Command              | Description                                                                                      |
+| -------------------- | ------------------------------------------------------------------------------------------------ |
+| `test <target>`      | Run probes. Target is a slug (`langgraph-python`), slug:demo (`langgraph-python:chat`), or `all` |
+| `up [slugs...]`      | Start infra (aimock, pocketbase, dashboard) + named packages. No args = infra only               |
+| `down [slugs...]`    | Stop services. No args = stop everything                                                         |
+| `rebuild [slugs...]` | Rebuild Docker images                                                                            |
+| `ps`                 | Show running services                                                                            |
+| `logs <slug>`        | Tail logs for a service                                                                          |
+| `status`             | Print dashboard URL for full results                                                             |
 
 ### Test levels
 
 Specify depth with `--level` or shorthand flags (mutually exclusive):
 
-| Flag | Level | What it runs |
-|------|-------|-------------|
-| `--smoke` | smoke | Liveness healthchecks (L1–L3) — container up, routes reachable, no JS errors |
-| `--d4` | d4 | E2E chat-tools — Playwright drives the demo UI, sends a message, asserts tool calls render |
-| `--d5` | d5 | E2E deep — full conversation flow with aimock fixtures, asserts feature-specific behavior |
-| `--level all` | all | Runs smoke → d4 → d5 sequentially |
+| Flag          | Level | What it runs                                                                               |
+| ------------- | ----- | ------------------------------------------------------------------------------------------ |
+| `--smoke`     | smoke | Liveness healthchecks (L1–L3) — container up, routes reachable, no JS errors               |
+| `--d4`        | d4    | E2E chat-tools — Playwright drives the demo UI, sends a message, asserts tool calls render |
+| `--d5`        | d5    | E2E deep — full conversation flow with aimock fixtures, asserts feature-specific behavior  |
+| `--level all` | all   | Runs smoke → d4 → d5 sequentially                                                          |
 
 Default level is `smoke` when no flag is given.
 
 ### Additional options
 
-| Option | Description |
-|--------|-------------|
-| `--headed` | Run Playwright visibly (not headless) — useful for debugging D4/D5 failures |
-| `--verbose` | Verbose logging output |
-| `--repeat <n>` | Run the test suite N times (flake detection) |
-| `--keep` | Don't stop auto-started containers after the test finishes |
-| `--live` | Write results to PocketBase so the dashboard reflects them |
-| `--rebuild` | Force Docker rebuild before running tests |
+| Option         | Description                                                                 |
+| -------------- | --------------------------------------------------------------------------- |
+| `--headed`     | Run Playwright visibly (not headless) — useful for debugging D4/D5 failures |
+| `--verbose`    | Verbose logging output                                                      |
+| `--repeat <n>` | Run the test suite N times (flake detection)                                |
+| `--keep`       | Don't stop auto-started containers after the test finishes                  |
+| `--live`       | Write results to PocketBase so the dashboard reflects them                  |
+| `--rebuild`    | Force Docker rebuild before running tests                                   |
 
 ### Config file (optional)
 
