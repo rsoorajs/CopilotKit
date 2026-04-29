@@ -292,10 +292,13 @@ describe("e2e-demos driver", () => {
       launcher: async () => browser,
       demosResolver: async (slug) => {
         resolverCalls.push(slug);
-        return [
-          { id: "agentic-chat", route: "/demos/agentic-chat" },
-          { id: "tool-rendering", route: "/demos/tool-rendering" },
-        ];
+        return {
+          present: true,
+          entries: [
+            { id: "agentic-chat", route: "/demos/agentic-chat" },
+            { id: "tool-rendering", route: "/demos/tool-rendering" },
+          ],
+        };
       },
     });
     const { writer, writes } = mkWriter();
@@ -485,10 +488,13 @@ describe("e2e-demos driver", () => {
 
     const driver = createE2eDemosDriver({
       launcher: async () => wrappedBrowser,
-      demosResolver: async () => [
-        { id: "cli-start" /* no route */ },
-        { id: "agentic-chat", route: "/demos/agentic-chat" },
-      ],
+      demosResolver: async () => ({
+        present: true,
+        entries: [
+          { id: "cli-start" /* no route */ },
+          { id: "agentic-chat", route: "/demos/agentic-chat" },
+        ],
+      }),
     });
     const { writer, writes } = mkWriter();
 
@@ -1148,7 +1154,10 @@ describe("e2e-demos driver", () => {
     const { browser } = makeBrowser([]);
     const driver = createE2eDemosDriver({
       launcher: async () => browser,
-      demosResolver: async () => [{ id: "broken-demo", route: "" }],
+      demosResolver: async () => ({
+        present: true,
+        entries: [{ id: "broken-demo", route: "" }],
+      }),
     });
     const { writer, writes } = mkWriter();
 
@@ -1367,10 +1376,18 @@ describe("e2e-demos driver", () => {
     expect(sig?.errorClass).toBe("resolver-error");
     expect(sig?.errorDesc).toMatch(/exploded/);
 
-    // Aggregate primary still emits — the orchestrator's writer sees
-    // both a synthetic red row and the green aggregate; alert rules
-    // can branch on `__resolver` to surface the bug.
+    // Aggregate primary MUST also be red. Without this, alert rules
+    // pattern-matching `e2e-demos:*` red would not fire — the dashboard
+    // would show red `__resolver` + green `e2e-demos:exploded`, defeating
+    // the entire fail-loud branch.
     expect(result.key).toBe("e2e-demos:exploded");
+    expect(result.state).toBe("red");
+    const aggSig = result.signal as E2eDemosAggregateSignal;
+    expect(aggSig.errorDesc).toBe("resolver-error");
+    expect(aggSig.failureSummary).toMatch(/exploded/);
+    expect(aggSig.total).toBe(0);
+    expect(aggSig.passed).toBe(0);
+    expect(aggSig.failed).toEqual([]);
 
     // Log carries errName + stack for debuggability.
     const failLogs = entries.filter(
@@ -1378,6 +1395,287 @@ describe("e2e-demos driver", () => {
     );
     expect(failLogs).toHaveLength(1);
     expect(failLogs[0]?.meta?.errName).toBe("Error");
+  });
+
+  // --- C12b: resolver throw on production path (no input.demos) ----------
+  //
+  // The pre-fix bug: in the catch block the synthetic red row was emitted
+  // but `slugPresentInRegistry` stayed at its default `true`, and `demos`
+  // was set to []. With no `input.demos` to fall back to, the post-catch
+  // `demos.length === 0` branch returned a green "no demos declared"
+  // aggregate — a red side row paired with a green aggregate. This test
+  // exercises the production path (no test-injection demos) and asserts
+  // the aggregate is red end-to-end.
+
+  it("returns red aggregate on production resolver-throw path with no input.demos fallback", async () => {
+    const { browser } = makeBrowser([]);
+    const driver = createE2eDemosDriver({
+      launcher: async () => browser,
+      demosResolver: async () => {
+        throw new Error("registry adapter exploded");
+      },
+    });
+    const { writer, writes } = mkWriter();
+
+    const result = await driver.run(mkCtx(writer), {
+      key: "e2e-demos:exploded",
+      name: "showcase-exploded",
+      publicUrl: "https://showcase-exploded.example.com",
+      shape: "package",
+      // Deliberately NO input.demos — exercise the production code path
+      // that previously fell through to a green "no demos declared"
+      // aggregate.
+    });
+
+    expect(result.state).toBe("red");
+    const aggSig = result.signal as E2eDemosAggregateSignal;
+    expect(aggSig.errorDesc).toBe("resolver-error");
+    expect(aggSig.failureSummary).toMatch(/exploded/);
+
+    // Synthetic side row is still emitted — and only the synthetic side
+    // row, since the early-return prevents any per-demo iteration.
+    expect(writes).toHaveLength(1);
+    expect(writes[0]?.key).toBe("e2e:exploded/__resolver");
+    expect(writes[0]?.state).toBe("red");
+  });
+
+  // --- Slug missing from registry → fail-loud red row ---------------------
+  //
+  // When the resolver returns `{ present: false, entries: [] }` — meaning
+  // registry.json was readable, JSON-valid, and shape-valid, but had no
+  // entry for the requested slug — the driver MUST emit a synthetic red
+  // `e2e:<slug>/__missing-registry` side row + flip the aggregate red.
+  // The previous behaviour collapsed this case into "green, no demos
+  // declared", which on the live dashboard rendered as GREEN agent:<slug>
+  // alongside MISSING e2e:<slug>/<feature> rows for every cell of the
+  // affected service — silent loss of signal across N dashboard cells per
+  // misconfigured slug. Fail-loud per the discipline: surface ONE distinct
+  // red dot the moment the slug is absent.
+
+  it("emits red __missing-registry side row when slug is absent from registry", async () => {
+    const { browser } = makeBrowser([]);
+    const driver = createE2eDemosDriver({
+      launcher: async () => browser,
+      demosResolver: async () => ({
+        present: false,
+        entries: [],
+      }),
+    });
+    const { writer, writes } = mkWriter();
+    const { logger: spy, entries } = mkSpyLogger();
+
+    const result = await driver.run(mkCtxWithLogger(writer, {}, spy), {
+      key: "e2e-demos:mastra",
+      name: "showcase-mastra",
+      publicUrl: "https://showcase-mastra.example.com",
+      shape: "package",
+    });
+
+    // Aggregate: red, with structured errorClass-shaped diagnostics so
+    // alert rules and the dashboard agree on the cause.
+    expect(result.state).toBe("red");
+    const sig = result.signal as E2eDemosAggregateSignal;
+    expect(sig.errorDesc).toBe("registry-missing");
+    expect(sig.failureSummary).toMatch(/mastra/);
+    expect(sig.total).toBe(0);
+    expect(sig.passed).toBe(0);
+
+    // Synthetic side row: ONE red dot keyed `__missing-registry` so the
+    // dashboard surfaces the misconfiguration distinctly from genuine
+    // per-demo failures (which use the demo's `featureId`).
+    expect(writes).toHaveLength(1);
+    expect(writes[0]?.key).toBe("e2e:mastra/__missing-registry");
+    expect(writes[0]?.state).toBe("red");
+    const sideSig = writes[0]?.signal as {
+      errorClass?: string;
+      errorDesc?: string;
+      featureId?: string;
+    };
+    expect(sideSig?.errorClass).toBe("registry-missing");
+    expect(sideSig?.featureId).toBe("__missing-registry");
+    expect(sideSig?.errorDesc).toMatch(/mastra/);
+
+    // Structured warn so operators can correlate the dashboard red dot
+    // with the boot-time log stream.
+    const slugWarns = entries.filter(
+      (e) => e.msg === "probe.e2e-demos.slug-missing-from-registry",
+    );
+    expect(slugWarns).toHaveLength(1);
+    expect(slugWarns[0]?.meta?.slug).toBe("mastra");
+  });
+
+  it("treats brand-new slug present with empty entries as legitimately green", async () => {
+    // Distinct from the missing case: the registry KNOWS about this slug
+    // but has no demos declared yet (a freshly-scaffolded package).
+    // Aggregate should stay green with `note: "no demos declared"` — the
+    // existing brand-new-package path. Fail-loud applies ONLY to genuinely
+    // missing slugs, not to legitimately-empty ones.
+    const { browser } = makeBrowser([]);
+    const driver = createE2eDemosDriver({
+      launcher: async () => browser,
+      demosResolver: async () => ({
+        present: true,
+        entries: [],
+      }),
+    });
+    const { writer, writes } = mkWriter();
+
+    const result = await driver.run(mkCtx(writer), {
+      key: "e2e-demos:brand-new",
+      name: "showcase-brand-new",
+      publicUrl: "https://showcase-brand-new.example.com",
+      shape: "package",
+    });
+
+    expect(result.state).toBe("green");
+    const sig = result.signal as E2eDemosAggregateSignal;
+    expect(sig.note).toBe("no demos declared");
+    expect(sig.total).toBe(0);
+    // No synthetic missing-registry row — the slug IS in the registry.
+    expect(writes).toHaveLength(0);
+  });
+
+  it("default registry resolver flags slug missing from registry.json as not present", async () => {
+    // End-to-end exercise of the default resolver: a fixture registry
+    // that lists ONE slug, then probe a DIFFERENT slug. The default
+    // resolver must report `present: false` for the unknown slug so the
+    // driver's fail-loud branch fires.
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "e2e-demos-missing-"));
+    cleanups.push(() => fs.rmSync(tmp, { recursive: true, force: true }));
+    const registryPath = path.join(tmp, "registry.json");
+    fs.writeFileSync(
+      registryPath,
+      JSON.stringify({
+        integrations: [
+          {
+            slug: "known-framework",
+            demos: [{ id: "agentic-chat", route: "/demos/agentic-chat" }],
+          },
+        ],
+      }),
+    );
+
+    const { browser } = makeBrowser([]);
+    const driver = createE2eDemosDriver({ launcher: async () => browser });
+    const { writer, writes } = mkWriter();
+
+    const result = await driver.run(
+      mkCtx(writer, { REGISTRY_JSON_PATH: registryPath }),
+      {
+        key: "e2e-demos:unknown-framework",
+        name: "showcase-unknown-framework",
+        publicUrl: "https://showcase-unknown-framework.example.com",
+        shape: "package",
+      },
+    );
+
+    expect(result.state).toBe("red");
+    const sig = result.signal as E2eDemosAggregateSignal;
+    expect(sig.errorDesc).toBe("registry-missing");
+    expect(writes).toHaveLength(1);
+    expect(writes[0]?.key).toBe("e2e:unknown-framework/__missing-registry");
+    expect(writes[0]?.state).toBe("red");
+  });
+
+  it("default resolver suppresses missing-registry red on global read failure", async () => {
+    // Distinct from "slug missing from a readable registry" — when the
+    // registry can't be READ at all (ENOENT, EACCES, parse error, shape
+    // error), the failure is global and already pulses one log entry per
+    // tick. Decorating EVERY service's dashboard cell with a red
+    // `__missing-registry` row would drown the actual signal in noise,
+    // so the resolver forces `present: true` for every lookup when the
+    // global read fails. The driver's existing "no demos declared" green
+    // path takes over from there.
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "e2e-demos-globalfail-"));
+    cleanups.push(() => fs.rmSync(tmp, { recursive: true, force: true }));
+    const missingPath = path.join(tmp, "does-not-exist.json");
+
+    const { browser } = makeBrowser([]);
+    const driver = createE2eDemosDriver({ launcher: async () => browser });
+    const { writer, writes } = mkWriter();
+
+    const result = await driver.run(
+      mkCtx(writer, { REGISTRY_JSON_PATH: missingPath }),
+      {
+        key: "e2e-demos:any",
+        name: "showcase-any",
+        publicUrl: "https://showcase-any.example.com",
+        shape: "package",
+      },
+    );
+
+    // No synthetic red row for global registry read failure — the read
+    // failure is logged once per tick and the aggregate stays green to
+    // avoid swamping the dashboard with redundant red dots.
+    expect(result.state).toBe("green");
+    expect(writes).toHaveLength(0);
+  });
+
+  it("in-band input.demos suppresses missing-registry red (test injection)", async () => {
+    // The in-band `input.demos` field is a deliberate test-injection
+    // escape hatch. When tests pass demos directly without going through
+    // the registry, the driver must NOT flip red on missing-registry —
+    // the resolver wasn't even consulted for the authoritative answer.
+    const { browser } = makeBrowser([{}, {}]);
+    const driver = createE2eDemosDriver({
+      launcher: async () => browser,
+      demosResolver: async () => ({ present: false, entries: [] }),
+    });
+    const { writer, writes } = mkWriter();
+
+    const result = await driver.run(mkCtx(writer), {
+      key: "e2e-demos:test-only",
+      name: "showcase-test-only",
+      publicUrl: "https://showcase-test-only.example.com",
+      demos: ["agentic-chat", "tool-rendering"],
+      shape: "package",
+    });
+
+    // In-band demos take priority; synthetic missing-registry row is NOT
+    // emitted because the in-band fallback path effectively says "the
+    // caller has authoritatively named the demos for this run".
+    expect(result.state).toBe("green");
+    expect(writes).toHaveLength(2);
+    const keys = writes.map((w) => w.key).sort();
+    expect(keys).toEqual([
+      "e2e:test-only/agentic-chat",
+      "e2e:test-only/tool-rendering",
+    ]);
+  });
+
+  it("empty in-band input.demos does NOT suppress missing-registry red", async () => {
+    // Edge case for the in-band test-injection escape hatch: an EMPTY
+    // `input.demos: []` carries no useful payload (no demos to inject)
+    // and must NOT suppress the fail-loud missing-registry branch. If
+    // the slug is genuinely absent from the registry, the driver must
+    // still emit the synthetic red `__missing-registry` row + flip
+    // aggregate red — otherwise a misconfigured probe (e.g. yaml
+    // `demos: []` for a slug not present in registry.json) would
+    // silently render aggregate green on the dashboard despite the
+    // resolver reporting `present: false`.
+    const { browser } = makeBrowser([]);
+    const driver = createE2eDemosDriver({
+      launcher: async () => browser,
+      demosResolver: async () => ({ present: false, entries: [] }),
+    });
+    const { writer, writes } = mkWriter();
+
+    const result = await driver.run(mkCtx(writer), {
+      key: "e2e-demos:empty-inband",
+      name: "showcase-empty-inband",
+      publicUrl: "https://showcase-empty-inband.example.com",
+      demos: [],
+      shape: "package",
+    });
+
+    // Empty in-band array falls through to fail-loud branch.
+    expect(result.state).toBe("red");
+    const sig = result.signal as E2eDemosAggregateSignal;
+    expect(sig.errorDesc).toBe("registry-missing");
+
+    // Exactly ONE synthetic missing-registry row.
+    expect(writes).toHaveLength(1);
+    expect(writes[0]?.key).toBe("e2e:empty-inband/__missing-registry");
   });
 });
 

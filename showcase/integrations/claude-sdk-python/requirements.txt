@@ -6,3 +6,14 @@ python-dotenv>=1.0.1
 # Used by the multimodal demo to flatten PDFs to text so the model can
 # read them without depending on Claude's PDF beta.
 pypdf>=4.0.0
+# Used by the declarative-gen-ui demo (a2ui_dynamic.py) for the secondary
+# LLM bound to the render_a2ui tool. Lazy-imported inside `_generate_a2ui`
+# (see agents/a2ui_dynamic.py) so a missing dep doesn't take the entire
+# agent_server module down at import time — the lazy import localizes the
+# failure to the demo that needs it instead of cascading through
+# entrypoint.sh's "Agent failed to start — exiting" gate and preventing
+# Next.js from booting (which would make every demo route unreachable
+# and turn D2 e2e-readiness red across the board). The lazy import is
+# the runtime safety net; `requirements.txt` is still the authoritative
+# place to declare the dep so containers ship with it installed.
+openai>=1.50.0
