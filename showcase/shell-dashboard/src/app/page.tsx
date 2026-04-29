@@ -181,7 +181,7 @@ export default function Page() {
             />
           </div>
           {/* Single scroll area — stats bar and title scroll away, table headers stick */}
-          <div className="flex-1 min-h-0 overflow-auto">
+          <div className="flex-1 min-h-0 overflow-auto pb-12">
             <div className="px-8 py-3 border-b border-[var(--border)]">
               <AdaptiveStatsBar
                 overlays={overlays}
