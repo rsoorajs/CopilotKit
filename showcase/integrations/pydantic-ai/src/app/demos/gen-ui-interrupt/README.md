@@ -6,7 +6,7 @@ The reference langgraph-python cell uses LangGraph's `interrupt()`
 primitive to pause graph execution mid-tool-call, surface an interactive
 component in the chat, await the user's resume value, then continue the
 graph with that value substituted in. It is the canonical way to embed
-generative UI that the agent then *acts on*.
+generative UI that the agent then _acts on_.
 
 ## Why pydantic-ai cannot support it
 

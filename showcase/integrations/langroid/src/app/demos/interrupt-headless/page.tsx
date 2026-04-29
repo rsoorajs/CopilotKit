@@ -27,9 +27,9 @@ export default function InterruptHeadlessUnsupported() {
         <p className="text-sm text-black/70 dark:text-white/70">
           The headless interrupt demo wraps the same LangGraph{" "}
           <code>interrupt()</code> primitive used by{" "}
-          <code>/demos/gen-ui-interrupt</code>. Langroid&rsquo;s ChatAgent
-          does not expose an equivalent pause/resume primitive today, so the
-          demo cannot be ported faithfully on either chat surface.
+          <code>/demos/gen-ui-interrupt</code>. Langroid&rsquo;s ChatAgent does
+          not expose an equivalent pause/resume primitive today, so the demo
+          cannot be ported faithfully on either chat surface.
         </p>
       </div>
       <p className="text-xs text-black/50 dark:text-white/50">

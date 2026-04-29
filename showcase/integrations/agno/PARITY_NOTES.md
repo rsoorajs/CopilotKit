@@ -69,7 +69,7 @@ See `manifest.yaml` for the authoritative list.
 - `agent-config` — typed config object (tone/expertise/responseLength)
   forwarded via the provider's `properties` prop. The Agno backend mounts a
   custom AGUI handler at `/agent-config/agui` (`agent_server.py::
-  _run_agent_config`) that reads `RunAgentInput.forwarded_props` and builds
+_run_agent_config`) that reads `RunAgentInput.forwarded_props` and builds
   a per-request Agno Agent from `agents.agent_config_agent.build_agent(...)`
   before delegating to the stock AGUI stream mapper. Agno has no
   LangGraph-style configurable channel, so the per-request factory is the
@@ -86,8 +86,8 @@ See `manifest.yaml` for the authoritative list.
   `byoc_hashbrown_agent.py` whose system prompt steers the LLM toward the
   hashbrown UI-kit envelope shape (`{ "ui": [...] }`).
 - `byoc-json-render` — dedicated `/api/copilotkit-byoc-json-render` runtime
-  + `byoc_json_render_agent.py` whose system prompt steers the LLM toward
-  the json-render flat element-tree spec (`{ root, elements }`).
+  - `byoc_json_render_agent.py` whose system prompt steers the LLM toward
+    the json-render flat element-tree spec (`{ root, elements }`).
 
 ### Sixth pass (A2UI fixed schema)
 
@@ -96,7 +96,7 @@ See `manifest.yaml` for the authoritative list.
   mounted at `/a2ui-fixed-schema/agui` ships
   `flight_schema.json` + `booked_schema.json` and a single
   `display_flight` tool that emits an `a2ui_operations` container
-  *directly* — no secondary LLM call — so the LLM only fills in data
+  _directly_ — no secondary LLM call — so the LLM only fills in data
   (origin/destination/airline/price). `booked_schema.json` is shipped
   as a sibling for when the SDK exposes per-button action handlers
   for fixed-schema surfaces.
@@ -111,7 +111,7 @@ See `manifest.yaml` for the authoritative list.
   `run_context.session_state["copilotkit"]["context"]` and feeds it to
   the secondary OpenAI client, so the rendered components stay in sync
   with whatever catalog the frontend registers via `<CopilotKit
-  a2ui={{ catalog }}>`. See `src/app/demos/declarative-gen-ui/README.md`
+a2ui={{ catalog }}>`. See `src/app/demos/declarative-gen-ui/README.md`
   for the differences vs. the main-agent path.
 
 ### Third pass (state + multi-agent recovery)

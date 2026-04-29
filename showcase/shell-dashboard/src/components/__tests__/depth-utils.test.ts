@@ -48,7 +48,6 @@ const cell = (
   category_name: "Dev Ex",
 });
 
-
 describe("deriveDepth", () => {
   it("returns D0 for unshipped cells regardless of live data", () => {
     const c = cell("lgp", "voice", "unshipped");
@@ -312,5 +311,4 @@ describe("deriveDepth", () => {
     const result = deriveDepth(c, live);
     expect(result.achieved).toBe(4);
   });
-
 });

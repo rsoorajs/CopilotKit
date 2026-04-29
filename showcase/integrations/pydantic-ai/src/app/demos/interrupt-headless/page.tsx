@@ -26,8 +26,8 @@ export default function InterruptHeadlessUnsupported() {
           <code className="rounded bg-[#F0F0F4] px-1 py-0.5 font-mono text-xs">
             interrupt()
           </code>{" "}
-          primitive — without it, the headless interrupt resume protocol
-          this cell demonstrates has no surface area to bind to.
+          primitive — without it, the headless interrupt resume protocol this
+          cell demonstrates has no surface area to bind to.
         </p>
         <p className="mt-3 text-sm text-[#57575B]">
           See the working reference in the{" "}

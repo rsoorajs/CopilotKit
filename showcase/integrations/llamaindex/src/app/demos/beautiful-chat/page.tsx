@@ -44,8 +44,7 @@ function PageShell() {
       },
       {
         title: "Pep talk",
-        message:
-          "Give me a one-sentence pep talk before I ship a new feature.",
+        message: "Give me a one-sentence pep talk before I ship a new feature.",
       },
     ],
     available: "always",

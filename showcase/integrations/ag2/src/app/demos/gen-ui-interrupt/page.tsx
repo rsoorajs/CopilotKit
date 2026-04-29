@@ -37,8 +37,8 @@ export default function GenUiInterruptUnsupportedPage() {
         <p className="text-sm text-[var(--muted-foreground)] mb-4 leading-relaxed">
           This demo depends on LangGraph&apos;s native{" "}
           <code className="px-1 rounded bg-[var(--muted)]">interrupt()</code>{" "}
-          primitive — the graph pauses, emits a resumable payload over the
-          AG-UI stream, and the frontend resumes the same run from a persisted
+          primitive — the graph pauses, emits a resumable payload over the AG-UI
+          stream, and the frontend resumes the same run from a persisted
           checkpoint. AG2&apos;s{" "}
           <code className="px-1 rounded bg-[var(--muted)]">
             human_input_mode

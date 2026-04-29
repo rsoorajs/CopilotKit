@@ -10,7 +10,7 @@ A2UI v0.9 schema from the registered catalog every turn.
   `InfoRow`, `PrimaryButton`, `PieChart`, `BarChart`) merged with the basic
   A2UI catalog. See `./a2ui/{catalog,definitions,renderers}.{ts,tsx}`.
 - **Backend** (`src/lib/factory/a2ui-factory.ts`) owns a `generate_a2ui`
-  tool. When the primary LLM calls it, the tool fires a *secondary* LLM
+  tool. When the primary LLM calls it, the tool fires a _secondary_ LLM
   call (forced JSON-object output) that designs the surface tree and data
   using the registered catalog. The tool wraps the result in an
   `a2ui_operations` container.

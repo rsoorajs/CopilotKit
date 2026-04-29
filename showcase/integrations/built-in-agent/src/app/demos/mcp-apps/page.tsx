@@ -15,23 +15,17 @@
  * (https://mcp.excalidraw.com).
  */
 
-import {
-  CopilotKitProvider,
-  CopilotChat,
-} from "@copilotkit/react-core/v2";
+import { CopilotKitProvider, CopilotChat } from "@copilotkit/react-core/v2";
 
 export default function MCPAppsDemo() {
   return (
-    <CopilotKitProvider
-      runtimeUrl="/api/copilotkit-mcp-apps"
-      useSingleEndpoint
-    >
+    <CopilotKitProvider runtimeUrl="/api/copilotkit-mcp-apps" useSingleEndpoint>
       <main className="p-8">
         <h1 className="text-2xl font-semibold mb-4">MCP Apps</h1>
         <p className="text-sm opacity-70 mb-6">
           Try: &ldquo;Use Excalidraw to draw a simple flowchart with three
-          steps.&rdquo; The agent invokes a remote MCP tool and the
-          associated UI resource renders inline in chat.
+          steps.&rdquo; The agent invokes a remote MCP tool and the associated
+          UI resource renders inline in chat.
         </p>
         <CopilotChat />
       </main>

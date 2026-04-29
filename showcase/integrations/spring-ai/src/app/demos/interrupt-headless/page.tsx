@@ -19,9 +19,9 @@ export default function InterruptHeadlessUnsupported() {
           Headless Interrupt — Not Supported by Spring AI
         </h1>
         <p style={{ color: "#555", lineHeight: 1.55, marginBottom: 16 }}>
-          Spring AI&apos;s <code>ChatClient</code> has no graph-interrupt primitive,
-          so <code>useAgent</code>&apos;s interrupt channel never fires against this
-          backend.
+          Spring AI&apos;s <code>ChatClient</code> has no graph-interrupt
+          primitive, so <code>useAgent</code>&apos;s interrupt channel never
+          fires against this backend.
         </p>
         <p style={{ color: "#555", lineHeight: 1.55 }}>
           See{" "}

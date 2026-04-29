@@ -18,10 +18,9 @@ export default function InterruptHeadlessUnsupported() {
         </h1>
         <p className="mt-3 text-sm text-[#3A3A46]">
           This feature requires <code>useLangGraphInterrupt</code>'s
-          resolve/respond primitive. AWS Strands does not expose an
-          equivalent first-class interrupt primitive, so the headless
-          variant is not portable without new Strands-side integration
-          work.
+          resolve/respond primitive. AWS Strands does not expose an equivalent
+          first-class interrupt primitive, so the headless variant is not
+          portable without new Strands-side integration work.
         </p>
         <p className="mt-3 text-sm text-[#3A3A46]">
           For a Strands-native HITL flow, see the{" "}

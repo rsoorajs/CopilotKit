@@ -81,7 +81,7 @@ const minimalSuggestions = [
   {
     title: "How a neural network works",
     message:
-      'Animate how a simple feed-forward neural network processes an input. Show 3 layers (input 4 nodes, hidden 5 nodes, output 2 nodes) with connections whose thickness encodes weight magnitude. Animate activations pulsing forward from input -> hidden -> output in a loop, brightening each node as it fires. Label each layer.',
+      "Animate how a simple feed-forward neural network processes an input. Show 3 layers (input 4 nodes, hidden 5 nodes, output 2 nodes) with connections whose thickness encodes weight magnitude. Animate activations pulsing forward from input -> hidden -> output in a loop, brightening each node as it fires. Label each layer.",
   },
   {
     title: "Quicksort visualization",

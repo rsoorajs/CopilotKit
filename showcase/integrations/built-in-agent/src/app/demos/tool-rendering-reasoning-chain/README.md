@@ -10,11 +10,12 @@ renders them via a custom `reasoningMessage` slot for visual emphasis.
 
 Tool rendering is wired the same way as the primary `tool-rendering`
 demo:
-- `get_weather`     → `<WeatherCard />`
-- `search_flights`  → `<FlightListCard />`
-- `*` (catch-all)   → `<CustomCatchallRenderer />`
 
-The reasoning chain is what makes this a *chain* — the model can think,
+- `get_weather` → `<WeatherCard />`
+- `search_flights` → `<FlightListCard />`
+- `*` (catch-all) → `<CustomCatchallRenderer />`
+
+The reasoning chain is what makes this a _chain_ — the model can think,
 call a tool, think again, and call another tool, all visible in the
 chat.
 

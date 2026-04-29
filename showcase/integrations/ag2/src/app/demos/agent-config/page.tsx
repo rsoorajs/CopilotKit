@@ -47,9 +47,8 @@ export default function AgentConfigDemoPage() {
           <p className="text-sm text-neutral-600">
             Forwarded props let the frontend tell the agent how to behave. This
             demo passes <code>tone</code>, <code>expertise</code>, and{" "}
-            <code>responseLength</code> through agent state; the AG2 agent
-            reads them from ContextVariables and rebuilds its system prompt
-            per turn.
+            <code>responseLength</code> through agent state; the AG2 agent reads
+            them from ContextVariables and rebuilds its system prompt per turn.
           </p>
         </header>
         <ConfigCard

@@ -68,9 +68,7 @@ export function SampleAudioButton({
       >
         {status === "loading" ? "Transcribing…" : "Play sample"}
       </button>
-      <span className="text-black/60">
-        Sample: &ldquo;{sampleLabel}&rdquo;
-      </span>
+      <span className="text-black/60">Sample: &ldquo;{sampleLabel}&rdquo;</span>
       {status === "error" && (
         <span
           data-testid="voice-sample-audio-error"

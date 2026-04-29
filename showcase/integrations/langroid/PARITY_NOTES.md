@@ -46,7 +46,7 @@ Canonical list: 36 demos (excluding `cli-start`).
 ### Wave 4 (showcase-fill-186)
 
 - cli-start (informational manifest entry — `npx copilotkit@latest init
-  --framework langroid`)
+--framework langroid`)
 - gen-ui-tool-based (manifest entry only — frontend already shipped in
   Wave 1; the agent's `generate_haiku` frontend tool was the missing
   manifest link)

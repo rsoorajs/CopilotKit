@@ -21,8 +21,8 @@ export default function GenUiInterruptUnsupportedPage() {
         </p>
         <p className="mt-3 text-sm text-[#3A3A46]">
           See the canonical implementation in the LangGraph or Pydantic AI
-          integrations, where the underlying agent runtime exposes the
-          interrupt machinery this demo requires.
+          integrations, where the underlying agent runtime exposes the interrupt
+          machinery this demo requires.
         </p>
       </div>
     </div>

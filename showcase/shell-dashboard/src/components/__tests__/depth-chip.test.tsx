@@ -11,10 +11,7 @@ describe("DepthChip", () => {
     "renders D%i for depth=%i with wired status",
     (depth) => {
       const { getByTestId } = render(
-        <DepthChip
-          depth={depth as 0 | 1 | 2 | 3 | 4 | 5 | 6}
-          status="wired"
-        />,
+        <DepthChip depth={depth as 0 | 1 | 2 | 3 | 4 | 5 | 6} status="wired" />,
       );
       const chip = getByTestId("depth-chip");
       expect(chip.textContent).toBe(`D${depth}`);

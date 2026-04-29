@@ -24,7 +24,7 @@ booking in a follow-up message.
 - The Langroid agent receives the tool schema from the AG-UI runtime as
   part of the request and the LLM emits a tool call against it.
 - `useHumanInTheLoop` registers a `render` that receives `{ args, status,
-  respond }`; calling `respond({ chosen_time, chosen_label })` resolves
+respond }`; calling `respond({ chosen_time, chosen_label })` resolves
   the pending tool call so the agent can continue the run.
 
 ## Notes for Langroid

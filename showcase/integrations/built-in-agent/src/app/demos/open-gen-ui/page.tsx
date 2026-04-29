@@ -10,10 +10,7 @@
  * iframe. No custom sandbox functions, no custom tools — just chat.
  */
 
-import {
-  CopilotKitProvider,
-  CopilotChat,
-} from "@copilotkit/react-core/v2";
+import { CopilotKitProvider, CopilotChat } from "@copilotkit/react-core/v2";
 
 const VISUALIZATION_DESIGN_SKILL = `When generating UI with generateSandboxedUi, your goal is to produce a polished, intricate, EDUCATIONAL visualisation that teaches the concept the user asked about. Treat the output like a figure from a well-designed textbook or explorable-explanation — not a bare-bones demo.
 

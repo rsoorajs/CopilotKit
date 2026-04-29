@@ -19,9 +19,10 @@ export default function GenUiInterruptUnsupported() {
           Generative UI (Interrupt) — Not Supported by Spring AI
         </h1>
         <p style={{ color: "#555", lineHeight: 1.55, marginBottom: 16 }}>
-          Spring AI&apos;s <code>ChatClient</code> has no graph-interrupt primitive
-          analogous to LangGraph&apos;s <code>interrupt(...)</code>, so the agent
-          cannot suspend mid-run and hand a payload to the frontend.
+          Spring AI&apos;s <code>ChatClient</code> has no graph-interrupt
+          primitive analogous to LangGraph&apos;s <code>interrupt(...)</code>,
+          so the agent cannot suspend mid-run and hand a payload to the
+          frontend.
         </p>
         <p style={{ color: "#555", lineHeight: 1.55 }}>
           See{" "}

@@ -6,11 +6,11 @@ This package aligns with `showcase/integrations/langgraph-python` in terms of de
 
 The following demos are intentionally skipped because they depend on LangGraph-specific primitives for which LlamaIndex has no analogue.
 
-| Demo                   | Missing primitive / reason                                                                                            |
-| ---------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| `gen-ui-interrupt`     | LangGraph's `interrupt()` primitive + `useLangGraphInterrupt`. LlamaIndex AG-UI has no interrupt/resume primitive.    |
-| `interrupt-headless`   | Same `interrupt()` primitive dependency as `gen-ui-interrupt`.                                                        |
-| `hitl-in-chat-booking` | Booking flow uses `interrupt()` to pause for the time-picker selection — same dependency as `gen-ui-interrupt`.       |
+| Demo                   | Missing primitive / reason                                                                                         |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `gen-ui-interrupt`     | LangGraph's `interrupt()` primitive + `useLangGraphInterrupt`. LlamaIndex AG-UI has no interrupt/resume primitive. |
+| `interrupt-headless`   | Same `interrupt()` primitive dependency as `gen-ui-interrupt`.                                                     |
+| `hitl-in-chat-booking` | Booking flow uses `interrupt()` to pause for the time-picker selection — same dependency as `gen-ui-interrupt`.    |
 
 `beautiful-chat` is now ported in simplified form (see Partial Ports). `cli-start` and `mcp-apps` are now wired in the manifest.
 

@@ -14,10 +14,7 @@
  */
 
 import { useCallback } from "react";
-import {
-  CopilotKitProvider,
-  CopilotChat,
-} from "@copilotkit/react-core/v2";
+import { CopilotKitProvider, CopilotChat } from "@copilotkit/react-core/v2";
 import type { AttachmentUploadResult } from "@copilotkit/shared";
 
 import { SampleAttachmentButtons } from "./sample-attachment-buttons";

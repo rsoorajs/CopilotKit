@@ -27,14 +27,16 @@ export default function InterruptHeadlessUnsupported() {
         </h1>
         <p className="mt-3 text-sm text-[#3A3A46]">
           This demo resolves LangGraph <code>interrupt()</code> events from a
-          plain button grid (no chat). The Claude Agent SDK has no
-          equivalent graph-level pause/resume primitive, so the headless
-          interrupt flow is not available on the claude-sdk-python
-          integration.
+          plain button grid (no chat). The Claude Agent SDK has no equivalent
+          graph-level pause/resume primitive, so the headless interrupt flow is
+          not available on the claude-sdk-python integration.
         </p>
         <p className="mt-3 text-sm text-[#3A3A46]">
           For human-in-the-loop on this backend, see the{" "}
-          <Link className="font-medium text-[#6366F1] underline" href="/demos/hitl">
+          <Link
+            className="font-medium text-[#6366F1] underline"
+            href="/demos/hitl"
+          >
             hitl
           </Link>{" "}
           and{" "}

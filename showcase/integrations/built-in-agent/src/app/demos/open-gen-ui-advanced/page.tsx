@@ -51,9 +51,11 @@ function Demo() {
       </h1>
       <p className="text-sm opacity-70 mb-6">
         Try one of the suggestions. The agent authors HTML + JS that runs in a
-        sandboxed iframe and calls host-side functions
-        (<code className="mx-1 px-1 bg-gray-100 rounded">evaluateExpression</code>,
-        <code className="mx-1 px-1 bg-gray-100 rounded">notifyHost</code>) over
+        sandboxed iframe and calls host-side functions (
+        <code className="mx-1 px-1 bg-gray-100 rounded">
+          evaluateExpression
+        </code>
+        ,<code className="mx-1 px-1 bg-gray-100 rounded">notifyHost</code>) over
         a postMessage bridge.
       </p>
       <CopilotChat />

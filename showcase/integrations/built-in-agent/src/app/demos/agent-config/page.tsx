@@ -1,9 +1,6 @@
 "use client";
 
-import {
-  CopilotKitProvider,
-  CopilotChat,
-} from "@copilotkit/react-core/v2";
+import { CopilotKitProvider, CopilotChat } from "@copilotkit/react-core/v2";
 import { useMemo } from "react";
 
 import { ConfigCard } from "./config-card";
@@ -37,8 +34,8 @@ export default function AgentConfigDemoPage() {
             demo passes <code>tone</code>, <code>expertise</code>, and
             <code> responseLength</code> through the provider; the
             built-in-agent factory reads them from{" "}
-            <code>input.forwardedProps</code> and prepends a tuned system
-            prompt per turn.
+            <code>input.forwardedProps</code> and prepends a tuned system prompt
+            per turn.
           </p>
         </header>
         <ConfigCard

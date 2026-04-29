@@ -4,7 +4,7 @@
 
 In the fixed-schema variant of A2UI, the component tree (schema) is
 authored ahead of time as JSON and shipped with the backend. The agent
-streams only *data* into the data model at runtime via the
+streams only _data_ into the data model at runtime via the
 `display_flight` tool. The frontend catalog binds component names from
 the JSON schema to real React renderers.
 

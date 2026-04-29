@@ -4,8 +4,8 @@ export default function GenUiInterruptNotSupported() {
       <div className="max-w-xl space-y-3 text-center">
         <h1 className="text-2xl font-semibold">Not supported by mastra</h1>
         <p className="text-sm text-muted-foreground">
-          The <code>gen-ui-interrupt</code> demo (in-chat HITL via the
-          low-level <code>useInterrupt</code> primitive) relies on AG-UI{" "}
+          The <code>gen-ui-interrupt</code> demo (in-chat HITL via the low-level{" "}
+          <code>useInterrupt</code> primitive) relies on AG-UI{" "}
           <code>INTERRUPT</code> custom events, which the Mastra adapter does
           not emit. See <code>README.md</code> for details, or browse the
           langgraph-python integration for a working reference.

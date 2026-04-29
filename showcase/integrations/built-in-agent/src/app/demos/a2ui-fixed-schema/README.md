@@ -2,7 +2,7 @@
 
 Declarative Generative UI with a fixed component tree. The frontend authors
 the schema (a JSON tree of A2UI components); the in-process tanstack agent
-only streams *data* into the data model via a single `display_flight` tool.
+only streams _data_ into the data model via a single `display_flight` tool.
 
 ## Pattern
 
@@ -21,7 +21,7 @@ only streams *data* into the data model via a single `display_flight` tool.
 
 ## How it differs from `declarative-gen-ui` (dynamic schema)
 
-Dynamic schema lets the LLM emit *any* component tree it likes from the
+Dynamic schema lets the LLM emit _any_ component tree it likes from the
 registered catalog. Fixed schema pins the tree ahead of time and lets the
 LLM only fill in data — strictly typed, predictable, no second LLM call.
 

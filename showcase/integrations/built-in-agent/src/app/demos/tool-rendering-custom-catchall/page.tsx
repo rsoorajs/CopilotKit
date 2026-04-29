@@ -71,8 +71,8 @@ function Demo() {
         Tool Rendering — Custom Catch-all
       </h1>
       <p className="text-sm opacity-70 mb-6">
-        Try one of the suggestions. A single branded card renders every
-        tool call via a wildcard renderer.
+        Try one of the suggestions. A single branded card renders every tool
+        call via a wildcard renderer.
       </p>
       <CopilotChat />
     </main>

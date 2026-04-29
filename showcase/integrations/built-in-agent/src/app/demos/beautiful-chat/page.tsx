@@ -63,8 +63,8 @@ function Canvas() {
           through the agent factory.
         </Card>
         <Card title="Tailwind theme">
-          Colors come from the global CopilotKit CSS variables; flip the page
-          to dark mode and the chat follows.
+          Colors come from the global CopilotKit CSS variables; flip the page to
+          dark mode and the chat follows.
         </Card>
         <Card title="Drop-in primitives">
           <code>&lt;CopilotChat /&gt;</code> ships with messages, input,

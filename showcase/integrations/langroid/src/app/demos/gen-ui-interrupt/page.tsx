@@ -33,10 +33,10 @@ export default function GenUiInterruptUnsupported() {
         </h1>
         <p className="text-sm text-black/70 dark:text-white/70">
           This demo relies on LangGraph&rsquo;s <code>interrupt()</code>{" "}
-          primitive, which lets the agent pause mid-run and surface a payload
-          to the frontend until the user resolves it. Langroid&rsquo;s
-          ChatAgent does not expose an equivalent pause/resume hook today, so
-          the demo cannot be ported faithfully.
+          primitive, which lets the agent pause mid-run and surface a payload to
+          the frontend until the user resolves it. Langroid&rsquo;s ChatAgent
+          does not expose an equivalent pause/resume hook today, so the demo
+          cannot be ported faithfully.
         </p>
       </div>
       <p className="text-xs text-black/50 dark:text-white/50">

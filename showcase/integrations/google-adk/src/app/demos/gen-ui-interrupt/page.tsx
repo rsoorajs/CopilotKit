@@ -27,9 +27,9 @@ export default function GenUiInterruptDemo() {
         <p className="text-sm leading-relaxed text-[#57575B]">
           This demo depends on LangGraph&apos;s <code>interrupt()</code>{" "}
           primitive and the <code>useInterrupt</code> hook&apos;s{" "}
-          <code>on_interrupt</code> backend events, which{" "}
-          <code>ag-ui-adk</code> does not emit. See the canonical
-          implementation in the <strong>langgraph-python</strong> integration.
+          <code>on_interrupt</code> backend events, which <code>ag-ui-adk</code>{" "}
+          does not emit. See the canonical implementation in the{" "}
+          <strong>langgraph-python</strong> integration.
         </p>
       </div>
     </div>

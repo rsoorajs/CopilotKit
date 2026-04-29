@@ -73,8 +73,8 @@ export default function BeautifulChatPage() {
                 Beautiful Chat
               </h1>
               <p className="text-sm text-[#3A3A46]">
-                A polished conversational surface powered by your Claude
-                Agent SDK backend. Ask a question, or pick a suggestion below.
+                A polished conversational surface powered by your Claude Agent
+                SDK backend. Ask a question, or pick a suggestion below.
               </p>
             </header>
             <div className="flex-1 overflow-hidden rounded-2xl border border-[#E5E5ED] bg-white/70 shadow-[0_1px_0_0_rgba(0,0,0,0.02),0_10px_40px_-10px_rgba(99,102,241,0.18)] backdrop-blur-sm">
@@ -155,8 +155,8 @@ function SamplePanel() {
         <p className="font-medium text-[#010507]">Tip</p>
         <p className="mt-1">
           The chat surface here is unmodified <code>CopilotChat</code>. The
-          theme, suggestions, and side panel are pure frontend dressing —
-          point this at any Claude Agent SDK backend.
+          theme, suggestions, and side panel are pure frontend dressing — point
+          this at any Claude Agent SDK backend.
         </p>
       </div>
     </>

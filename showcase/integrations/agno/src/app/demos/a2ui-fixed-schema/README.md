@@ -2,7 +2,7 @@
 
 The component tree (schema) is authored ahead of time as JSON
 (`src/agents/a2ui_schemas/flight_schema.json`) and shipped with the
-backend. The agent only streams *data* into the data model at runtime
+backend. The agent only streams _data_ into the data model at runtime
 via the `display_flight` tool — **no secondary LLM call**. The frontend
 catalog (`./a2ui/catalog.ts`) pins each component name in the schema to
 a real React renderer.
@@ -10,7 +10,7 @@ a real React renderer.
 ## How it differs from Agno's existing `generate_a2ui` tool
 
 The Agno main agent's `generate_a2ui` tool (in `src/agents/main.py`)
-runs a *secondary* OpenAI client to design the component tree per turn
+runs a _secondary_ OpenAI client to design the component tree per turn
 (dynamic-schema flavor). This demo is the opposite: the schema is
 fixed, the LLM only fills in the data, and the tool emits an
 `a2ui_operations` container directly without a secondary LLM call. That

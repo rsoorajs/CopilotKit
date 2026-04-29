@@ -63,8 +63,7 @@ const NOTES_DB: Note[] = [
   {
     id: "n7",
     title: "1:1 prep — career planning",
-    excerpt:
-      "Discuss growth areas. Ask about scope for Q3. Revisit goals doc.",
+    excerpt: "Discuss growth areas. Ask about scope for Q3. Revisit goals doc.",
     tags: ["career", "planning"],
   },
 ];

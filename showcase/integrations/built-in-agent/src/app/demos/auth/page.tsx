@@ -8,10 +8,7 @@
 
 import { Component, useCallback, useMemo, useState } from "react";
 import type { ErrorInfo, ReactNode } from "react";
-import {
-  CopilotKitProvider,
-  CopilotChat,
-} from "@copilotkit/react-core/v2";
+import { CopilotKitProvider, CopilotChat } from "@copilotkit/react-core/v2";
 import { useDemoAuth } from "./use-demo-auth";
 import { AuthBanner } from "./auth-banner";
 

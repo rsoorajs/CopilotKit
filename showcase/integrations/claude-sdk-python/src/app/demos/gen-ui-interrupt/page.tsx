@@ -28,15 +28,18 @@ export default function GenUiInterruptUnsupported() {
           Gen UI Interrupt
         </h1>
         <p className="mt-3 text-sm text-[#3A3A46]">
-          The <code>useInterrupt</code> flow depends on LangGraph&apos;s built-in
-          graph-level <code>interrupt()</code> / <code>Command(resume=...)</code>{" "}
-          protocol. The Claude Agent SDK&apos;s Anthropic Messages stream has
-          no equivalent pause/resume primitive, so this demo is not available
-          on the claude-sdk-python integration.
+          The <code>useInterrupt</code> flow depends on LangGraph&apos;s
+          built-in graph-level <code>interrupt()</code> /{" "}
+          <code>Command(resume=...)</code> protocol. The Claude Agent SDK&apos;s
+          Anthropic Messages stream has no equivalent pause/resume primitive, so
+          this demo is not available on the claude-sdk-python integration.
         </p>
         <p className="mt-3 text-sm text-[#3A3A46]">
           For human-in-the-loop on this backend, see the{" "}
-          <Link className="font-medium text-[#6366F1] underline" href="/demos/hitl">
+          <Link
+            className="font-medium text-[#6366F1] underline"
+            href="/demos/hitl"
+          >
             hitl
           </Link>{" "}
           and{" "}
@@ -46,8 +49,8 @@ export default function GenUiInterruptUnsupported() {
           >
             hitl-in-app
           </Link>{" "}
-          cells — both model approval gating with regular tool calls rather
-          than graph-level interrupts.
+          cells — both model approval gating with regular tool calls rather than
+          graph-level interrupts.
         </p>
       </div>
     </div>

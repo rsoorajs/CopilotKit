@@ -49,10 +49,9 @@ export default function GenUiInterruptUnsupportedPage() {
             className="font-medium text-[#6366F1] underline-offset-2 hover:underline"
           >
             in-chat human-in-the-loop
-          </Link>
-          {" "}via <code>useHumanInTheLoop</code>, which renders a card inside
-          the chat and waits for the user to confirm before the agent
-          proceeds.
+          </Link>{" "}
+          via <code>useHumanInTheLoop</code>, which renders a card inside the
+          chat and waits for the user to confirm before the agent proceeds.
         </p>
         <div className="text-xs text-[#57575B]">
           See the canonical implementation in{" "}

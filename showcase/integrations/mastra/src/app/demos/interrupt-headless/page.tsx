@@ -6,9 +6,9 @@ export default function InterruptHeadlessNotSupported() {
         <p className="text-sm text-muted-foreground">
           The <code>interrupt-headless</code> demo (resolve interrupts from a
           plain button grid via <code>useHeadlessInterrupt</code>) relies on
-          AG-UI <code>INTERRUPT</code> custom events, which the Mastra
-          adapter does not emit. See <code>README.md</code> for details, or
-          browse the langgraph-python integration for a working reference.
+          AG-UI <code>INTERRUPT</code> custom events, which the Mastra adapter
+          does not emit. See <code>README.md</code> for details, or browse the
+          langgraph-python integration for a working reference.
         </p>
       </div>
     </main>

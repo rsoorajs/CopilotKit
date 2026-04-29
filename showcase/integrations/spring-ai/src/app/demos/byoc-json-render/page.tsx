@@ -21,8 +21,8 @@ export default function ByocJsonRenderUnsupported() {
         <p style={{ color: "#555", lineHeight: 1.55, marginBottom: 16 }}>
           Spring AI&apos;s <code>BeanOutputConverter</code> only resolves on the
           final response, so there is no per-token JSON streaming to drive
-          incremental rendering. The <code>@json-render</code> dependencies
-          are also not installed in this integration.
+          incremental rendering. The <code>@json-render</code> dependencies are
+          also not installed in this integration.
         </p>
         <p style={{ color: "#555", lineHeight: 1.55 }}>
           See{" "}

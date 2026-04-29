@@ -10,10 +10,7 @@
 //    textarea (bypassing mic permissions for screenshots/Playwright).
 
 import { useCallback } from "react";
-import {
-  CopilotKitProvider,
-  CopilotChat,
-} from "@copilotkit/react-core/v2";
+import { CopilotKitProvider, CopilotChat } from "@copilotkit/react-core/v2";
 import { SampleAudioButton } from "./sample-audio-button";
 
 const RUNTIME_URL = "/api/copilotkit-voice";
@@ -46,10 +43,7 @@ export default function VoiceDemoPage() {
   }, []);
 
   return (
-    <CopilotKitProvider
-      runtimeUrl={RUNTIME_URL}
-      useSingleEndpoint={false}
-    >
+    <CopilotKitProvider runtimeUrl={RUNTIME_URL} useSingleEndpoint={false}>
       <div className="flex h-screen flex-col gap-3 p-6">
         <header>
           <h1 className="text-lg font-semibold">Voice input</h1>

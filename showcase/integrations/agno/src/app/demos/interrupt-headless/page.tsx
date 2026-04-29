@@ -36,23 +36,21 @@ export default function InterruptHeadlessUnsupportedPage() {
         <p className="mb-4 text-sm leading-relaxed text-[#3A3A46]">
           This demo drives a picker UI rendered <em>outside</em> the chat by
           listening for LangGraph&apos;s <code>interrupt()</code> event on the
-          AG-UI stream and resuming the paused run with the user&apos;s
-          choice. Agno does not currently expose an equivalent
-          pause/resume primitive, so the demo is documented but not runnable
-          on this integration.
+          AG-UI stream and resuming the paused run with the user&apos;s choice.
+          Agno does not currently expose an equivalent pause/resume primitive,
+          so the demo is documented but not runnable on this integration.
         </p>
         <p className="mb-6 text-sm leading-relaxed text-[#3A3A46]">
-          The closest Agno-supported pattern for an in-app modal that blocks
-          the agent on user input is{" "}
+          The closest Agno-supported pattern for an in-app modal that blocks the
+          agent on user input is{" "}
           <Link
             href="/demos/hitl-in-app"
             className="font-medium text-[#6366F1] underline-offset-2 hover:underline"
           >
             in-app human-in-the-loop
-          </Link>
-          {" "}via <code>useFrontendTool</code> with an async handler — the
-          tool resolves only after the user interacts with a host-rendered
-          modal.
+          </Link>{" "}
+          via <code>useFrontendTool</code> with an async handler — the tool
+          resolves only after the user interacts with a host-rendered modal.
         </p>
         <div className="text-xs text-[#57575B]">
           See the canonical implementation in{" "}

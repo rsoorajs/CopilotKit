@@ -33,6 +33,7 @@ expose at this time:
   `useLangGraphInterrupt`'s resolve/respond primitive. Not portable.
   Surfaced as a stub page (`src/app/demos/interrupt-headless/`) and as
   `not_supported_features.interrupt-headless` in the manifest.
+
 ## MCP Apps — now ported (wave-2 follow-up)
 
 - **mcp-apps** — **shipped (simplified)**. Dedicated

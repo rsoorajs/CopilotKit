@@ -21,11 +21,11 @@ export default function GenUiInterruptUnsupported() {
           Gen UI Interrupt
         </h1>
         <p className="mt-2 text-sm text-[#57575B]">
-          This demo isn&apos;t supported by the built-in-agent integration.
-          The <code className="font-mono text-xs">useInterrupt</code> primitive
+          This demo isn&apos;t supported by the built-in-agent integration. The{" "}
+          <code className="font-mono text-xs">useInterrupt</code> primitive
           requires a graph-interrupt runtime such as LangGraph. The
-          built-in-agent runs on TanStack AI&apos;s chat-completions adapter
-          and has no equivalent.
+          built-in-agent runs on TanStack AI&apos;s chat-completions adapter and
+          has no equivalent.
         </p>
         <p className="mt-3 text-sm text-[#57575B]">
           See the <span className="font-mono text-xs">langgraph-python</span>{" "}

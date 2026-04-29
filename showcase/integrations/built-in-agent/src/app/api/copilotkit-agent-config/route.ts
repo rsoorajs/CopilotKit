@@ -44,15 +44,14 @@ function buildConfigSystemPrompt(props: Record<string, unknown>): string {
   const expertise =
     typeof props.expertise === "string" ? props.expertise : "intermediate";
   const responseLength =
-    typeof props.responseLength === "string"
-      ? props.responseLength
-      : "concise";
+    typeof props.responseLength === "string" ? props.responseLength : "concise";
 
   const toneLine = TONE_GUIDANCE[tone] ?? TONE_GUIDANCE.professional;
   const expertiseLine =
     EXPERTISE_GUIDANCE[expertise] ?? EXPERTISE_GUIDANCE.intermediate;
   const lengthLine =
-    RESPONSE_LENGTH_GUIDANCE[responseLength] ?? RESPONSE_LENGTH_GUIDANCE.concise;
+    RESPONSE_LENGTH_GUIDANCE[responseLength] ??
+    RESPONSE_LENGTH_GUIDANCE.concise;
 
   return [
     "You adapt your responses based on the active agent config:",

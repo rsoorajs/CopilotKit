@@ -13,7 +13,11 @@
  * Achieved depth = highest D where ALL lower depths are also green.
  * Short-circuits: if any level is not green, stop there.
  */
-import { keyFor, CATALOG_TO_D5_KEY, type LiveStatusMap } from "@/lib/live-status";
+import {
+  keyFor,
+  CATALOG_TO_D5_KEY,
+  type LiveStatusMap,
+} from "@/lib/live-status";
 
 /** Minimal catalog cell shape consumed by depth derivation. */
 export interface CatalogCell {

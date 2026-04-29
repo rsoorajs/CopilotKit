@@ -128,7 +128,9 @@ function buildGenerateA2uiTool(
 
     const surfaceId = parsed.surfaceId ?? "dynamic-surface";
     const catalogId = parsed.catalogId ?? CUSTOM_CATALOG_ID;
-    const components = Array.isArray(parsed.components) ? parsed.components : [];
+    const components = Array.isArray(parsed.components)
+      ? parsed.components
+      : [];
     const data = parsed.data ?? {};
 
     const ops: unknown[] = [
@@ -171,7 +173,10 @@ export function createDeclarativeGenUIAgent() {
           .filter((p) => /a2ui|catalog|component/i.test(p))
           .join("\n\n") || systemPrompts.join("\n\n");
 
-      const generateA2ui = buildGenerateA2uiTool(catalogContext, abortController);
+      const generateA2ui = buildGenerateA2uiTool(
+        catalogContext,
+        abortController,
+      );
 
       return chat({
         adapter: openaiText("gpt-4o"),

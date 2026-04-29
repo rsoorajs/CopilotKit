@@ -32,15 +32,14 @@ export default function InterruptHeadlessUnsupportedPage() {
         <p className="text-sm text-[var(--muted-foreground)] mb-4 leading-relaxed">
           This demo resolves a LangGraph{" "}
           <code className="px-1 rounded bg-[var(--muted)]">interrupt()</code>{" "}
-          headlessly — the host page subscribes to the AG-UI stream and
-          resumes the same run from a persisted checkpoint via{" "}
+          headlessly — the host page subscribes to the AG-UI stream and resumes
+          the same run from a persisted checkpoint via{" "}
           <code className="px-1 rounded bg-[var(--muted)]">
             copilotkit.runAgent({"{"} forwardedProps: {"{"} command: {"{"}
             resume {"}}}}"})
           </code>
-          . AG2 has no equivalent resumable-pause primitive on
-          ConversableAgent, so the headless resume contract cannot be
-          reproduced.
+          . AG2 has no equivalent resumable-pause primitive on ConversableAgent,
+          so the headless resume contract cannot be reproduced.
         </p>
         <p className="text-sm text-[var(--muted-foreground)] mb-6 leading-relaxed">
           For an out-of-chat approval surface on AG2 use{" "}

@@ -8,10 +8,7 @@ import {
   useConfigureSuggestions,
 } from "@copilotkit/react-core/v2";
 import { z } from "zod";
-import {
-  TimePickerCard,
-  TimeSlot,
-} from "../hitl-in-chat/time-picker-card";
+import { TimePickerCard, TimeSlot } from "../hitl-in-chat/time-picker-card";
 
 // Booking-flow alias of `hitl-in-chat` — same time-picker tool, same
 // backend agent. The page exists so the showcase can deep-link to a

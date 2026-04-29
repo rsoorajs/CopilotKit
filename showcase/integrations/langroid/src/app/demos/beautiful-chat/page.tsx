@@ -93,9 +93,9 @@ export default function BeautifulChatPage() {
               Polished Langroid surface
             </h1>
             <p className="max-w-xl text-sm text-[#3A3A46]">
-              A flagship-style chat shell over the shared Langroid backend.
-              Ask the assistant a question, pick a suggestion pill, or have
-              it talk through the example dashboard.
+              A flagship-style chat shell over the shared Langroid backend. Ask
+              the assistant a question, pick a suggestion pill, or have it talk
+              through the example dashboard.
             </p>
           </header>
 
