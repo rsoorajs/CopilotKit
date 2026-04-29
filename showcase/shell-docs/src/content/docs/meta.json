@@ -10,6 +10,7 @@
     "prebuilt-components",
     "custom-look-and-feel",
     "multimodal-attachments",
+    "voice",
     "---Build Generative UI---",
     "...generative-ui",
     "---Give Your App Agent Powers---",

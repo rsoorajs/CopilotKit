@@ -108,18 +108,6 @@
     "readonly-state-agent-context": {
       "og_docs_url": "https://docs.copilotkit.ai/adk/shared-state/in-app-agent-read",
       "shell_docs_path": "/shared-state/agent-readonly"
-    },
-    "voice": {
-      "og_docs_url": null,
-      "shell_docs_path": null
-    },
-    "byoc-json-render": {
-      "og_docs_url": null,
-      "shell_docs_path": null
-    },
-    "byoc-hashbrown": {
-      "og_docs_url": null,
-      "shell_docs_path": null
     }
   }
 }

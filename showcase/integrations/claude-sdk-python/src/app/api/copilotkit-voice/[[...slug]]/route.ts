@@ -57,6 +57,7 @@ function createAgent() {
  *
  * See file header note #2 for why this is the preferred error surface.
  */
+// @region[transcription-service-guard]
 class GuardedOpenAITranscriptionService extends TranscriptionService {
   private delegate: TranscriptionServiceOpenAI | null;
 
@@ -84,6 +85,7 @@ class GuardedOpenAITranscriptionService extends TranscriptionService {
     return this.delegate.transcribeFile(options);
   }
 }
+// @endregion[transcription-service-guard]
 
 // Lazily construct the runtime + transcription service on first
 // request. Next.js build-time page-data collection imports every route
@@ -102,6 +104,7 @@ function getRuntime(): CopilotRuntime {
     default: agent,
   };
 
+  // @region[voice-runtime]
   const runtime = new CopilotRuntime({
     // @ts-ignore -- see main route.ts
     agents,
@@ -141,3 +144,4 @@ export const POST = async (req: NextRequest) => {
 // logs; the V2 auto-detect ignores the 405 and moves on to the working
 // POST path.
 export const GET = POST;
+// @endregion[voice-runtime]

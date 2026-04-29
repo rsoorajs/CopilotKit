@@ -16,6 +16,7 @@ const SAMPLE_LABEL = "What is the weather in Tokyo?";
 // 2. A "Play sample" button that POSTs a bundled clip to /transcribe and
 //    injects the transcript into the chat composer (bypasses mic perms so
 //    Playwright + screenshot flows work too).
+// @region[voice-page]
 export default function VoiceDemoPage() {
   const handleTranscribed = useCallback((text: string) => {
     if (typeof document === "undefined") return;
@@ -68,3 +69,4 @@ export default function VoiceDemoPage() {
     </CopilotKit>
   );
 }
+// @endregion[voice-page]

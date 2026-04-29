@@ -347,7 +347,8 @@
       "id": "voice",
       "name": "Voice",
       "category": "platform",
-      "description": "Real-time voice interaction"
+      "description": "Real-time voice interaction",
+      "shell_docs_path": "/voice"
     },
     {
       "id": "multimodal",
@@ -367,9 +368,7 @@
       "id": "byoc-json-render",
       "name": "BYOC json-render",
       "category": "byoc",
-      "description": "Hashbrown-style generative UI built on json-render",
-      "og_docs_url": "https://docs.copilotkit.ai/generative-ui/your-components/display-only",
-      "shell_docs_path": "/generative-ui/your-components/display-only"
+      "description": "Streaming structured-output generative UI via @json-render/react"
     }
   ]
 }

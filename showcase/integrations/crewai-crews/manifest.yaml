@@ -317,6 +317,10 @@ demos:
       - chat-ui
     route: /demos/voice
     animated_preview_url:
+    highlight:
+      - src/app/demos/voice/page.tsx
+      - src/app/demos/voice/sample-audio-button.tsx
+      - src/app/api/copilotkit-voice/[[...slug]]/route.ts
   - id: multimodal
     name: Multimodal Attachments
     description: Image and PDF uploads routed through the AG-UI attachment pipeline

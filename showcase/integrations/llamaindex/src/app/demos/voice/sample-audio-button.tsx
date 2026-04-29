@@ -25,6 +25,7 @@ export interface SampleAudioButtonProps {
   sampleLabel: string;
 }
 
+// @region[sample-audio-button]
 export function SampleAudioButton({
   onTranscribed,
   runtimeUrl,
@@ -91,3 +92,4 @@ export function SampleAudioButton({
     </div>
   );
 }
+// @endregion[sample-audio-button]

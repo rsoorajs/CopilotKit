@@ -47,6 +47,7 @@ if (!voiceDemoAgent) {
  * OPENAI_API_KEY is not configured. When the key is present we delegate to
  * the real OpenAI-backed service.
  */
+// @region[transcription-service-guard]
 class GuardedOpenAITranscriptionService extends TranscriptionService {
   private delegate: TranscriptionServiceOpenAI | null;
 
@@ -69,11 +70,13 @@ class GuardedOpenAITranscriptionService extends TranscriptionService {
     return this.delegate.transcribeFile(options);
   }
 }
+// @endregion[transcription-service-guard]
 
 let cachedHandler: ((req: Request) => Promise<Response>) | null = null;
 function getHandler(): (req: Request) => Promise<Response> {
   if (cachedHandler) return cachedHandler;
 
+  // @region[voice-runtime]
   const runtime = new CopilotRuntime({
     // @ts-ignore -- see main route.ts
     agents: {
@@ -94,3 +97,4 @@ export const POST = (req: NextRequest) => getHandler()(req);
 export const GET = (req: NextRequest) => getHandler()(req);
 export const PUT = (req: NextRequest) => getHandler()(req);
 export const DELETE = (req: NextRequest) => getHandler()(req);
+// @endregion[voice-runtime]
