@@ -4,24 +4,19 @@
 // numbered via a small circle on the left and a thin vertical line
 // connects consecutive steps. We approximate that here in pure CSS —
 // no client-side JS needed, so this works inside RSC-rendered MDX.
+//
+// Numbering is CSS counter-driven (see `.docs-steps` / `.docs-step__badge`
+// in `globals.css`) rather than React-injected indices. That way a
+// `<Step>` hidden by a gate like `<WhenFrameworkHas>` doesn't advance
+// the counter — visible steps stay 1, 2, 3, … in the reader's view
+// regardless of which gates pass.
 
 import React from "react";
 
 export function Steps({ children }: { children: React.ReactNode }) {
-  // Walk children and wrap each Step with its auto-assigned number.
-  const items = React.Children.toArray(children).filter((c) =>
-    React.isValidElement(c),
-  );
-  const numbered = items.map((child, idx) =>
-    React.isValidElement(child)
-      ? React.cloneElement(child as React.ReactElement<StepProps>, {
-          __index: idx + 1,
-          __total: items.length,
-        })
-      : child,
-  );
   return (
     <div
+      className="docs-steps"
       style={{
         position: "relative",
         paddingLeft: "2rem",
@@ -30,7 +25,7 @@ export function Steps({ children }: { children: React.ReactNode }) {
         margin: "1.5rem 0 1.5rem 0.75rem",
       }}
     >
-      {numbered}
+      {children}
     </div>
   );
 }
@@ -38,24 +33,20 @@ export function Steps({ children }: { children: React.ReactNode }) {
 interface StepProps {
   title?: string;
   children?: React.ReactNode;
-  __index?: number;
-  __total?: number;
 }
 
-export function Step({ title, children, __index, __total }: StepProps) {
-  const isLast =
-    __index !== undefined && __total !== undefined && __index === __total;
+export function Step({ title, children }: StepProps) {
   return (
     <div
       style={{
         position: "relative",
-        paddingBottom: isLast ? "0" : "1.5rem",
-        marginBottom: isLast ? "0" : "0",
+        paddingBottom: "1.5rem",
       }}
     >
-      {/* numbered badge */}
+      {/* numbered badge — number rendered via CSS counter (globals.css) */}
       <div
         aria-hidden
+        className="docs-step__badge"
         style={{
           position: "absolute",
           left: "-2.75rem",
@@ -73,9 +64,7 @@ export function Step({ title, children, __index, __total }: StepProps) {
           justifyContent: "center",
           lineHeight: 1,
         }}
-      >
-        {__index ?? ""}
-      </div>
+      />
       {title && (
         <h4
           style={{

@@ -15,6 +15,7 @@
     "---Give Your App Agent Powers---",
     "frontend-tools",
     "shared-state",
+    "human-in-the-loop",
     "multi-agent/subagents",
     "programmatic-control",
     "---Agents & Backends---",

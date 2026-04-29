@@ -37,6 +37,8 @@ export default function SharedStateReadWriteDemo() {
 }
 
 function DemoContent() {
+  // @region[use-agent]
+  // @region[use-agent-read]
   // Subscribe the component to agent state changes. Any time the agent
   // mutates its state (e.g. via its `set_notes` tool emitting a
   // StateSnapshotEvent through ag_ui_strands' ToolBehavior hook) this
@@ -46,6 +48,8 @@ function DemoContent() {
     agentId: "shared-state-read-write",
     updates: [UseAgentUpdate.OnStateChanged],
   });
+  // @endregion[use-agent-read]
+  // @endregion[use-agent]
 
   useConfigureSuggestions({
     suggestions: [
@@ -79,6 +83,8 @@ function DemoContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // @region[set-state]
+  // @region[use-agent-write]
   // WRITE: every edit in the sidebar goes straight into agent state.
   // On the agent's next turn, `build_state_prompt` (the Strands
   // state_context_builder) reads this back out of state and prepends a
@@ -90,6 +96,8 @@ function DemoContent() {
       notes, // preserve what the agent has written
     } as RWAgentState);
   };
+  // @endregion[use-agent-write]
+  // @endregion[set-state]
 
   // WRITE: let the user clear the agent-authored notes from the UI.
   const handleClearNotes = () => {

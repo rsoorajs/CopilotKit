@@ -59,6 +59,8 @@ features:
   - open-gen-ui-advanced
   - voice
   - agent-config
+a2ui_pattern: schema-loading
+interrupt_pattern: promise-based
 demos:
   - id: cli-start
     name: CLI Start Command

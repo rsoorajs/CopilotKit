@@ -66,6 +66,7 @@ features:
 not_supported_features:
   - gen-ui-interrupt
   - interrupt-headless
+a2ui_pattern: llm-driven
 demos:
   - id: cli-start
     name: CLI Start Command

@@ -162,6 +162,8 @@ demos:
     description: Backend agent tools rendered as UI components
     tags: [agent-capabilities]
     route: /demos/tool-rendering
+    highlight:
+      - src/lib/factory/server-tools.ts
   - id: gen-ui-tool-based
     name: Tool-Based Generative UI
     description: Agent uses tools to trigger UI generation
@@ -187,6 +189,8 @@ demos:
     description: Multiple agents with visible task delegation
     tags: [multi-agent]
     route: /demos/subagents
+    highlight:
+      - src/lib/factory/subagent-tools.ts
   - id: hitl-in-chat-booking
     name: In-Chat HITL (Booking)
     description: Time-picker card rendered inline via useHumanInTheLoop for a booking flow
