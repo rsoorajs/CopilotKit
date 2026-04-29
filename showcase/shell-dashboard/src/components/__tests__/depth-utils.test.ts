@@ -311,4 +311,93 @@ describe("deriveDepth", () => {
     const result = deriveDepth(c, live);
     expect(result.achieved).toBe(4);
   });
+
+  // D5-bypass-for-D3/D4 cohort: per the harness model, e2e-deep only emits
+  // a green d5 row after D3 + D4 have passed at some point. So a green D5
+  // is sufficient evidence that D3/D4 implicitly passed and the cell should
+  // advance past D2 even if the D3 (e2e) row is currently missing or red.
+  describe("D5-bypass for missing/red D3", () => {
+    it("returns D5 when D1+D2 green, D3 (e2e) row missing, D5 green", () => {
+      const c = cell("lgp", "agentic-chat");
+      const live = mapOf([
+        row("health:lgp", "health", "green"),
+        row("agent:lgp", "agent", "green"),
+        // no e2e row
+        row("d5:lgp/agentic-chat", "d5", "green"),
+      ]);
+      const result = deriveDepth(c, live);
+      expect(result.achieved).toBe(5);
+    });
+
+    it("returns D5 when D1+D2 green, D3 (e2e) row red, D5 green", () => {
+      const c = cell("lgp", "agentic-chat");
+      const live = mapOf([
+        row("health:lgp", "health", "green"),
+        row("agent:lgp", "agent", "green"),
+        row("e2e:lgp/agentic-chat", "e2e", "red"),
+        row("d5:lgp/agentic-chat", "d5", "green"),
+      ]);
+      const result = deriveDepth(c, live);
+      expect(result.achieved).toBe(5);
+    });
+
+    it("returns D2 when D1+D2 green, D3 (e2e) row missing, D5 missing (unchanged)", () => {
+      const c = cell("lgp", "agentic-chat");
+      const live = mapOf([
+        row("health:lgp", "health", "green"),
+        row("agent:lgp", "agent", "green"),
+        // no e2e row, no d5 row
+      ]);
+      const result = deriveDepth(c, live);
+      expect(result.achieved).toBe(2);
+    });
+
+    it("returns D0 when D1 red even if D5 green (D5 must NOT bypass D1)", () => {
+      const c = cell("lgp", "agentic-chat");
+      const live = mapOf([
+        row("health:lgp", "health", "red"),
+        row("agent:lgp", "agent", "green"),
+        row("d5:lgp/agentic-chat", "d5", "green"),
+      ]);
+      const result = deriveDepth(c, live);
+      expect(result.achieved).toBe(0);
+    });
+
+    it("returns D1 when D2 (agent) red even if D5 green (D5 must NOT bypass D2)", () => {
+      const c = cell("lgp", "agentic-chat");
+      const live = mapOf([
+        row("health:lgp", "health", "green"),
+        row("agent:lgp", "agent", "red"),
+        row("d5:lgp/agentic-chat", "d5", "green"),
+      ]);
+      const result = deriveDepth(c, live);
+      expect(result.achieved).toBe(1);
+    });
+
+    it("returns D6 via D5-bypass when D3 missing, D5+D6 green", () => {
+      const c = cell("lgp", "agentic-chat");
+      const live = mapOf([
+        row("health:lgp", "health", "green"),
+        row("agent:lgp", "agent", "green"),
+        // no e2e row
+        row("d5:lgp/agentic-chat", "d5", "green"),
+        row("d6:lgp/agentic-chat", "d6", "green"),
+      ]);
+      const result = deriveDepth(c, live);
+      expect(result.achieved).toBe(6);
+    });
+
+    it("isRegression false when D5-bypass lifts cell from D2 to D5 at max_depth=5", () => {
+      const c = cell("lgp", "agentic-chat", "wired", 5);
+      const live = mapOf([
+        row("health:lgp", "health", "green"),
+        row("agent:lgp", "agent", "green"),
+        // no e2e row, but d5 green
+        row("d5:lgp/agentic-chat", "d5", "green"),
+      ]);
+      const result = deriveDepth(c, live);
+      expect(result.achieved).toBe(5);
+      expect(result.isRegression).toBe(false);
+    });
+  });
 });
