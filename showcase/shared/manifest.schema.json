@@ -93,6 +93,13 @@
       "minItems": 1,
       "description": "List of supported feature IDs from the feature registry"
     },
+    "not_supported_features": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "List of feature IDs the integration explicitly does not support. Each id must have a stub page that surfaces the unsupported state to the dashboard."
+    },
     "demos": {
       "type": "array",
       "items": {
