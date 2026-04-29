@@ -25,9 +25,12 @@ managed_platform:
   name: LangGraph Platform
   url: https://langsmith.com
 features:
+  - cli-start
   - agentic-chat
   - hitl
   - hitl-in-app
+  - hitl-in-chat
+  - hitl-in-chat-booking
   - gen-ui-tool-based
   - shared-state-read-write
   - subagents
@@ -63,6 +66,12 @@ features:
   - open-gen-ui
   - open-gen-ui-advanced
 demos:
+  - id: cli-start
+    name: CLI Start Command
+    description: Copy-paste command to clone the canonical starter
+    tags:
+      - chat-ui
+    command: "npx copilotkit@latest init --framework langgraph-typescript"
   - id: agentic-chat
     name: Agentic Chat
     description: Natural conversation with frontend tool execution
@@ -88,6 +97,30 @@ demos:
       - src/agent/hitl-in-app.ts
       - src/app/demos/hitl-in-app/page.tsx
       - src/app/demos/hitl-in-app/approval-dialog.tsx
+      - src/app/api/copilotkit/route.ts
+  - id: hitl-in-chat
+    name: In-Chat HITL (useHumanInTheLoop — ergonomic API)
+    description: Interactive approval/decision surface rendered inline in the chat via the high-level `useHumanInTheLoop` hook
+    tags:
+      - interactivity
+    route: /demos/hitl-in-chat
+    animated_preview_url:
+    highlight:
+      - src/agent/hitl-in-chat.ts
+      - src/app/demos/hitl-in-chat/page.tsx
+      - src/app/demos/hitl-in-chat/time-picker-card.tsx
+      - src/app/api/copilotkit/route.ts
+  - id: hitl-in-chat-booking
+    name: In-Chat HITL (Booking)
+    description: Time-picker card rendered inline via useHumanInTheLoop for a booking flow
+    tags:
+      - interactivity
+    route: /demos/hitl-in-chat
+    animated_preview_url:
+    highlight:
+      - src/agent/hitl-in-chat.ts
+      - src/app/demos/hitl-in-chat/page.tsx
+      - src/app/demos/hitl-in-chat/time-picker-card.tsx
       - src/app/api/copilotkit/route.ts
   - id: tool-rendering
     name: Tool Rendering
