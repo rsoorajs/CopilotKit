@@ -21,6 +21,7 @@ import type { CatalogCell } from "@/components/depth-utils";
 import type { Overlay } from "@/lib/overlay-types";
 import type { ParityTier } from "@/components/parity-badge";
 import type { CatalogData } from "@/data/catalog-types";
+import type { TallyDetail, TallyItem } from "@/components/tally-types";
 import {
   useCollapsible,
   CategoryHeaderRow,
@@ -102,6 +103,67 @@ export function computeColumnTally(
     });
 
     tallyTone(cell.e2e.tone);
+  }
+
+  return { green, amber, red, unknown: false };
+}
+
+/**
+ * Per-bucket feature lists for a single integration column — companion to
+ * `computeColumnTally()` that returns `TallyItem[]` arrays instead of counts.
+ *
+ * Logic mirrors `computeColumnTally()` exactly: same signal scoping (health
+ * counted once, e2e per feature-with-demo) and same connection-error guard.
+ */
+export function computeColumnTallyDetail(
+  integration: Integration,
+  features: Feature[],
+  liveStatus: LiveStatusMap,
+  connection: ConnectionStatus,
+): TallyDetail {
+  if (connection === "error") {
+    return { green: [], amber: [], red: [], unknown: true };
+  }
+
+  const green: TallyItem[] = [];
+  const amber: TallyItem[] = [];
+  const red: TallyItem[] = [];
+
+  // Integration-level health — counted once per integration.
+  const healthRow = liveStatus.get(keyFor("health", integration.slug)) ?? null;
+  if (healthRow) {
+    const item: TallyItem = { label: "Health (Up)", dimension: "health" };
+    switch (healthRow.state) {
+      case "green":
+        green.push(item);
+        break;
+      case "red":
+        red.push(item);
+        break;
+      case "degraded":
+        amber.push(item);
+        break;
+    }
+  }
+
+  // Feature-level dimensions: e2e per feature-with-demo.
+  for (const feature of features) {
+    const demo = integration.demos.find((d) => d.id === feature.id);
+    if (!demo) continue;
+
+    const cell = resolveCell(liveStatus, integration.slug, feature.id, {
+      connection,
+    });
+
+    const item: TallyItem = {
+      label: feature.name,
+      dimension: "e2e",
+      featureId: feature.id,
+    };
+
+    if (cell.e2e.tone === "green") green.push(item);
+    else if (cell.e2e.tone === "amber") amber.push(item);
+    else if (cell.e2e.tone === "red") red.push(item);
   }
 
   return { green, amber, red, unknown: false };
@@ -324,6 +386,18 @@ export function FeatureGrid({
     return out;
   }, [integrations, features, liveStatus, connection]);
 
+  // Per-bucket feature lists — mirrors tallies but with TallyItem arrays.
+  const tallyDetails = useMemo(() => {
+    const out = new Map<string, TallyDetail>();
+    for (const integration of integrations) {
+      out.set(
+        integration.slug,
+        computeColumnTallyDetail(integration, features, liveStatus, connection),
+      );
+    }
+    return out;
+  }, [integrations, features, liveStatus, connection]);
+
   // Whether to show the parity ref-depth column
   const showRefDepth = overlays ? overlays.has("parity") : false;
 
@@ -404,6 +478,7 @@ export function FeatureGrid({
                       key={integration.slug}
                       integration={integration}
                       tally={tally}
+                      tallyDetail={tallyDetails.get(integration.slug)}
                       overlays={overlays}
                       liveStatus={liveStatus}
                       connection={connection}
