@@ -47,10 +47,14 @@ from agents.byoc_hashbrown_agent import BYOC_HASHBROWN_SYSTEM_PROMPT
 from agents.byoc_json_render_agent import BYOC_JSON_RENDER_SYSTEM_PROMPT
 from agents.multimodal_agent import SYSTEM_PROMPT as MULTIMODAL_SYSTEM_PROMPT
 from agents.multimodal_agent import convert_part_for_claude
+from agents.reasoning_agent import run_reasoning_agent
 from agents.shared_state_read_write_agent import (
     run_shared_state_read_write_agent,
 )
 from agents.subagents_agent import run_subagents_agent
+from agents.tool_rendering_reasoning_chain_agent import (
+    run_tool_rendering_reasoning_chain_agent,
+)
 
 load_dotenv()
 
@@ -169,6 +173,53 @@ async def shared_state_read_write_endpoint(request: Request) -> StreamingRespons
 
     async def event_stream() -> AsyncIterator[str]:
         async for chunk in run_shared_state_read_write_agent(input_data):
+            yield chunk
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
+@app.post("/reasoning")
+async def reasoning_endpoint(request: Request) -> StreamingResponse:
+    """Reasoning demo backend — emits AG-UI REASONING_MESSAGE_* events.
+
+    Shared by the agentic-chat-reasoning and reasoning-default-render
+    demos. Both demos hit the same backend; the difference is purely
+    on the frontend slot configuration.
+    """
+    body = await request.json()
+    input_data = RunAgentInput(**body)
+
+    async def event_stream() -> AsyncIterator[str]:
+        async for chunk in run_reasoning_agent(input_data):
+            yield chunk
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
+@app.post("/tool-rendering-reasoning-chain")
+async def tool_rendering_reasoning_chain_endpoint(
+    request: Request,
+) -> StreamingResponse:
+    """Sequential tool calls + visible reasoning chain."""
+    body = await request.json()
+    input_data = RunAgentInput(**body)
+
+    async def event_stream() -> AsyncIterator[str]:
+        async for chunk in run_tool_rendering_reasoning_chain_agent(input_data):
             yield chunk
 
     return StreamingResponse(

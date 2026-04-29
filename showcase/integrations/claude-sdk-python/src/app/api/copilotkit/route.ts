@@ -48,6 +48,13 @@ const agentNames = [
 const dedicatedAgentPaths: Record<string, string> = {
   "shared-state-read-write": "/shared-state-read-write",
   subagents: "/subagents",
+  // Reasoning demos share a single backend that emits AG-UI
+  // REASONING_MESSAGE_* events (parsed out of <reasoning>...</reasoning>
+  // blocks the model emits). The two demo cells differ only on the
+  // frontend slot configuration.
+  "agentic-chat-reasoning": "/reasoning",
+  "reasoning-default-render": "/reasoning",
+  "tool-rendering-reasoning-chain": "/tool-rendering-reasoning-chain",
 };
 
 const agents: Record<string, AbstractAgent> = {};
