@@ -6,7 +6,8 @@ Per-framework demos of CopilotKit (LangGraph, CrewAI, Mastra, Claude Agent SDK, 
 
 ```
 showcase/
-  integrations/<slug>/              # one per framework (17 total) — Dockerfile, src/app/demos/*/, src/agents/ or equivalent
+  bin/showcase                  # unified CLI — run showcase/bin/showcase <command> for help
+  integrations/<slug>/          # one per framework (17 total) — Dockerfile, src/app/demos/*/, src/agents/ or equivalent
   shell/                        # hub: home page, /matrix, canonical /integrations/[slug]/[demo]/{preview,code}
   shell-dashboard/              # internal-only feature × integration grid (port 3002)
   shared/
@@ -15,7 +16,8 @@ showcase/
     local-ports.json            # deterministic host ports per package for local Docker runs
     python/ typescript/tools/   # shared agent utility code; CI stages these into each build context
   scripts/
-    dev-local.sh                # local Docker workflow (see below)
+    dev-local.sh                # low-level Docker Compose wrapper (prefer bin/showcase)
+    cli/                        # command modules for bin/showcase
     generate-registry.ts        # builds shell/src/data/registry.json from all manifest.yaml
     bundle-demo-content.ts      # bundles per-demo source + README into shell/src/data/demo-content.json
   docker-compose.local.yml      # one service per package; ports from local-ports.json; env from .env
@@ -101,11 +103,11 @@ The showcase harness includes a CLI that runs the same probe drivers (liveness, 
 # 2. Start infra + one integration
 ./showcase/bin/showcase up langgraph-python
 
-# 3. Run smoke probes
-./showcase/bin/showcase test langgraph-python --smoke
+# 3. Run D5 probes
+./showcase/bin/showcase test langgraph-python --d5
 
-# 4. Run full D5 depth
-./showcase/bin/showcase test langgraph-python --d5 --headed
+# 4. Run with verbose output
+./showcase/bin/showcase test langgraph-python --d5 --verbose
 
 # 5. Tear down when done
 ./showcase/bin/showcase down
@@ -113,104 +115,88 @@ The showcase harness includes a CLI that runs the same probe drivers (liveness, 
 
 ### Commands
 
-| Command              | Description                                                                                      |
-| -------------------- | ------------------------------------------------------------------------------------------------ |
-| `test <target>`      | Run probes. Target is a slug (`langgraph-python`), slug:demo (`langgraph-python:chat`), or `all` |
-| `up [slugs...]`      | Start infra (aimock, pocketbase, dashboard) + named packages. No args = infra only               |
-| `down [slugs...]`    | Stop services. No args = stop everything                                                         |
-| `rebuild [slugs...]` | Rebuild Docker images                                                                            |
-| `ps`                 | Show running services                                                                            |
-| `logs <slug>`        | Tail logs for a service                                                                          |
-| `status`             | Print dashboard URL for full results                                                             |
+| Command              | Description                                                                     |
+| -------------------- | ------------------------------------------------------------------------------- |
+| `test <slug>`        | Run probes against a running service                                            |
+| `up [slugs...]`      | Start infra (aimock, pocketbase, dashboard) + named packages. No args = infra only |
+| `down [slugs...]`    | Stop services. No args = stop everything                                        |
+| `build [slugs...]`   | Build Docker images                                                             |
+| `ps`                 | Show running services                                                           |
+| `ports`              | Print slug to host port mapping                                                 |
+| `logs <slug>`        | Follow container logs (supports `--grep`, `--since`, `-n`, `--no-follow`)       |
 
-### Test levels
+**Debugging commands** (see [DEBUGGING.md](DEBUGGING.md) for full details):
 
-Specify depth with `--level` or shorthand flags (mutually exclusive):
+| Command                  | Description                                              |
+| ------------------------ | -------------------------------------------------------- |
+| `aimock-rebuild`         | Rebuild aimock from local source                         |
+| `recreate <slug>`       | Force-recreate a service (picks up new image)            |
+| `fixtures validate`      | Validate fixture JSON files for common errors            |
+| `doctor`                 | Check local environment and stack health                 |
+| `diff-logs <slug>`       | Show log delta for a time window                         |
 
-| Flag          | Level | What it runs                                                                               |
-| ------------- | ----- | ------------------------------------------------------------------------------------------ |
-| `--smoke`     | smoke | Liveness healthchecks (L1–L3) — container up, routes reachable, no JS errors               |
-| `--d4`        | d4    | E2E chat-tools — Playwright drives the demo UI, sends a message, asserts tool calls render |
-| `--d5`        | d5    | E2E deep — full conversation flow with aimock fixtures, asserts feature-specific behavior  |
-| `--level all` | all   | Runs smoke → d4 → d5 sequentially                                                          |
+### Test options
 
-Default level is `smoke` when no flag is given.
+| Option           | Description                                                          |
+| ---------------- | -------------------------------------------------------------------- |
+| `--d5`           | Run D5 (subagents/tool-rendering/agentic-chat) probes only           |
+| `--d6`           | Run D6 probes only                                                   |
+| `--verbose`      | Verbose test output                                                  |
+| `--cycle`        | On failure, auto-dump aimock logs from the test window                |
+| `--timeout <ms>` | Test timeout in milliseconds (default: 30000)                        |
 
-### Additional options
-
-| Option         | Description                                                                 |
-| -------------- | --------------------------------------------------------------------------- |
-| `--headed`     | Run Playwright visibly (not headless) — useful for debugging D4/D5 failures |
-| `--verbose`    | Verbose logging output                                                      |
-| `--repeat <n>` | Run the test suite N times (flake detection)                                |
-| `--keep`       | Don't stop auto-started containers after the test finishes                  |
-| `--live`       | Write results to PocketBase so the dashboard reflects them                  |
-| `--rebuild`    | Force Docker rebuild before running tests                                   |
-
-### Config file (optional)
-
-Create `showcase/showcase.local.json` to override defaults:
-
-```json
-{
-  "pocketbase": {
-    "url": "http://localhost:8090",
-    "email": "admin@localhost",
-    "password": "showcase-local-dev"
-  },
-  "dashboardUrl": "http://localhost:3200"
-}
-```
-
-The CLI works without this file — it uses sensible defaults matching docker-compose.local.yml.
+`--d5` and `--d6` are mutually exclusive. When neither is given, all tests run.
 
 ### How it works
 
 The CLI reuses the same probe drivers that the showcase-harness service runs on Railway. The difference is infrastructure: Railway probes hit Railway-deployed containers; the CLI probes hit local Docker Compose containers. Same assertions, same aimock fixtures, same Playwright flows.
 
 ```
-┌─────────┐     ┌──────────────────┐     ┌─────────────────────┐
-│  CLI    │────▸│  Probe Drivers   │────▸│  Docker Compose     │
-│  cli.ts │     │  liveness/d4/d5  │     │  containers         │
-└─────────┘     └──────────────────┘     │  (aimock + integs)  │
-                                         └─────────────────────┘
+┌───────────────┐     ┌──────────────────┐     ┌─────────────────────┐
+│  CLI          │────▸│  Probe Drivers   │────▸│  Docker Compose     │
+│  bin/showcase │     │  d5/d6           │     │  containers         │
+└───────────────┘     └──────────────────┘     │  (aimock + integs)  │
+                                               └─────────────────────┘
 ```
 
 ### Use cases
 
-1. **Debugging Dn failures** — reproduce a CI/Railway failure locally with `--d5 --headed` to watch Playwright step through the flow
-2. **Building new demos** — `up` the integration, iterate on code, `test --d4` to verify, repeat
-3. **Background automation** — `test all --level all --repeat 3` as a pre-push sanity check
+1. **Debugging Dn failures** — reproduce a CI/Railway failure locally with `--d5 --verbose --cycle` to see what aimock matched
+2. **Building new demos** — `up` the integration, iterate on code, `test <slug> --d5` to verify, repeat
+3. **Background automation** — run `test <slug> --d5` as a pre-push sanity check
 
-## Low-level Docker Compose workflow
+## Local Docker workflow
 
-For manual container management without the CLI, `scripts/dev-local.sh` wraps `docker compose` and handles the `shared_python/` / `shared_typescript/` staging step that CI also performs.
+`bin/showcase` is the unified CLI for local development. It wraps Docker Compose and adds debugging commands.
 
 ```sh
 # from the repo root
 
-# inspect — no Docker calls
-./showcase/scripts/dev-local.sh ports            # slug → host port
-./showcase/scripts/dev-local.sh ps               # what's running
+# inspect
+showcase/bin/showcase ports              # slug → host port
+showcase/bin/showcase ps                 # what's running
 
-# build one (first build: 1–3 min; subsequent builds are cached)
-./showcase/scripts/dev-local.sh build langgraph-python
-
-# start one — rebuilds if source changed
-./showcase/scripts/dev-local.sh up langgraph-python
+# build + start
+showcase/bin/showcase build langgraph-python
+showcase/bin/showcase up langgraph-python
 
 # start everything (17 containers, heavy)
-./showcase/scripts/dev-local.sh up
+showcase/bin/showcase up
 
-# follow logs
-./showcase/scripts/dev-local.sh logs langgraph-python
+# follow logs (with optional grep filtering)
+showcase/bin/showcase logs langgraph-python
+showcase/bin/showcase logs aimock --grep "fixture|match"
 
 # stop
-./showcase/scripts/dev-local.sh down langgraph-python
-./showcase/scripts/dev-local.sh down            # all
+showcase/bin/showcase down langgraph-python
+showcase/bin/showcase down               # all
 ```
 
-Each container exposes port `10000` internally and is mapped to the host port in [`shared/local-ports.json`](shared/local-ports.json) (langgraph-python → 3100, langgraph-typescript → 3101, …). The image and entrypoint are **the same ones Railway runs** — no frontend-only shortcuts, no behavioral drift.
+Each container exposes port `10000` internally and is mapped to the host port in [`shared/local-ports.json`](shared/local-ports.json). The image and entrypoint are **the same ones Railway runs**.
+
+For debugging workflows (aimock rebuild cycles, fixture validation, probe testing, diagnostics), see [DEBUGGING.md](DEBUGGING.md).
+
+> **Note:** `scripts/dev-local.sh` still works for the core commands (`up`, `down`, `build`, `logs`, `ps`, `ports`). `bin/showcase` wraps the same logic and adds the debugging commands.
 
 ## Hooking the local containers into the shell
 
@@ -241,8 +227,19 @@ Column ordering lives in `shell-dashboard/src/lib/sort-order.ts` — internal to
 1. Edit the demo in `integrations/<slug>/src/app/demos/<demo-id>/page.tsx` (and the backend under `src/agents/` if applicable).
 2. Rebundle so `/code` in `shell` reflects the edit: `cd showcase && npx tsx scripts/bundle-demo-content.ts`.
 3. If you changed `manifest.yaml` or added a feature to `shared/feature-registry.json`: `npx tsx scripts/generate-registry.ts`.
-4. Rebuild + restart the container: `./scripts/dev-local.sh up <slug>`.
+4. Rebuild + restart the container: `showcase/bin/showcase up <slug>`.
 5. The grid in `shell-dashboard` and `/preview` in `shell` now show the new state.
+
+## Debugging
+
+For the full debugging playbook — including aimock rebuild cycles, fixture validation, probe testing, container diagnostics, and common gotchas — see [DEBUGGING.md](DEBUGGING.md).
+
+Quick start:
+```sh
+showcase/bin/showcase doctor              # check your stack
+showcase/bin/showcase test mastra --d5    # run D5 probes
+showcase/bin/showcase aimock-rebuild      # rebuild aimock from local source
+```
 
 ## Relationship to Railway
 
