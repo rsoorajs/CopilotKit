@@ -21,6 +21,7 @@ interaction_modalities:
   - embedded
   - chat
 features:
+  - cli-start
   - agentic-chat
   - hitl-in-chat
   - hitl-in-app
@@ -29,12 +30,14 @@ features:
   - tool-rendering-default-catchall
   - tool-rendering-custom-catchall
   - gen-ui-agent
+  - gen-ui-tool-based
   - shared-state-streaming
   - prebuilt-sidebar
   - prebuilt-popup
   - chat-slots
   - chat-customization-css
   - headless-simple
+  - headless-complete
   - readonly-state-agent-context
   - reasoning-default-render
   - frontend-tools
@@ -42,6 +45,12 @@ features:
   - shared-state-read-write
   - subagents
 demos:
+  - id: cli-start
+    name: CLI Start Command
+    description: Copy-paste command to clone the canonical starter
+    tags:
+      - chat-ui
+    command: "npx copilotkit@latest init --framework ag2"
   - id: agentic-chat
     name: Agentic Chat
     description: Natural conversation with frontend tool execution
@@ -133,6 +142,17 @@ demos:
       - src/agents/agent.py
       - src/app/demos/gen-ui-agent/page.tsx
       - src/app/api/copilotkit/route.ts
+  - id: gen-ui-tool-based
+    name: Tool-Based Generative UI
+    description: Agent uses tools to trigger UI generation
+    tags:
+      - generative-ui
+    route: /demos/gen-ui-tool-based
+    animated_preview_url:
+    highlight:
+      - src/agents/agent.py
+      - src/app/demos/gen-ui-tool-based/page.tsx
+      - src/app/api/copilotkit/route.ts
   - id: shared-state-streaming
     name: State Streaming
     description: Per-token state delta streaming from agent to UI
@@ -200,6 +220,19 @@ demos:
     highlight:
       - src/agents/agent.py
       - src/app/demos/headless-simple/page.tsx
+      - src/app/api/copilotkit/route.ts
+  - id: headless-complete
+    name: Headless Chat (Complete)
+    description: Full chat implementation built from scratch on useAgent
+    tags:
+      - chat-ui
+    route: /demos/headless-complete
+    animated_preview_url:
+    highlight:
+      - src/agents/headless_complete.py
+      - src/app/demos/headless-complete/page.tsx
+      - src/app/demos/headless-complete/message-list.tsx
+      - src/app/demos/headless-complete/use-rendered-messages.tsx
       - src/app/api/copilotkit/route.ts
   - id: readonly-state-agent-context
     name: Readonly State (Agent Context)

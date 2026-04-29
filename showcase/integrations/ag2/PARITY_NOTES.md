@@ -28,6 +28,17 @@ all pointing to the same HTTP backend.
 - `agentic-chat`, `hitl-in-chat`, `tool-rendering`, `gen-ui-tool-based`,
   `gen-ui-agent`, `shared-state-streaming`
 
+### Batch 3 — Headless complete + manifest-only entries (this batch)
+
+- `cli-start` — informational manifest entry (copy-paste starter command).
+- `gen-ui-tool-based` — already shipped; manifest entry added.
+- `headless-complete` — TRULY headless chat re-composed from low-level
+  hooks (`useRenderToolCall`, `useRenderActivityMessage`,
+  `useRenderCustomMessages`). Backend: dedicated AG2
+  `ConversableAgent` (`agents/headless_complete.py`) mounted at
+  `/headless-complete/` with `get_weather` + `get_stock_price` tools;
+  `highlight_note` is registered on the frontend via `useComponent`.
+
 ### Batch 2 — Dedicated AG2 sub-apps
 
 These demos own their own `ConversableAgent(s)` plus FastAPI sub-app
@@ -61,7 +72,7 @@ of the langgraph-python cell.
 The following demos fall into that bucket and are **deferred**, not
 strictly "missing primitive" skips:
 
-- `agentic-chat-reasoning`, `headless-complete`, `tool-rendering-reasoning-chain`
+- `agentic-chat-reasoning`, `tool-rendering-reasoning-chain`
   — need a reasoning-forward AG2 agent (o1-style model config).
 - `declarative-gen-ui`, `a2ui-fixed-schema` — need A2UI middleware parity
   with the langgraph-python `CopilotKitMiddleware` + `a2ui_dynamic` / `a2ui_fixed`
@@ -89,3 +100,7 @@ strictly "missing primitive" skips:
   `human_input_mode` is a synchronous request/reply; it does not resume
   the same run from a persisted checkpoint.
 - `interrupt-headless` — same underlying primitive as `gen-ui-interrupt`.
+- `hitl-in-chat-booking` — booking variant of the langgraph
+  `useInterrupt`-driven HITL flow; same missing primitive as above.
+  AG2 has the simpler `hitl-in-chat` (synchronous `useHumanInTheLoop`)
+  but cannot reproduce the resumable interrupt round-trip.
