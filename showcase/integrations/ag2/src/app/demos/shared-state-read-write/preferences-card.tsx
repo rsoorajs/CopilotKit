@@ -38,12 +38,12 @@ export function PreferencesCard({ value, onChange }: PreferencesCardProps) {
     onChange({ ...value, [key]: v });
 
   const toggleInterest = (interest: string) => {
-    const has = value.interests.includes(interest);
+    const has = (value.interests ?? []).includes(interest);
     set(
       "interests",
       has
-        ? value.interests.filter((i) => i !== interest)
-        : [...value.interests, interest],
+        ? (value.interests ?? []).filter((i) => i !== interest)
+        : [...(value.interests ?? []), interest],
     );
   };
 
@@ -110,7 +110,7 @@ export function PreferencesCard({ value, onChange }: PreferencesCardProps) {
         <span className="text-sm font-medium text-[#57575B]">Interests</span>
         <div className="mt-2 flex flex-wrap gap-2">
           {INTEREST_OPTIONS.map((interest) => {
-            const selected = value.interests.includes(interest);
+            const selected = (value.interests ?? []).includes(interest);
             return (
               <button
                 key={interest}
