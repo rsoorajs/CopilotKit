@@ -31,15 +31,18 @@ describe("TallyTrigger", () => {
     vi.useRealTimers();
   });
 
-  it("renders children without button wrapper when items is empty", () => {
-    const { getByText, queryByRole } = render(
+  it("renders children inside inert button wrapper when items is empty", () => {
+    const { getByText, getByTestId } = render(
       <TallyTrigger items={[]} tone="green">
         <span>✓ 5</span>
       </TallyTrigger>,
     );
 
     expect(getByText("✓ 5")).toBeInTheDocument();
-    expect(queryByRole("button")).not.toBeInTheDocument();
+    // Always renders same DOM structure (div > button) to avoid hydration mismatch
+    const trigger = getByTestId("tally-trigger-green");
+    expect(trigger).toBeInTheDocument();
+    expect(trigger.className).not.toContain("cursor-pointer");
   });
 
   it("renders button wrapper when items are provided", () => {
@@ -125,15 +128,16 @@ describe("TallyTrigger", () => {
   });
 
   it("does not open popover on click when items is empty", () => {
-    const { getByText, queryByTestId, queryByRole } = render(
+    const { getByText, getByTestId, queryByTestId } = render(
       <TallyTrigger items={[]} tone="red">
         <span>✗ 0</span>
       </TallyTrigger>,
     );
 
-    // No button wrapper, so nothing to click for opening
     expect(getByText("✗ 0")).toBeInTheDocument();
-    expect(queryByRole("button")).not.toBeInTheDocument();
+    // Button wrapper exists (stable DOM) but clicking does not open popover
+    const trigger = getByTestId("tally-trigger-red");
+    fireEvent.click(trigger);
     expect(queryByTestId("tally-popover")).not.toBeInTheDocument();
   });
 

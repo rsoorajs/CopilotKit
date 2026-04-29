@@ -106,12 +106,10 @@ export function TallyTrigger({ items, tone, children }: TallyTriggerProps) {
   // Cleanup timers on unmount
   useEffect(() => clearTimers, [clearTimers]);
 
-  // No interaction when there are no items
-  if (items.length === 0) {
-    return <>{children}</>;
-  }
+  const hasItems = items.length > 0;
 
   const handleClick = () => {
+    if (!hasItems) return;
     clearTimers();
     if (open && pinned.current) {
       // Click again while pinned → close
@@ -125,6 +123,7 @@ export function TallyTrigger({ items, tone, children }: TallyTriggerProps) {
   };
 
   const handleMouseEnter = () => {
+    if (!hasItems) return;
     if (leaveTimeout.current) {
       clearTimeout(leaveTimeout.current);
       leaveTimeout.current = null;
@@ -137,6 +136,7 @@ export function TallyTrigger({ items, tone, children }: TallyTriggerProps) {
   };
 
   const handleMouseLeave = () => {
+    if (!hasItems) return;
     if (hoverTimeout.current) {
       clearTimeout(hoverTimeout.current);
       hoverTimeout.current = null;
@@ -165,12 +165,12 @@ export function TallyTrigger({ items, tone, children }: TallyTriggerProps) {
       <button
         type="button"
         data-testid={`tally-trigger-${tone}`}
-        className="cursor-pointer bg-transparent border-none p-0 inline-flex"
+        className={`bg-transparent border-none p-0 inline-flex${hasItems ? " cursor-pointer" : ""}`}
         onClick={handleClick}
       >
         {children}
       </button>
-      {open && (
+      {open && hasItems && (
         <TallyBreakdownPopover
           items={items}
           tone={tone}
