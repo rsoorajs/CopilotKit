@@ -35,9 +35,27 @@ services:
       - ./aimock/d5-all.json:/showcase-fixtures/d5-all.json:ro
       - ./aimock/smoke.json:/showcase-fixtures/smoke.json:ro
       - ./aimock/feature-parity.json:/showcase-fixtures/feature-parity.json:ro
-    command: ["--port", "4010", "--host", "0.0.0.0", "--fixtures", "/showcase-fixtures/d5-all.json", "--fixtures", "/showcase-fixtures/smoke.json", "--fixtures", "/showcase-fixtures/feature-parity.json"]
+    command:
+      [
+        "--port",
+        "4010",
+        "--host",
+        "0.0.0.0",
+        "--fixtures",
+        "/showcase-fixtures/d5-all.json",
+        "--fixtures",
+        "/showcase-fixtures/smoke.json",
+        "--fixtures",
+        "/showcase-fixtures/feature-parity.json",
+      ]
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://localhost:4010/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://localhost:4010/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
+        ]
       interval: 5s
       timeout: 3s
       retries: 5
