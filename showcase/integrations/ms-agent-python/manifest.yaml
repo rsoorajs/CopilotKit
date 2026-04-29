@@ -34,6 +34,9 @@ features:
   - frontend-tools-async
   - hitl
   - hitl-in-app
+  - hitl-in-chat
+  - hitl-in-chat-booking
+  - gen-ui-tool-based
   - gen-ui-interrupt
   - interrupt-headless
   - declarative-gen-ui
@@ -150,6 +153,43 @@ demos:
       - src/agents/hitl_in_app_agent.py
       - src/app/demos/hitl-in-app/page.tsx
       - src/app/demos/hitl-in-app/approval-dialog.tsx
+      - src/app/api/copilotkit/route.ts
+  - id: hitl-in-chat
+    name: In-Chat HITL (useHumanInTheLoop — ergonomic API)
+    description: Interactive approval/decision surface rendered inline in the chat via the high-level `useHumanInTheLoop` hook
+    tags:
+      - interactivity
+    route: /demos/hitl-in-chat
+    animated_preview_url:
+    highlight:
+      - src/agents/hitl_in_chat_agent.py
+      - src/app/demos/hitl-in-chat/page.tsx
+      - src/app/demos/hitl-in-chat/time-picker-card.tsx
+      - src/app/api/copilotkit/route.ts
+  - id: hitl-in-chat-booking
+    name: In-Chat HITL (Booking)
+    description: Time-picker card rendered inline via useHumanInTheLoop for a booking flow
+    tags:
+      - interactivity
+    route: /demos/hitl-in-chat-booking
+    animated_preview_url:
+    highlight:
+      - src/agents/hitl_in_chat_agent.py
+      - src/app/demos/hitl-in-chat-booking/page.tsx
+      - src/app/demos/hitl-in-chat/time-picker-card.tsx
+      - src/app/api/copilotkit/route.ts
+  - id: gen-ui-tool-based
+    name: Tool-Based Generative UI
+    description: Agent uses tools to trigger UI generation
+    tags:
+      - generative-ui
+    route: /demos/gen-ui-tool-based
+    animated_preview_url:
+    highlight:
+      - src/agents/gen_ui_tool_based_agent.py
+      - src/app/demos/gen-ui-tool-based/page.tsx
+      - src/app/demos/gen-ui-tool-based/bar-chart.tsx
+      - src/app/demos/gen-ui-tool-based/pie-chart.tsx
       - src/app/api/copilotkit/route.ts
   - id: tool-rendering
     name: Tool Rendering
