@@ -173,6 +173,10 @@ demos:
       - agent-capabilities
     route: /demos/tool-rendering
     animated_preview_url:
+    highlight:
+      - src/agents/tools/custom_tool.py
+      - src/app/demos/tool-rendering/page.tsx
+      - src/app/api/copilotkit/route.ts
   - id: tool-rendering-default-catchall
     name: Tool Rendering (Default Catch-all)
     description: Out-of-the-box tool rendering — backend defines the tools; the frontend adds zero custom renderers and relies on CopilotKit's built-in default UI

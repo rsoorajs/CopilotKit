@@ -253,7 +253,7 @@ demos:
     route: /demos/tool-rendering
     animated_preview_url:
     highlight:
-      - src/app/demos/tool-rendering/agent.py
+      - src/agents/agent.py
       - src/app/demos/tool-rendering/page.tsx
       - src/app/api/copilotkit/route.ts
   - id: tool-rendering-default-catchall

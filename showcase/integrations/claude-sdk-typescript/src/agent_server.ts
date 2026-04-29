@@ -626,6 +626,7 @@ async function executeBackendTool(
     };
   }
 
+  // @region[weather-tool-backend]
   if (toolName === "get_weather") {
     const location =
       typeof toolInput.location === "string" ? toolInput.location : "";
@@ -634,6 +635,7 @@ async function executeBackendTool(
       state: null,
     };
   }
+  // @endregion[weather-tool-backend]
 
   if (toolName === "get_stock_price") {
     const ticker = typeof toolInput.ticker === "string" ? toolInput.ticker : "";
