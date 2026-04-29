@@ -24,6 +24,7 @@ from textwrap import dedent
 from typing import Any
 
 import anthropic
+import openai
 from ag_ui.core import (
     EventType,
     RunAgentInput,
@@ -82,13 +83,6 @@ GENERATE_A2UI_TOOL = {
 
 def _generate_a2ui(context: str, conversation_messages: list[dict[str, Any]] | None = None) -> dict[str, Any]:
     """Invoke a secondary LLM bound to render_a2ui and return an operations container."""
-    # Lazy-import openai so a missing/uninstalled dep doesn't take the entire
-    # agent_server module down at import time — that import-time failure
-    # cascades through entrypoint.sh ("Agent failed to start — exiting")
-    # and prevents Next.js from booting, making every demo route in this
-    # integration unreachable. Mirrors the same lazy-import pattern in
-    # agents/agent.py:339 for the shared `generate_a2ui` tool handler.
-    import openai
     client = openai.OpenAI()
     llm_messages: list[dict[str, Any]] = [
         {"role": "system", "content": context or "Generate a useful dashboard UI."},
