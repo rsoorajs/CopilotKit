@@ -80,8 +80,26 @@ const SERVICE_ICON: Record<string, string> = {
   failed: "❌",
 };
 
+/**
+ * Result-aware icon for historical run service chips. Completed services
+ * with result "red" or "yellow" should not show ✅ — mirrors the fix
+ * in status-running-panel.tsx for inflight services.
+ */
+const RESULT_ICON: Record<string, string> = {
+  green: "✅",
+  yellow: "⚠️",
+  red: "❌",
+};
+
+function serviceChipIcon(svc: ProbeRunServiceResult): string {
+  if (svc.state === "completed" && svc.result) {
+    return RESULT_ICON[svc.result] ?? SERVICE_ICON[svc.state] ?? "—";
+  }
+  return SERVICE_ICON[svc.state] ?? "—";
+}
+
 function ServiceChip({ svc }: { svc: ProbeRunServiceResult }) {
-  const icon = SERVICE_ICON[svc.state] ?? "—";
+  const icon = serviceChipIcon(svc);
   return (
     <div
       data-testid={`run-service-${svc.slug}`}
