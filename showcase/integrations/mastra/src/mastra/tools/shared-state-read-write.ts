@@ -32,8 +32,8 @@ export const setNotesTool = createTool({
         "Full updated notes list (existing notes plus any new ones). NOT a diff.",
       ),
   }),
-  execute: async ({ context }, executionContext) => {
-    const notes = context.notes ?? [];
+  execute: async (inputData, executionContext) => {
+    const notes = inputData.notes ?? [];
     await writeNotesToWorkingMemory(executionContext, notes);
     return JSON.stringify({ notes, updated: true as const });
   },
