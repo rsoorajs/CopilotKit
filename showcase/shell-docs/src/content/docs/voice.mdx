@@ -1,0 +1,121 @@
+---
+title: Voice
+description: Real-time speech-to-text in the chat composer. The user speaks, the runtime transcribes, the agent runs the resulting prompt.
+icon: "lucide/Mic"
+snippet_cell: voice
+---
+
+You have a working chat surface and you want users to be able to speak instead of type. By the end of this guide, the chat composer will sprout a mic button, recorded audio will be transcribed by the runtime, and the transcript will auto-send to the agent like any other message.
+
+## When to use this
+
+- **Hands-free or accessibility flows** where typing isn't the right input modality.
+- **Mobile or kiosk surfaces** where a long voice query is faster than thumb-typing.
+- **Demo and test loops** where you want canned audio to drive the chat without a microphone.
+
+If you only need file uploads (audio, images, video, documents), use [Multimodal Attachments](/multimodal-attachments) instead. Voice is specifically about live transcription of recorded speech into chat input.
+
+<InlineDemo demo="voice" />
+
+## Frontend
+
+`<CopilotChat />` renders the mic button automatically when the runtime advertises `audioFileTranscriptionEnabled: true` on its `/info` endpoint. There's nothing to wire up on the chat surface itself:
+
+```tsx title="frontend/src/app/page.tsx"
+import { CopilotKit, CopilotChat } from "@copilotkit/react-core/v2";
+
+export default function VoiceDemoPage() {
+  return (
+    <CopilotKit runtimeUrl="/api/copilotkit-voice" agent="voice-demo">
+      <CopilotChat />
+    </CopilotKit>
+  );
+}
+```
+
+When the user clicks the mic, the chat captures audio, POSTs it to the runtime's `/transcribe` endpoint, drops the resulting transcript into the composer, and submits.
+
+### Driving the demo without a mic
+
+For Playwright runs, screenshots, or any flow where prompting for mic permissions is awkward, ship a button that POSTs a bundled audio clip directly to the same `/transcribe` endpoint:
+
+```tsx title="frontend/src/app/sample-audio-button.tsx"
+async function handleClick() {
+  const audioRes = await fetch("/demo-audio/sample.wav");
+  const audioBlob = await audioRes.blob();
+  const form = new FormData();
+  form.append("file", audioBlob, "sample.wav");
+
+  const res = await fetch(`${runtimeUrl}/transcribe`, {
+    method: "POST",
+    body: form,
+  });
+  const { text } = await res.json();
+  onTranscribed(text);
+}
+```
+
+The caller can drop the resulting text into the composer's textarea (matched via `data-testid="copilot-chat-textarea"`) using the native value setter and a synthetic `input` event so React's managed state updates correctly.
+
+## Backend
+
+Wire up the V2 runtime with a `TranscriptionService`. The V1 wrapper drops the `transcriptionService` option, so use `createCopilotRuntimeHandler` from `@copilotkit/runtime/v2` directly:
+
+```ts title="app/api/copilotkit-voice/[[...slug]]/route.ts"
+import type { NextRequest } from "next/server";
+import {
+  CopilotRuntime,
+  TranscriptionService,
+  createCopilotRuntimeHandler,
+} from "@copilotkit/runtime/v2";
+import { TranscriptionServiceOpenAI } from "@copilotkit/voice";
+import OpenAI from "openai";
+
+const transcriptionService = new TranscriptionServiceOpenAI({
+  openai: new OpenAI({ apiKey: process.env.OPENAI_API_KEY! }),
+});
+
+const runtime = new CopilotRuntime({
+  agents: { "voice-demo": myAgent },
+  transcriptionService,
+});
+
+const BASE_PATH = "/api/copilotkit-voice";
+const handler = createCopilotRuntimeHandler({ runtime, basePath: BASE_PATH });
+
+export const POST = (req: NextRequest) => handler(req);
+export const GET = (req: NextRequest) => handler(req);
+```
+
+With `transcriptionService` set, the runtime advertises `audioFileTranscriptionEnabled: true` on `/info` (which is what tells the chat to render the mic button) and routes `POST /transcribe` to the service.
+
+### Custom transcription backends
+
+`TranscriptionService` from `@copilotkit/runtime/v2` is an abstract class. Subclass it to plug in any transcription provider — Whisper, AssemblyAI, Deepgram, your own model. The library ships `TranscriptionServiceOpenAI` as the canonical reference implementation.
+
+A useful pattern is wrapping your service in a guard that returns a clean 4xx when credentials aren't configured, instead of an opaque 5xx from the underlying SDK:
+
+```ts
+class GuardedOpenAITranscriptionService extends TranscriptionService {
+  private delegate: TranscriptionServiceOpenAI | null;
+
+  constructor() {
+    super();
+    const apiKey = process.env.OPENAI_API_KEY;
+    this.delegate = apiKey
+      ? new TranscriptionServiceOpenAI({ openai: new OpenAI({ apiKey }) })
+      : null;
+  }
+
+  async transcribeFile(opts: TranscribeFileOptions) {
+    if (!this.delegate) {
+      throw new Response("OPENAI_API_KEY not configured", { status: 503 });
+    }
+    return this.delegate.transcribeFile(opts);
+  }
+}
+```
+
+<FeatureIntegrations feature="voice" />
+
+<IntegrationGrid path="voice" />
