@@ -50,6 +50,7 @@ from agents.beautiful_chat import BeautifulChat
 from agents.byoc_hashbrown_agent import ByocHashbrown
 from agents.byoc_json_render_agent import ByocJsonRender
 from agents.declarative_gen_ui import DeclarativeGenUI
+from agents.mcp_apps_agent import MCPApps
 from agents.shared_state_read_write import shared_state_read_write_flow
 from agents.subagents import subagents_flow
 
@@ -410,6 +411,7 @@ add_crewai_crew_fastapi_endpoint(app, A2UIFixedSchema(), "/a2ui-fixed-schema")
 add_crewai_crew_fastapi_endpoint(app, ByocHashbrown(), "/byoc-hashbrown")
 add_crewai_crew_fastapi_endpoint(app, ByocJsonRender(), "/byoc-json-render")
 add_crewai_crew_fastapi_endpoint(app, BeautifulChat(), "/beautiful-chat")
+add_crewai_crew_fastapi_endpoint(app, MCPApps(), "/mcp-apps")
 
 # Per-demo dedicated `Flow` (not Crew) endpoints. The shared
 # `ChatWithCrewFlow` cannot host these demos because it has no per-tool
