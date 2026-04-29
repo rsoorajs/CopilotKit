@@ -109,31 +109,11 @@
       "og_docs_url": "https://docs.copilotkit.ai/adk/shared-state/in-app-agent-read",
       "shell_docs_path": "/shared-state/agent-readonly"
     },
-    "multimodal": {
-      "og_docs_url": null,
-      "shell_docs_path": null
-    },
-    "agent-config": {
-      "og_docs_url": null,
-      "shell_docs_path": null
-    },
     "voice": {
       "og_docs_url": null,
       "shell_docs_path": null
     },
-    "auth": {
-      "og_docs_url": null,
-      "shell_docs_path": null
-    },
-    "chat-customization-css": {
-      "og_docs_url": null,
-      "shell_docs_path": null
-    },
     "byoc-json-render": {
-      "og_docs_url": null,
-      "shell_docs_path": null
-    },
-    "subagents": {
       "og_docs_url": null,
       "shell_docs_path": null
     },
