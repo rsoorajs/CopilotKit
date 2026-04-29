@@ -18,6 +18,7 @@ the full rationale.
 from __future__ import annotations
 
 import json
+import os
 from random import choice, randint
 from textwrap import dedent
 
@@ -48,8 +49,10 @@ SYSTEM_PROMPT = dedent(
 ).strip()
 
 
+_REASONING_MODEL = os.environ.get("REASONING_MODEL", "gpt-5")
+
 agent = Agent(
-    model=OpenAIResponsesModel("gpt-5"),
+    model=OpenAIResponsesModel(_REASONING_MODEL),
     model_settings=OpenAIResponsesModelSettings(
         openai_reasoning_summary="auto",
     ),

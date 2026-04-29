@@ -15,7 +15,7 @@ import { baseServerTools } from "./server-tools";
  * emits reasoning the chain surfaces on the frontend with no extra
  * plumbing.
  */
-const REASONING_MODEL = "gpt-5.2";
+const REASONING_MODEL = process.env.REASONING_MODEL ?? "gpt-5.2";
 
 /**
  * Built-in agent for `agentic-chat-reasoning` — visible thinking chain

@@ -25,6 +25,7 @@ THINKING events.
 
 from __future__ import annotations
 
+import os
 from textwrap import dedent
 
 from pydantic_ai import Agent
@@ -47,8 +48,10 @@ SYSTEM_PROMPT = dedent(
 # reasoning items (which the AG-UI bridge then forwards as THINKING /
 # REASONING events). Without a summary the API can omit the reasoning
 # payload from the streamed response.
+_REASONING_MODEL = os.environ.get("REASONING_MODEL", "gpt-5")
+
 agent = Agent(
-    model=OpenAIResponsesModel("gpt-5"),
+    model=OpenAIResponsesModel(_REASONING_MODEL),
     model_settings=OpenAIResponsesModelSettings(
         openai_reasoning_summary="auto",
     ),

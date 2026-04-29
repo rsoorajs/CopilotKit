@@ -177,6 +177,21 @@ function validateManifest(
     }
   }
 
+  // Validate not_supported_features doesn't overlap with features
+  const notSupported = (manifest.not_supported_features as string[]) || [];
+  for (const featureId of notSupported) {
+    if (!featureIds.has(featureId)) {
+      errors.push(
+        `${filePath}: Unknown feature ID "${featureId}" in not_supported_features`,
+      );
+    }
+    if (features.includes(featureId)) {
+      errors.push(
+        `${filePath}: Feature "${featureId}" appears in both features and not_supported_features — only one is allowed`,
+      );
+    }
+  }
+
   return errors;
 }
 

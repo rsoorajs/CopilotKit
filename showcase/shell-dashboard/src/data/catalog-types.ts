@@ -5,7 +5,7 @@
 
 export interface CatalogCell {
   id: string;
-  manifestation: "integrated";
+  manifestation: "integrated" | "starter";
   integration: string;
   integration_name: string;
   feature: string | null;

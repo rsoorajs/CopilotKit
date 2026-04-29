@@ -17,7 +17,6 @@ generative_ui:
   - constrained-explicit
   - a2ui-fixed-schema
   - a2ui-dynamic-schema
-  - declarative-schema
 interaction_modalities:
   - sidebar
   - embedded

@@ -356,4 +356,3 @@ demos:
       - src/agents/mcp_apps_agent.py
       - src/app/demos/mcp-apps/page.tsx
       - src/app/api/copilotkit-mcp-apps/route.ts
-    animated_preview_url:
