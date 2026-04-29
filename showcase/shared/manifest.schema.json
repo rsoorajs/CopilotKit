@@ -93,6 +93,13 @@
       "minItems": 1,
       "description": "List of supported feature IDs from the feature registry"
     },
+    "not_supported_features": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Feature IDs whose framework cannot architecturally support them (renders as 'unsupported' cells, distinct from 'unshipped')."
+    },
     "demos": {
       "type": "array",
       "items": {
