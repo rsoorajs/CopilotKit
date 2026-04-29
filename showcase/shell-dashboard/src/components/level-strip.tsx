@@ -5,6 +5,7 @@
  */
 import { ToneChip } from "@/components/badges";
 import { keyFor, type LiveStatusMap, type BadgeTone } from "@/lib/live-status";
+import { formatTs } from "@/lib/format-ts";
 import type { Integration } from "@/lib/registry";
 
 interface LevelBadge {
@@ -34,7 +35,7 @@ function resolveBadge(
   return {
     name: label,
     tone,
-    title: `${label}: ${row.state} since ${row.observed_at}`,
+    title: `${label}: ${row.state} since ${formatTs(row.observed_at)}`,
   };
 }
 

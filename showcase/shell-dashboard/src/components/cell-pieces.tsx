@@ -7,6 +7,7 @@ import { Badge, FlashOnChange } from "@/components/badges";
 import { keyFor, resolveCell, type BadgeRender } from "@/lib/live-status";
 import type { Feature, Integration } from "@/lib/registry";
 import { useLastTransition, deriveFromTo } from "@/hooks/useLastTransition";
+import { formatTs } from "@/lib/format-ts";
 
 /**
  * Magic path segment used by the shell when no framework column is selected.
@@ -258,25 +259,26 @@ function formatTransitionLine(row: {
   observed_at: string;
 }): string {
   if (row.transition === "first") {
-    return ` — since ${row.observed_at} (initial: ${row.state})`;
+    return ` — since ${formatTs(row.observed_at)} (initial: ${row.state})`;
   }
   if (row.transition === "error") {
-    return ` — since ${row.observed_at} (error → ${row.state})`;
+    return ` — since ${formatTs(row.observed_at)} (error → ${row.state})`;
   }
   const { from, to } = deriveFromTo(row.transition);
   // Any non-first/non-error transition that deriveFromTo can't decode
   // (unexpected enum value) falls back to the row's current state so we
   // never render "null → null" copy.
   const pair = from && to ? `${from} → ${to}` : row.state;
-  return ` — since ${row.observed_at} (${pair})`;
+  return ` — since ${formatTs(row.observed_at)} (${pair})`;
 }
 
 /**
- * Shared status row: docs-og/docs-shell line + E2E badge.
+ * Shared status row: E2E / D5 / D6 badges.
  * QA and HealthDot removed in Phase 3 (3.3 + 3.4). L1 health now in strip.
  * Smoke per-cell badge removed — integration-scoped smoke lives in the strip.
- * Consumes `liveStatus` from `ctx` (spec §5.4 wiring). Hides the docs row
- * for `testing`-kind features to match previous behavior.
+ * Docs rendering removed — handled exclusively by DocsLayer in ComposedCell,
+ * gated on the `overlays.has("docs")` toggle.
+ * Consumes `liveStatus` from `ctx` (spec §5.4 wiring).
  */
 export function CellStatus({ ctx }: { ctx: CellContext }) {
   const isTesting = ctx.feature.kind === "testing";
@@ -297,49 +299,40 @@ export function CellStatus({ ctx }: { ctx: CellContext }) {
   // worktree) and is tracked in the cross-worktree concerns of this fix.
 
   return (
-    <>
-      {!isTesting && (
-        <DocsRow
-          integration={ctx.integration}
-          feature={ctx.feature}
-          shellUrl={ctx.shellUrl}
-        />
-      )}
-      <div className="flex items-center gap-2.5">
-        <LiveBadge
-          name="E2E"
-          badge={cell.e2e}
-          dimensionKey={keyFor("e2e", ctx.integration.slug, ctx.feature.id)}
-        />
-        {/*
-          CP8: D5/D6 producers (`e2e-deep`, `e2e-parity`) only emit rows for
-          primary features per spec; testing-kind features never get a D5 or
-          D6 row, so the badge would render a perpetual gray "?" that adds
-          noise without information. Hide for `isTesting` to mirror the
-          docs-row visibility rule.
+    <div className="flex items-center gap-2.5">
+      <LiveBadge
+        name="E2E"
+        badge={cell.e2e}
+        dimensionKey={keyFor("e2e", ctx.integration.slug, ctx.feature.id)}
+      />
+      {/*
+        CP8: D5/D6 producers (`e2e-deep`, `e2e-parity`) only emit rows for
+        primary features per spec; testing-kind features never get a D5 or
+        D6 row, so the badge would render a perpetual gray "?" that adds
+        noise without information. Hide for `isTesting` so operators only
+        see badges backed by real data.
 
-          CP9: D5/D6 chips intentionally have no `href` — there is no
-          per-feature drilldown URL convention in shell-dashboard today.
-          When a drilldown route exists (e.g. a per-(slug, feature) D5 run
-          history page), wire the URL through `keyFor` here.
-          TODO(showcase-dashboard): D5/D6 drilldown URL — see
-          docs/spec §5.6 follow-up.
-        */}
-        {!isTesting && (
-          <>
-            <LiveBadge
-              name="D5"
-              badge={cell.d5}
-              dimensionKey={keyFor("d5", ctx.integration.slug, ctx.feature.id)}
-            />
-            <LiveBadge
-              name="D6"
-              badge={cell.d6}
-              dimensionKey={keyFor("d6", ctx.integration.slug, ctx.feature.id)}
-            />
-          </>
-        )}
-      </div>
-    </>
+        CP9: D5/D6 chips intentionally have no `href` — there is no
+        per-feature drilldown URL convention in shell-dashboard today.
+        When a drilldown route exists (e.g. a per-(slug, feature) D5 run
+        history page), wire the URL through `keyFor` here.
+        TODO(showcase-dashboard): D5/D6 drilldown URL — see
+        docs/spec §5.6 follow-up.
+      */}
+      {!isTesting && (
+        <>
+          <LiveBadge
+            name="D5"
+            badge={cell.d5}
+            dimensionKey={keyFor("d5", ctx.integration.slug, ctx.feature.id)}
+          />
+          <LiveBadge
+            name="D6"
+            badge={cell.d6}
+            dimensionKey={keyFor("d6", ctx.integration.slug, ctx.feature.id)}
+          />
+        </>
+      )}
+    </div>
   );
 }

@@ -11,6 +11,8 @@
  * `agentic-chat`) so the existing per-cell lookup pattern stays uniform.
  */
 
+import { formatTs } from "./format-ts";
+
 export type State = "green" | "red" | "degraded";
 
 export interface StatusRow {
@@ -198,16 +200,16 @@ function formatTooltip(
     // surface the row's last-known state alongside the offline banner so
     // operators can triage without waiting for reconnect.
     if (row && (row.state === "red" || row.state === "degraded")) {
-      return `dashboard offline (§5.3) — last observed: ${dim} ${row.state} since ${row.transitioned_at}`;
+      return `dashboard offline (§5.3) — last observed: ${dim} ${row.state} since ${formatTs(row.transitioned_at)}`;
     }
     return "dashboard offline (§5.3)";
   }
   if (!row) return "no data — probe pending";
   switch (row.state) {
     case "green":
-      return `${dim} green since ${row.observed_at}`;
+      return `${dim} green since ${formatTs(row.observed_at)}`;
     case "red": {
-      const base = `${dim} red since ${row.first_failure_at ?? row.transitioned_at}`;
+      const base = `${dim} red since ${formatTs(row.first_failure_at ?? row.transitioned_at)}`;
       const sig = summarizeSignal(row.signal);
       return sig ? `${base} — ${sig}` : base;
     }
@@ -219,7 +221,7 @@ function formatTooltip(
       // for a degraded row that timestamp is when degradation was
       // last observed. Earlier copy ("last pass @ ...") was misleading
       // operators into reading it as the last green tick.
-      const base = `${dim} stale — last seen @ ${row.observed_at}`;
+      const base = `${dim} stale — last seen @ ${formatTs(row.observed_at)}`;
       const sig = summarizeSignal(row.signal);
       return sig ? `${base} — ${sig}` : base;
     }
