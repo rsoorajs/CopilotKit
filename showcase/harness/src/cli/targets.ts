@@ -67,13 +67,14 @@ export interface ChatToolsInput {
  * e2e-deep (D5) driver input — mirrors the `inputSchema` in
  * `src/probes/drivers/e2e-deep.ts`. `backendUrl` or `publicUrl` is
  * required. The CLI sets `backendUrl` from local-ports and populates
- * `features` from the manifest's top-level `features` array.
+ * `demos` from the manifest's top-level `features` array (registry IDs
+ * that the driver maps to D5 feature types via `demosToFeatureTypes()`).
  */
 export interface DeepInput {
   key: string;
   backendUrl: string;
   name: string;
-  features: string[];
+  demos: string[];
   shape: "package";
 }
 
@@ -267,11 +268,11 @@ export function buildDeepInputs(
         key: `e2e-deep:${slug}`,
         backendUrl: getPackageUrl(slug, config),
         name: manifest.name,
-        features,
+        demos: features,
         shape: "package" as const,
       };
     })
-    .filter((input) => input.features.length > 0);
+    .filter((input) => input.demos.length > 0);
 }
 
 /**

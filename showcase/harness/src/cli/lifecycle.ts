@@ -201,6 +201,32 @@ export function restoreSymlinks(): void {
 }
 
 // ---------------------------------------------------------------------------
+// Timestamp file for diff-logs --since last-test
+// ---------------------------------------------------------------------------
+
+const LAST_TEST_TS_FILE = path.join(SHOWCASE_DIR, ".last-test-ts");
+
+/**
+ * Write the current timestamp to `.last-test-ts` so `diff-logs --since last-test`
+ * can reference when the last test run started.
+ */
+export function writeLastTestTimestamp(): void {
+  fs.writeFileSync(LAST_TEST_TS_FILE, new Date().toISOString(), "utf-8");
+  log.debug("wrote last-test timestamp", { path: LAST_TEST_TS_FILE });
+}
+
+/**
+ * Read the last-test timestamp. Returns null if the file doesn't exist.
+ */
+function readLastTestTimestamp(): string | null {
+  try {
+    return fs.readFileSync(LAST_TEST_TS_FILE, "utf-8").trim();
+  } catch {
+    return null;
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Lifecycle functions
 // ---------------------------------------------------------------------------
 
@@ -353,6 +379,195 @@ export async function logs(
         resolve();
       } else {
         reject(new Error(`Log streaming for ${slug} exited with code ${code}`));
+      }
+    });
+  });
+}
+
+/**
+ * Build Docker images without starting containers.
+ *
+ * - If `slugs` is empty, builds all images.
+ * - If `slugs` are provided, builds only those service images.
+ */
+export async function build(
+  slugs: string[],
+  _opts?: LifecycleOptions,
+): Promise<void> {
+  try {
+    stageSharedModules();
+
+    log.info("building images", {
+      slugs: slugs.length ? slugs : ["all"],
+    });
+
+    if (slugs.length > 0) {
+      const profileArgs = slugs.flatMap((s) => ["--profile", s]);
+      compose(...profileArgs, "build", ...slugs);
+    } else {
+      compose("--profile", "all", "build");
+    }
+
+    log.info("build complete");
+  } finally {
+    restoreSymlinks();
+  }
+}
+
+/**
+ * Force-recreate a service container, optionally rebuilding the image first.
+ * Runs a health check after recreating.
+ */
+export async function recreate(
+  slug: string,
+  opts?: { build?: boolean },
+): Promise<void> {
+  log.info("recreating service", { slug, build: opts?.build ?? false });
+
+  const args = [
+    "--profile",
+    slug,
+    "up",
+    "-d",
+    "--force-recreate",
+    ...(opts?.build ? ["--build"] : []),
+    slug,
+  ];
+
+  if (opts?.build) {
+    try {
+      stageSharedModules();
+      compose(...args);
+    } finally {
+      restoreSymlinks();
+    }
+  } else {
+    compose(...args);
+  }
+
+  // Health check
+  const results = await healthCheck([slug]);
+  const healthy = results.get(slug);
+
+  if (!healthy) {
+    throw new Error(
+      `Health check failed for ${slug} after recreate. Check logs with: showcase logs ${slug}`,
+    );
+  }
+
+  log.info("recreate complete, service healthy", { slug });
+}
+
+/**
+ * Return a formatted slug-to-port mapping table.
+ */
+export function ports(): string {
+  const integrationPorts = loadPortsFile();
+
+  const lines: string[] = ["\n  Slug                        Port"];
+  lines.push("  " + "-".repeat(40));
+
+  // Print infra ports first, then integration ports alphabetically
+  const infraEntries = Object.entries(INFRA_PORTS).sort(([a], [b]) =>
+    a.localeCompare(b),
+  );
+  const integrationEntries = Object.entries(integrationPorts).sort(
+    ([a], [b]) => a.localeCompare(b),
+  );
+
+  for (const [slug, port] of infraEntries) {
+    lines.push(`  ${slug.padEnd(28)} ${port}  (infra)`);
+  }
+
+  if (integrationEntries.length > 0) {
+    lines.push("  " + "-".repeat(40));
+    for (const [slug, port] of integrationEntries) {
+      lines.push(`  ${slug.padEnd(28)} ${port}`);
+    }
+  }
+
+  return lines.join("\n");
+}
+
+/**
+ * Show filtered logs for a service within a time window.
+ *
+ * @param slug - Service name
+ * @param opts.since - Duration string (e.g. "5m", "30s") or "last-test"
+ * @param opts.grep - Optional pattern filter
+ */
+export async function diffLogs(
+  slug: string,
+  opts?: { since?: string; grep?: string },
+): Promise<void> {
+  let sinceArg = opts?.since ?? "5m";
+
+  // Resolve "last-test" to a duration
+  if (sinceArg === "last-test") {
+    const ts = readLastTestTimestamp();
+    if (!ts) {
+      throw new Error(
+        "No last-test timestamp found. Run a test first: showcase test <target>",
+      );
+    }
+    // Calculate seconds since last test
+    const elapsed = Math.max(
+      1,
+      Math.ceil((Date.now() - new Date(ts).getTime()) / 1000),
+    );
+    sinceArg = `${elapsed}s`;
+    log.info("resolved last-test to duration", { ts, sinceArg });
+  }
+
+  const args: string[] = [
+    "compose",
+    "-f",
+    COMPOSE_FILE,
+    "logs",
+    "--since",
+    sinceArg,
+  ];
+
+  if (opts?.grep) {
+    // docker compose logs doesn't have --grep, so we filter with a pipe
+    // Instead, use the native --no-log-prefix and filter ourselves
+  }
+
+  args.push(slug);
+
+  log.debug("exec", { cmd: ["docker", ...args].join(" ") });
+
+  return new Promise<void>((resolve, reject) => {
+    const child = spawn("docker", args, {
+      cwd: SHOWCASE_DIR,
+      stdio: opts?.grep ? ["pipe", "pipe", "inherit"] : "inherit",
+    } satisfies SpawnOptions);
+
+    if (opts?.grep && child.stdout) {
+      const pattern = new RegExp(opts.grep, "i");
+      child.stdout.on("data", (chunk: Buffer) => {
+        const lines = chunk.toString().split("\n");
+        for (const line of lines) {
+          if (pattern.test(line)) {
+            process.stdout.write(line + "\n");
+          }
+        }
+      });
+    }
+
+    child.on("error", (err) => {
+      reject(
+        new Error(`Failed to get logs for ${slug}: ${err.message}`),
+      );
+    });
+
+    child.on("close", (code) => {
+      if (code === 0 || code === null) {
+        resolve();
+      } else {
+        reject(
+          new Error(`Log retrieval for ${slug} exited with code ${code}`),
+        );
       }
     });
   });
