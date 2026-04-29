@@ -7,10 +7,7 @@
 // Mirrors the convention from `tool-rendering/render-flight-tool.snippet.tsx`.
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  useAgent,
-  useCopilotKit,
-} from "@copilotkit/react-core/v2";
+import { useAgent, useCopilotKit } from "@copilotkit/react-core/v2";
 import type { Message } from "@ag-ui/core";
 
 const AGENT_ID = "headless-complete";
@@ -24,7 +21,9 @@ export function HeadlessSendMessageWiring() {
   useEffect(() => {
     const ac = new AbortController();
     if ("abortController" in agent) {
-      (agent as unknown as { abortController: AbortController }).abortController = ac;
+      (
+        agent as unknown as { abortController: AbortController }
+      ).abortController = ac;
     }
     copilotkit.connectAgent({ agent }).catch(() => {
       // connectAgent emits via the subscriber system; swallow here.

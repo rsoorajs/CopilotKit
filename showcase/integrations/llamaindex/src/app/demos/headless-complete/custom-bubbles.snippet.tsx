@@ -29,8 +29,7 @@ export function UserBubble({ children }: { children: React.ReactNode }) {
 }
 // @endregion[custom-bubbles]
 
-
-"use client";
+("use client");
 
 import React from "react";
 
