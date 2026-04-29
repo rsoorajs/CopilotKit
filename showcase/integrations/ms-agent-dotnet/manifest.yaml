@@ -38,6 +38,7 @@ features:
   - hitl
   - hitl-in-app
   - hitl-in-chat
+  - hitl-in-chat-booking
   - gen-ui-tool-based
   - gen-ui-interrupt
   - interrupt-headless
@@ -159,6 +160,18 @@ demos:
   - id: hitl-in-chat
     name: In-Chat HITL (useHumanInTheLoop — ergonomic API)
     description: Interactive approval/decision surface rendered inline in the chat via the high-level `useHumanInTheLoop` hook
+    tags:
+      - interactivity
+    route: /demos/hitl-in-chat
+    animated_preview_url:
+    highlight:
+      - agent/HitlInChatAgent.cs
+      - src/app/demos/hitl-in-chat/page.tsx
+      - src/app/demos/hitl-in-chat/time-picker-card.tsx
+      - src/app/api/copilotkit/route.ts
+  - id: hitl-in-chat-booking
+    name: In-Chat HITL (Booking)
+    description: Time-picker card rendered inline via useHumanInTheLoop for a booking flow
     tags:
       - interactivity
     route: /demos/hitl-in-chat
