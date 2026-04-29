@@ -59,6 +59,7 @@ features:
   - voice
   - agent-config
   - auth
+  - a2ui-fixed-schema
 demos:
   - id: cli-start
     name: CLI Start Command
