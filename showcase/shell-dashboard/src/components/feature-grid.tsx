@@ -324,10 +324,10 @@ function CategorySection({
                       // feature. Distinct from the unshipped "no demo" ✗ so
                       // viewers can tell "won't be done" apart from "to do".
                       <span
-                        className="inline-flex items-center justify-center px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase tracking-wider border border-slate-500/40 bg-slate-500/10 text-slate-400"
+                        className="inline-flex items-center justify-center px-1.5 py-0.5 rounded text-base border border-slate-500/40 bg-slate-500/10 text-slate-400"
                         title="Not supported by this framework"
                       >
-                        N/A
+                        🚫
                       </span>
                     ) : (
                       <div
