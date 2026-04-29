@@ -126,20 +126,19 @@ export interface UseOverlaysReturn {
 export function useOverlays(): UseOverlaysReturn {
   const initialized = useRef(false);
 
-  const [overlays, setOverlays] = useState<OverlaySet>(() => {
-    const { overlays: fromHash } = parseHash();
-    if (fromHash) return fromHash;
+  const [overlays, setOverlays] = useState<OverlaySet>(
+    () => new Set(DEFAULT_OVERLAYS) as OverlaySet,
+  );
+  const [activeTab, setActiveTabRaw] = useState<"matrix" | "ops">("matrix");
 
-    const fromStorage = loadFromStorage();
-    if (fromStorage) return fromStorage;
-
-    return new Set(DEFAULT_OVERLAYS) as OverlaySet;
-  });
-
-  const [activeTab, setActiveTabRaw] = useState<"matrix" | "ops">(() => {
-    const { tab } = parseHash();
-    return tab;
-  });
+  // Sync from URL hash / localStorage after hydration
+  useEffect(() => {
+    const { tab, overlays: fromHash } = parseHash();
+    const resolved =
+      fromHash ?? loadFromStorage() ?? (new Set(DEFAULT_OVERLAYS) as OverlaySet);
+    setOverlays(resolved);
+    setActiveTabRaw(tab);
+  }, []);
 
   // On mount, write hash to reflect actual state (handles legacy redirects
   // and fallback from localStorage where the URL had no hash).

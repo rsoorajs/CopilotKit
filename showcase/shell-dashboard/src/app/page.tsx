@@ -140,7 +140,7 @@ export default function Page() {
   );
 
   return (
-    <div data-testid="tab-shell">
+    <div data-testid="tab-shell" className="pb-20">
       {/* 2-tab bar: Matrix | Ops */}
       <div className="flex items-center gap-0 border-b border-[var(--border)] px-8">
         <button
@@ -172,7 +172,7 @@ export default function Page() {
       {/* Tab content */}
       {activeTab === "matrix" && (
         <>
-          <div className="px-8 pt-4 flex flex-col gap-3">
+          <div className="sticky top-0 z-30 px-8 py-3 flex flex-col gap-3 bg-[var(--bg-surface)] border-b border-[var(--border)]">
             <OverlayToggleBar
               overlays={overlays}
               onToggle={toggle}

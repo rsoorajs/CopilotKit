@@ -87,9 +87,104 @@ cp showcase/.env.example showcase/.env
 
 Only `OPENAI_API_KEY` is strictly required. Missing optional keys fail gracefully (per-package).
 
-## Local Docker workflow
+## Local CLI — parity testing without Railway
 
-`scripts/dev-local.sh` wraps `docker compose` and handles the `shared_python/` / `shared_typescript/` staging step that CI also performs.
+The showcase harness includes a CLI that runs the same probe drivers (liveness, D4, D5) used in CI/Railway against local Docker Compose containers. This lets you debug Dn failures, iterate on new demos, or run background parity checks without pushing to a branch.
+
+### Quick start
+
+```sh
+# runs from any directory — all paths are resolved relative to the script itself
+
+# 1. Make sure Docker is running (Colima, Docker Desktop, or OrbStack)
+
+# 2. Start infra + one integration
+./showcase/bin/showcase up langgraph-python
+
+# 3. Run smoke probes
+./showcase/bin/showcase test langgraph-python --smoke
+
+# 4. Run full D5 depth
+./showcase/bin/showcase test langgraph-python --d5 --headed
+
+# 5. Tear down when done
+./showcase/bin/showcase down
+```
+
+### Commands
+
+| Command              | Description                                                                                      |
+| -------------------- | ------------------------------------------------------------------------------------------------ |
+| `test <target>`      | Run probes. Target is a slug (`langgraph-python`), slug:demo (`langgraph-python:chat`), or `all` |
+| `up [slugs...]`      | Start infra (aimock, pocketbase, dashboard) + named packages. No args = infra only               |
+| `down [slugs...]`    | Stop services. No args = stop everything                                                         |
+| `rebuild [slugs...]` | Rebuild Docker images                                                                            |
+| `ps`                 | Show running services                                                                            |
+| `logs <slug>`        | Tail logs for a service                                                                          |
+| `status`             | Print dashboard URL for full results                                                             |
+
+### Test levels
+
+Specify depth with `--level` or shorthand flags (mutually exclusive):
+
+| Flag          | Level | What it runs                                                                               |
+| ------------- | ----- | ------------------------------------------------------------------------------------------ |
+| `--smoke`     | smoke | Liveness healthchecks (L1–L3) — container up, routes reachable, no JS errors               |
+| `--d4`        | d4    | E2E chat-tools — Playwright drives the demo UI, sends a message, asserts tool calls render |
+| `--d5`        | d5    | E2E deep — full conversation flow with aimock fixtures, asserts feature-specific behavior  |
+| `--level all` | all   | Runs smoke → d4 → d5 sequentially                                                          |
+
+Default level is `smoke` when no flag is given.
+
+### Additional options
+
+| Option         | Description                                                                 |
+| -------------- | --------------------------------------------------------------------------- |
+| `--headed`     | Run Playwright visibly (not headless) — useful for debugging D4/D5 failures |
+| `--verbose`    | Verbose logging output                                                      |
+| `--repeat <n>` | Run the test suite N times (flake detection)                                |
+| `--keep`       | Don't stop auto-started containers after the test finishes                  |
+| `--live`       | Write results to PocketBase so the dashboard reflects them                  |
+| `--rebuild`    | Force Docker rebuild before running tests                                   |
+
+### Config file (optional)
+
+Create `showcase/showcase.local.json` to override defaults:
+
+```json
+{
+  "pocketbase": {
+    "url": "http://localhost:8090",
+    "email": "admin@localhost",
+    "password": "showcase-local-dev"
+  },
+  "dashboardUrl": "http://localhost:3200"
+}
+```
+
+The CLI works without this file — it uses sensible defaults matching docker-compose.local.yml.
+
+### How it works
+
+The CLI reuses the same probe drivers that the showcase-harness service runs on Railway. The difference is infrastructure: Railway probes hit Railway-deployed containers; the CLI probes hit local Docker Compose containers. Same assertions, same aimock fixtures, same Playwright flows.
+
+```
+┌─────────┐     ┌──────────────────┐     ┌─────────────────────┐
+│  CLI    │────▸│  Probe Drivers   │────▸│  Docker Compose     │
+│  cli.ts │     │  liveness/d4/d5  │     │  containers         │
+└─────────┘     └──────────────────┘     │  (aimock + integs)  │
+                                         └─────────────────────┘
+```
+
+### Use cases
+
+1. **Debugging Dn failures** — reproduce a CI/Railway failure locally with `--d5 --headed` to watch Playwright step through the flow
+2. **Building new demos** — `up` the integration, iterate on code, `test --d4` to verify, repeat
+3. **Background automation** — `test all --level all --repeat 3` as a pre-push sanity check
+
+## Low-level Docker Compose workflow
+
+For manual container management without the CLI, `scripts/dev-local.sh` wraps `docker compose` and handles the `shared_python/` / `shared_typescript/` staging step that CI also performs.
 
 ```sh
 # from the repo root

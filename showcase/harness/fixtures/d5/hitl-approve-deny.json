@@ -1,0 +1,29 @@
+{
+  "_comment": "D5 fixture for /demos/hitl-in-app against LangGraph Python (LGP). Approve/deny HITL via the frontend-defined `request_user_approval` tool. Uses turnIndex matching: aimock counts assistant messages in the request to disambiguate multi-turn fixtures sharing the same userMessage. Fixtures ordered 0→N for readability.",
+  "fixtures": [
+    {
+      "match": {
+        "userMessage": "Issue a $50 refund to customer #12345",
+        "turnIndex": 0
+      },
+      "response": {
+        "toolCalls": [
+          {
+            "id": "call_d5_request_approval_001",
+            "name": "request_user_approval",
+            "arguments": "{\"message\":\"Issue a $50 refund to customer #12345.\",\"context\":\"Per the standard goodwill-credit policy for shipping delays.\"}"
+          }
+        ]
+      }
+    },
+    {
+      "match": {
+        "userMessage": "Issue a $50 refund to customer #12345",
+        "turnIndex": 1
+      },
+      "response": {
+        "content": "Approved — processing the $50 refund to customer #12345 now."
+      }
+    }
+  ]
+}

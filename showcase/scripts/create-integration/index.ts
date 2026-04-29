@@ -2027,7 +2027,7 @@ export function updateWorkflows(args: CLIArgs) {
     console.log("  Updated showcase_deploy.yml");
   }
 
-  // 2. showcase_drift-detection.yml was replaced by the showcase-ops
+  // 2. showcase_drift-detection.yml was replaced by the showcase-harness
   // service's aimock_wiring / image-drift probes; no per-integration
   // workflow edit is needed anymore. The probes enumerate services from
   // Railway at runtime.

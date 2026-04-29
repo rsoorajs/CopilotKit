@@ -5,7 +5,12 @@ import {
   getFeatures,
   getFeatureCategories,
 } from "@/lib/registry";
-import type { Integration, Feature, Demo } from "@/lib/registry";
+import type {
+  Integration,
+  Feature,
+  Demo,
+  FeatureCategory,
+} from "@/lib/registry";
 import { keyFor, resolveCell } from "@/lib/live-status";
 import type { ConnectionStatus, LiveStatusMap } from "@/lib/live-status";
 import { LevelStrip } from "@/components/level-strip";
@@ -16,6 +21,11 @@ import type { CatalogCell } from "@/components/depth-utils";
 import type { Overlay } from "@/lib/overlay-types";
 import type { ParityTier } from "@/components/parity-badge";
 import type { CatalogData } from "@/data/catalog-types";
+import type { TallyDetail, TallyItem } from "@/components/tally-types";
+import {
+  useCollapsible,
+  CategoryHeaderRow,
+} from "@/components/collapsible-category";
 
 export interface CellContext {
   integration: Integration;
@@ -99,6 +109,67 @@ export function computeColumnTally(
 }
 
 /**
+ * Per-bucket feature lists for a single integration column — companion to
+ * `computeColumnTally()` that returns `TallyItem[]` arrays instead of counts.
+ *
+ * Logic mirrors `computeColumnTally()` exactly: same signal scoping (health
+ * counted once, e2e per feature-with-demo) and same connection-error guard.
+ */
+export function computeColumnTallyDetail(
+  integration: Integration,
+  features: Feature[],
+  liveStatus: LiveStatusMap,
+  connection: ConnectionStatus,
+): TallyDetail {
+  if (connection === "error") {
+    return { green: [], amber: [], red: [], unknown: true };
+  }
+
+  const green: TallyItem[] = [];
+  const amber: TallyItem[] = [];
+  const red: TallyItem[] = [];
+
+  // Integration-level health — counted once per integration.
+  const healthRow = liveStatus.get(keyFor("health", integration.slug)) ?? null;
+  if (healthRow) {
+    const item: TallyItem = { label: "Health (Up)", dimension: "health" };
+    switch (healthRow.state) {
+      case "green":
+        green.push(item);
+        break;
+      case "red":
+        red.push(item);
+        break;
+      case "degraded":
+        amber.push(item);
+        break;
+    }
+  }
+
+  // Feature-level dimensions: e2e per feature-with-demo.
+  for (const feature of features) {
+    const demo = integration.demos.find((d) => d.id === feature.id);
+    if (!demo) continue;
+
+    const cell = resolveCell(liveStatus, integration.slug, feature.id, {
+      connection,
+    });
+
+    const item: TallyItem = {
+      label: feature.name,
+      dimension: "e2e",
+      featureId: feature.id,
+    };
+
+    if (cell.e2e.tone === "green") green.push(item);
+    else if (cell.e2e.tone === "amber") amber.push(item);
+    else if (cell.e2e.tone === "red") red.push(item);
+  }
+
+  return { green, amber, red, unknown: false };
+}
+
+/**
  * Resolve the shell URL used to build Demo/Code links.
  *
  * `NEXT_PUBLIC_SHELL_URL` is inlined at build time. In production builds we
@@ -126,6 +197,146 @@ function resolveShellUrl(): string {
   }
   return "http://localhost:3000";
 }
+
+/* ------------------------------------------------------------------ */
+/*  CategorySection — one collapsible group of feature rows            */
+/* ------------------------------------------------------------------ */
+
+interface CategorySectionProps {
+  cat: FeatureCategory & { features: Feature[] };
+  integrations: Integration[];
+  renderCell: CellRenderer;
+  shellUrl: string;
+  liveStatus: LiveStatusMap;
+  connection: ConnectionStatus;
+  showRefDepth: boolean;
+  refCellsByFeature: Map<string, CatalogCell>;
+  categoryColSpan: number;
+}
+
+function CategorySection({
+  cat,
+  integrations,
+  renderCell,
+  shellUrl,
+  liveStatus,
+  connection,
+  showRefDepth,
+  refCellsByFeature,
+  categoryColSpan,
+}: CategorySectionProps) {
+  const { isOpen, toggle } = useCollapsible({
+    name: cat.name,
+    defaultOpen: true,
+  });
+
+  const wiredCount = cat.features.reduce((acc, feature) => {
+    return (
+      acc +
+      integrations.filter((int) => int.demos.some((d) => d.id === feature.id))
+        .length
+    );
+  }, 0);
+  const totalCount = cat.features.length * integrations.length;
+  const countString = `${wiredCount}/${totalCount}`;
+
+  return (
+    <Fragment>
+      <CategoryHeaderRow
+        name={cat.name}
+        count={countString}
+        colSpan={categoryColSpan}
+        isOpen={isOpen}
+        onToggle={toggle}
+      />
+      {isOpen &&
+        cat.features.map((feature) => {
+          const testing = feature.kind === "testing";
+          const refCell = showRefDepth
+            ? refCellsByFeature.get(feature.id)
+            : undefined;
+          const refDepth = refCell
+            ? deriveDepth(refCell, liveStatus)
+            : undefined;
+          return (
+            <tr
+              key={feature.id}
+              className="border-t border-[var(--border)] hover:bg-[var(--bg-hover)]"
+            >
+              <td className="sticky left-0 z-10 bg-[var(--bg-surface)] px-4 py-2 border-r border-[var(--border)] align-top">
+                <div
+                  className={
+                    testing
+                      ? "font-normal text-[var(--text-muted)] italic"
+                      : "font-medium text-[var(--text)]"
+                  }
+                  title={feature.description}
+                >
+                  {feature.name}
+                  {testing && (
+                    <span className="ml-2 text-[9px] uppercase tracking-wider text-[var(--text-muted)]">
+                      testing
+                    </span>
+                  )}
+                </div>
+              </td>
+              {showRefDepth &&
+                (refCell && refDepth ? (
+                  <RefDepthCell
+                    depth={refDepth.achieved}
+                    status={refCell.status}
+                    regression={refDepth.isRegression}
+                  />
+                ) : (
+                  <td
+                    className="sticky left-[260px] z-10 px-3 py-2 border-r-2 border-r-[#c4b5fd] border-l border-[var(--border)] align-top"
+                    style={{ backgroundColor: "#f5f0ff" }}
+                  >
+                    <span className="text-[var(--text-muted)] text-[10px]">
+                      --
+                    </span>
+                  </td>
+                ))}
+              {integrations.map((integration) => {
+                const demo = integration.demos.find((d) => d.id === feature.id);
+                return (
+                  <td
+                    key={integration.slug}
+                    className="border-l border-[var(--border)] px-3 py-2 align-top text-center"
+                  >
+                    {demo ? (
+                      renderCell({
+                        integration,
+                        feature,
+                        demo,
+                        hostedUrl: demo.route
+                          ? `${integration.backend_url}${demo.route}`
+                          : "",
+                        shellUrl,
+                        liveStatus,
+                        connection,
+                      })
+                    ) : (
+                      <div
+                        className="text-center text-base text-[var(--danger)]"
+                        title="No demo"
+                      >
+                        ✗
+                      </div>
+                    )}
+                  </td>
+                );
+              })}
+            </tr>
+          );
+        })}
+    </Fragment>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  FeatureGrid                                                        */
+/* ------------------------------------------------------------------ */
 
 export interface FeatureGridProps {
   title: string;
@@ -170,6 +381,18 @@ export function FeatureGrid({
       out.set(
         integration.slug,
         computeColumnTally(integration, features, liveStatus, connection),
+      );
+    }
+    return out;
+  }, [integrations, features, liveStatus, connection]);
+
+  // Per-bucket feature lists — mirrors tallies but with TallyItem arrays.
+  const tallyDetails = useMemo(() => {
+    const out = new Map<string, TallyDetail>();
+    for (const integration of integrations) {
+      out.set(
+        integration.slug,
+        computeColumnTallyDetail(integration, features, liveStatus, connection),
       );
     }
     return out;
@@ -255,6 +478,7 @@ export function FeatureGrid({
                       key={integration.slug}
                       integration={integration}
                       tally={tally}
+                      tallyDetail={tallyDetails.get(integration.slug)}
                       overlays={overlays}
                       liveStatus={liveStatus}
                       connection={connection}
@@ -324,99 +548,18 @@ export function FeatureGrid({
           </thead>
           <tbody>
             {featuresByCategory.map((cat) => (
-              <Fragment key={cat.id}>
-                <tr>
-                  <td
-                    colSpan={categoryColSpan}
-                    className="sticky left-0 px-4 pt-5 pb-1.5 text-[10px] font-medium uppercase tracking-wider text-[var(--text-muted)] bg-[var(--bg-surface)]"
-                  >
-                    {cat.name}
-                  </td>
-                </tr>
-                {cat.features.map((feature) => {
-                  const testing = feature.kind === "testing";
-                  // Ref-depth cell data for this feature row
-                  const refCell = showRefDepth
-                    ? refCellsByFeature.get(feature.id)
-                    : undefined;
-                  const refDepth = refCell
-                    ? deriveDepth(refCell, liveStatus)
-                    : undefined;
-                  return (
-                    <tr
-                      key={feature.id}
-                      className="border-t border-[var(--border)] hover:bg-[var(--bg-hover)]"
-                    >
-                      <td className="sticky left-0 z-10 bg-[var(--bg-surface)] px-4 py-2 border-r border-[var(--border)] align-top">
-                        <div
-                          className={
-                            testing
-                              ? "font-normal text-[var(--text-muted)] italic"
-                              : "font-medium text-[var(--text)]"
-                          }
-                          title={feature.description}
-                        >
-                          {feature.name}
-                          {testing && (
-                            <span className="ml-2 text-[9px] uppercase tracking-wider text-[var(--text-muted)]">
-                              testing
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      {showRefDepth &&
-                        (refCell && refDepth ? (
-                          <RefDepthCell
-                            depth={refDepth.achieved}
-                            status={refCell.status}
-                            regression={refDepth.isRegression}
-                          />
-                        ) : (
-                          <td
-                            className="sticky left-[260px] z-10 px-3 py-2 border-r-2 border-r-[#c4b5fd] border-l border-[var(--border)] align-top"
-                            style={{ backgroundColor: "#f5f0ff" }}
-                          >
-                            <span className="text-[var(--text-muted)] text-[10px]">
-                              --
-                            </span>
-                          </td>
-                        ))}
-                      {integrations.map((integration) => {
-                        const demo = integration.demos.find(
-                          (d) => d.id === feature.id,
-                        );
-                        return (
-                          <td
-                            key={integration.slug}
-                            className="border-l border-[var(--border)] px-3 py-2 align-top text-left"
-                          >
-                            {demo ? (
-                              renderCell({
-                                integration,
-                                feature,
-                                demo,
-                                hostedUrl: demo.route
-                                  ? `${integration.backend_url}${demo.route}`
-                                  : "",
-                                shellUrl,
-                                liveStatus,
-                                connection,
-                              })
-                            ) : (
-                              <div
-                                className="text-center text-base text-[var(--danger)]"
-                                title="No demo"
-                              >
-                                ✗
-                              </div>
-                            )}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  );
-                })}
-              </Fragment>
+              <CategorySection
+                key={cat.id}
+                cat={cat}
+                integrations={integrations}
+                renderCell={renderCell}
+                shellUrl={shellUrl}
+                liveStatus={liveStatus}
+                connection={connection}
+                showRefDepth={showRefDepth}
+                refCellsByFeature={refCellsByFeature}
+                categoryColSpan={categoryColSpan}
+              />
             ))}
           </tbody>
         </table>

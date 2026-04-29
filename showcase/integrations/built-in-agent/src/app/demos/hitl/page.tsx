@@ -9,7 +9,7 @@ import { z } from "zod";
 
 export default function HITL() {
   return (
-    <CopilotKitProvider runtimeUrl="/api/copilotkit">
+    <CopilotKitProvider runtimeUrl="/api/copilotkit" useSingleEndpoint>
       <Demo />
     </CopilotKitProvider>
   );

@@ -80,7 +80,7 @@ COPY --chown=node:node --from=builder /app/shell-dashboard/.next ./.next
 COPY --chown=node:node --from=prod-deps /app/shell-dashboard/node_modules ./node_modules
 COPY --chown=node:node --from=builder /app/shell-dashboard/package.json ./
 
-# Drop root privileges — parity with showcase/ops/Dockerfile. Reduces
+# Drop root privileges — parity with showcase/harness/Dockerfile. Reduces
 # blast radius of any RCE in Next.js or a transitive dep.
 USER node
 

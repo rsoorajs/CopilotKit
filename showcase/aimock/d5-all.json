@@ -1,5 +1,5 @@
 {
-  "_comment": "Bundled D5 (e2e-deep) fixtures. Source files: showcase/ops/fixtures/d5/*.json. Loaded by aimock before feature-parity.json for match precedence.",
+  "_comment": "Bundled D5 (e2e-deep) fixtures. Source files: showcase/harness/fixtures/d5/*.json. Uses turnIndex matching for multi-turn disambiguation. Loaded by aimock before feature-parity.json for match precedence.",
   "fixtures": [
     {
       "match": {
@@ -28,16 +28,7 @@
     {
       "match": {
         "userMessage": "Show me a pie chart of revenue by category",
-        "sequenceIndex": 1
-      },
-      "response": {
-        "content": "Pie chart rendered above — Electronics is the largest slice, followed by Clothing, Food, and Books."
-      }
-    },
-    {
-      "match": {
-        "userMessage": "Show me a pie chart of revenue by category",
-        "sequenceIndex": 0
+        "turnIndex": 0
       },
       "response": {
         "toolCalls": [
@@ -51,17 +42,17 @@
     },
     {
       "match": {
-        "userMessage": "Write me a haiku about nature",
-        "sequenceIndex": 1
+        "userMessage": "Show me a pie chart of revenue by category",
+        "turnIndex": 1
       },
       "response": {
-        "content": "Haiku generated above — a beautiful verse about nature with an accompanying image."
+        "content": "Pie chart rendered above — Electronics is the largest slice, followed by Clothing, Food, and Books."
       }
     },
     {
       "match": {
         "userMessage": "Write me a haiku about nature",
-        "sequenceIndex": 0
+        "turnIndex": 0
       },
       "response": {
         "toolCalls": [
@@ -75,17 +66,17 @@
     },
     {
       "match": {
-        "userMessage": "Show me a profile card for Ada Lovelace",
-        "sequenceIndex": 1
+        "userMessage": "Write me a haiku about nature",
+        "turnIndex": 1
       },
       "response": {
-        "content": "Here is a quick card for Ada Lovelace — the rendered card above shows a short biography. Let me know if you want a deeper dive on her work or a different historical figure."
+        "content": "Haiku generated above — a beautiful verse about nature with an accompanying image."
       }
     },
     {
       "match": {
         "userMessage": "Show me a profile card for Ada Lovelace",
-        "sequenceIndex": 0
+        "turnIndex": 0
       },
       "response": {
         "toolCalls": [
@@ -99,17 +90,17 @@
     },
     {
       "match": {
-        "userMessage": "Issue a $50 refund to customer #12345",
-        "sequenceIndex": 1
+        "userMessage": "Show me a profile card for Ada Lovelace",
+        "turnIndex": 1
       },
       "response": {
-        "content": "Approved — processing the $50 refund to customer #12345 now."
+        "content": "Here is a quick card for Ada Lovelace — the rendered card above shows a short biography. Let me know if you want a deeper dive on her work or a different historical figure."
       }
     },
     {
       "match": {
         "userMessage": "Issue a $50 refund to customer #12345",
-        "sequenceIndex": 0
+        "turnIndex": 0
       },
       "response": {
         "toolCalls": [
@@ -123,17 +114,17 @@
     },
     {
       "match": {
-        "userMessage": "trip to mars",
-        "sequenceIndex": 1
+        "userMessage": "Issue a $50 refund to customer #12345",
+        "turnIndex": 1
       },
       "response": {
-        "content": "Great choices! I will proceed with executing the selected steps for your trip to Mars. Let me work through each one."
+        "content": "Approved — processing the $50 refund to customer #12345 now."
       }
     },
     {
       "match": {
         "userMessage": "trip to mars",
-        "sequenceIndex": 0
+        "turnIndex": 0
       },
       "response": {
         "toolCalls": [
@@ -147,17 +138,17 @@
     },
     {
       "match": {
-        "userMessage": "Book a 30-minute onboarding call for Alice",
-        "sequenceIndex": 1
+        "userMessage": "trip to mars",
+        "turnIndex": 1
       },
       "response": {
-        "content": "Booked Alice's onboarding call for the time you selected — calendar invite is on its way."
+        "content": "Great choices! I will proceed with executing the selected steps for your trip to Mars. Let me work through each one."
       }
     },
     {
       "match": {
         "userMessage": "Book a 30-minute onboarding call for Alice",
-        "sequenceIndex": 0
+        "turnIndex": 0
       },
       "response": {
         "toolCalls": [
@@ -171,24 +162,24 @@
     },
     {
       "match": {
-        "userMessage": "Research the benefits of remote work and draft a one-paragraph summary",
-        "sequenceIndex": 3
+        "userMessage": "Book a 30-minute onboarding call for Alice",
+        "turnIndex": 1
       },
       "response": {
-        "content": "Here is the summary, after research → drafting → critique:\n\nRemote work returns roughly ten hours a week to employees by eliminating the commute, and repeated surveys show meaningfully higher job satisfaction among remote workers. Employers benefit too: a geographically unbounded talent pool and lower office overhead. The honest counterweight is that ad-hoc collaboration, mentorship of junior staff, and cultural cohesion all degrade without intentional rituals to replace what an office provided implicitly."
+        "content": "Booked Alice's onboarding call for the time you selected — calendar invite is on its way."
       }
     },
     {
       "match": {
         "userMessage": "Research the benefits of remote work and draft a one-paragraph summary",
-        "sequenceIndex": 2
+        "turnIndex": 0
       },
       "response": {
         "toolCalls": [
           {
-            "id": "call_d5_critique_agent_001",
-            "name": "critique_agent",
-            "arguments": "{\"draft\":\"Remote work returns roughly ten hours a week to employees by eliminating the commute, and repeated surveys show meaningfully higher job satisfaction among remote workers. Employers benefit too: a geographically unbounded talent pool and lower office overhead. The honest counterweight is that ad-hoc collaboration, mentorship of junior staff, and cultural cohesion all degrade without intentional rituals to replace what an office provided implicitly.\"}"
+            "id": "call_d5_research_agent_001",
+            "name": "research_agent",
+            "arguments": "{\"topic\":\"Benefits of remote work\"}"
           }
         ]
       }
@@ -196,7 +187,7 @@
     {
       "match": {
         "userMessage": "Research the benefits of remote work and draft a one-paragraph summary",
-        "sequenceIndex": 1
+        "turnIndex": 1
       },
       "response": {
         "toolCalls": [
@@ -211,22 +202,31 @@
     {
       "match": {
         "userMessage": "Research the benefits of remote work and draft a one-paragraph summary",
-        "sequenceIndex": 0
+        "turnIndex": 2
       },
       "response": {
         "toolCalls": [
           {
-            "id": "call_d5_research_agent_001",
-            "name": "research_agent",
-            "arguments": "{\"topic\":\"Benefits of remote work\"}"
+            "id": "call_d5_critique_agent_001",
+            "name": "critique_agent",
+            "arguments": "{\"draft\":\"Remote work returns roughly ten hours a week to employees by eliminating the commute, and repeated surveys show meaningfully higher job satisfaction among remote workers. Employers benefit too: a geographically unbounded talent pool and lower office overhead. The honest counterweight is that ad-hoc collaboration, mentorship of junior staff, and cultural cohesion all degrade without intentional rituals to replace what an office provided implicitly.\"}"
           }
         ]
       }
     },
     {
       "match": {
+        "userMessage": "Research the benefits of remote work and draft a one-paragraph summary",
+        "turnIndex": 3
+      },
+      "response": {
+        "content": "Here is the summary, after research → drafting → critique:\n\nRemote work returns roughly ten hours a week to employees by eliminating the commute, and repeated surveys show meaningfully higher job satisfaction among remote workers. Employers benefit too: a geographically unbounded talent pool and lower office overhead. The honest counterweight is that ad-hoc collaboration, mentorship of junior staff, and cultural cohesion all degrade without intentional rituals to replace what an office provided implicitly."
+      }
+    },
+    {
+      "match": {
         "userMessage": "remember that my favorite color is blue",
-        "sequenceIndex": 0
+        "turnIndex": 0
       },
       "response": {
         "toolCalls": [
@@ -241,7 +241,7 @@
     {
       "match": {
         "userMessage": "remember that my favorite color is blue",
-        "sequenceIndex": 1
+        "turnIndex": 1
       },
       "response": {
         "content": "Got it — I have noted that your favorite color is blue."
@@ -258,16 +258,7 @@
     {
       "match": {
         "userMessage": "weather in Tokyo",
-        "sequenceIndex": 1
-      },
-      "response": {
-        "content": "Tokyo is 22°C and partly cloudy."
-      }
-    },
-    {
-      "match": {
-        "userMessage": "weather in Tokyo",
-        "sequenceIndex": 0
+        "turnIndex": 0
       },
       "response": {
         "toolCalls": [
@@ -277,6 +268,15 @@
             "arguments": "{\"location\":\"Tokyo\"}"
           }
         ]
+      }
+    },
+    {
+      "match": {
+        "userMessage": "weather in Tokyo",
+        "turnIndex": 1
+      },
+      "response": {
+        "content": "Tokyo is 22°C and partly cloudy."
       }
     }
   ]
