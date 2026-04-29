@@ -59,6 +59,10 @@ features:
   - byoc-hashbrown
   - byoc-json-render
   - beautiful-chat
+  - mcp-apps
+not_supported_features:
+  - gen-ui-interrupt
+  - interrupt-headless
 demos:
   - id: cli-start
     name: CLI Start Command
@@ -341,4 +345,15 @@ demos:
     tags:
       - chat-ui
     route: /demos/beautiful-chat
+  - id: mcp-apps
+    name: MCP Apps
+    description: MCP server-driven UI via activity renderers
+    tags:
+      - generative-ui
+    route: /demos/mcp-apps
+    animated_preview_url:
+    highlight:
+      - src/agents/mcp_apps_agent.py
+      - src/app/demos/mcp-apps/page.tsx
+      - src/app/api/copilotkit-mcp-apps/route.ts
     animated_preview_url:
