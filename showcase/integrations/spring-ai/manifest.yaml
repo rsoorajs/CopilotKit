@@ -399,7 +399,7 @@ demos:
     route: /demos/tool-rendering
     animated_preview_url:
     highlight:
-      - src/app/demos/tool-rendering/agent.ts
+      - src/main/java/com/copilotkit/showcase/springai/tools/WeatherTool.java
       - src/app/demos/tool-rendering/page.tsx
       - src/app/api/copilotkit/route.ts
   - id: cli-start

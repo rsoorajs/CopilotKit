@@ -9,6 +9,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 
+// @region[weather-tool-backend]
 /**
  * Server-side weather tool that calls the Open-Meteo API.
  * Registered as "get_weather" in AgentConfig.
@@ -90,3 +91,4 @@ public class WeatherTool implements Function<WeatherRequest, String> {
         }
     }
 }
+// @endregion[weather-tool-backend]
