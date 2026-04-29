@@ -7,6 +7,7 @@ import { Badge, FlashOnChange } from "@/components/badges";
 import { keyFor, resolveCell, type BadgeRender } from "@/lib/live-status";
 import type { Feature, Integration } from "@/lib/registry";
 import { useLastTransition, deriveFromTo } from "@/hooks/useLastTransition";
+import { formatTs } from "@/lib/format-ts";
 
 /**
  * Magic path segment used by the shell when no framework column is selected.
@@ -258,17 +259,17 @@ function formatTransitionLine(row: {
   observed_at: string;
 }): string {
   if (row.transition === "first") {
-    return ` — since ${row.observed_at} (initial: ${row.state})`;
+    return ` — since ${formatTs(row.observed_at)} (initial: ${row.state})`;
   }
   if (row.transition === "error") {
-    return ` — since ${row.observed_at} (error → ${row.state})`;
+    return ` — since ${formatTs(row.observed_at)} (error → ${row.state})`;
   }
   const { from, to } = deriveFromTo(row.transition);
   // Any non-first/non-error transition that deriveFromTo can't decode
   // (unexpected enum value) falls back to the row's current state so we
   // never render "null → null" copy.
   const pair = from && to ? `${from} → ${to}` : row.state;
-  return ` — since ${row.observed_at} (${pair})`;
+  return ` — since ${formatTs(row.observed_at)} (${pair})`;
 }
 
 /**
