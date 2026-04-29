@@ -507,7 +507,7 @@ demos:
     route: /demos/headless-complete
     animated_preview_url:
     highlight:
-      - src/agent/headless-complete-agent.ts
+      - src/agent/headless-complete-prompt.ts
       - src/app/demos/headless-complete/page.tsx
       - src/app/demos/headless-complete/tool-renderers.tsx
       - src/app/demos/headless-complete/use-rendered-messages.tsx
@@ -520,7 +520,7 @@ demos:
     route: /demos/a2ui-fixed-schema
     animated_preview_url:
     highlight:
-      - src/agent/a2ui-fixed-agent.ts
+      - src/agent/a2ui-fixed-prompt.ts
       - src/agent/a2ui_schemas/flight_schema.json
       - src/app/demos/a2ui-fixed-schema/page.tsx
       - src/app/demos/a2ui-fixed-schema/a2ui/catalog.ts
