@@ -75,6 +75,11 @@ agents["default"] = createAgent();
 // rendered OUTSIDE the chat surface.
 agents["hitl-in-app"] = new HttpAgent({ url: `${AGENT_URL}/hitl-in-app` });
 
+// In-chat HITL demo backend. The frontend registers the `book_call` tool
+// via `useHumanInTheLoop`; the .NET agent owns no tools. See
+// agent/HitlInChatAgent.cs.
+agents["hitl-in-chat"] = new HttpAgent({ url: `${AGENT_URL}/hitl-in-chat` });
+
 // Shared State (Read + Write) demo backend. UI owns `preferences` (written
 // via agent.setState) and the agent owns `notes` via the `set_notes` tool.
 // See agent/SharedStateReadWriteAgent.cs.

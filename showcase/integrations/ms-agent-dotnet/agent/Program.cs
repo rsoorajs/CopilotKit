@@ -78,6 +78,13 @@ app.MapAGUI("/mcp-apps", mcpAppsFactory.CreateMcpAppsAgent());
 var hitlInAppFactory = new HitlInAppAgentFactory(builder.Configuration, loggerFactory);
 app.MapAGUI("/hitl-in-app", hitlInAppFactory.CreateHitlInAppAgent());
 
+// In-chat HITL demo (useHumanInTheLoop). The `book_call` tool is defined
+// entirely on the frontend via the hook; this backend is a plain
+// ChatClientAgent with a system prompt that nudges the model to call it.
+// See agent/HitlInChatAgent.cs.
+var hitlInChatFactory = new HitlInChatAgentFactory(builder.Configuration, loggerFactory);
+app.MapAGUI("/hitl-in-chat", hitlInChatFactory.CreateHitlInChatAgent());
+
 // Shared State (Read + Write) demo. UI owns `preferences`, agent owns
 // `notes` via a `set_notes` tool. See agent/SharedStateReadWriteAgent.cs
 // for the pattern.
