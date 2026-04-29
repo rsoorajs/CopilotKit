@@ -20,6 +20,7 @@ from agents.agent import agent_router
 from agents.a2ui_dynamic import a2ui_dynamic_router
 from agents.a2ui_fixed import a2ui_fixed_router
 from agents.agent_config_agent import agent_config_router
+from agents.beautiful_chat_agent import beautiful_chat_router
 from agents.byoc_hashbrown_agent import byoc_hashbrown_router
 from agents.byoc_json_render_agent import byoc_json_render_router
 from agents.gen_ui_tool_based_agent import gen_ui_tool_based_router
@@ -81,6 +82,7 @@ app.include_router(
 )
 app.include_router(mcp_apps_router, prefix="/mcp-apps")
 app.include_router(gen_ui_tool_based_router, prefix="/gen-ui-tool-based")
+app.include_router(beautiful_chat_router, prefix="/beautiful-chat")
 app.include_router(
     shared_state_read_write_router, prefix="/shared-state-read-write"
 )

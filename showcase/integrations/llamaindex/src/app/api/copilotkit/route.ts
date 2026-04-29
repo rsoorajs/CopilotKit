@@ -54,6 +54,7 @@ const specializedAgents: Record<string, string> = {
   "tool-rendering-reasoning-chain": "/tool-rendering-reasoning-chain",
   "shared-state-read-write": "/shared-state-read-write",
   "gen-ui-tool-based": "/gen-ui-tool-based",
+  "beautiful-chat": "/beautiful-chat",
   subagents: "/subagents",
 };
 
