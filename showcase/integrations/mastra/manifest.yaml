@@ -427,6 +427,7 @@ demos:
     highlight:
       - src/app/demos/open-gen-ui-advanced/page.tsx
       - src/app/demos/open-gen-ui-advanced/sandbox-functions.ts
+      - src/app/demos/open-gen-ui-advanced/suggestions.ts
       - src/app/api/copilotkit-ogui/route.ts
   - id: voice
     name: Voice Input
