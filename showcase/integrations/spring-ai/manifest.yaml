@@ -67,6 +67,8 @@ not_supported_features:
   - shared-state-streaming
   - byoc-json-render
 a2ui_pattern: schema-inline
+agent_config_pattern: shared-state
+auth_pattern: runtime-onrequest
 demos:
   - id: agentic-chat
     name: Agentic Chat

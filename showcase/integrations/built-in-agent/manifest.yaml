@@ -69,6 +69,10 @@ not_supported_features:
   - gen-ui-interrupt
   - interrupt-headless
   - hitl
+agent_config_pattern: runtime-properties
+
+a2ui_pattern: schema-inline
+auth_pattern: runtime-onrequest
 demos:
   - id: cli-start
     name: CLI Start Command
