@@ -56,6 +56,10 @@ features:
   - tool-rendering-reasoning-chain
   - headless-complete
   - auth
+  - beautiful-chat
+not_supported_features:
+  - gen-ui-interrupt
+  - interrupt-headless
 demos:
   - id: cli-start
     name: CLI Start Command
@@ -474,6 +478,19 @@ demos:
       - src/app/demos/byoc-json-render/registry.tsx
       - src/app/demos/byoc-json-render/catalog.ts
       - src/app/api/copilotkit-byoc-json-render/route.ts
+  - id: beautiful-chat
+    name: Beautiful Chat
+    description: Polished landing-style chat shell over the shared Agno agent — gradient background, suggestion pills, and an example dashboard surface
+    tags:
+      - chat-ui
+    route: /demos/beautiful-chat
+    animated_preview_url:
+    highlight:
+      - src/agents/main.py
+      - src/app/demos/beautiful-chat/page.tsx
+      - src/app/demos/byoc-json-render/charts/bar-chart.tsx
+      - src/app/demos/byoc-json-render/charts/pie-chart.tsx
+      - src/app/api/copilotkit/route.ts
 managed_platform:
   name: Agent OS
   url: https://os.agno.com
