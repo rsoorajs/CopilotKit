@@ -284,14 +284,7 @@ export default async function FrameworkScopedDocsPage({
                   </Link>
                 </React.Fragment>
               );
-            })}{" "}
-            instead, or browse the{" "}
-            <Link
-              href={`/${slugPath}`}
-              className="text-[var(--accent)] hover:underline"
-            >
-              framework-agnostic version
-            </Link>
+            })}
             .
           </>
         )}

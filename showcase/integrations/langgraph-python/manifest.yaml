@@ -68,6 +68,8 @@ features:
   - agent-config
 a2ui_pattern: schema-loading
 interrupt_pattern: native
+agent_config_pattern: shared-state
+auth_pattern: langgraph
 demos:
   - id: cli-start
     name: CLI Start Command

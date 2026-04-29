@@ -62,6 +62,10 @@ features:
   - byoc-hashbrown
   - byoc-json-render
   - beautiful-chat
+agent_config_pattern: shared-state
+
+a2ui_pattern: schema-loading
+auth_pattern: ag2-context-variables
 demos:
   - id: cli-start
     name: CLI Start Command

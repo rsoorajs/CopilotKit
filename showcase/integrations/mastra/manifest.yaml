@@ -67,6 +67,8 @@ not_supported_features:
   - gen-ui-interrupt
   - interrupt-headless
 a2ui_pattern: llm-driven
+agent_config_pattern: shared-state
+auth_pattern: runtime-onrequest
 demos:
   - id: cli-start
     name: CLI Start Command
