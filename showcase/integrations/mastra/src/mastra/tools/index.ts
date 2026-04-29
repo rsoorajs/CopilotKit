@@ -29,8 +29,7 @@ export const weatherTool = createTool({
   inputSchema: z.object({
     location: z.string().describe("City name"),
   }),
-  execute: async ({ location }) =>
-    JSON.stringify(getWeatherImpl(location)),
+  execute: async ({ location }) => JSON.stringify(getWeatherImpl(location)),
 });
 // @endregion[weather-tool-backend]
 
@@ -81,8 +80,7 @@ export const manageSalesTodosTool = createTool({
       )
       .describe("Array of sales todo items"),
   }),
-  execute: async ({ todos }) =>
-    JSON.stringify(manageSalesTodosImpl(todos)),
+  execute: async ({ todos }) => JSON.stringify(manageSalesTodosImpl(todos)),
 });
 
 export const getSalesTodosTool = createTool({
@@ -117,9 +115,7 @@ export const scheduleMeetingTool = createTool({
     durationMinutes: z.number().optional().describe("Duration in minutes"),
   }),
   execute: async ({ reason, durationMinutes }) =>
-    JSON.stringify(
-      scheduleMeetingImpl(reason, durationMinutes),
-    ),
+    JSON.stringify(scheduleMeetingImpl(reason, durationMinutes)),
 });
 
 export const searchFlightsTool = createTool({
@@ -146,8 +142,7 @@ export const searchFlightsTool = createTool({
       )
       .describe("Array of flight results"),
   }),
-  execute: async ({ flights }) =>
-    JSON.stringify(searchFlightsImpl(flights)),
+  execute: async ({ flights }) => JSON.stringify(searchFlightsImpl(flights)),
 });
 
 export const generateA2uiTool = createTool({
