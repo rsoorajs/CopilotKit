@@ -52,6 +52,7 @@ from agents.shared_state_read_write import SharedStateRWState
 from agents.shared_state_read_write import agent as shared_state_read_write_agent
 from agents.subagents import SubagentsState
 from agents.subagents import agent as subagents_agent
+from agents.gen_ui_tool_based import agent as gen_ui_tool_based_agent
 
 load_dotenv()
 
@@ -122,6 +123,9 @@ app.mount(
     "/subagents",
     subagents_agent.to_ag_ui(deps=StateDeps(SubagentsState())),
 )
+
+# ── Tool-Based Generative UI — chart-viz system prompt ───────────────
+app.mount("/gen_ui_tool_based", gen_ui_tool_based_agent.to_ag_ui())
 
 # ── Main sales agent — mounted at root (catch-all) ───────────────────
 # Mounted LAST so the sub-path mounts above win for their specific paths.

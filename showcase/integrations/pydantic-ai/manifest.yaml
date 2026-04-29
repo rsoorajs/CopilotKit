@@ -34,6 +34,7 @@ features:
   - tool-rendering-default-catchall
   - tool-rendering-custom-catchall
   - gen-ui-agent
+  - gen-ui-tool-based
   - shared-state-streaming
   - shared-state-read-write
   - readonly-state-agent-context
@@ -217,6 +218,19 @@ demos:
     highlight:
       - src/agents/agent.py
       - src/app/demos/gen-ui-agent/page.tsx
+      - src/app/api/copilotkit/route.ts
+  - id: gen-ui-tool-based
+    name: Tool-Based Generative UI
+    description: Frontend-registered chart components rendered by agent tool calls
+    tags:
+      - generative-ui
+    route: /demos/gen-ui-tool-based
+    animated_preview_url:
+    highlight:
+      - src/agents/gen_ui_tool_based.py
+      - src/app/demos/gen-ui-tool-based/page.tsx
+      - src/app/demos/gen-ui-tool-based/bar-chart.tsx
+      - src/app/demos/gen-ui-tool-based/pie-chart.tsx
       - src/app/api/copilotkit/route.ts
   - id: shared-state-streaming
     name: State Streaming

@@ -73,6 +73,9 @@ agents["shared-state-read-write"] = new HttpAgent({
 agents["subagents"] = new HttpAgent({
   url: `${AGENT_URL}/subagents/`,
 });
+agents["gen-ui-tool-based"] = new HttpAgent({
+  url: `${AGENT_URL}/gen_ui_tool_based/`,
+});
 
 console.log(
   `[copilotkit/route] Registered ${Object.keys(agents).length} agent names: ${Object.keys(agents).join(", ")}`,
