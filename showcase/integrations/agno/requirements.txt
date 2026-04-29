@@ -4,3 +4,4 @@ fastapi>=0.115.13
 uvicorn[standard]>=0.34.3
 ag-ui-protocol>=0.1.8
 python-dotenv>=1.0.0
+pypdf>=4.0.0
