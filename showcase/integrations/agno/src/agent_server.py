@@ -44,6 +44,7 @@ from starlette.responses import JSONResponse
 
 from agents.main import agent as main_agent
 from agents.mcp_apps_agent import agent as mcp_apps_agent
+from agents.open_gen_ui_agent import agent as open_gen_ui_agent
 from agents.reasoning_agent import agent as reasoning_agent
 from agents.shared_state_read_write import agent as shared_state_rw_agent
 from agents.subagents import agent as subagents_supervisor
@@ -183,6 +184,7 @@ agent_os = AgentOS(
     agents=[
         main_agent,
         mcp_apps_agent,
+        open_gen_ui_agent,
         reasoning_agent,
         shared_state_rw_agent,
         subagents_supervisor,
@@ -194,6 +196,10 @@ agent_os = AgentOS(
         # `mcpApps.servers` middleware injects MCP server tools at request
         # time, so the LLM only sees the MCP-provided toolset.
         AGUI(agent=mcp_apps_agent, prefix="/mcp-apps"),  # -> /mcp-apps/agui
+        # No-tools agent for the Open Generative UI cells. The runtime's
+        # `openGenerativeUI` middleware injects the `generateSandboxedUi`
+        # tool the LLM uses to author HTML+CSS for the sandboxed iframe.
+        AGUI(agent=open_gen_ui_agent, prefix="/open-gen-ui"),  # -> /open-gen-ui/agui
     ],
 )
 app = agent_os.get_app()
