@@ -31,8 +31,10 @@ features:
   - prebuilt-popup
   - headless-simple
   - headless-complete
+  - hitl
   - hitl-in-chat
   - hitl-in-app
+  - tool-rendering
   - tool-rendering-reasoning-chain
   - gen-ui-agent
   - frontend-tools
@@ -129,6 +131,20 @@ demos:
     tags:
       - interactivity
     route: /demos/hitl-in-app
+    animated_preview_url:
+  - id: hitl
+    name: In-Chat Human in the Loop (original)
+    description: Original CrewAI HITL demo — kept for backwards-compat
+    tags:
+      - interactivity
+    route: /demos/hitl
+    animated_preview_url:
+  - id: tool-rendering
+    name: Tool Rendering
+    description: Custom per-tool renderers plus a wildcard catch-all for every other tool
+    tags:
+      - agent-capabilities
+    route: /demos/tool-rendering
     animated_preview_url:
   - id: tool-rendering-reasoning-chain
     name: Tool Rendering + Reasoning Chain

@@ -34,6 +34,9 @@ features:
   - headless-simple
   - frontend-tools
   - frontend-tools-async
+  - hitl
+  - hitl-in-chat
+  - hitl-in-app
   - readonly-state-agent-context
   - tool-rendering-default-catchall
   - tool-rendering-custom-catchall
@@ -172,6 +175,41 @@ demos:
     highlight:
       - src/agents/main.py
       - src/app/demos/headless-simple/page.tsx
+      - src/app/api/copilotkit/route.ts
+  - id: hitl
+    name: In-Chat Human in the Loop
+    description: User approves agent actions before execution
+    tags:
+      - interactivity
+    route: /demos/hitl
+    animated_preview_url:
+    highlight:
+      - src/app/demos/hitl/agent.py
+      - src/app/demos/hitl/page.tsx
+      - src/app/api/copilotkit/route.ts
+  - id: hitl-in-chat
+    name: In-Chat Human in the Loop (Time Picker)
+    description: Agent proposes a meeting time; user confirms or adjusts via an in-chat card before the agent proceeds
+    tags:
+      - interactivity
+    route: /demos/hitl-in-chat
+    animated_preview_url:
+    highlight:
+      - src/agents/main.py
+      - src/app/demos/hitl-in-chat/page.tsx
+      - src/app/demos/hitl-in-chat/time-picker-card.tsx
+      - src/app/api/copilotkit/route.ts
+  - id: hitl-in-app
+    name: In-App Human in the Loop (Frontend Tools + async HITL)
+    description: Agent requests approval via useFrontendTool with an async handler; the approval UI pops up as an app-level modal OUTSIDE the chat
+    tags:
+      - interactivity
+    route: /demos/hitl-in-app
+    animated_preview_url:
+    highlight:
+      - src/agents/main.py
+      - src/app/demos/hitl-in-app/page.tsx
+      - src/app/demos/hitl-in-app/approval-dialog.tsx
       - src/app/api/copilotkit/route.ts
   - id: frontend-tools
     name: Frontend Tools (In-App Actions)

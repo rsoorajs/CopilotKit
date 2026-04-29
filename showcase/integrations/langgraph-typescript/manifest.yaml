@@ -27,6 +27,8 @@ managed_platform:
 features:
   - agentic-chat
   - hitl
+  - hitl-in-app
+  - gen-ui-tool-based
   - shared-state-read-write
   - subagents
   - tool-rendering
@@ -75,6 +77,18 @@ demos:
       - interactivity
     route: /demos/hitl
     animated_preview_url:
+  - id: hitl-in-app
+    name: In-App Human in the Loop (Frontend Tools + async HITL)
+    description: Agent requests approval via useFrontendTool with an async handler; the approval UI pops up as an app-level modal OUTSIDE the chat, and a completion callback resolves the pending tool Promise with the user's decision
+    tags:
+      - interactivity
+    route: /demos/hitl-in-app
+    animated_preview_url:
+    highlight:
+      - src/agent/hitl-in-app.ts
+      - src/app/demos/hitl-in-app/page.tsx
+      - src/app/demos/hitl-in-app/approval-dialog.tsx
+      - src/app/api/copilotkit/route.ts
   - id: tool-rendering
     name: Tool Rendering
     description: Backend agent tools rendered as UI components
@@ -85,6 +99,16 @@ demos:
     highlight:
       - src/agent/tool-rendering.ts
       - src/app/demos/tool-rendering/page.tsx
+  - id: gen-ui-tool-based
+    name: Tool-Based Generative UI
+    description: Agent uses tools to trigger UI generation
+    tags:
+      - generative-ui
+    route: /demos/gen-ui-tool-based
+    animated_preview_url:
+    highlight:
+      - src/app/demos/gen-ui-tool-based/page.tsx
+      - src/app/api/copilotkit/route.ts
   - id: gen-ui-agent
     name: Agentic Generative UI
     description: Long-running agent tasks with generated UI
