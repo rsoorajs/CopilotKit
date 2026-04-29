@@ -40,6 +40,7 @@ const agentNames = [
   "hitl-in-app",
   "readonly-state-agent-context",
   "headless-complete",
+  "beautiful-chat",
 ];
 
 // Demos with dedicated FastAPI endpoints (their own state schema, tool

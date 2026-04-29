@@ -53,6 +53,11 @@ features:
   - agentic-chat-reasoning
   - reasoning-default-render
   - tool-rendering-reasoning-chain
+  - mcp-apps
+  - beautiful-chat
+not_supported_features:
+  - gen-ui-interrupt
+  - interrupt-headless
 demos:
   - id: cli-start
     name: CLI Start Command
@@ -400,3 +405,24 @@ demos:
       - src/app/demos/auth/use-demo-auth.ts
       - src/app/demos/auth/demo-token.ts
       - src/app/api/copilotkit-auth/[[...slug]]/route.ts
+  - id: mcp-apps
+    name: MCP Apps
+    description: MCP server-driven UI via activity renderers — the agent calls a tool on a remote MCP server (Excalidraw) and the runtime middleware renders the returned UI resource as a sandboxed iframe inline in the chat
+    tags:
+      - generative-ui
+    route: /demos/mcp-apps
+    animated_preview_url:
+    highlight:
+      - src/agents/mcp_apps_agent.py
+      - src/app/demos/mcp-apps/page.tsx
+      - src/app/api/copilotkit-mcp-apps/route.ts
+  - id: beautiful-chat
+    name: Beautiful Chat
+    description: Polished brand-themed chat surface over the Claude Agent SDK backend with seeded suggestion pills and a glanceable decorative side panel — pure frontend dressing, no extra runtime config
+    tags:
+      - chat-ui
+    route: /demos/beautiful-chat
+    animated_preview_url:
+    highlight:
+      - src/app/demos/beautiful-chat/page.tsx
+      - src/app/api/copilotkit/route.ts

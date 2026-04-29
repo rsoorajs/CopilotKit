@@ -22,6 +22,9 @@ Endpoints:
   POST /subagents                  — supervisor delegates to research /
                                       writing / critique sub-agents,
                                       each its own Anthropic SDK call.
+  POST /mcp-apps                   — MCP Apps demo: no bespoke tools,
+                                      forwards MCP middleware-injected
+                                      tools straight to Claude.
 
 Each dedicated endpoint reuses the shared AG-UI <-> Anthropic streaming
 plumbing in ``agents.agent`` but swaps the system prompt and/or tool set
@@ -45,6 +48,7 @@ from agents.agent import create_app, run_agent
 from agents.agent_config_agent import build_system_prompt, read_properties
 from agents.byoc_hashbrown_agent import BYOC_HASHBROWN_SYSTEM_PROMPT
 from agents.byoc_json_render_agent import BYOC_JSON_RENDER_SYSTEM_PROMPT
+from agents.mcp_apps_agent import run_mcp_apps_agent
 from agents.multimodal_agent import SYSTEM_PROMPT as MULTIMODAL_SYSTEM_PROMPT
 from agents.multimodal_agent import convert_part_for_claude
 from agents.reasoning_agent import run_reasoning_agent
@@ -220,6 +224,33 @@ async def tool_rendering_reasoning_chain_endpoint(
 
     async def event_stream() -> AsyncIterator[str]:
         async for chunk in run_tool_rendering_reasoning_chain_agent(input_data):
+            yield chunk
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
+@app.post("/mcp-apps")
+async def mcp_apps_endpoint(request: Request) -> StreamingResponse:
+    """MCP Apps demo — pass-through tools forwarded by the runtime middleware.
+
+    The dedicated runtime at ``/api/copilotkit-mcp-apps`` configures
+    ``mcpApps: { servers: [...] }``, which auto-applies the MCP Apps
+    middleware to the agent. The middleware appends the remote MCP
+    server's tools to the AG-UI request's ``tools`` array; this endpoint
+    forwards them straight to Claude.
+    """
+    body = await request.json()
+    input_data = RunAgentInput(**body)
+
+    async def event_stream() -> AsyncIterator[str]:
+        async for chunk in run_mcp_apps_agent(input_data):
             yield chunk
 
     return StreamingResponse(

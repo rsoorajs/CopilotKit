@@ -93,6 +93,13 @@
       "minItems": 1,
       "description": "List of supported feature IDs from the feature registry"
     },
+    "not_supported_features": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "List of feature IDs explicitly not supported on this integration. Used to surface stub pages that explain why a feature is unavailable instead of leaving a 404."
+    },
     "demos": {
       "type": "array",
       "items": {
