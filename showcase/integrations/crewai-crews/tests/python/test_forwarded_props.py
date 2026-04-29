@@ -220,6 +220,7 @@ def _stub_agent_server_deps():
         "byoc_hashbrown_agent",
         "byoc_json_render_agent",
         "declarative_gen_ui",
+        "mcp_apps_agent",
         "shared_state_read_write",
         "subagents",
     ):
@@ -230,6 +231,7 @@ def _stub_agent_server_deps():
     setattr(sys.modules["agents.byoc_hashbrown_agent"], "ByocHashbrown", lambda: object())
     setattr(sys.modules["agents.byoc_json_render_agent"], "ByocJsonRender", lambda: object())
     setattr(sys.modules["agents.declarative_gen_ui"], "DeclarativeGenUI", lambda: object())
+    setattr(sys.modules["agents.mcp_apps_agent"], "MCPApps", lambda: object())
     # Sentinel `Flow` instances for the raw-Flow endpoints (set_notes,
     # subagents). Real flows are CrewAI `Flow` subclasses; the stub only
     # needs to be a non-`None` value `add_crewai_flow_fastapi_endpoint`
