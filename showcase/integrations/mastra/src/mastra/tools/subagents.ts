@@ -140,8 +140,8 @@ export const researchAgentTool = createTool({
   inputSchema: z.object({
     task: z.string().describe("The research task / topic to investigate."),
   }),
-  execute: async ({ context }, executionContext) => {
-    const task = context.task ?? "";
+  execute: async (inputData, executionContext) => {
+    const task = inputData.task ?? "";
     const result = await invokeSubAgent(researchSubAgent, task);
     const { delegation, resultText } = buildDelegationPayload(
       "research_agent",
@@ -167,8 +167,8 @@ export const writingAgentTool = createTool({
         "The drafting brief, including any facts the writer should incorporate.",
       ),
   }),
-  execute: async ({ context }, executionContext) => {
-    const task = context.task ?? "";
+  execute: async (inputData, executionContext) => {
+    const task = inputData.task ?? "";
     const result = await invokeSubAgent(writingSubAgent, task);
     const { delegation, resultText } = buildDelegationPayload(
       "writing_agent",
@@ -194,8 +194,8 @@ export const critiqueAgentTool = createTool({
         "The draft to critique, plus any specific critique focus you want.",
       ),
   }),
-  execute: async ({ context }, executionContext) => {
-    const task = context.task ?? "";
+  execute: async (inputData, executionContext) => {
+    const task = inputData.task ?? "";
     const result = await invokeSubAgent(critiqueSubAgent, task);
     const { delegation, resultText } = buildDelegationPayload(
       "critique_agent",
