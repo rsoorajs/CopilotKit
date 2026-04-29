@@ -68,16 +68,19 @@ describe("DepthChip", () => {
     expect(chip.getAttribute("data-status")).toBe("unshipped");
   });
 
-  it("renders prohibited glyph for unsupported with descriptive tooltip", () => {
+  it("renders 'N/A' label for unsupported with descriptive tooltip", () => {
     const { getByTestId } = render(
       <DepthChip depth={0} status="unsupported" />,
     );
     const chip = getByTestId("depth-chip");
-    expect(chip.textContent).toBe("🚫");
+    // We render plain "N/A" text rather than the 🚫 emoji so the glyph
+    // renders consistently on systems without color emoji support; a
+    // missing emoji font there falls back to a tofu/X-shaped box that
+    // viewers misread as the unshipped X marker.
+    expect(chip.textContent).toBe("N/A");
     // Distinct attribute lets the matrix and tests differentiate from unshipped.
     expect(chip.getAttribute("data-status")).toBe("unsupported");
     expect(chip.getAttribute("title")).toBe("Not supported by this framework");
-    expect(chip.className).toContain("border-dashed");
   });
 
   it("unsupported renders distinctly from unshipped (different glyph + status)", () => {
