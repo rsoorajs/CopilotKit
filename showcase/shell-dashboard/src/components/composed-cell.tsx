@@ -37,7 +37,7 @@ function LinksLayer({ ctx }: { ctx: CellContext }) {
   const links = urlsFor(ctx);
 
   return (
-    <div className="flex items-center gap-2.5">
+    <div className="flex items-center justify-center gap-1.5">
       <a
         href={links.demoUrl}
         target="_blank"
@@ -60,7 +60,7 @@ function LinksLayer({ ctx }: { ctx: CellContext }) {
 }
 
 /**
- * Render the Depth layer: DepthChip showing D0-D4 with regression marker.
+ * Render the Depth layer: DepthChip showing D0-D6 with regression marker.
  * Clicking the chip opens a CellDrilldown popup with per-badge dimension details.
  */
 function DepthLayer({
@@ -184,11 +184,11 @@ export function ComposedCell({
   return (
     <div
       data-testid="composed-cell"
-      className={`flex flex-col items-center gap-1 text-[11px] ${isTesting ? "opacity-60" : ""}`}
+      className={`flex flex-col items-center gap-0.5 text-[11px] ${isTesting ? "opacity-60" : ""}`}
     >
       {hasLinks && <LinksLayer ctx={ctx} />}
       {hasDepth && <DepthLayer ctx={ctx} catalogCell={catalogCell} />}
-      {hasHealth && <HealthLayer ctx={ctx} />}
+      {hasHealth && !ctx.demo.command && <HealthLayer ctx={ctx} />}
       {hasDocs && !hasHealth && <DocsLayer ctx={ctx} />}
     </div>
   );

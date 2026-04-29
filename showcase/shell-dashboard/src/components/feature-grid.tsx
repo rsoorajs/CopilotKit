@@ -263,7 +263,7 @@ function CategorySection({
               key={feature.id}
               className="border-t border-[var(--border)] hover:bg-[var(--bg-hover)]"
             >
-              <td className="sticky left-0 z-10 bg-[var(--bg-surface)] px-4 py-2 border-r border-[var(--border)] align-top">
+              <td className="sticky left-0 z-10 bg-[var(--bg-surface)] px-1 py-1 border-r border-[var(--border)] align-top">
                 <div
                   className={
                     testing
@@ -289,7 +289,7 @@ function CategorySection({
                   />
                 ) : (
                   <td
-                    className="sticky left-[260px] z-10 px-3 py-2 border-r-2 border-r-[#c4b5fd] border-l border-[var(--border)] align-top"
+                    className="sticky left-[260px] z-10 px-1 py-1 border-r-2 border-r-[#c4b5fd] border-l border-[var(--border)] align-top"
                     style={{ backgroundColor: "#f5f0ff" }}
                   >
                     <span className="text-[var(--text-muted)] text-[10px]">
@@ -302,7 +302,7 @@ function CategorySection({
                 return (
                   <td
                     key={integration.slug}
-                    className="border-l border-[var(--border)] px-3 py-2 align-top text-center"
+                    className="border-l border-[var(--border)] px-1 py-1 align-top text-center"
                   >
                     {demo ? (
                       renderCell({
@@ -439,7 +439,7 @@ export function FeatureGrid({
   const categoryColSpan = integrations.length + 1 + (showRefDepth ? 1 : 0);
 
   return (
-    <div className="p-8 max-w-[100vw]">
+    <div className="p-8">
       <header className="mb-6">
         <div className="flex items-center gap-3">
           <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
@@ -453,11 +453,11 @@ export function FeatureGrid({
 
       {connection === "error" && <OfflineBanner />}
 
-      <div className="overflow-auto rounded-lg border border-[var(--border)] bg-[var(--bg-surface)]">
+      <div className="rounded-lg border border-[var(--border)] bg-[var(--bg-surface)]" style={{ width: 'fit-content', minWidth: '100%' }}>
         <table className="border-collapse text-sm">
           <thead>
             <tr>
-              <th className="sticky left-0 top-0 z-30 bg-[var(--bg-muted)] px-4 py-3 text-left min-w-[260px] border-b border-[var(--border)]">
+              <th className="sticky left-0 top-0 z-30 bg-[var(--bg-muted)] px-1 py-1.5 text-left min-w-[160px] border-b border-[var(--border)]">
                 <span className="text-[10px] font-medium uppercase tracking-wider text-[var(--text-muted)]">
                   Feature
                 </span>
@@ -498,7 +498,7 @@ export function FeatureGrid({
                 return (
                   <th
                     key={integration.slug}
-                    className="sticky top-0 z-20 bg-[var(--bg-muted)] px-3 py-3 text-left border-b border-l border-[var(--border)] font-normal"
+                    className="sticky top-0 z-20 bg-[var(--bg-muted)] px-1 py-1.5 text-center border-b border-l border-[var(--border)] font-normal"
                     style={{ minWidth: `${minColWidth}px` }}
                   >
                     <div className="text-xs font-semibold text-[var(--text)]">

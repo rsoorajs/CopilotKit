@@ -12,7 +12,7 @@ import { DepthChip } from "@/components/depth-chip";
 export function RefDepthHeader() {
   return (
     <th
-      className="sticky left-[260px] top-0 z-30 px-3 py-3 text-left border-b border-r-2 border-r-[#c4b5fd] border-l border-[var(--border)] font-normal"
+      className="sticky left-[260px] top-0 z-30 px-1.5 py-1.5 text-left border-b border-r-2 border-r-[#c4b5fd] border-l border-[var(--border)] font-normal"
       style={{ backgroundColor: "#f5f0ff" }}
     >
       <div className="text-[9px] font-semibold uppercase tracking-wider text-[#7c3aed] leading-tight">
@@ -29,7 +29,7 @@ export function RefDepthHeader() {
 /* ------------------------------------------------------------------ */
 
 export interface RefDepthCellProps {
-  depth: 0 | 1 | 2 | 3 | 4;
+  depth: 0 | 1 | 2 | 3 | 4 | 5 | 6;
   status: "wired" | "stub" | "unshipped";
   /** When true, chip renders in red regardless of depth. */
   regression?: boolean;
@@ -38,7 +38,7 @@ export interface RefDepthCellProps {
 export function RefDepthCell({ depth, status, regression }: RefDepthCellProps) {
   return (
     <td
-      className="sticky left-[260px] z-10 px-3 py-2 border-r-2 border-r-[#c4b5fd] border-l border-[var(--border)] align-top"
+      className="sticky left-[260px] z-10 px-1.5 py-1 border-r-2 border-r-[#c4b5fd] border-l border-[var(--border)] align-top"
       style={{ backgroundColor: "#f5f0ff" }}
     >
       <DepthChip depth={depth} status={status} regression={regression} />

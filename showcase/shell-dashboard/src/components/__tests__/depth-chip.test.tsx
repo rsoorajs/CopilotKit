@@ -1,5 +1,5 @@
 /**
- * Unit tests for DepthChip — renders correct text + class for D0-D4,
+ * Unit tests for DepthChip — renders correct text + class for D0-D6,
  * unshipped, and regression states.
  */
 import { describe, it, expect } from "vitest";
@@ -7,11 +7,14 @@ import { render } from "@testing-library/react";
 import { DepthChip } from "../depth-chip";
 
 describe("DepthChip", () => {
-  it.each([0, 1, 2, 3, 4])(
+  it.each([0, 1, 2, 3, 4, 5, 6])(
     "renders D%i for depth=%i with wired status",
     (depth) => {
       const { getByTestId } = render(
-        <DepthChip depth={depth as 0 | 1 | 2 | 3 | 4} status="wired" />,
+        <DepthChip
+          depth={depth as 0 | 1 | 2 | 3 | 4 | 5 | 6}
+          status="wired"
+        />,
       );
       const chip = getByTestId("depth-chip");
       expect(chip.textContent).toBe(`D${depth}`);
@@ -46,6 +49,18 @@ describe("DepthChip", () => {
     const { getByTestId } = render(<DepthChip depth={4} status="wired" />);
     const chip = getByTestId("depth-chip");
     expect(chip.className).toContain("accent");
+  });
+
+  it("renders D5 with emerald background class", () => {
+    const { getByTestId } = render(<DepthChip depth={5} status="wired" />);
+    const chip = getByTestId("depth-chip");
+    expect(chip.className).toContain("emerald");
+  });
+
+  it("renders D6 with emerald background class", () => {
+    const { getByTestId } = render(<DepthChip depth={6} status="wired" />);
+    const chip = getByTestId("depth-chip");
+    expect(chip.className).toContain("emerald");
   });
 
   it("renders '--' for unshipped status with dashed border", () => {

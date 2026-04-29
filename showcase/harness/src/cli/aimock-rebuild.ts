@@ -31,7 +31,9 @@ function findAimockSource(fromPath?: string): string {
       throw new Error(`Aimock source not found at: ${resolved}`);
     }
     if (!fs.existsSync(path.join(resolved, "package.json"))) {
-      throw new Error(`No package.json found at: ${resolved} — not an aimock checkout`);
+      throw new Error(
+        `No package.json found at: ${resolved} — not an aimock checkout`,
+      );
     }
     return resolved;
   }

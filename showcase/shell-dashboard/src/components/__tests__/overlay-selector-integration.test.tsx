@@ -521,10 +521,8 @@ describe("Overlay selector integration — real UI components", () => {
     expect(getByTestId("depth-layer")).toBeInTheDocument();
     expect(getByTestId("depth-chip")).toBeInTheDocument();
 
-    // No health badges
-    expect(queryByText("E2E")).not.toBeInTheDocument();
-    expect(queryByText("D5")).not.toBeInTheDocument();
-    expect(queryByText("D6")).not.toBeInTheDocument();
+    // No health badges (health overlay not active)
+    expect(queryByTestId("health-layer")).not.toBeInTheDocument();
 
     // No docs
     expect(queryByText("docs-og")).not.toBeInTheDocument();
@@ -572,6 +570,6 @@ describe("Overlay selector integration — real UI components", () => {
     // health+agent+e2e+chat all green, deriveDepth should yield D4
     const depthAttr = chip.getAttribute("data-depth");
     expect(depthAttr).toBeTruthy();
-    expect(chip.textContent).toMatch(/^D[0-4]$/);
+    expect(chip.textContent).toMatch(/^D[0-6]$/);
   });
 });
