@@ -58,6 +58,11 @@ features:
   - open-gen-ui
   - open-gen-ui-advanced
   - voice
+  - gen-ui-tool-based
+  - hitl
+  - hitl-in-chat-booking
+  - mcp-apps
+  - tool-rendering-reasoning-chain
 demos:
   - id: cli-start
     name: CLI Start Command
@@ -437,3 +442,59 @@ demos:
       - src/app/demos/voice/page.tsx
       - src/app/demos/voice/sample-audio-button.tsx
       - src/app/api/copilotkit-voice/[[...slug]]/route.ts
+  - id: gen-ui-tool-based
+    name: Tool-Based Generative UI
+    description: Agent uses a frontend tool to trigger rich generative UI inline in the chat
+    tags:
+      - generative-ui
+    route: /demos/gen-ui-tool-based
+    animated_preview_url:
+    highlight:
+      - src/app/demos/gen-ui-tool-based/page.tsx
+      - src/app/api/copilotkit/route.ts
+  - id: hitl
+    name: Human in the Loop (Step Selection)
+    description: Step-selection HITL surface rendered inline via `useHumanInTheLoop` (the LangGraph-specific `useLangGraphInterrupt` branch is a no-op on Mastra)
+    tags:
+      - interactivity
+    route: /demos/hitl
+    animated_preview_url:
+    highlight:
+      - src/app/demos/hitl/page.tsx
+      - src/app/api/copilotkit/route.ts
+  - id: hitl-in-chat-booking
+    name: In-Chat HITL (Booking)
+    description: Time-picker card rendered inline via useHumanInTheLoop for a booking flow (alias of hitl-in-chat)
+    tags:
+      - interactivity
+    route: /demos/hitl-in-chat
+    animated_preview_url:
+    highlight:
+      - src/app/demos/hitl-in-chat/page.tsx
+      - src/app/demos/hitl-in-chat/time-picker-card.tsx
+      - src/app/api/copilotkit/route.ts
+  - id: mcp-apps
+    name: MCP Apps
+    description: MCP server-driven UI rendered inline via the runtime's mcpApps config and the built-in activity renderer
+    tags:
+      - generative-ui
+    route: /demos/mcp-apps
+    animated_preview_url:
+    highlight:
+      - src/mastra/agents/index.ts
+      - src/app/demos/mcp-apps/page.tsx
+      - src/app/api/copilotkit-mcp-apps/route.ts
+  - id: tool-rendering-reasoning-chain
+    name: Tool Rendering + Reasoning Chain
+    description: Sequential tool calls rendered with per-tool components plus a reasoning chain rendered inline via a custom reasoningMessage slot
+    tags:
+      - generative-ui
+    route: /demos/tool-rendering-reasoning-chain
+    animated_preview_url:
+    highlight:
+      - src/app/demos/tool-rendering-reasoning-chain/page.tsx
+      - src/app/demos/tool-rendering-reasoning-chain/reasoning-block.tsx
+      - src/app/demos/tool-rendering-reasoning-chain/weather-card.tsx
+      - src/app/demos/tool-rendering-reasoning-chain/flight-list-card.tsx
+      - src/app/demos/tool-rendering-reasoning-chain/custom-catchall-renderer.tsx
+      - src/app/api/copilotkit/route.ts

@@ -6,6 +6,7 @@ import {
   sharedStateReadWriteAgent,
   subagentsSupervisorAgent,
   multimodalAgent,
+  mcpAppsAgent,
 } from "./agents";
 import { ConsoleLogger, LogLevel } from "@mastra/core/logger";
 
@@ -18,6 +19,7 @@ export const mastra = new Mastra({
     sharedStateReadWriteAgent,
     subagentsSupervisorAgent,
     multimodalAgent,
+    mcpAppsAgent,
   },
   storage: new LibSQLStore({
     id: "mastra-storage",

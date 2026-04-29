@@ -271,6 +271,48 @@ If a delegation's \`status\` field is \`"failed"\`, treat it as a real error: do
 // @endregion[subagents-supervisor]
 
 /**
+ * Lightweight Mastra agent backing the MCP Apps demo.
+ *
+ * Defines no bespoke tools — the CopilotKit runtime is wired with
+ * `mcpApps: { servers: [...] }` (see
+ * `src/app/api/copilotkit-mcp-apps/route.ts`). The runtime auto-applies the
+ * MCP Apps middleware, which injects the remote MCP server's tools into
+ * each request and emits the activity events the built-in
+ * `MCPAppsActivityRenderer` renders in chat as sandboxed iframes.
+ */
+export const mcpAppsAgent = new Agent({
+  id: "mcp-apps-agent",
+  name: "MCP Apps Agent",
+  model: openai("gpt-4o-mini"),
+  instructions: `You draw simple diagrams in Excalidraw via the MCP tool.
+
+SPEED MATTERS. Produce a correct-enough diagram fast; do not optimize for polish. Target: one tool call, done in seconds.
+
+When the user asks for a diagram:
+1. Call \`create_view\` ONCE with 3-5 elements total: shapes + arrows + an optional title text.
+2. Use straightforward shapes (rectangle, ellipse, diamond) with plain \`label\` fields (\`{"text": "...", "fontSize": 18}\`) on them.
+3. Connect with arrows. Endpoints can be element centers or simple coordinates.
+4. Include ONE \`cameraUpdate\` at the END of the elements array that frames the whole diagram (600x450 or 800x600).
+5. Reply with ONE short sentence describing what you drew.
+
+Every element needs a unique string \`id\` (e.g. \`"b1"\`, \`"a1"\`, \`"title"\`). Standard sizes: rectangles 160x70, ellipses/diamonds 120x80, 40-80px gap between shapes.
+
+Do NOT call \`read_me\`, do NOT iterate, do NOT make multiple calls. Ship on the first shot.`,
+  memory: new Memory({
+    storage: new LibSQLStore({
+      id: "mcp-apps-agent-memory",
+      url: WORKING_MEMORY_DB_URL,
+    }),
+    options: {
+      workingMemory: {
+        enabled: true,
+        schema: AgentState,
+      },
+    },
+  }),
+});
+
+/**
  * Vision-capable Mastra agent backing the Multimodal Attachments demo.
  *
  * gpt-4o supports image and PDF attachments in the messages array. The

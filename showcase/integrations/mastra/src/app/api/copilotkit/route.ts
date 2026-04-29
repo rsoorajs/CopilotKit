@@ -71,6 +71,7 @@ export const demoAgentNames = [
   "declarative-gen-ui",
   "a2ui-fixed-schema",
   "headless-complete",
+  "tool-rendering-reasoning-chain",
 ] as const;
 
 // Per-demo override map: any demo alias listed here resolves to a dedicated
@@ -99,7 +100,8 @@ export type LocalMastraAgentName =
   | "headlessCompleteAgent"
   | "sharedStateReadWriteAgent"
   | "subagentsSupervisorAgent"
-  | "multimodalAgent";
+  | "multimodalAgent"
+  | "mcpAppsAgent";
 
 export type BuiltAgents = Record<
   DemoAgentName | LocalMastraAgentName,
@@ -157,6 +159,11 @@ export function buildAgents(
       "multimodalAgent missing from Mastra config — required for /demos/multimodal",
     );
   }
+  if (!baseLocalAgents.mcpAppsAgent) {
+    throw new Error(
+      "mcpAppsAgent missing from Mastra config — required for /demos/mcp-apps",
+    );
+  }
   const headlessCompleteAgentInstance = getLocalAgent({
     mastra: mastraInstance,
     agentId: "headlessCompleteAgent",
@@ -191,12 +198,21 @@ export function buildAgents(
   if (!multimodalAgentInstance) {
     throw new Error("getLocalAgent returned null for multimodalAgent");
   }
+  const mcpAppsAgentInstance = getLocalAgent({
+    mastra: mastraInstance,
+    agentId: "mcpAppsAgent",
+    resourceId: "mastra-mcpAppsAgent",
+  });
+  if (!mcpAppsAgentInstance) {
+    throw new Error("getLocalAgent returned null for mcpAppsAgent");
+  }
   const localAgents = {
     weatherAgent: baseLocalAgents.weatherAgent,
     headlessCompleteAgent: headlessCompleteAgentInstance,
     sharedStateReadWriteAgent: sharedStateRWAgentInstance,
     subagentsSupervisorAgent: subagentsSupervisorAgentInstance,
     multimodalAgent: multimodalAgentInstance,
+    mcpAppsAgent: mcpAppsAgentInstance,
   };
 
   // Guard against silent shadowing: if Mastra ever registers a local agent
@@ -241,6 +257,7 @@ export function buildAgents(
     "mastra-subagentsSupervisorAgent",
   );
   resourceIdByAgent.set("multimodalAgent", "mastra-multimodalAgent");
+  resourceIdByAgent.set("mcpAppsAgent", "mastra-mcpAppsAgent");
 
   const demoAliases: Record<
     string,
