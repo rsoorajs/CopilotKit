@@ -56,6 +56,7 @@ const dedicatedAgentPaths: Record<string, string> = {
   "agentic-chat-reasoning": "/reasoning",
   "reasoning-default-render": "/reasoning",
   "tool-rendering-reasoning-chain": "/tool-rendering-reasoning-chain",
+  "hitl-in-chat": "/hitl-in-chat",
 };
 
 const agents: Record<string, AbstractAgent> = {};
