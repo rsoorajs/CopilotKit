@@ -54,7 +54,7 @@
 # max_concurrency × 3 endpoints = 18 inflight.
 kind: smoke
 id: smoke
-schedule: "*/15 * * * *"
+schedule: "*/5 * * * *"
 timeout_ms: 30000
 max_concurrency: 6
 discovery:

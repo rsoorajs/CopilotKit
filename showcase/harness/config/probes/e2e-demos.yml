@@ -28,47 +28,15 @@
 # row via `keyFor("e2e", slug, featureId)` which formats as
 # `e2e:<slug>/<featureId>` — the driver's side-emit keys match.
 #
-# ── Cadence: every 6 hours ────────────────────────────────────────────
+# ── Cadence: hourly ────────────────────────────────────────────────────
 #
-# Chromium cost scales as demos × services per tick. The 17 framework
-# packages each carry ~32 demos on average; the largest single service
-# carries ~38 demos and is the wall-clock-dominating service under
-# bounded concurrency. Aggregate page loads per tick are
-# 17 × ~32 ≈ 544 typical (~32 average per service, capped by the
-# ~38-demo largest).
+# All showcase integrations are aimock-backed — zero LLM cost per tick.
+# The driver's goto + selector check takes 2-3 min typical wall-clock
+# (worst case 19 min for the largest 38-demo service, bounded by the
+# 20-min outer cap below). Hourly gives continuous structural coverage.
 #
-# Wall-clock per tick is NOT aggregate-divided-by-concurrency: with
-# `max_concurrency: 6` the wall-clock floor is set by the SLOWEST
-# single service's serial per-demo fan-out (the driver visits each
-# demo sequentially within a single service invocation).
-#
-# Per-demo wall-clock is bounded by `pageTimeoutMs` (30s) — the
-# driver's runDemo() shares one 30s budget across goto + all 5
-# fallback selector waits, so a single demo cannot exceed 30s
-# regardless of how many selectors it tries (enforced via a single
-# wall-clock deadline in `drivers/e2e-readiness.ts`'s runDemo()). For
-# the largest 38-demo service the
-# absolute worst case is therefore ~38 × 30s ≈ ~19 min — bounded by
-# the 20-min outer cap below (which the driver's internal hard-cap is
-# now aligned to via the orchestrator's `E2E_DEMOS_TIMEOUT_MS`
-# threading; see the `timeout_ms` block).
-#
-# Typical pages finish in ~3-5s so the realistic wall-clock is ~2-3
-# minutes (the slowest single service). Smaller services interleave
-# in parallel slots and don't extend wall-clock past the slowest, so
-# the bound holds regardless of service count.
-# Every 6 hours gives us:
-#   - 4 ticks/day: catches regressions within a half-deploy window
-#     while leaving ~90% of the scheduler's wall time to sibling
-#     probes.
-#   - Bounded LLM and bandwidth cost: the driver's ready-selector
-#     check does NOT issue a chat turn (unlike e2e-smoke) so there is
-#     no per-demo LLM spend, but each goto still pulls the Next.js
-#     bundle and chromium heap grows with page count.
-#
-# Speed up (e.g. */2h, */1h) ONLY after observing the per-tick memory
-# headroom + any downstream cost (LLM, bandwidth, Railway compute) on
-# the production orchestrator for a full cycle.
+# Cron string: `10 * * * *` (hourly at :10, offset from D5's :05/:20
+# cadence to avoid Chromium contention).
 #
 # ── timeout_ms: 1_200_000 (20 min) ─────────────────────────────────────
 #
@@ -128,7 +96,7 @@
 # new infra service added there lands here too during review.
 kind: e2e_demos
 id: e2e-demos
-schedule: "10 */6 * * *"
+schedule: "10 * * * *"
 timeout_ms: 1200000
 max_concurrency: 6
 discovery:

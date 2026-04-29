@@ -38,7 +38,7 @@
 #   - showcase-shell-dashboard / -docs / -dojo (auxiliary UI services)
 kind: e2e_smoke
 id: e2e-smoke
-schedule: "*/30 * * * *"
+schedule: "*/15 * * * *"
 timeout_ms: 180000
 max_concurrency: 2
 discovery:
