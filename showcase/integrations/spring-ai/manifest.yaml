@@ -61,6 +61,11 @@ features:
   - tool-rendering
   - mcp-apps
   - byoc-hashbrown
+not_supported_features:
+  - gen-ui-interrupt
+  - interrupt-headless
+  - shared-state-streaming
+  - byoc-json-render
 demos:
   - id: agentic-chat
     name: Agentic Chat
