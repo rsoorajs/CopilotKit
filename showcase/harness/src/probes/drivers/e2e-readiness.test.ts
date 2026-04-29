@@ -1573,9 +1573,7 @@ describe("e2e-demos driver", () => {
     const sig = result.signal as E2eDemosAggregateSignal;
     expect(sig.errorDesc).toBe("registry-missing");
     expect(writes).toHaveLength(1);
-    expect(writes[0]?.key).toBe(
-      "e2e:unknown-framework/__missing-registry",
-    );
+    expect(writes[0]?.key).toBe("e2e:unknown-framework/__missing-registry");
     expect(writes[0]?.state).toBe("red");
   });
 
