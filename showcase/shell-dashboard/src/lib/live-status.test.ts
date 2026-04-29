@@ -4,9 +4,8 @@ import {
   mergeRowsToMap,
   resolveCell,
   upsertByKey,
-  type LiveStatusMap,
-  type StatusRow,
 } from "./live-status";
+import type { LiveStatusMap, StatusRow } from "./live-status";
 import { formatTs } from "./format-ts";
 
 function row(
@@ -366,7 +365,9 @@ describe("formatTooltip behaviour (via resolveCell)", () => {
       }),
     ]);
     const c = resolveCell(live, "a", "b");
-    expect(c.e2e.tooltip).toContain(`last seen @ ${formatTs("2026-04-22T08:00:00Z")}`);
+    expect(c.e2e.tooltip).toContain(
+      `last seen @ ${formatTs("2026-04-22T08:00:00Z")}`,
+    );
     expect(c.e2e.tooltip).not.toContain("last pass");
   });
 
