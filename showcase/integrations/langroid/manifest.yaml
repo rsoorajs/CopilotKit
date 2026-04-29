@@ -45,6 +45,11 @@ features:
   - auth
   - headless-complete
   - agent-config
+  - tool-rendering-default-catchall
+  - tool-rendering-custom-catchall
+  - tool-rendering-reasoning-chain
+  - open-gen-ui
+  - open-gen-ui-advanced
 demos:
   - id: cli-start
     name: CLI Start Command
@@ -334,3 +339,63 @@ demos:
       - src/app/demos/agent-config/config-card.tsx
       - src/app/demos/agent-config/use-agent-config.ts
       - src/app/api/copilotkit-agent-config/route.ts
+  - id: tool-rendering-default-catchall
+    name: Tool Rendering (Default Catch-all)
+    description: Out-of-the-box tool rendering — backend defines the tools; the frontend adds zero custom renderers and relies on CopilotKit's built-in default UI
+    tags:
+      - generative-ui
+    route: /demos/tool-rendering-default-catchall
+    animated_preview_url:
+    highlight:
+      - src/app/demos/tool-rendering-default-catchall/page.tsx
+      - src/agents/agent.py
+      - src/app/api/copilotkit/route.ts
+  - id: tool-rendering-custom-catchall
+    name: Tool Rendering (Custom Catch-all)
+    description: Single branded wildcard renderer via useDefaultRenderTool — the same app-designed card paints every tool call
+    tags:
+      - generative-ui
+    route: /demos/tool-rendering-custom-catchall
+    animated_preview_url:
+    highlight:
+      - src/app/demos/tool-rendering-custom-catchall/page.tsx
+      - src/app/demos/tool-rendering-custom-catchall/custom-catchall-renderer.tsx
+      - src/agents/agent.py
+      - src/app/api/copilotkit/route.ts
+  - id: tool-rendering-reasoning-chain
+    name: Tool Rendering + Reasoning Chain (testing)
+    description: Sequential tool calls with reasoning tokens rendered side-by-side. NOTE — Langroid does not yet emit native reasoning AG-UI events; the slot wires up only when reasoning content arrives over the wire
+    tags:
+      - generative-ui
+    route: /demos/tool-rendering-reasoning-chain
+    animated_preview_url:
+    highlight:
+      - src/app/demos/tool-rendering-reasoning-chain/page.tsx
+      - src/app/demos/tool-rendering-reasoning-chain/weather-card.tsx
+      - src/app/demos/tool-rendering-reasoning-chain/flight-list-card.tsx
+      - src/agents/agent.py
+      - src/app/api/copilotkit/route.ts
+  - id: open-gen-ui
+    name: Fully Open-Ended Generative UI
+    description: Agent generates UI from an arbitrary component library via the runtime's openGenerativeUI middleware
+    tags:
+      - generative-ui
+    route: /demos/open-gen-ui
+    animated_preview_url:
+    highlight:
+      - src/app/demos/open-gen-ui/page.tsx
+      - src/agents/agent.py
+      - src/app/api/copilotkit-ogui/route.ts
+  - id: open-gen-ui-advanced
+    name: "Open-Ended Gen UI (Advanced: with frontend function calling)"
+    description: Agent-authored UI that can invoke frontend sandbox functions from inside the iframe
+    tags:
+      - generative-ui
+    route: /demos/open-gen-ui-advanced
+    animated_preview_url:
+    highlight:
+      - src/app/demos/open-gen-ui-advanced/page.tsx
+      - src/app/demos/open-gen-ui-advanced/sandbox-functions.ts
+      - src/app/demos/open-gen-ui-advanced/suggestions.ts
+      - src/agents/agent.py
+      - src/app/api/copilotkit-ogui/route.ts
