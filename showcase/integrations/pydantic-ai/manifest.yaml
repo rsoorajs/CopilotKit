@@ -51,6 +51,13 @@ features:
   - voice
   - agent-config
   - auth
+  - agentic-chat-reasoning
+  - reasoning-default-render
+  - tool-rendering-reasoning-chain
+  - mcp-apps
+not_supported_features:
+  - gen-ui-interrupt
+  - interrupt-headless
 demos:
   - id: cli-start
     name: CLI Start Command
@@ -437,3 +444,55 @@ demos:
       - src/app/demos/auth/auth-banner.tsx
       - src/app/demos/auth/use-demo-auth.ts
       - src/app/api/copilotkit-auth/[[...slug]]/route.ts
+  - id: agentic-chat-reasoning
+    name: Agentic Chat (Reasoning)
+    description: Reasoning chain rendered via a custom amber slot — backed by a gpt-5 reasoning model whose Responses-API reasoning items the AG-UI bridge translates to REASONING events
+    tags:
+      - chat-ui
+    route: /demos/agentic-chat-reasoning
+    animated_preview_url:
+    highlight:
+      - src/agents/reasoning_agent.py
+      - src/app/demos/agentic-chat-reasoning/page.tsx
+      - src/app/demos/agentic-chat-reasoning/reasoning-block.tsx
+      - src/app/demos/agentic-chat-reasoning/README.md
+      - src/app/api/copilotkit/route.ts
+  - id: reasoning-default-render
+    name: Reasoning (Default Render)
+    description: Built-in CopilotChatReasoningMessage card rendering REASONING events emitted by a gpt-5 reasoning agent — zero-config frontend
+    tags:
+      - chat-ui
+    route: /demos/reasoning-default-render
+    animated_preview_url:
+    highlight:
+      - src/agents/reasoning_agent.py
+      - src/app/demos/reasoning-default-render/page.tsx
+      - src/app/demos/reasoning-default-render/README.md
+      - src/app/api/copilotkit/route.ts
+  - id: tool-rendering-reasoning-chain
+    name: Tool Rendering (Reasoning Chain)
+    description: Reasoning + sequential tool calls (get_weather, search_flights, get_stock_price, roll_dice) in a single cell — gpt-5 reasoning model emits REASONING events between each tool call
+    tags:
+      - generative-ui
+    route: /demos/tool-rendering-reasoning-chain
+    animated_preview_url:
+    highlight:
+      - src/agents/tool_rendering_reasoning_chain_agent.py
+      - src/app/demos/tool-rendering-reasoning-chain/page.tsx
+      - src/app/demos/tool-rendering-reasoning-chain/reasoning-block.tsx
+      - src/app/demos/tool-rendering-reasoning-chain/weather-card.tsx
+      - src/app/demos/tool-rendering-reasoning-chain/flight-list-card.tsx
+      - src/app/demos/tool-rendering-reasoning-chain/custom-catchall-renderer.tsx
+      - src/app/demos/tool-rendering-reasoning-chain/README.md
+      - src/app/api/copilotkit/route.ts
+  - id: mcp-apps
+    name: MCP Apps
+    description: No-tools agent + runtime mcpApps middleware pointing at the public Excalidraw MCP server — the built-in MCPAppsActivityRenderer paints sandboxed iframes inline
+    tags:
+      - generative-ui
+    route: /demos/mcp-apps
+    animated_preview_url:
+    highlight:
+      - src/agents/mcp_apps_agent.py
+      - src/app/demos/mcp-apps/page.tsx
+      - src/app/api/copilotkit-mcp-apps/route.ts
