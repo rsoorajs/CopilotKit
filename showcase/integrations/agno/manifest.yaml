@@ -57,6 +57,8 @@ features:
   - headless-complete
   - auth
   - beautiful-chat
+  - a2ui-fixed-schema
+  - declarative-gen-ui
 not_supported_features:
   - gen-ui-interrupt
   - interrupt-headless
@@ -491,6 +493,38 @@ demos:
       - src/app/demos/byoc-json-render/charts/bar-chart.tsx
       - src/app/demos/byoc-json-render/charts/pie-chart.tsx
       - src/app/api/copilotkit/route.ts
+  - id: declarative-gen-ui
+    name: "Declarative Generative UI (A2UI Dynamic)"
+    description: Agent dynamically composes UI per turn from a registered frontend catalog — secondary LLM call inside the backend `generate_a2ui` tool emits an a2ui_operations container that the A2UI middleware forwards to the catalog renderer
+    tags:
+      - generative-ui
+      - a2ui
+    route: /demos/declarative-gen-ui
+    animated_preview_url:
+    highlight:
+      - src/agents/a2ui_dynamic_agent.py
+      - src/app/demos/declarative-gen-ui/page.tsx
+      - src/app/demos/declarative-gen-ui/a2ui/catalog.ts
+      - src/app/demos/declarative-gen-ui/a2ui/definitions.ts
+      - src/app/demos/declarative-gen-ui/a2ui/renderers.tsx
+      - src/app/api/copilotkit-declarative-gen-ui/route.ts
+  - id: a2ui-fixed-schema
+    name: "A2UI Fixed Schema"
+    description: Schema is authored ahead of time as JSON; the agent only streams data into the data model. `display_flight` emits an a2ui_operations container directly with no secondary LLM call
+    tags:
+      - generative-ui
+      - a2ui
+    route: /demos/a2ui-fixed-schema
+    animated_preview_url:
+    highlight:
+      - src/agents/a2ui_fixed_agent.py
+      - src/agents/a2ui_schemas/flight_schema.json
+      - src/agents/a2ui_schemas/booked_schema.json
+      - src/app/demos/a2ui-fixed-schema/page.tsx
+      - src/app/demos/a2ui-fixed-schema/a2ui/catalog.ts
+      - src/app/demos/a2ui-fixed-schema/a2ui/definitions.ts
+      - src/app/demos/a2ui-fixed-schema/a2ui/renderers.tsx
+      - src/app/api/copilotkit-a2ui-fixed-schema/route.ts
 managed_platform:
   name: Agent OS
   url: https://os.agno.com

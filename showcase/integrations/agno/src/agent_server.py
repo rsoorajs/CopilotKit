@@ -42,6 +42,8 @@ from fastapi.responses import StreamingResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
+from agents.a2ui_dynamic_agent import agent as a2ui_dynamic_agent
+from agents.a2ui_fixed_agent import agent as a2ui_fixed_agent
 from agents.agent_config_agent import (
     agent as agent_config_agent,
     build_agent as build_agent_config_agent,
@@ -277,6 +279,8 @@ def _attach_agent_config_route(app: FastAPI, prefix: str) -> None:
 agent_os = AgentOS(
     agents=[
         main_agent,
+        a2ui_dynamic_agent,
+        a2ui_fixed_agent,
         agent_config_agent,
         byoc_hashbrown_agent,
         byoc_json_render_agent,
@@ -306,6 +310,15 @@ agent_os = AgentOS(
         # BYOC: json-render — agent emits a json-render spec the frontend
         # renderer mounts against a Zod-validated catalog.
         AGUI(agent=byoc_json_render_agent, prefix="/byoc-json-render"),
+        # A2UI dynamic schema — agent owns `generate_a2ui` which calls a
+        # secondary OpenAI client bound to `render_a2ui` and emits an
+        # `a2ui_operations` container the runtime A2UI middleware forwards
+        # to the frontend renderer.
+        AGUI(agent=a2ui_dynamic_agent, prefix="/declarative-gen-ui"),
+        # A2UI fixed schema — agent's `display_flight` tool emits an
+        # `a2ui_operations` container directly (no secondary LLM) bound to
+        # the pre-authored `flight_schema.json`.
+        AGUI(agent=a2ui_fixed_agent, prefix="/a2ui-fixed-schema"),
     ],
 )
 app = agent_os.get_app()

@@ -89,6 +89,31 @@ See `manifest.yaml` for the authoritative list.
   + `byoc_json_render_agent.py` whose system prompt steers the LLM toward
   the json-render flat element-tree spec (`{ root, elements }`).
 
+### Sixth pass (A2UI fixed schema)
+
+- `a2ui-fixed-schema` — dedicated `/api/copilotkit-a2ui-fixed-schema`
+  runtime with `injectA2UITool: false`. New `a2ui_fixed_agent.py`
+  mounted at `/a2ui-fixed-schema/agui` ships
+  `flight_schema.json` + `booked_schema.json` and a single
+  `display_flight` tool that emits an `a2ui_operations` container
+  *directly* — no secondary LLM call — so the LLM only fills in data
+  (origin/destination/airline/price). `booked_schema.json` is shipped
+  as a sibling for when the SDK exposes per-button action handlers
+  for fixed-schema surfaces.
+
+### Seventh pass (A2UI dynamic schema)
+
+- `declarative-gen-ui` — dedicated `/api/copilotkit-declarative-gen-ui`
+  runtime with `injectA2UITool: false`. New `a2ui_dynamic_agent.py`
+  mounted at `/declarative-gen-ui/agui` owns its own `generate_a2ui`
+  tool. Unlike the main agent's hardcoded-catalog `generate_a2ui`, this
+  agent's tool reads the registered client catalog from
+  `run_context.session_state["copilotkit"]["context"]` and feeds it to
+  the secondary OpenAI client, so the rendered components stay in sync
+  with whatever catalog the frontend registers via `<CopilotKit
+  a2ui={{ catalog }}>`. See `src/app/demos/declarative-gen-ui/README.md`
+  for the differences vs. the main-agent path.
+
 ### Third pass (state + multi-agent recovery)
 
 - `shared-state-read-write` — bidirectional shared state with the UI
@@ -153,10 +178,6 @@ follow-up parity pass rather than faked in.
   an Agno agent
 - `agent-config` — dedicated `/api/copilotkit-agent-config` runtime with typed
   config forwarding; needs Agno dynamic-system-prompt wiring per-request
-- `declarative-gen-ui` (A2UI dynamic) — dedicated runtime + frontend A2UI
-  catalog; the existing Agno `main` agent already exposes `generate_a2ui`,
-  but the declarative-gen-ui cell expects a different runtime surface
-- `a2ui-fixed-schema` — dedicated runtime + fixed-schema catalog
 - `mcp-apps` — requires Agno MCP client/server wiring; Agno has
   `agno.tools.mcp.MCPTools` but integration with the AGUI adapter's
   activity-message surface wasn't verified
