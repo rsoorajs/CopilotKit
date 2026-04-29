@@ -1,3 +1,6 @@
 # Agent implementation for Tool-Based Generative UI
-# The LlamaIndex agent is defined in src/agents/agent.py
-# All demos share a single agent_router via get_ag_ui_workflow_router()
+# Defined in src/agents/gen_ui_tool_based_agent.py
+# Mounted at /gen-ui-tool-based on the agent_server.
+# The frontend registers `render_bar_chart` and `render_pie_chart` via
+# `useComponent`; AG-UI forwards those tool definitions to the agent at
+# request time.
