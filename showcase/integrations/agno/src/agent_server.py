@@ -46,6 +46,8 @@ from agents.agent_config_agent import (
     agent as agent_config_agent,
     build_agent as build_agent_config_agent,
 )
+from agents.byoc_hashbrown_agent import agent as byoc_hashbrown_agent
+from agents.byoc_json_render_agent import agent as byoc_json_render_agent
 from agents.main import agent as main_agent
 from agents.mcp_apps_agent import agent as mcp_apps_agent
 from agents.multimodal_agent import agent as multimodal_agent
@@ -276,6 +278,8 @@ agent_os = AgentOS(
     agents=[
         main_agent,
         agent_config_agent,
+        byoc_hashbrown_agent,
+        byoc_json_render_agent,
         mcp_apps_agent,
         multimodal_agent,
         open_gen_ui_agent,
@@ -296,6 +300,12 @@ agent_os = AgentOS(
         AGUI(agent=open_gen_ui_agent, prefix="/open-gen-ui"),  # -> /open-gen-ui/agui
         # Vision-capable agent (gpt-4o) for the Multimodal Attachments cell.
         AGUI(agent=multimodal_agent, prefix="/multimodal"),  # -> /multimodal/agui
+        # BYOC: hashbrown — agent emits a hashbrown UI-kit envelope as a single
+        # JSON object that the frontend renderer parses progressively.
+        AGUI(agent=byoc_hashbrown_agent, prefix="/byoc-hashbrown"),
+        # BYOC: json-render — agent emits a json-render spec the frontend
+        # renderer mounts against a Zod-validated catalog.
+        AGUI(agent=byoc_json_render_agent, prefix="/byoc-json-render"),
     ],
 )
 app = agent_os.get_app()
