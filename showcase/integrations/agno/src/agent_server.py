@@ -43,6 +43,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
 from agents.main import agent as main_agent
+from agents.mcp_apps_agent import agent as mcp_apps_agent
 from agents.reasoning_agent import agent as reasoning_agent
 from agents.shared_state_read_write import agent as shared_state_rw_agent
 from agents.subagents import agent as subagents_supervisor
@@ -181,6 +182,7 @@ def _attach_state_aware_route(
 agent_os = AgentOS(
     agents=[
         main_agent,
+        mcp_apps_agent,
         reasoning_agent,
         shared_state_rw_agent,
         subagents_supervisor,
@@ -188,6 +190,10 @@ agent_os = AgentOS(
     interfaces=[
         AGUI(agent=main_agent),  # default prefix "" -> /agui
         AGUI(agent=reasoning_agent, prefix="/reasoning"),  # -> /reasoning/agui
+        # No-tools agent for the MCP Apps cell. The CopilotKit runtime's
+        # `mcpApps.servers` middleware injects MCP server tools at request
+        # time, so the LLM only sees the MCP-provided toolset.
+        AGUI(agent=mcp_apps_agent, prefix="/mcp-apps"),  # -> /mcp-apps/agui
     ],
 )
 app = agent_os.get_app()
