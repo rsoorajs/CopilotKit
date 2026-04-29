@@ -18,6 +18,7 @@ import React from "react";
 import Link from "next/link";
 import { useFramework } from "./framework-provider";
 import { StoredFrameworkHighlight } from "./stored-framework-highlight";
+import { FrameworkLogo } from "./icons/framework-icons";
 import { FRAMEWORK_CATEGORY_ORDER } from "@/lib/framework-categories";
 import {
   getCategoryLabel,
@@ -70,12 +71,12 @@ function FrameworkPicker({
                   href={`/${i.slug}`}
                   className="group relative flex items-center gap-2 p-3 rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] hover:border-[var(--accent)] hover:shadow-sm transition-all"
                 >
-                  {i.logo ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={i.logo} alt="" className="w-5 h-5 shrink-0" />
-                  ) : (
-                    <span className="w-5 h-5 shrink-0" />
-                  )}
+                  <FrameworkLogo
+                    slug={i.slug}
+                    fallbackSrc={i.logo}
+                    size={20}
+                    className="shrink-0 text-[var(--text-secondary)] group-hover:text-[var(--accent)]"
+                  />
                   <span className="flex-1 min-w-0 truncate text-sm font-medium text-[var(--text)] group-hover:text-[var(--accent)]">
                     {i.name}
                   </span>

@@ -10,6 +10,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useFramework } from "./framework-provider";
+import { FrameworkLogo } from "./icons/framework-icons";
 
 export interface FrameworkOption {
   slug: string;
@@ -204,9 +205,13 @@ export function FrameworkSelector({
       >
         {isSidebar ? (
           <>
-            {current?.logo ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={current.logo} alt="" className="w-5 h-5 shrink-0" />
+            {current ? (
+              <FrameworkLogo
+                slug={current.slug}
+                fallbackSrc={current.logo}
+                size={20}
+                className="shrink-0 text-[var(--text-secondary)]"
+              />
             ) : (
               <span
                 className="w-5 h-5 shrink-0 rounded-full bg-[var(--accent)] opacity-70"
@@ -293,16 +298,12 @@ export function FrameworkSelector({
                     : "text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text)]"
                 }`}
               >
-                {pinnedBIA.logo ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={pinnedBIA.logo}
-                    alt=""
-                    className="w-4 h-4 shrink-0"
-                  />
-                ) : (
-                  <span className="w-4 h-4 shrink-0" />
-                )}
+                <FrameworkLogo
+                  slug={pinnedBIA.slug}
+                  fallbackSrc={pinnedBIA.logo}
+                  size={16}
+                  className="shrink-0"
+                />
                 <span className="flex-1 text-left truncate">
                   {displayNameFor(pinnedBIA)}
                 </span>
@@ -333,16 +334,12 @@ export function FrameworkSelector({
                           : "text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text)]"
                       }`}
                     >
-                      {opt.logo ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={opt.logo}
-                          alt=""
-                          className="w-4 h-4 shrink-0"
-                        />
-                      ) : (
-                        <span className="w-4 h-4 shrink-0" />
-                      )}
+                      <FrameworkLogo
+                        slug={opt.slug}
+                        fallbackSrc={opt.logo}
+                        size={16}
+                        className="shrink-0"
+                      />
                       <span className="flex-1 text-left truncate">
                         {displayNameFor(opt)}
                       </span>
