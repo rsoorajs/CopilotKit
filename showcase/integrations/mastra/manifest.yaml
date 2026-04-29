@@ -109,13 +109,6 @@ demos:
       - src/app/demos/hitl-in-app/page.tsx
       - src/app/demos/hitl-in-app/approval-dialog.tsx
       - src/app/api/copilotkit/route.ts
-  - id: hitl
-    name: In-Chat Human in the Loop (original)
-    description: Original Mastra HITL demo — kept for backwards-compat
-    tags:
-      - interactivity
-    route: /demos/hitl
-    animated_preview_url:
   - id: tool-rendering
     name: Tool Rendering
     description: Custom per-tool renderers plus a wildcard catch-all for every other tool
