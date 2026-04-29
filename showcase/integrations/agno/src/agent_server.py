@@ -42,6 +42,10 @@ from fastapi.responses import StreamingResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
+from agents.agent_config_agent import (
+    agent as agent_config_agent,
+    build_agent as build_agent_config_agent,
+)
 from agents.main import agent as main_agent
 from agents.mcp_apps_agent import agent as mcp_apps_agent
 from agents.open_gen_ui_agent import agent as open_gen_ui_agent
@@ -177,12 +181,100 @@ def _attach_state_aware_route(
 
 
 # ---------------------------------------------------------------------------
+# Per-request agent factory (Agent Config Object demo)
+# ---------------------------------------------------------------------------
+#
+# The CopilotKit provider's `properties` prop arrives as top-level keys on
+# `RunAgentInput.forwarded_props`. The Agent Config Object cell reads three
+# of those keys (tone, expertise, responseLength) and composes a fresh
+# system prompt per turn. Agno doesn't have a LangGraph-style configurable
+# channel, so we mount a custom AGUI handler that builds a per-request
+# Agno Agent and runs it through the stock AGUI stream mapper.
+
+
+async def _run_agent_config(run_input: RunAgentInput) -> AsyncIterator[BaseEvent]:
+    """Stream one Agent-Config run with a freshly-built system prompt."""
+    run_id = run_input.run_id or str(uuid.uuid4())
+    thread_id = run_input.thread_id
+
+    forwarded = (
+        run_input.forwarded_props
+        if isinstance(run_input.forwarded_props, dict)
+        else None
+    )
+
+    try:
+        user_input = extract_agui_user_input(run_input.messages or [])
+
+        yield RunStartedEvent(
+            type=EventType.RUN_STARTED, thread_id=thread_id, run_id=run_id
+        )
+
+        per_request_agent = build_agent_config_agent(forwarded)
+        session_state = validate_agui_state(run_input.state, thread_id) or {}
+
+        response_stream = per_request_agent.arun(  # type: ignore[attr-defined]
+            input=user_input,
+            session_id=thread_id,
+            stream=True,
+            stream_events=True,
+            session_state=session_state,
+            run_id=run_id,
+        )
+
+        async for event in async_stream_agno_response_as_agui_events(
+            response_stream=response_stream,  # type: ignore[arg-type]
+            thread_id=thread_id,
+            run_id=run_id,
+        ):
+            # The inner stream emits its own RUN_STARTED/RUN_FINISHED; we
+            # already emitted RUN_STARTED and will close out below.
+            if event.type in (EventType.RUN_STARTED, EventType.RUN_FINISHED):
+                continue
+            yield event
+
+        yield RunFinishedEvent(
+            type=EventType.RUN_FINISHED, thread_id=thread_id, run_id=run_id
+        )
+    except asyncio.CancelledError:  # noqa: TRY302 — propagate cancellation
+        raise
+    except Exception as exc:  # noqa: BLE001
+        yield RunErrorEvent(type=EventType.RUN_ERROR, message=str(exc))
+
+
+def _attach_agent_config_route(app: FastAPI, prefix: str) -> None:
+    """Mount a single Agent-Config AGUI POST endpoint at `<prefix>/agui`."""
+    encoder = EventEncoder()
+    route = f"{prefix.rstrip('/')}/agui"
+
+    async def _handler(run_input: RunAgentInput) -> StreamingResponse:
+        async def _gen():
+            async for event in _run_agent_config(run_input):
+                yield encoder.encode(event)
+
+        return StreamingResponse(
+            _gen(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
+                "Access-Control-Allow-Headers": "*",
+            },
+        )
+
+    app.post(route, name=f"agui_agent_config_{prefix.strip('/')}")(_handler)
+
+
+# ---------------------------------------------------------------------------
 # AgentOS bootstrap
 # ---------------------------------------------------------------------------
 
 agent_os = AgentOS(
     agents=[
         main_agent,
+        agent_config_agent,
         mcp_apps_agent,
         open_gen_ui_agent,
         reasoning_agent,
@@ -209,6 +301,11 @@ app = agent_os.get_app()
 # CORS with the stock AGUI interfaces above.
 _attach_state_aware_route(app, shared_state_rw_agent, "/shared-state-rw")
 _attach_state_aware_route(app, subagents_supervisor, "/subagents")
+
+# Agent Config Object cell — builds a per-request Agno Agent whose system
+# prompt is composed from the CopilotKit provider's forwarded properties
+# (tone / expertise / responseLength).
+_attach_agent_config_route(app, "/agent-config")
 
 
 # Serve /health via middleware so it short-circuits BEFORE route resolution.
