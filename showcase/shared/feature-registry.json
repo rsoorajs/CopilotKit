@@ -333,13 +333,15 @@
       "id": "auth",
       "name": "Authentication",
       "category": "platform",
-      "description": "Framework-native authentication"
+      "description": "Framework-native authentication",
+      "shell_docs_path": "/auth"
     },
     {
       "id": "agent-config",
       "name": "Agent Config Object",
       "category": "platform",
-      "description": "Forwarded props / config objects"
+      "description": "Forwarded props / config objects",
+      "shell_docs_path": "/agent-config"
     },
     {
       "id": "voice",
