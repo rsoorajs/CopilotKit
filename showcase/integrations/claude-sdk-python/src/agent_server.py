@@ -44,10 +44,13 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 
+from agents.a2ui_dynamic import run_a2ui_dynamic_agent
+from agents.a2ui_fixed import run_a2ui_fixed_agent
 from agents.agent import create_app, run_agent
 from agents.agent_config_agent import build_system_prompt, read_properties
 from agents.byoc_hashbrown_agent import BYOC_HASHBROWN_SYSTEM_PROMPT
 from agents.byoc_json_render_agent import BYOC_JSON_RENDER_SYSTEM_PROMPT
+from agents.hitl_in_chat_agent import run_hitl_in_chat_agent
 from agents.mcp_apps_agent import run_mcp_apps_agent
 from agents.multimodal_agent import SYSTEM_PROMPT as MULTIMODAL_SYSTEM_PROMPT
 from agents.multimodal_agent import convert_part_for_claude
@@ -271,6 +274,66 @@ async def subagents_endpoint(request: Request) -> StreamingResponse:
 
     async def event_stream() -> AsyncIterator[str]:
         async for chunk in run_subagents_agent(input_data):
+            yield chunk
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
+@app.post("/hitl-in-chat")
+async def hitl_in_chat_endpoint(request: Request) -> StreamingResponse:
+    """In-Chat HITL demo — frontend `book_call` tool via `useHumanInTheLoop`."""
+    body = await request.json()
+    input_data = RunAgentInput(**body)
+
+    async def event_stream() -> AsyncIterator[str]:
+        async for chunk in run_hitl_in_chat_agent(input_data):
+            yield chunk
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
+@app.post("/declarative-gen-ui")
+async def declarative_gen_ui_endpoint(request: Request) -> StreamingResponse:
+    """Declarative Generative UI (A2UI Dynamic Schema) demo."""
+    body = await request.json()
+    input_data = RunAgentInput(**body)
+
+    async def event_stream() -> AsyncIterator[str]:
+        async for chunk in run_a2ui_dynamic_agent(input_data):
+            yield chunk
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
+@app.post("/a2ui-fixed-schema")
+async def a2ui_fixed_schema_endpoint(request: Request) -> StreamingResponse:
+    """A2UI Fixed Schema demo — backend ships flight_schema.json."""
+    body = await request.json()
+    input_data = RunAgentInput(**body)
+
+    async def event_stream() -> AsyncIterator[str]:
+        async for chunk in run_a2ui_fixed_agent(input_data):
             yield chunk
 
     return StreamingResponse(
