@@ -29,8 +29,7 @@ export const weatherTool = createTool({
   inputSchema: z.object({
     location: z.string().describe("City name"),
   }),
-  execute: async ({ context }) =>
-    JSON.stringify(getWeatherImpl(context.location)),
+  execute: async ({ location }) => JSON.stringify(getWeatherImpl(location)),
 });
 // @endregion[weather-tool-backend]
 
@@ -44,8 +43,8 @@ export const stockPriceTool = createTool({
   inputSchema: z.object({
     ticker: z.string().describe("Stock ticker symbol, e.g. AAPL"),
   }),
-  execute: async ({ context }) => {
-    const ticker = (context.ticker ?? "").toUpperCase();
+  execute: async ({ ticker: rawTicker }) => {
+    const ticker = (rawTicker ?? "").toUpperCase();
     return JSON.stringify({
       ticker,
       price_usd: 189.42,
@@ -60,7 +59,7 @@ export const queryDataTool = createTool({
   inputSchema: z.object({
     query: z.string().describe("Natural language query"),
   }),
-  execute: async ({ context }) => JSON.stringify(queryDataImpl(context.query)),
+  execute: async ({ query }) => JSON.stringify(queryDataImpl(query)),
 });
 
 export const manageSalesTodosTool = createTool({
@@ -81,8 +80,7 @@ export const manageSalesTodosTool = createTool({
       )
       .describe("Array of sales todo items"),
   }),
-  execute: async ({ context }) =>
-    JSON.stringify(manageSalesTodosImpl(context.todos)),
+  execute: async ({ todos }) => JSON.stringify(manageSalesTodosImpl(todos)),
 });
 
 export const getSalesTodosTool = createTool({
@@ -105,8 +103,8 @@ export const getSalesTodosTool = createTool({
       .nullable()
       .describe("Current todos if any"),
   }),
-  execute: async ({ context }) =>
-    JSON.stringify(getSalesTodosImpl(context.currentTodos)),
+  execute: async ({ currentTodos }) =>
+    JSON.stringify(getSalesTodosImpl(currentTodos)),
 });
 
 export const scheduleMeetingTool = createTool({
@@ -116,10 +114,8 @@ export const scheduleMeetingTool = createTool({
     reason: z.string().describe("Reason for the meeting"),
     durationMinutes: z.number().optional().describe("Duration in minutes"),
   }),
-  execute: async ({ context }) =>
-    JSON.stringify(
-      scheduleMeetingImpl(context.reason, context.durationMinutes),
-    ),
+  execute: async ({ reason, durationMinutes }) =>
+    JSON.stringify(scheduleMeetingImpl(reason, durationMinutes)),
 });
 
 export const searchFlightsTool = createTool({
@@ -146,8 +142,7 @@ export const searchFlightsTool = createTool({
       )
       .describe("Array of flight results"),
   }),
-  execute: async ({ context }) =>
-    JSON.stringify(searchFlightsImpl(context.flights)),
+  execute: async ({ flights }) => JSON.stringify(searchFlightsImpl(flights)),
 });
 
 export const generateA2uiTool = createTool({
@@ -160,10 +155,10 @@ export const generateA2uiTool = createTool({
       .optional()
       .describe("Context entries"),
   }),
-  execute: async ({ context }) => {
+  execute: async ({ messages, contextEntries }) => {
     const prep = generateA2uiImpl({
-      messages: context.messages,
-      contextEntries: context.contextEntries,
+      messages,
+      contextEntries,
     });
 
     const result = await generateText({
