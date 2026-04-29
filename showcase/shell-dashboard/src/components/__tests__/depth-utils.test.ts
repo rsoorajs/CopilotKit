@@ -1,6 +1,6 @@
 /**
  * Unit tests for depth derivation utility.
- * Parameterized: all D0-D4 combos, short-circuit on red, unshipped returns D0.
+ * Parameterized: all D0-D6 combos, short-circuit on red, unshipped returns D0.
  */
 import { describe, it, expect } from "vitest";
 import { deriveDepth } from "../depth-utils";
@@ -205,6 +205,98 @@ describe("deriveDepth", () => {
     const result = deriveDepth(c, live);
     expect(result.achieved).toBe(0);
     expect(result.isRegression).toBe(true);
+  });
+
+  it("returns D5 when D0-D4 green plus D5 green (via CATALOG_TO_D5_KEY)", () => {
+    const c = cell("lgp", "agentic-chat");
+    const live = mapOf([
+      row("health:lgp", "health", "green"),
+      row("agent:lgp", "agent", "green"),
+      row("e2e:lgp/agentic-chat", "e2e", "green"),
+      row("chat:lgp", "chat", "green"),
+      row("d5:lgp/agentic-chat", "d5", "green"),
+    ]);
+    const result = deriveDepth(c, live);
+    expect(result.achieved).toBe(5);
+  });
+
+  it("returns D4 when D5 row is red", () => {
+    const c = cell("lgp", "agentic-chat");
+    const live = mapOf([
+      row("health:lgp", "health", "green"),
+      row("agent:lgp", "agent", "green"),
+      row("e2e:lgp/agentic-chat", "e2e", "green"),
+      row("chat:lgp", "chat", "green"),
+      row("d5:lgp/agentic-chat", "d5", "red"),
+    ]);
+    const result = deriveDepth(c, live);
+    expect(result.achieved).toBe(4);
+  });
+
+  it("returns D4 when D5 row is missing", () => {
+    const c = cell("lgp", "agentic-chat");
+    const live = mapOf([
+      row("health:lgp", "health", "green"),
+      row("agent:lgp", "agent", "green"),
+      row("e2e:lgp/agentic-chat", "e2e", "green"),
+      row("chat:lgp", "chat", "green"),
+    ]);
+    const result = deriveDepth(c, live);
+    expect(result.achieved).toBe(4);
+  });
+
+  it("returns D5 for multi-key D5 mapping (shared-state-read-write)", () => {
+    const c = cell("lgp", "shared-state-read-write");
+    const live = mapOf([
+      row("health:lgp", "health", "green"),
+      row("agent:lgp", "agent", "green"),
+      row("e2e:lgp/shared-state-read-write", "e2e", "green"),
+      row("tools:lgp", "tools", "green"),
+      row("d5:lgp/shared-state-read", "d5", "green"),
+      row("d5:lgp/shared-state-write", "d5", "green"),
+    ]);
+    const result = deriveDepth(c, live);
+    expect(result.achieved).toBe(5);
+  });
+
+  it("returns D4 when one of multi-key D5 rows is red", () => {
+    const c = cell("lgp", "shared-state-read-write");
+    const live = mapOf([
+      row("health:lgp", "health", "green"),
+      row("agent:lgp", "agent", "green"),
+      row("e2e:lgp/shared-state-read-write", "e2e", "green"),
+      row("tools:lgp", "tools", "green"),
+      row("d5:lgp/shared-state-read", "d5", "green"),
+      row("d5:lgp/shared-state-write", "d5", "red"),
+    ]);
+    const result = deriveDepth(c, live);
+    expect(result.achieved).toBe(4);
+  });
+
+  it("returns D6 when D0-D5 green plus D6 green", () => {
+    const c = cell("lgp", "agentic-chat");
+    const live = mapOf([
+      row("health:lgp", "health", "green"),
+      row("agent:lgp", "agent", "green"),
+      row("e2e:lgp/agentic-chat", "e2e", "green"),
+      row("chat:lgp", "chat", "green"),
+      row("d5:lgp/agentic-chat", "d5", "green"),
+      row("d6:lgp/agentic-chat", "d6", "green"),
+    ]);
+    const result = deriveDepth(c, live);
+    expect(result.achieved).toBe(6);
+  });
+
+  it("returns D4 for feature with no D5 mapping", () => {
+    const c = cell("lgp", "unknown-feature");
+    const live = mapOf([
+      row("health:lgp", "health", "green"),
+      row("agent:lgp", "agent", "green"),
+      row("e2e:lgp/unknown-feature", "e2e", "green"),
+      row("chat:lgp", "chat", "green"),
+    ]);
+    const result = deriveDepth(c, live);
+    expect(result.achieved).toBe(4);
   });
 
 });

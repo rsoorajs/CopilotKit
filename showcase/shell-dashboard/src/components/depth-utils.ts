@@ -1,17 +1,19 @@
 /**
- * Pure depth-derivation utility for the D0-D4 depth ladder.
+ * Pure depth-derivation utility for the D0-D6 depth ladder.
  *
- * Walks D0 through D4 checking PocketBase live-status rows:
+ * Walks D0 through D6 checking PocketBase live-status rows:
  *   D0 = cell exists with status wired or stub (static, no PB)
  *   D1 = health:<slug> green (integration-scoped)
  *   D2 = agent:<slug> green (integration-scoped)
  *   D3 = e2e:<slug>/<featureId> green (per-cell)
  *   D4 = chat:<slug> OR tools:<slug> green (integration-scoped)
+ *   D5 = d5:<slug>/<d5FeatureType> green (per-cell, mapped via CATALOG_TO_D5_KEY)
+ *   D6 = d6:<slug>/<featureId> green (per-cell)
  *
  * Achieved depth = highest D where ALL lower depths are also green.
  * Short-circuits: if any level is not green, stop there.
  */
-import { keyFor, type LiveStatusMap } from "@/lib/live-status";
+import { keyFor, CATALOG_TO_D5_KEY, type LiveStatusMap } from "@/lib/live-status";
 
 /** Minimal catalog cell shape consumed by depth derivation. */
 export interface CatalogCell {
@@ -27,11 +29,11 @@ export interface CatalogCell {
   category_name: string | null;
 }
 
-/** Achieved depth on the D0-D4 ladder. */
-export type AchievedDepth = 0 | 1 | 2 | 3 | 4;
+/** Achieved depth on the D0-D6 ladder. */
+export type AchievedDepth = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
 export interface DepthResult {
-  /** Highest contiguous depth achieved (0-4). */
+  /** Highest contiguous depth achieved (0-6). */
   achieved: AchievedDepth;
   /** Whether achieved depth is below the historical high-water mark (max_depth). */
   isRegression: boolean;
@@ -43,10 +45,26 @@ function isGreen(live: LiveStatusMap, key: string): boolean {
 }
 
 /**
+ * Check whether all D5 PB rows for a given (slug, catalogFeatureId) are green.
+ * Returns false if the feature has no D5 mapping or any mapped row is missing/non-green.
+ */
+function isD5Green(
+  live: LiveStatusMap,
+  slug: string,
+  featureId: string,
+): boolean {
+  const d5Keys = CATALOG_TO_D5_KEY[featureId];
+  if (!d5Keys || d5Keys.length === 0) {
+    return isGreen(live, keyFor("d5", slug, featureId));
+  }
+  return d5Keys.every((d5Key) => isGreen(live, keyFor("d5", slug, d5Key)));
+}
+
+/**
  * Derive the achieved depth for a single catalog cell.
  *
  * The walk is contiguous: if D1 is not green, achieved = D0 regardless
- * of D2/D3/D4 status (short-circuit).
+ * of D2/D3/D4/D5/D6 status (short-circuit).
  */
 export function deriveDepth(
   cell: CatalogCell,
@@ -73,7 +91,7 @@ export function deriveDepth(
   achieved = 2;
 
   // D3: e2e:<slug>/<featureId> green (per-cell)
-  // Guard: skip D3 if feature is null (no per-cell e2e to evaluate).
+  // Guard: skip D3+ if feature is null (no per-cell e2e to evaluate).
   if (cell.feature === null) {
     return { achieved, isRegression: achieved < cell.max_depth };
   }
@@ -85,8 +103,20 @@ export function deriveDepth(
   // D4: chat:<slug> OR tools:<slug> green (integration-scoped)
   const chatGreen = isGreen(live, keyFor("chat", cell.integration));
   const toolsGreen = isGreen(live, keyFor("tools", cell.integration));
-  if (chatGreen || toolsGreen) {
-    achieved = 4;
+  if (!(chatGreen || toolsGreen)) {
+    return { achieved, isRegression: achieved < cell.max_depth };
+  }
+  achieved = 4;
+
+  // D5: d5:<slug>/<d5FeatureType> green (per-cell, mapped via CATALOG_TO_D5_KEY)
+  if (!isD5Green(live, cell.integration, cell.feature)) {
+    return { achieved, isRegression: achieved < cell.max_depth };
+  }
+  achieved = 5;
+
+  // D6: d6:<slug>/<featureId> green (per-cell)
+  if (isGreen(live, keyFor("d6", cell.integration, cell.feature))) {
+    achieved = 6;
   }
 
   return { achieved, isRegression: achieved < cell.max_depth };
