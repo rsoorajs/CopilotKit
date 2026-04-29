@@ -1,18 +1,10 @@
 {
-  "_comment": "D5 multi-turn fixture for /demos/shared-state-read-write. Demonstrates the agent-write half of bidirectional shared state: turn 1 the user asks the agent to remember something, the agent calls the backend `set_notes` tool which mutates shared state. After the tool result is appended, the agent re-invokes the LLM — we match that second leg via toolCallId on the last tool message. Turn 2 the user asks the agent to recall what it remembered. The UI-write half (preferences via agent.setState) does not flow through the LLM, so it is not part of this fixture. ORDER: toolCallId fixture first (tried first, skips when no tool result), then userMessage-only fallback.",
+  "_comment": "D5 multi-turn fixture for /demos/shared-state-read-write. Uses turnIndex matching: aimock counts assistant messages in the request to disambiguate multi-turn fixtures sharing the same userMessage. The 'favorite color' fixture has a unique userMessage and needs no turnIndex. Fixtures ordered 0→N for readability.",
   "fixtures": [
     {
       "match": {
         "userMessage": "remember that my favorite color is blue",
-        "toolCallId": "call_d5_set_notes_001"
-      },
-      "response": {
-        "content": "Got it — I have noted that your favorite color is blue."
-      }
-    },
-    {
-      "match": {
-        "userMessage": "remember that my favorite color is blue"
+        "turnIndex": 0
       },
       "response": {
         "toolCalls": [
@@ -22,6 +14,15 @@
             "arguments": "{\"notes\":[\"Favorite color: blue\"]}"
           }
         ]
+      }
+    },
+    {
+      "match": {
+        "userMessage": "remember that my favorite color is blue",
+        "turnIndex": 1
+      },
+      "response": {
+        "content": "Got it — I have noted that your favorite color is blue."
       }
     },
     {

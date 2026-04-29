@@ -1,18 +1,10 @@
 {
-  "_comment": "D5 fixture for /demos/hitl-in-app against LangGraph Python (LGP). Approve/deny HITL via the frontend-defined `request_user_approval` tool (see src/app/demos/hitl-in-app/page.tsx and src/agents/hitl_in_app.py). The agent calls request_user_approval; the frontend opens an out-of-chat modal; on approval the async handler resolves with {approved: true, reason: ...} and the tool result is appended back to the conversation. The agent then re-invokes the LLM — second-leg fixture matches on toolCallId. ORDER: toolCallId fixture above userMessage-only fixture so it is tried first.",
+  "_comment": "D5 fixture for /demos/hitl-in-app against LangGraph Python (LGP). Approve/deny HITL via the frontend-defined `request_user_approval` tool. Uses turnIndex matching: aimock counts assistant messages in the request to disambiguate multi-turn fixtures sharing the same userMessage. Fixtures ordered 0→N for readability.",
   "fixtures": [
     {
       "match": {
         "userMessage": "Issue a $50 refund to customer #12345",
-        "toolCallId": "call_d5_request_approval_001"
-      },
-      "response": {
-        "content": "Approved — processing the $50 refund to customer #12345 now."
-      }
-    },
-    {
-      "match": {
-        "userMessage": "Issue a $50 refund to customer #12345"
+        "turnIndex": 0
       },
       "response": {
         "toolCalls": [
@@ -22,6 +14,15 @@
             "arguments": "{\"message\":\"Issue a $50 refund to customer #12345.\",\"context\":\"Per the standard goodwill-credit policy for shipping delays.\"}"
           }
         ]
+      }
+    },
+    {
+      "match": {
+        "userMessage": "Issue a $50 refund to customer #12345",
+        "turnIndex": 1
+      },
+      "response": {
+        "content": "Approved — processing the $50 refund to customer #12345 now."
       }
     }
   ]
