@@ -51,10 +51,18 @@ export type ProbeKind =
 export type ServiceState = "queued" | "running" | "completed" | "failed";
 export type ProbeResult = "green" | "yellow" | "red";
 
+export interface ProbeRunServiceResult {
+  slug: string;
+  state: "completed" | "failed";
+  result?: "green" | "yellow" | "red";
+  error?: string;
+}
+
 export interface ProbeRunSummary {
   total: number;
   passed: number;
   failed: number;
+  services?: ProbeRunServiceResult[];
 }
 
 export interface ProbeLastRun {

@@ -662,10 +662,17 @@ export function buildProbeInvoker(
       // B7: finalize the run row. Best-effort: log + swallow on failure so
       // a misbehaving PB never crashes the scheduler tick.
       if (runWriter && runRowId !== null) {
+        const snap = tracker.snapshot();
         const persistSummary: ProbeRunSummary = {
           total: summary.total,
           passed: summary.passed,
           failed: summary.failed,
+          services: snap.services.map((s) => ({
+            slug: s.slug,
+            state: s.state,
+            result: s.result,
+            error: s.error,
+          })),
         };
         try {
           await runWriter.finish({
