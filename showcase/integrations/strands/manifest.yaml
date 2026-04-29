@@ -34,8 +34,10 @@ features:
   - reasoning-default-render
   - frontend-tools
   - frontend-tools-async
+  - hitl
   - hitl-in-chat
   - hitl-in-app
+  - tool-rendering
   - tool-rendering-reasoning-chain
   - gen-ui-agent
   - declarative-gen-ui
@@ -209,6 +211,28 @@ demos:
       - src/agents/agent.py
       - src/app/demos/hitl-in-app/page.tsx
       - src/app/demos/hitl-in-app/approval-dialog.tsx
+      - src/app/api/copilotkit/route.ts
+  - id: hitl
+    name: In-Chat HITL (Steps)
+    description: Agent pauses for user approval via step-based human-in-the-loop
+    tags:
+      - interactivity
+    route: /demos/hitl
+    animated_preview_url:
+    highlight:
+      - src/app/demos/hitl/agent.py
+      - src/app/demos/hitl/page.tsx
+      - src/app/api/copilotkit/route.ts
+  - id: tool-rendering
+    name: Tool Rendering
+    description: Custom render for tool calls inline in the chat stream
+    tags:
+      - generative-ui
+    route: /demos/tool-rendering
+    animated_preview_url:
+    highlight:
+      - src/app/demos/tool-rendering/agent.py
+      - src/app/demos/tool-rendering/page.tsx
       - src/app/api/copilotkit/route.ts
   - id: tool-rendering-reasoning-chain
     name: Tool Rendering + Reasoning Chain

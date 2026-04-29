@@ -40,6 +40,7 @@ features:
   - frontend-tools
   - frontend-tools-async
   - gen-ui-tool-based
+  - hitl
   - hitl-in-app
   - declarative-gen-ui
   - a2ui-fixed-schema
@@ -137,6 +138,17 @@ demos:
       - src/agents/shared_chat.py
       - src/app/demos/frontend-tools-async/page.tsx
       - src/app/demos/frontend-tools-async/notes-card.tsx
+      - src/app/api/copilotkit/route.ts
+  - id: hitl
+    name: In-Chat Human in the Loop (Original)
+    description: User approves agent actions before execution
+    tags:
+      - interactivity
+    route: /demos/hitl
+    animated_preview_url:
+    highlight:
+      - src/app/demos/hitl/agent.py
+      - src/app/demos/hitl/page.tsx
       - src/app/api/copilotkit/route.ts
   - id: hitl-in-app
     name: In-App Human in the Loop (Frontend Tools + async HITL)

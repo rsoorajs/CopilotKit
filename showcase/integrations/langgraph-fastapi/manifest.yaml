@@ -36,6 +36,7 @@ features:
   - declarative-gen-ui
   - a2ui-fixed-schema
   - mcp-apps
+  - gen-ui-tool-based
   - shared-state-streaming
   - shared-state-read-write
   - subagents
@@ -90,6 +91,17 @@ demos:
       - generative-ui
     route: /demos/gen-ui-agent
     animated_preview_url:
+  - id: gen-ui-tool-based
+    name: Tool-Based Generative UI
+    description: Agent uses tools to trigger UI generation
+    tags:
+      - generative-ui
+    route: /demos/gen-ui-tool-based
+    animated_preview_url:
+    highlight:
+      - src/app/demos/gen-ui-tool-based/agent.py
+      - src/app/demos/gen-ui-tool-based/page.tsx
+      - src/app/api/copilotkit/route.ts
   - id: shared-state-streaming
     name: State Streaming
     description: Per-token state delta streaming from agent to UI

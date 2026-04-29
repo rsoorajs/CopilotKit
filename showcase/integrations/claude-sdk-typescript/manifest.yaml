@@ -30,6 +30,7 @@ features:
   - frontend-tools-async
   - hitl
   - hitl-in-app
+  - tool-rendering
   - declarative-gen-ui
   - gen-ui-agent
   - shared-state-streaming
@@ -164,6 +165,17 @@ demos:
       - src/agent_server.ts
       - src/app/demos/hitl-in-app/page.tsx
       - src/app/demos/hitl-in-app/approval-dialog.tsx
+      - src/app/api/copilotkit/route.ts
+  - id: tool-rendering
+    name: Tool Rendering
+    description: Backend agent tools rendered as UI components
+    tags:
+      - agent-capabilities
+    route: /demos/tool-rendering
+    animated_preview_url:
+    highlight:
+      - src/app/demos/tool-rendering/agent.ts
+      - src/app/demos/tool-rendering/page.tsx
       - src/app/api/copilotkit/route.ts
   - id: declarative-gen-ui
     name: Declarative Generative UI (A2UI)
