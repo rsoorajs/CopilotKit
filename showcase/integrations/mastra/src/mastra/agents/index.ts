@@ -269,3 +269,32 @@ If a delegation's \`status\` field is \`"failed"\`, treat it as a real error: do
   }),
 });
 // @endregion[subagents-supervisor]
+
+/**
+ * Vision-capable Mastra agent backing the Multimodal Attachments demo.
+ *
+ * gpt-4o supports image and PDF attachments in the messages array. The
+ * AG-UI Mastra adapter forwards user-message `content` parts (image_url /
+ * file) verbatim to the model. Kept on a dedicated agent (and dedicated
+ * route) so the vision-tier cost is scoped to exactly the cell that
+ * exercises it.
+ */
+export const multimodalAgent = new Agent({
+  id: "multimodal-demo",
+  name: "Multimodal Agent",
+  model: openai("gpt-4o"),
+  instructions:
+    "You are a helpful assistant with vision and document capabilities. When the user shares an image or PDF, examine it carefully and answer their question about it. Be concise and specific — describe what you actually see, not what you guess might be there.",
+  memory: new Memory({
+    storage: new LibSQLStore({
+      id: "multimodal-agent-memory",
+      url: WORKING_MEMORY_DB_URL,
+    }),
+    options: {
+      workingMemory: {
+        enabled: true,
+        schema: AgentState,
+      },
+    },
+  }),
+});

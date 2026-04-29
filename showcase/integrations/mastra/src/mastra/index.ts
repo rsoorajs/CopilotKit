@@ -5,6 +5,7 @@ import {
   headlessCompleteAgent,
   sharedStateReadWriteAgent,
   subagentsSupervisorAgent,
+  multimodalAgent,
 } from "./agents";
 import { ConsoleLogger, LogLevel } from "@mastra/core/logger";
 
@@ -16,6 +17,7 @@ export const mastra = new Mastra({
     headlessCompleteAgent,
     sharedStateReadWriteAgent,
     subagentsSupervisorAgent,
+    multimodalAgent,
   },
   storage: new LibSQLStore({
     id: "mastra-storage",

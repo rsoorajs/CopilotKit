@@ -51,6 +51,13 @@ features:
   - auth
   - shared-state-read-write
   - subagents
+  - beautiful-chat
+  - byoc-hashbrown
+  - byoc-json-render
+  - multimodal
+  - open-gen-ui
+  - open-gen-ui-advanced
+  - voice
 demos:
   - id: cli-start
     name: CLI Start Command
@@ -356,3 +363,77 @@ demos:
       - src/app/demos/subagents/page.tsx
       - src/app/demos/subagents/delegation-log.tsx
       - src/app/api/copilotkit/route.ts
+  - id: beautiful-chat
+    name: Beautiful Chat (Flagship)
+    description: Flagship CopilotKit showcase combining A2UI, Open Generative UI, and MCP Apps in one cell
+    tags:
+      - chat-ui
+      - generative-ui
+    route: /demos/beautiful-chat
+    animated_preview_url:
+    highlight:
+      - src/app/demos/beautiful-chat/page.tsx
+      - src/app/api/copilotkit-beautiful-chat/route.ts
+  - id: byoc-hashbrown
+    name: BYOC — Hashbrown
+    description: Bring-your-own-component dashboard rendered via @hashbrownai/react useUiKit + useJsonParser
+    tags:
+      - generative-ui
+    route: /demos/byoc-hashbrown
+    animated_preview_url:
+    highlight:
+      - src/app/demos/byoc-hashbrown/page.tsx
+      - src/app/api/copilotkit-byoc-hashbrown/route.ts
+  - id: byoc-json-render
+    name: BYOC — JSON Render
+    description: Bring-your-own-component dashboard rendered from a streamed JSON envelope into a frontend-owned catalog
+    tags:
+      - generative-ui
+    route: /demos/byoc-json-render
+    animated_preview_url:
+    highlight:
+      - src/app/demos/byoc-json-render/page.tsx
+      - src/app/api/copilotkit-byoc-json-render/route.ts
+  - id: multimodal
+    name: Multimodal Attachments
+    description: Image + PDF uploads forwarded to a vision-capable Mastra agent (gpt-4o)
+    tags:
+      - chat-ui
+    route: /demos/multimodal
+    animated_preview_url:
+    highlight:
+      - src/mastra/agents/index.ts
+      - src/app/demos/multimodal/page.tsx
+      - src/app/api/copilotkit-multimodal/route.ts
+  - id: open-gen-ui
+    name: Open Generative UI
+    description: Agent-authored HTML + CSS streamed into a sandboxed iframe via the runtime's openGenerativeUI flag
+    tags:
+      - generative-ui
+    route: /demos/open-gen-ui
+    animated_preview_url:
+    highlight:
+      - src/app/demos/open-gen-ui/page.tsx
+      - src/app/api/copilotkit-ogui/route.ts
+  - id: open-gen-ui-advanced
+    name: Open Generative UI (Advanced)
+    description: Open Generative UI with host-side sandbox functions wired through the iframe bridge
+    tags:
+      - generative-ui
+    route: /demos/open-gen-ui-advanced
+    animated_preview_url:
+    highlight:
+      - src/app/demos/open-gen-ui-advanced/page.tsx
+      - src/app/demos/open-gen-ui-advanced/sandbox-functions.ts
+      - src/app/api/copilotkit-ogui/route.ts
+  - id: voice
+    name: Voice Input
+    description: Mic-to-text input via OpenAI Whisper, streamed into the chat composer
+    tags:
+      - chat-ui
+    route: /demos/voice
+    animated_preview_url:
+    highlight:
+      - src/app/demos/voice/page.tsx
+      - src/app/demos/voice/sample-audio-button.tsx
+      - src/app/api/copilotkit-voice/[[...slug]]/route.ts

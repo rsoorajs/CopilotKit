@@ -98,7 +98,8 @@ export type LocalMastraAgentName =
   | "weatherAgent"
   | "headlessCompleteAgent"
   | "sharedStateReadWriteAgent"
-  | "subagentsSupervisorAgent";
+  | "subagentsSupervisorAgent"
+  | "multimodalAgent";
 
 export type BuiltAgents = Record<
   DemoAgentName | LocalMastraAgentName,
@@ -151,6 +152,11 @@ export function buildAgents(
       "subagentsSupervisorAgent missing from Mastra config — required for subagents demo alias",
     );
   }
+  if (!baseLocalAgents.multimodalAgent) {
+    throw new Error(
+      "multimodalAgent missing from Mastra config — required for /demos/multimodal",
+    );
+  }
   const headlessCompleteAgentInstance = getLocalAgent({
     mastra: mastraInstance,
     agentId: "headlessCompleteAgent",
@@ -177,11 +183,20 @@ export function buildAgents(
   if (!subagentsSupervisorAgentInstance) {
     throw new Error("getLocalAgent returned null for subagentsSupervisorAgent");
   }
+  const multimodalAgentInstance = getLocalAgent({
+    mastra: mastraInstance,
+    agentId: "multimodalAgent",
+    resourceId: "mastra-multimodalAgent",
+  });
+  if (!multimodalAgentInstance) {
+    throw new Error("getLocalAgent returned null for multimodalAgent");
+  }
   const localAgents = {
     weatherAgent: baseLocalAgents.weatherAgent,
     headlessCompleteAgent: headlessCompleteAgentInstance,
     sharedStateReadWriteAgent: sharedStateRWAgentInstance,
     subagentsSupervisorAgent: subagentsSupervisorAgentInstance,
+    multimodalAgent: multimodalAgentInstance,
   };
 
   // Guard against silent shadowing: if Mastra ever registers a local agent
@@ -225,6 +240,7 @@ export function buildAgents(
     "subagentsSupervisorAgent",
     "mastra-subagentsSupervisorAgent",
   );
+  resourceIdByAgent.set("multimodalAgent", "mastra-multimodalAgent");
 
   const demoAliases: Record<
     string,
