@@ -121,20 +121,34 @@ strictly "missing primitive" skips:
 - `byoc-hashbrown`, `byoc-json-render` — streaming structured-output BYOC
   with Zod-validated catalogs; each has its own runtime route, catalog,
   renderer, and supporting components.
-- `beautiful-chat` — branded starter chat with OGUI + A2UI + MCP combined
-  runtime; large cross-cutting port.
 - `multimodal` — vision-capable AG2 agent + dedicated `/api/copilotkit-multimodal`.
 - `voice` — frontend voice STT; needs dedicated `/api/copilotkit-voice` and
   the lazy-init agent shape from langgraph-python.
+
+## Shipped — wave 2 follow-up
+
+- `beautiful-chat` — simplified port: combines A2UI Dynamic + Open
+  Generative UI on a dedicated runtime (`/api/copilotkit-beautiful-chat`).
+  MCP Apps is intentionally out-of-scope (covered separately by
+  `/demos/mcp-apps`); the canonical reference's app-mode toggle / todos
+  canvas is also not ported. Frontend reuses the catalog from
+  `/demos/declarative-gen-ui` to avoid duplication.
+- `hitl-in-chat-booking` — manifest alias to the existing `hitl-in-chat`
+  cell. The langgraph reference itself aliases the booking variant to
+  the same `/demos/hitl-in-chat` route; AG2's `useHumanInTheLoop`
+  surface (TimePickerCard) is functionally equivalent for the booking
+  flow. NOT a missing-primitive case — the earlier "skipped" entry was
+  incorrect (it conflated `hitl-in-chat-booking` with the
+  `useInterrupt`-driven flow, which it isn't).
 
 ## Skipped (missing primitive)
 
 - `gen-ui-interrupt` — requires a LangGraph-style `interrupt()` that
   round-trips a resumable graph pause through the event stream. AG2's
   `human_input_mode` is a synchronous request/reply; it does not resume
-  the same run from a persisted checkpoint.
+  the same run from a persisted checkpoint. Marked as
+  `not_supported_features` in `manifest.yaml`; the route renders a stub
+  page pointing at `hitl-in-chat` / `hitl-in-app`.
 - `interrupt-headless` — same underlying primitive as `gen-ui-interrupt`.
-- `hitl-in-chat-booking` — booking variant of the langgraph
-  `useInterrupt`-driven HITL flow; same missing primitive as above.
-  AG2 has the simpler `hitl-in-chat` (synchronous `useHumanInTheLoop`)
-  but cannot reproduce the resumable interrupt round-trip.
+  Marked `not_supported_features`; stub page points at `hitl-in-app` /
+  `frontend-tools-async`.

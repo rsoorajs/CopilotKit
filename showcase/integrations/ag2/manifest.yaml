@@ -16,6 +16,9 @@ generative_ui:
   - constrained-explicit
   - a2ui-fixed-schema
   - a2ui-dynamic-schema
+not_supported_features:
+  - gen-ui-interrupt
+  - interrupt-headless
 interaction_modalities:
   - sidebar
   - embedded
@@ -24,6 +27,7 @@ features:
   - cli-start
   - agentic-chat
   - hitl-in-chat
+  - hitl-in-chat-booking
   - hitl-in-app
   - hitl
   - tool-rendering
@@ -57,6 +61,7 @@ features:
   - multimodal
   - byoc-hashbrown
   - byoc-json-render
+  - beautiful-chat
 demos:
   - id: cli-start
     name: CLI Start Command
@@ -78,6 +83,18 @@ demos:
   - id: hitl-in-chat
     name: In-Chat HITL (useHumanInTheLoop)
     description: Interactive approval/decision surface rendered inline in the chat via the high-level `useHumanInTheLoop` hook
+    tags:
+      - interactivity
+    route: /demos/hitl-in-chat
+    animated_preview_url:
+    highlight:
+      - src/agents/agent.py
+      - src/app/demos/hitl-in-chat/page.tsx
+      - src/app/demos/hitl-in-chat/time-picker-card.tsx
+      - src/app/api/copilotkit/route.ts
+  - id: hitl-in-chat-booking
+    name: In-Chat HITL (Booking)
+    description: Time-picker card rendered inline via useHumanInTheLoop for a booking flow — same surface as hitl-in-chat with a booking-focused framing
     tags:
       - interactivity
     route: /demos/hitl-in-chat
@@ -495,6 +512,20 @@ demos:
       - src/app/demos/byoc-json-render/types.ts
       - src/app/demos/byoc-json-render/suggestions.ts
       - src/app/api/copilotkit-byoc-json-render/route.ts
+  - id: beautiful-chat
+    name: Beautiful Chat
+    description: Simplified flagship cell that combines A2UI Dynamic + Open Generative UI on a single dedicated runtime — agent picks branded catalog components for structured visuals and free-form sandboxed UI for everything else
+    tags:
+      - chat-ui
+      - generative-ui
+    route: /demos/beautiful-chat
+    animated_preview_url:
+    highlight:
+      - src/agents/beautiful_chat.py
+      - src/app/demos/beautiful-chat/page.tsx
+      - src/app/demos/beautiful-chat/README.md
+      - src/app/demos/declarative-gen-ui/a2ui/catalog.ts
+      - src/app/api/copilotkit-beautiful-chat/route.ts
 managed_platform:
   name: Agent OS
   url: https://ag2.ai/product
