@@ -134,6 +134,13 @@ samp {
   color: var(--text);
 }
 
+/* Inline code inside headings should scale with the heading, not stay fixed */
+.reference-content h2 code,
+.reference-content h3 code,
+.reference-content h4 code {
+  font-size: 0.875em;
+}
+
 /* Bare <pre> fallback (when an MDX page uses a triple-fence rather than
  * <Snippet>). Mirrors the chrome on <Snippet>'s figure so pages look
  * consistent whether the code is live-from-cell or inline. */
@@ -164,6 +171,12 @@ samp {
   opacity: 0.8;
 }
 
+/* Cards and nav grids inside MDX use not-prose to opt out of prose link styling */
+.reference-content .not-prose a {
+  text-decoration: none;
+  color: inherit;
+}
+
 .reference-content table {
   width: 100%;
   font-size: 0.8125rem;
@@ -192,4 +205,16 @@ samp {
   border: none;
   border-top: 1px solid var(--border);
   margin: 1.5rem 0;
+}
+
+/* <Steps> / <Step> — CSS counters so numbering survives WhenFrameworkHas
+ * gating. The Steps wrapper resets the counter; each visible Step
+ * increments and renders its number via ::before. Hidden gates render
+ * nothing, so the counter doesn't advance across them. */
+.docs-steps {
+  counter-reset: docs-step;
+}
+.docs-step__badge::before {
+  counter-increment: docs-step;
+  content: counter(docs-step);
 }
