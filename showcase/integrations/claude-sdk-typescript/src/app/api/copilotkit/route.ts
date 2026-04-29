@@ -64,6 +64,12 @@ const agentNames = [
   "voice-demo",
   "agent-config-demo",
   "auth-demo",
+  // showcase-fill-186 ports — pass-through agents driven by frontend tooling
+  "tool-rendering-default-catchall",
+  "tool-rendering-custom-catchall",
+  "tool-rendering-reasoning-chain",
+  "agentic-chat-reasoning",
+  "reasoning-default-render",
 ];
 
 const agents: Record<string, AbstractAgent> = {};

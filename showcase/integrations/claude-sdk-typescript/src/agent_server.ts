@@ -290,6 +290,15 @@ interface DemoConfig {
   buildSystemPrompt?: (forwardedProps: Record<string, unknown>) => string;
   /** Force vision-capable model regardless of attachment detection. */
   forceVisionModel?: boolean;
+  /**
+   * Enable Anthropic extended thinking and forward `thinking_delta` events
+   * as AG-UI REASONING_MESSAGE_* events. Requires a model that supports
+   * extended thinking (Claude 3.7 Sonnet / Claude 4 family). Sets
+   * `thinking: { type: "enabled", budget_tokens }`.
+   */
+  enableThinking?: boolean;
+  /** Override model used when `enableThinking` is set. */
+  thinkingModel?: string;
 }
 
 const DEFAULT_SYSTEM_PROMPT =
@@ -346,15 +355,26 @@ function makeAgentHandler(config: DemoConfig = {}) {
 
       const useVision =
         config.forceVisionModel || messagesHaveAttachments(userMessages);
-      const model = useVision ? CLAUDE_VISION_MODEL : CLAUDE_MODEL;
+      let model = useVision ? CLAUDE_VISION_MODEL : CLAUDE_MODEL;
+      if (config.enableThinking && config.thinkingModel) {
+        model = config.thinkingModel;
+      }
 
       const claudeRequest: Anthropic.MessageCreateParamsStreaming = {
         model,
-        max_tokens: 4096,
+        max_tokens: config.enableThinking ? 8192 : 4096,
         system: systemPrompt,
         messages,
         stream: true,
         ...(tools.length > 0 ? { tools } : {}),
+        ...(config.enableThinking
+          ? {
+              thinking: {
+                type: "enabled" as const,
+                budget_tokens: 2048,
+              },
+            }
+          : {}),
       };
 
       let toolCallId: string | null = null;
@@ -362,6 +382,9 @@ function makeAgentHandler(config: DemoConfig = {}) {
       let toolCallArgs = "";
       let textMessageStarted = false;
       let textMessageEnded = false;
+      let reasoningMsgId: string | null = null;
+      let reasoningStarted = false;
+      let reasoningEnded = false;
 
       try {
         const stream = await anthropic.messages.stream(claudeRequest);
@@ -380,6 +403,13 @@ function makeAgentHandler(config: DemoConfig = {}) {
                 toolCallName,
                 parentMessageId: msgId,
               });
+            } else if (
+              (event.content_block as any).type === "thinking" &&
+              config.enableThinking
+            ) {
+              reasoningMsgId = randomUUID();
+              reasoningStarted = false;
+              reasoningEnded = false;
             }
           } else if (event.type === "content_block_delta") {
             if (event.delta.type === "text_delta") {
@@ -403,6 +433,25 @@ function makeAgentHandler(config: DemoConfig = {}) {
                 toolCallId,
                 delta: event.delta.partial_json,
               });
+            } else if (
+              (event.delta as any).type === "thinking_delta" &&
+              config.enableThinking &&
+              reasoningMsgId
+            ) {
+              const thinkingText = (event.delta as any).thinking as string;
+              if (!reasoningStarted) {
+                emit({
+                  type: EventType.REASONING_MESSAGE_START,
+                  messageId: reasoningMsgId,
+                  role: "assistant",
+                });
+                reasoningStarted = true;
+              }
+              emit({
+                type: EventType.REASONING_MESSAGE_CONTENT,
+                messageId: reasoningMsgId,
+                delta: thinkingText,
+              });
             }
           } else if (event.type === "content_block_stop") {
             if (toolCallId) {
@@ -413,6 +462,14 @@ function makeAgentHandler(config: DemoConfig = {}) {
               toolCallId = null;
               toolCallName = null;
               toolCallArgs = "";
+            } else if (reasoningMsgId && reasoningStarted && !reasoningEnded) {
+              emit({
+                type: EventType.REASONING_MESSAGE_END,
+                messageId: reasoningMsgId,
+              });
+              reasoningEnded = true;
+              reasoningMsgId = null;
+              reasoningStarted = false;
             }
           } else if (event.type === "message_stop") {
             if (textMessageStarted && !textMessageEnded) {
@@ -435,6 +492,13 @@ function makeAgentHandler(config: DemoConfig = {}) {
             messageId: msgId,
           });
           textMessageEnded = true;
+        }
+        if (reasoningMsgId && reasoningStarted && !reasoningEnded) {
+          emit({
+            type: EventType.REASONING_MESSAGE_END,
+            messageId: reasoningMsgId,
+          });
+          reasoningEnded = true;
         }
       }
 
@@ -955,6 +1019,24 @@ app.post(
 
 // Auth and voice reuse the default pass-through — the gate / transcription
 // service lives on the Next.js route, not the agent itself.
+
+// Reasoning demos — enable Anthropic extended-thinking and forward
+// `thinking_delta` events as AG-UI REASONING_MESSAGE_* events. The
+// claude-3-7-sonnet family supports extended thinking.
+const CLAUDE_REASONING_MODEL =
+  process.env.CLAUDE_REASONING_MODEL || "claude-3-7-sonnet-20250219";
+const REASONING_SYSTEM_PROMPT =
+  "You are a helpful assistant. For each user question, first think " +
+  "step-by-step about the approach, then give a concise answer.";
+
+app.post(
+  "/reasoning",
+  makeAgentHandler({
+    systemPrompt: REASONING_SYSTEM_PROMPT,
+    enableThinking: true,
+    thinkingModel: CLAUDE_REASONING_MODEL,
+  }),
+);
 
 // Shared State (Read + Write) — UI writes preferences via agent.setState,
 // the agent reads them out of input.state every turn and prepends them to
