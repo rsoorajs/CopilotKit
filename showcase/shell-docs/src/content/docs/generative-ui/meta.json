@@ -13,6 +13,8 @@
     "a2ui/dynamic-schema",
     "a2ui/fixed-schema",
     "open-json-ui",
+    "hashbrown",
+    "json-render",
     "---Open-Ended---",
     "mcp-apps"
   ]

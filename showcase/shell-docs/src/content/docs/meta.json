@@ -13,8 +13,6 @@
     "voice",
     "---Build Generative UI---",
     "...generative-ui",
-    "byoc-hashbrown",
-    "byoc-json-render",
     "---Give Your App Agent Powers---",
     "frontend-tools",
     "shared-state",
