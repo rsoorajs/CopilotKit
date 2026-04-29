@@ -191,7 +191,10 @@ export function StatusTable({
                 (s) => s.state === "completed" && s.result === "green",
               ).length;
               const failed = inflight.services.filter(
-                (s) => s.state === "failed" || (s.state === "completed" && s.result === "red"),
+                (s) =>
+                  s.state === "failed" ||
+                  (s.state === "completed" &&
+                    (s.result === "red" || s.result === "yellow")),
               ).length;
 
               if (failed > 0) tone = "red";

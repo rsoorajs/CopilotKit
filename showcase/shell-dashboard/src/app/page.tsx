@@ -57,7 +57,7 @@ export default function Page() {
   );
 
   // Overlay state management (handles URL hash + localStorage persistence)
-  const { overlays, activeTab, toggle, applyPreset, setTab, activePreset } =
+  const { overlays, activeTab, toggle, applyPreset, setTab, activePreset, selectedProbeId, selectProbe } =
     useOverlays();
 
   // Build a cell-lookup map: integration slug + feature id -> CatalogCell
@@ -207,7 +207,12 @@ export default function Page() {
 
       {activeTab === "ops" && (
         <div className="flex-1 min-h-0 overflow-auto">
-          <StatusTab entries={probeEntries} onTrigger={handleTrigger} />
+          <StatusTab
+            entries={probeEntries}
+            onTrigger={handleTrigger}
+            selectedProbeId={selectedProbeId}
+            onSelectProbe={selectProbe}
+          />
         </div>
       )}
     </div>
