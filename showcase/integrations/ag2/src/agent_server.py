@@ -21,8 +21,12 @@ from dotenv import load_dotenv
 from agents.agent import stream as default_stream
 from agents.a2ui_dynamic import a2ui_dynamic_app
 from agents.a2ui_fixed import a2ui_fixed_app
+from agents.agent_config_agent import agent_config_app
+from agents.byoc_hashbrown_agent import byoc_hashbrown_app
+from agents.byoc_json_render_agent import byoc_json_render_app
 from agents.headless_complete import headless_complete_app
 from agents.mcp_apps_agent import mcp_apps_app
+from agents.multimodal_agent import multimodal_app
 from agents.open_gen_ui_advanced_agent import open_gen_ui_advanced_app
 from agents.open_gen_ui_agent import open_gen_ui_app
 from agents.shared_state_read_write import (
@@ -76,6 +80,10 @@ app.mount(
     "/tool-rendering-reasoning-chain",
     tool_rendering_reasoning_chain_app,
 )
+app.mount("/agent-config", agent_config_app)
+app.mount("/multimodal", multimodal_app)
+app.mount("/byoc-hashbrown", byoc_hashbrown_app)
+app.mount("/byoc-json-render", byoc_json_render_app)
 
 
 # Mount the default AG2 AG-UI endpoint at the root.

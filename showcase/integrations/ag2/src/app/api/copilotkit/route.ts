@@ -58,6 +58,7 @@ const dedicatedAgents: Record<string, string> = {
   subagents: "/subagents/",
   "headless-complete": "/headless-complete/",
   "tool-rendering-reasoning-chain": "/tool-rendering-reasoning-chain/",
+  "agent-config-demo": "/agent-config/",
 };
 
 const agents: Record<string, AbstractAgent> = {};
