@@ -1,5 +1,5 @@
 {
-  "_comment": "D5 fixture for /demos/subagents against LangGraph Python (LGP). Four-step chain: supervisor calls research_agent -> writing_agent -> critique_agent -> final reply. Uses turnIndex matching: aimock counts assistant messages in the request to disambiguate the four legs of the chain. Fixtures ordered 0→3 for readability.",
+  "_comment": "D5 fixture for /demos/subagents. Two layers: (1) Supervisor chain — 4-step turnIndex progression: research_agent -> writing_agent -> critique_agent -> final reply. (2) Nested sub-agent fixtures — each tool spawns an independent LLM call; these fixtures serve those nested calls so they succeed without --proxy-only mode.",
   "fixtures": [
     {
       "match": {
@@ -14,6 +14,15 @@
             "arguments": "{\"topic\":\"Benefits of remote work\"}"
           }
         ]
+      }
+    },
+    {
+      "_comment": "Nested: research sub-agent single-turn LLM call",
+      "match": {
+        "userMessage": "Benefits of remote work"
+      },
+      "response": {
+        "content": "- Eliminates commute, returning ~10 hours/week to employees\n- Surveys consistently show higher job satisfaction among remote workers\n- Employers gain access to a geographically unbounded talent pool\n- Reduced office overhead (rent, utilities, maintenance)\n- Trade-offs: ad-hoc collaboration, mentorship of junior staff, and cultural cohesion degrade without intentional replacement rituals"
       }
     },
     {
@@ -32,6 +41,15 @@
       }
     },
     {
+      "_comment": "Nested: writing sub-agent single-turn LLM call",
+      "match": {
+        "userMessage": "One-paragraph summary on the benefits of remote work"
+      },
+      "response": {
+        "content": "Remote work returns roughly ten hours a week to employees by eliminating the commute, and repeated surveys show meaningfully higher job satisfaction among remote workers. Employers benefit too: a geographically unbounded talent pool and lower office overhead. The honest counterweight is that ad-hoc collaboration, mentorship of junior staff, and cultural cohesion all degrade without intentional rituals to replace what an office provided implicitly."
+      }
+    },
+    {
       "match": {
         "userMessage": "Research the benefits of remote work and draft a one-paragraph summary",
         "turnIndex": 2
@@ -44,6 +62,15 @@
             "arguments": "{\"draft\":\"Remote work returns roughly ten hours a week to employees by eliminating the commute, and repeated surveys show meaningfully higher job satisfaction among remote workers. Employers benefit too: a geographically unbounded talent pool and lower office overhead. The honest counterweight is that ad-hoc collaboration, mentorship of junior staff, and cultural cohesion all degrade without intentional rituals to replace what an office provided implicitly.\"}"
           }
         ]
+      }
+    },
+    {
+      "_comment": "Nested: critique sub-agent single-turn LLM call",
+      "match": {
+        "userMessage": "Review this draft"
+      },
+      "response": {
+        "content": "1. Add a specific citation or date range for the surveys mentioned — 'repeated surveys' is vague and weakens the empirical claim.\n2. The ten-hours figure needs sourcing; without it the opening reads as an unsupported assertion rather than a research finding.\n3. The final sentence about 'intentional rituals' is abstract — one concrete example (e.g., scheduled pair-programming sessions, virtual coffee chats) would make the counterweight more actionable."
       }
     },
     {
