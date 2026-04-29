@@ -154,7 +154,14 @@ export class LangGraphAgent extends AGUILangGraphAgent {
 
   // @ts-ignore
   run(input: RunAgentInput): Observable<BaseEvent> {
-    return super.run(input).pipe(
+    const enrichedInput = {
+      ...input,
+      forwardedProps: {
+        ...input.forwardedProps,
+        streamSubgraphs: input.forwardedProps?.streamSubgraphs ?? true,
+      },
+    };
+    return super.run(enrichedInput).pipe(
       map((processedEvent) => {
         // Turn raw event into emit state snapshot from tool call event
         if (processedEvent.type === EventType.RAW) {
