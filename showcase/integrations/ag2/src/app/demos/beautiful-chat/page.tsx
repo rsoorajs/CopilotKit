@@ -97,7 +97,7 @@ const SUGGESTIONS = [
   {
     title: "Quicksort visualization (Open Gen UI)",
     message:
-      "Visualize quicksort on ~10 bars of varying heights. Highlight the pivot in amber, comparisons in indigo, swaps in emerald. Auto-advance through the sort with a caption per step.",
+      "Visualize quicksort on ~10 bars of varying heights. Highlight the pivot in amber, compared elements in indigo, swaps in emerald. Auto-advance through the sort with a caption per step.",
   },
 ];
 
