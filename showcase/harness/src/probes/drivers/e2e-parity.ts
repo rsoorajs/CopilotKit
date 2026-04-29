@@ -42,6 +42,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { defaultScriptLoader as defaultD5ScriptLoader } from "./e2e-deep.js";
 import type { Page as PlaywrightPage } from "playwright";
+import type { BrowserPool } from "../helpers/browser-pool.js";
 
 /**
  * D6 — e2e-parity driver.
@@ -348,6 +349,31 @@ const defaultLauncher: E2eParityBrowserLauncher =
       close: () => browser.close(),
     };
   };
+
+export function createPooledE2eParityLauncher(
+  pool: BrowserPool,
+): E2eParityBrowserLauncher {
+  return async (): Promise<E2eParityBrowser> => {
+    const browser = await pool.acquire();
+    return {
+      async newContext(): Promise<E2eParityBrowserContext> {
+        const ctx = await browser.newContext();
+        return {
+          async newPage(): Promise<E2eParityPage> {
+            const page = await ctx.newPage();
+            const wrapped = page as unknown as E2eParityPage;
+            wrapped.asPlaywrightPage = (): PlaywrightPage => page;
+            return wrapped;
+          },
+          close: () => ctx.close(),
+        };
+      },
+      close: async () => {
+        pool.release(browser);
+      },
+    };
+  };
+}
 
 /**
  * Default SSE interceptor — pulls the Playwright Page out via

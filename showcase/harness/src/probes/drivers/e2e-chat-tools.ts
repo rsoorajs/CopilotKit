@@ -6,6 +6,7 @@ import {
   resolveShape,
   showcaseShapeSchema,
 } from "../discovery/railway-services.js";
+import type { BrowserPool } from "../helpers/browser-pool.js";
 import type { ProbeDriver } from "../types.js";
 import type { ProbeContext, ProbeResult } from "../../types/index.js";
 
@@ -257,6 +258,37 @@ const defaultLauncher: E2eBrowserLauncher = async (): Promise<E2eBrowser> => {
     close: () => browser.close(),
   };
 };
+
+export function createPooledE2eSmokeLauncher(
+  pool: BrowserPool,
+): E2eBrowserLauncher {
+  return async (): Promise<E2eBrowser> => {
+    const browser = await pool.acquire();
+    return {
+      async newContext(): Promise<E2eBrowserContext> {
+        const ctx = await browser.newContext();
+        return {
+          async newPage(): Promise<E2ePage> {
+            const page = await ctx.newPage();
+            return {
+              goto: (url, opts) => page.goto(url, opts),
+              type: (sel, text, opts) => page.type(sel, text, opts),
+              press: (sel, key, opts) => page.press(sel, key, opts),
+              waitForSelector: (sel, opts) => page.waitForSelector(sel, opts),
+              textContent: (sel) => page.textContent(sel),
+              evaluate: <R>(fn: () => R) => page.evaluate(fn),
+              close: () => page.close(),
+            };
+          },
+          close: () => ctx.close(),
+        };
+      },
+      close: async () => {
+        pool.release(browser);
+      },
+    };
+  };
+}
 
 /**
  * Default demos resolver. Reads `/app/data/registry.json` once (memoised
