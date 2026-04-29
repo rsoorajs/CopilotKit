@@ -17,13 +17,18 @@ declare const FlightListCard: React.ComponentType<{
   flights: unknown[];
 }>;
 
+type FlightToolProps = {
+  status: string;
+  args?: { origin?: string; destination?: string };
+  result?: { origin?: string; destination?: string; flights?: unknown[] };
+};
+
 export function FlightToolRenderer() {
   // @region[render-flight-tool]
   // Per-tool renderer: search_flights → branded FlightListCard.
   useComponent({
     name: "search_flights",
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    render: (props: any) => {
+    render: (props: FlightToolProps) => {
       const { status, args, result } = props;
       const loading = status !== "complete";
       return (

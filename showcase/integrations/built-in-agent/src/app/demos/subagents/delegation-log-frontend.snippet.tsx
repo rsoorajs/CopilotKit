@@ -51,9 +51,6 @@ const SUB_AGENT_STYLE: Record<
   },
 };
 
-// Per-status color map. A `failed` delegation must be visually distinct
-// from `completed` — rendering "failed" in green (the prior behaviour)
-// made errors silently look successful.
 const STATUS_BADGE: Record<Delegation["status"], string> = {
   running: "text-[#5B5BD6]",
   completed: "text-[#189370]",
@@ -64,11 +61,10 @@ const STATUS_BADGE: Record<Delegation["status"], string> = {
 /**
  * Live delegation log — renders the `delegations` slot of agent state.
  *
- * Each entry corresponds to one invocation of an AG2 sub-agent. The list
- * grows in real time as the supervisor fans work out to its children;
- * each delegation is appended via the supervisor's tool returning a
- * ReplyResult with updated ContextVariables, which AG-UI surfaces to
- * the UI through agent state.
+ * Each entry corresponds to one sub-agent invocation. The list grows in
+ * real time as the supervisor fans work out to its children; each
+ * delegation is appended through agent state, and the UI re-renders
+ * via the standard shared-state subscription.
  */
 export function DelegationLog({ delegations, isRunning }: DelegationLogProps) {
   return (

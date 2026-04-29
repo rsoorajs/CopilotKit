@@ -16,7 +16,7 @@ from copilotkit.middleware import StateStreamingMiddleware, StateItem
 # @region[state-streaming-middleware]
 graph = create_agent(
     model=ChatOpenAI(model="gpt-4o-mini"),
-    tools=[write_document],  # type: ignore[name-defined]
+    tools=[write_document],
     middleware=[
         CopilotKitMiddleware(),
         # Forward every token of write_document's `content` argument
@@ -31,7 +31,7 @@ graph = create_agent(
             )
         ),
     ],
-    state_schema=AgentState,  # type: ignore[name-defined]
+    state_schema=AgentState,
     system_prompt=(
         "You are a collaborative writing assistant. Whenever the user asks "
         "you to write, draft, or revise any piece of text, ALWAYS call the "

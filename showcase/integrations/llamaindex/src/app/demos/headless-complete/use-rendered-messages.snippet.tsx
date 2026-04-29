@@ -27,10 +27,8 @@ import {
 /**
  * Manual per-message composition for the TRULY headless chat cell.
  *
- * This hook mirrors — line-for-line in spirit — the role-dispatch that happens
- * inside `renderMessageBlock` in the canonical primitive:
- *
- *   packages/react-core/src/v2/components/chat/CopilotChatMessageView.tsx:542-612
+ * This hook mirrors — line-for-line in spirit — the role-dispatch that
+ * the canonical `<CopilotChatMessageView>` does internally.
  *
  * The point of this cell is to demonstrate that the FULL generative-UI weave
  * (assistant text + tool-call renders + reasoning + activity + custom before /
@@ -108,9 +106,7 @@ function renderMessageContent(args: {
 
   // Tool-role messages carry a tool-call RESULT whose UI lives inline inside
   // the PRECEDING assistant message's `toolCalls[i]` render (keyed by
-  // toolCallId). We return null here so the list skips them, mirroring the
-  // fact that CopilotChatMessageView's `renderMessageBlock` has no
-  // `message.role === "tool"` branch.
+  // toolCallId). We return null here so the list skips them.
   if (message.role === "tool") {
     return null;
   }
@@ -174,7 +170,6 @@ function renderAssistantBody(args: {
       {hasText && <div className="whitespace-pre-wrap break-words">{text}</div>}
       {toolCalls.map((toolCall) => {
         // Tool result lives on a sibling `tool`-role message keyed by toolCallId.
-        // Mirrors CopilotChatToolCallsView (react-core/v2/components/chat/CopilotChatToolCallsView.tsx).
         const toolMessage = messages.find(
           (m) => m.role === "tool" && m.toolCallId === toolCall.id,
         ) as ToolMessage | undefined;

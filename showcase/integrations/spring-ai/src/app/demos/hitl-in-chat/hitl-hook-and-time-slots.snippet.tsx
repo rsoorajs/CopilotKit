@@ -23,6 +23,12 @@ declare const TimePickerCard: React.ComponentType<{
   onSubmit: (result: unknown) => void;
 }>;
 
+type BookCallRenderProps = {
+  args?: { topic?: string; attendee?: string };
+  status: string;
+  respond?: (result: unknown) => void;
+};
+
 // @region[time-slots]
 const DEFAULT_SLOTS: TimeSlot[] = [
   { label: "Tomorrow 10:00 AM", iso: "2026-04-30T10:00:00-07:00" },
@@ -46,8 +52,7 @@ export function HitlBookingHook() {
         .string()
         .describe("Who the call is with (e.g. 'Alice from Sales')"),
     }),
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    render: ({ args, status, respond }: any) => (
+    render: ({ args, status, respond }: BookCallRenderProps) => (
       <TimePickerCard
         topic={args?.topic ?? "a call"}
         attendee={args?.attendee}
