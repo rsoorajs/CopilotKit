@@ -42,6 +42,8 @@ features:
   - gen-ui-tool-based
   - hitl
   - hitl-in-app
+  - hitl-in-chat
+  - hitl-in-chat-booking
   - declarative-gen-ui
   - a2ui-fixed-schema
   - gen-ui-agent
@@ -61,6 +63,7 @@ features:
   - open-gen-ui-advanced
   - voice
   - agent-config
+  - mcp-apps
 demos:
   - id: cli-start
     name: CLI Start Command
@@ -150,6 +153,41 @@ demos:
       - src/app/demos/hitl/agent.py
       - src/app/demos/hitl/page.tsx
       - src/app/api/copilotkit/route.ts
+  - id: hitl-in-chat
+    name: In-Chat HITL (book_call)
+    description: Frontend-tool HITL via useHumanInTheLoop — agent calls book_call, frontend renders an in-chat time-picker, user's selection is forwarded back as the tool result
+    tags:
+      - interactivity
+    route: /demos/hitl-in-chat
+    animated_preview_url:
+    highlight:
+      - src/agents/hitl_in_chat_book_call_agent.py
+      - src/app/demos/hitl-in-chat/page.tsx
+      - src/app/demos/hitl-in-chat/time-picker-card.tsx
+      - src/app/api/copilotkit/route.ts
+  - id: hitl-in-chat-booking
+    name: In-Chat HITL (Booking)
+    description: Time-picker card rendered inline via useHumanInTheLoop for a booking flow
+    tags:
+      - interactivity
+    route: /demos/hitl-in-chat
+    animated_preview_url:
+    highlight:
+      - src/agents/hitl_in_chat_book_call_agent.py
+      - src/app/demos/hitl-in-chat/page.tsx
+      - src/app/demos/hitl-in-chat/time-picker-card.tsx
+      - src/app/api/copilotkit/route.ts
+  - id: mcp-apps
+    name: MCP Apps
+    description: Runtime mcpApps config wires an Excalidraw MCP server; the built-in MCPAppsActivityRenderer renders the sandboxed iframe inline in the chat with no app-side renderer
+    tags:
+      - generative-ui
+    route: /demos/mcp-apps
+    animated_preview_url:
+    highlight:
+      - src/agents/mcp_apps_agent.py
+      - src/app/demos/mcp-apps/page.tsx
+      - src/app/api/copilotkit-mcp-apps/route.ts
   - id: hitl-in-app
     name: In-App Human in the Loop (Frontend Tools + async HITL)
     description: Agent requests approval via a frontend tool with an async handler; the approval UI pops up as an app-level modal OUTSIDE the chat, and a completion callback resolves the pending tool Promise with the user's decision
