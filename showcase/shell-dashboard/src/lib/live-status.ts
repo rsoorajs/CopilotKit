@@ -97,6 +97,46 @@ export function keyFor(
     : `${dimension}:${slug}`;
 }
 
+/**
+ * Catalog feature ID → D5 PB row key suffix. The harness writes D5 rows
+ * keyed by `d5:<slug>/<d5FeatureType>`, but the dashboard resolves cells
+ * by catalog `featureId`. This map bridges the two namespaces.
+ *
+ * Mirrors `REGISTRY_TO_D5` in `harness/src/probes/helpers/d5-feature-mapping.ts`.
+ */
+const CATALOG_TO_D5_KEY: Readonly<Record<string, readonly string[]>> = {
+  "agentic-chat": ["agentic-chat"],
+  "tool-rendering": ["tool-rendering"],
+  "tool-rendering-default-catchall": ["tool-rendering"],
+  "tool-rendering-custom-catchall": ["tool-rendering"],
+  "headless-simple": ["gen-ui-headless"],
+  "headless-complete": ["gen-ui-headless"],
+  "gen-ui-tool-based": ["gen-ui-custom"],
+  "hitl-in-chat": ["hitl-text-input"],
+  "hitl-in-chat-booking": ["hitl-text-input"],
+  hitl: ["hitl-steps"],
+  "hitl-in-app": ["hitl-approve-deny"],
+  "shared-state-read-write": ["shared-state-read", "shared-state-write"],
+  "mcp-apps": ["mcp-apps"],
+  subagents: ["subagents"],
+};
+
+function resolveD5Row(
+  live: LiveStatusMap,
+  slug: string,
+  featureId: string,
+): StatusRow | null {
+  const d5Keys = CATALOG_TO_D5_KEY[featureId];
+  if (!d5Keys) return null;
+  let worst: StatusRow | null = null;
+  for (const d5Key of d5Keys) {
+    const row = live.get(keyFor("d5", slug, d5Key)) ?? null;
+    if (!row) continue;
+    if (!worst || row.state === "red") worst = row;
+  }
+  return worst;
+}
+
 function rowTone(row: StatusRow | null): BadgeTone {
   if (!row) return "gray";
   switch (row.state) {
@@ -281,7 +321,7 @@ export function resolveCell(
   // (alert engine routes them independently, same model as smoke). A
   // missing row resolves to a gray "?" badge, which is the expected
   // resting state for D6 cells outside their weekly-rotation slot.
-  const d5Row = live.get(keyFor("d5", slug, featureId)) ?? null;
+  const d5Row = resolveD5Row(live, slug, featureId);
   const d6Row = live.get(keyFor("d6", slug, featureId)) ?? null;
 
   // Rollup contributors: health + e2e (Decision #7: smokeRow dropped).
