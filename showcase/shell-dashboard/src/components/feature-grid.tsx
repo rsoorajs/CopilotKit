@@ -250,8 +250,9 @@ function CategorySection({
         onToggle={toggle}
       />
       {isOpen &&
-        cat.features.map((feature) => {
+        cat.features.map((feature, idx) => {
           const testing = feature.kind === "testing";
+          const stripe = idx % 2 === 1;
           const refCell = showRefDepth
             ? refCellsByFeature.get(feature.id)
             : undefined;
@@ -262,8 +263,12 @@ function CategorySection({
             <tr
               key={feature.id}
               className="border-t border-[var(--border)] hover:bg-[var(--bg-hover)]"
+              style={stripe ? { backgroundColor: "color-mix(in srgb, var(--bg-surface) 94%, var(--bg-muted))" } : undefined}
             >
-              <td className="sticky left-0 z-10 bg-[var(--bg-surface)] px-1 py-1 border-r border-[var(--border)] align-top">
+              <td
+                className="sticky left-0 z-10 px-1 py-1 border-r border-[var(--border)] align-top"
+                style={{ backgroundColor: stripe ? "color-mix(in srgb, var(--bg-surface) 94%, var(--bg-muted))" : "var(--bg-surface)" }}
+              >
                 <div
                   className={
                     testing
