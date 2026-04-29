@@ -466,7 +466,10 @@ export function FeatureGrid({
 
       {connection === "error" && <OfflineBanner />}
 
-      <div className="rounded-lg border border-[var(--border)] bg-[var(--bg-surface)]" style={{ width: 'fit-content', minWidth: '100%' }}>
+      <div
+        className="rounded-lg border border-[var(--border)] bg-[var(--bg-surface)]"
+        style={{ width: "fit-content", minWidth: "100%" }}
+      >
         <table className="border-collapse text-sm">
           <thead>
             <tr>
