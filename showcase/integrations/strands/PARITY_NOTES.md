@@ -111,6 +111,17 @@ Added in this blitz:
 - `auth` — bearer-token gated runtime.
 - `voice` — voice input via `@copilotkit/voice`.
 - `agent-config` — typed config object forwarded to agent.
+- `gen-ui-tool-based` — tool-triggered generative UI (haiku generator) via
+  `useFrontendTool` with a custom render. Manifest entry added; the page
+  was already in place from a prior wave.
+- `tool-rendering-default-catchall` — zero-config wildcard tool render via
+  `useDefaultRenderTool()`. Manifest entry added; page already shipped.
+- `tool-rendering-custom-catchall` — branded wildcard render. Manifest
+  entry added; page already shipped.
+- `hitl-in-chat-booking` — manifest alias of `hitl-in-chat`; both feature
+  ids point to the same `/demos/hitl-in-chat` route, mirroring the
+  langgraph-python manifest topology so the harness's per-feature live
+  status surfaces the booking flow as its own row.
 
 The Strands shared agent (`src/agents/agent.py`) already exposes the tools
 all of the above need (weather, flights, query_data, schedule_meeting,
