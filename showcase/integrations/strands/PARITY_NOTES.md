@@ -29,10 +29,16 @@ expose at this time:
   regular frontend tool — Strands supports that natively.
 - **interrupt-headless** — Same rationale as `gen-ui-interrupt`. Requires
   `useLangGraphInterrupt`'s resolve/respond primitive. Not portable.
-- **mcp-apps** — Requires MCP server-driven UI routed through a LangGraph
-  tool node. The MCP plumbing (StreamableHttp transport + the
-  `useConfigureMcpClient` wiring) is LangGraph-specific in our current
-  runtime glue. Not portable without new Strands-side integration work.
+## MCP Apps — now ported (wave-2 follow-up)
+
+- **mcp-apps** — **shipped (simplified)**. Dedicated
+  `/api/copilotkit-mcp-apps` route configures
+  `mcpApps.servers: [{ type: "http", url: ..., serverId: "excalidraw" }]`.
+  The Strands shared agent has no bespoke MCP tools — the runtime
+  middleware advertises the MCP server's tools to the agent at request
+  time and emits the activity events that CopilotKit's built-in
+  `MCPAppsActivityRenderer` paints inline as a sandboxed iframe. Mirrors
+  the langgraph-python sibling pattern.
 
 Wave-2 port status for the previously deferred demos:
 
