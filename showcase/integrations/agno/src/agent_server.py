@@ -554,10 +554,11 @@ async def _run_reasoning_agent(
             lower = full_text.lower()
             if lower.startswith("reasoning:") or lower.startswith("reasoning step"):
                 # Treat the whole text as containing reasoning — emit as
-                # reasoning message so the ReasoningBlock renders, then emit
-                # a short text answer.
+                # reasoning message so the ReasoningBlock renders, then
+                # re-emit as a text message so CopilotKit's conversation
+                # view has an assistant bubble the D5 probe can read.
                 reasoning_text = full_text.strip()
-                answer_text = ""
+                answer_text = full_text.strip()
             else:
                 reasoning_text = ""
                 answer_text = full_text.strip()
@@ -580,9 +581,11 @@ async def _run_reasoning_agent(
                 message_id=reasoning_msg_id,
             )
 
-        # Emit text message for the answer (or entire text if no reasoning)
+        # Always emit a text message so CopilotKit renders an assistant
+        # bubble in the conversation. Without this the frontend shows
+        # nothing (reasoning events alone don't produce a visible message
+        # in the default CopilotChat transcript).
         text_msg_id = str(uuid.uuid4())
-        # Only emit a text message if there's actual content or tool events
         if answer_text or tool_events:
             yield TextMessageStartEvent(
                 type=EventType.TEXT_MESSAGE_START,
