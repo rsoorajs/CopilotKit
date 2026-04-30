@@ -61,7 +61,7 @@
       "name": "CLI Start Command",
       "category": "dev-ex",
       "description": "One-liner to scaffold a new CopilotKit app via the official CLI",
-      "kind": "primary",
+      "kind": "docs-only",
       "og_docs_url": "https://docs.copilotkit.ai/quickstart",
       "shell_docs_path": "/quickstart"
     },

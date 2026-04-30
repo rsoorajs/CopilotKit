@@ -5,6 +5,7 @@
  *   - CP5: missing-state tooltip distinguishes opt-out vs absent
  *   - CP7: error-state docs link is clickable when href is present
  *   - CP8: CV badges hidden for testing-kind features
+ *   - docs-only kind hides ALL badges (API, RT, CV)
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, fireEvent, waitFor } from "@testing-library/react";
@@ -294,5 +295,18 @@ describe("CP8: CV badges hidden for testing-kind features", () => {
     const text = container.textContent ?? "";
     expect(text).toContain("API");
     expect(text).toContain("CV");
+  });
+});
+
+describe("docs-only kind hides ALL badges", () => {
+  it("returns null (renders nothing) when feature.kind === 'docs-only'", () => {
+    const ctx = makeCtx({
+      feature: makeFeature({ kind: "docs-only" }),
+    });
+    const { container } = render(<CellStatus ctx={ctx} />);
+    const text = container.textContent ?? "";
+    expect(text).not.toContain("API");
+    expect(text).not.toContain("RT");
+    expect(text).not.toContain("CV");
   });
 });

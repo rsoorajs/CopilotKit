@@ -252,6 +252,8 @@ function CategorySection({
       {isOpen &&
         cat.features.map((feature, idx) => {
           const testing = feature.kind === "testing";
+          const docsOnly = feature.kind === "docs-only";
+          const muted = testing || docsOnly;
           const stripe = idx % 2 === 1;
           const refCell = showRefDepth
             ? refCellsByFeature.get(feature.id)
@@ -282,7 +284,7 @@ function CategorySection({
               >
                 <div
                   className={
-                    testing
+                    muted
                       ? "font-normal text-[var(--text-muted)] italic"
                       : "font-medium text-[var(--text)]"
                   }
@@ -292,6 +294,11 @@ function CategorySection({
                   {testing && (
                     <span className="ml-2 text-[9px] uppercase tracking-wider text-[var(--text-muted)]">
                       testing
+                    </span>
+                  )}
+                  {docsOnly && (
+                    <span className="ml-2 text-[9px] uppercase tracking-wider text-[var(--text-muted)]">
+                      docs-only
                     </span>
                   )}
                 </div>
