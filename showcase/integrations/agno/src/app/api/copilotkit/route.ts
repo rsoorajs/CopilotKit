@@ -62,6 +62,16 @@ const mainAgentNames = [
   "agent-config",
 ];
 
+// Interrupt-adapted demos: gen-ui-interrupt and interrupt-headless share
+// the same Agno scheduling agent at /interrupt-adapted/agui. The agent has
+// tools=[]; `schedule_meeting` is provided by the frontend via
+// `useFrontendTool` with an async Promise handler.
+function createInterruptAgent() {
+  return new HttpAgent({ url: `${AGENT_URL}/interrupt-adapted/agui` });
+}
+
+const interruptAgentNames = ["gen-ui-interrupt", "interrupt-headless"];
+
 // Reasoning agent names — backed by the reasoning-enabled Agno agent at
 // /reasoning/agui. Emits AG-UI REASONING_MESSAGE_* events that the
 // frontend renders via CopilotChatReasoningMessage (or a custom slot).
@@ -74,6 +84,9 @@ const reasoningAgentNames = [
 const agents: Record<string, AbstractAgent> = {};
 for (const name of mainAgentNames) {
   agents[name] = createMainAgent();
+}
+for (const name of interruptAgentNames) {
+  agents[name] = createInterruptAgent();
 }
 for (const name of reasoningAgentNames) {
   agents[name] = createReasoningAgent();

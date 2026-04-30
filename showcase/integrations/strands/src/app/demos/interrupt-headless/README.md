@@ -1,27 +1,14 @@
-# interrupt-headless (not supported on AWS Strands)
+# interrupt-headless (Strands — Strategy B)
 
-This feature is listed under `not_supported_features` in
-`showcase/integrations/strands/manifest.yaml`.
+Headless interrupt demo: chat on the right, app surface on the left. When the
+agent calls `schedule_meeting`, a time-picker popup appears in the app surface
+(outside the chat). Picking a slot resolves the tool call.
 
-## Why It Is Not Supported
-
-`interrupt-headless` requires `useLangGraphInterrupt`'s resolve/respond
-primitive — the headless variant of `gen-ui-interrupt`. AWS Strands does
-not expose an equivalent first-class interrupt primitive, so the headless
-variant is not portable without new Strands-side integration work.
-
-See `showcase/integrations/strands/PARITY_NOTES.md` for full context.
-
-## Ergonomic Replacements
-
-For Strands-native HITL flows, see:
-
-- `headless-complete` (`src/app/demos/headless-complete/`) — full headless
-  chat implementation using `useAgent` directly.
-- `hitl-in-chat` (`src/app/demos/hitl-in-chat/`) — `useHumanInTheLoop`
-  ergonomic HITL.
+This is the Strands adaptation of the LangGraph headless interrupt demo. Since
+Strands does not have a native interrupt primitive, we use the "Strategy B"
+pattern: `useFrontendTool` with an async handler that sets pending state for
+the external popup and returns a Promise that resolves when the user interacts.
 
 ## Files
 
-- `page.tsx` — stub page that surfaces the unsupported message and links
-  to the closest replacements.
+- `page.tsx` — demo page with split layout and external popup

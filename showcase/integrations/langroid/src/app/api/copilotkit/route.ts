@@ -63,6 +63,9 @@ const agentNames = [
   "open-gen-ui",
   "open-gen-ui-advanced",
   "headless-complete",
+  // Interrupt demos (Strategy B — frontend-tool async handler)
+  "gen-ui-interrupt",
+  "interrupt-headless",
 ];
 
 const agents: Record<string, AbstractAgent> = {};

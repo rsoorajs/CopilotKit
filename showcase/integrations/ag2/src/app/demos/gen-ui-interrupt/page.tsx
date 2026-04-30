@@ -1,75 +1,121 @@
 "use client";
 
-/**
- * gen-ui-interrupt — NOT SUPPORTED on AG2
- *
- * The LangGraph version of this demo uses LangGraph's native `interrupt()`
- * primitive, which pauses the running graph and emits a resumable interrupt
- * payload over the AG-UI stream. The frontend then resumes the SAME graph
- * run from a persisted checkpoint via
- * `copilotkit.runAgent({ forwardedProps: { command: { resume } } })`.
- *
- * AG2's `human_input_mode` is a synchronous request/reply hook on a
- * `ConversableAgent`; it does not pause-and-resume the same run from a
- * persisted checkpoint, so the resumable interrupt round-trip cannot be
- * reproduced faithfully.
- *
- * For an inline-in-chat HITL surface on AG2 see `/demos/hitl-in-chat`,
- * which uses the higher-level `useHumanInTheLoop` hook (the same UX that
- * langgraph's `useInterrupt` exposes via `useHumanInTheLoop` on top).
- *
- * For an out-of-chat HITL surface on AG2 see `/demos/hitl-in-app`.
- */
+// Gen UI Interrupt demo (AG2 port).
+//
+// The LangGraph version of this demo uses `useInterrupt` with LangGraph's
+// native `interrupt()` primitive — the backend pauses the run and surfaces
+// a payload that the frontend renders into the chat via the `useInterrupt`
+// hook. AG2 does NOT have an equivalent interrupt primitive, so we adapt
+// the demo by registering a frontend tool with `useFrontendTool`. The
+// handler returns a Promise that only resolves once the user picks a time
+// (or cancels), which produces the same UX: the picker appears inline in
+// the chat and the agent's tool call blocks until the user decides.
 
-import React from "react";
-import Link from "next/link";
+import React, { useRef } from "react";
+import { CopilotKit } from "@copilotkit/react-core";
+import {
+  CopilotChat,
+  useConfigureSuggestions,
+  useFrontendTool,
+} from "@copilotkit/react-core/v2";
+import { z } from "zod";
+import { TimePickerCard, TimeSlot } from "./time-picker-card";
 
-export default function GenUiInterruptUnsupportedPage() {
+const DEFAULT_SLOTS: TimeSlot[] = [
+  { label: "Tomorrow 10:00 AM", iso: "2026-04-25T10:00:00-07:00" },
+  { label: "Tomorrow 2:00 PM", iso: "2026-04-25T14:00:00-07:00" },
+  { label: "Monday 9:00 AM", iso: "2026-04-28T09:00:00-07:00" },
+  { label: "Monday 3:30 PM", iso: "2026-04-28T15:30:00-07:00" },
+];
+
+type PickerResult =
+  | { chosen_time: string; chosen_label: string }
+  | { cancelled: true };
+
+export default function GenUiInterruptDemo() {
   return (
-    <div className="flex justify-center items-center h-screen w-full p-6">
-      <div className="max-w-2xl w-full rounded-2xl border border-[var(--border)] bg-[var(--card)] p-8 shadow-sm">
-        <div className="text-xs uppercase tracking-wider text-[var(--muted-foreground)] mb-2">
-          Not supported on AG2
-        </div>
-        <h1 className="text-2xl font-semibold mb-3">
-          gen-ui-interrupt is not available on AG2
-        </h1>
-        <p className="text-sm text-[var(--muted-foreground)] mb-4 leading-relaxed">
-          This demo depends on LangGraph&apos;s native{" "}
-          <code className="px-1 rounded bg-[var(--muted)]">interrupt()</code>{" "}
-          primitive — the graph pauses, emits a resumable payload over the AG-UI
-          stream, and the frontend resumes the same run from a persisted
-          checkpoint. AG2&apos;s{" "}
-          <code className="px-1 rounded bg-[var(--muted)]">
-            human_input_mode
-          </code>{" "}
-          is a synchronous request/reply hook and does not round-trip a
-          resumable pause through the event stream, so the AG-UI interrupt
-          contract cannot be reproduced faithfully.
-        </p>
-        <p className="text-sm text-[var(--muted-foreground)] mb-6 leading-relaxed">
-          Equivalent in-chat HITL flows on AG2 are available via the
-          higher-level{" "}
-          <code className="px-1 rounded bg-[var(--muted)]">
-            useHumanInTheLoop
-          </code>{" "}
-          hook.
-        </p>
-        <div className="flex flex-wrap gap-3">
-          <Link
-            href="/demos/hitl-in-chat"
-            className="inline-flex items-center px-4 py-2 rounded-lg border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--muted)] text-sm font-medium"
-          >
-            Try hitl-in-chat (in-chat HITL on AG2) →
-          </Link>
-          <Link
-            href="/demos/hitl-in-app"
-            className="inline-flex items-center px-4 py-2 rounded-lg border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--muted)] text-sm font-medium"
-          >
-            Try hitl-in-app (out-of-chat HITL on AG2) →
-          </Link>
+    <CopilotKit runtimeUrl="/api/copilotkit" agent="gen-ui-interrupt">
+      <div className="flex justify-center items-center h-screen w-full">
+        <div className="h-full w-full max-w-4xl">
+          <Chat />
         </div>
       </div>
-    </div>
+    </CopilotKit>
+  );
+}
+
+function Chat() {
+  // Pending-resolver ref: set by the async handler, called by the render
+  // prop when the user clicks a slot or cancels. This is the AG2
+  // adaptation of the LangGraph `resolve(...)` callback.
+  const resolverRef = useRef<((result: PickerResult) => void) | null>(null);
+
+  useConfigureSuggestions({
+    suggestions: [
+      {
+        title: "Book a call with sales",
+        message: "Book an intro call with the sales team to discuss pricing.",
+      },
+      {
+        title: "Schedule a 1:1 with Alice",
+        message: "Schedule a 1:1 with Alice next week to review Q2 goals.",
+      },
+    ],
+    available: "always",
+  });
+
+  // @region[frontend-promise-handler]
+  useFrontendTool({
+    name: "schedule_meeting",
+    description:
+      "Ask the user to pick a time slot for a meeting via an in-chat " +
+      "picker. Blocks until the user chooses a slot or cancels.",
+    parameters: z.object({
+      topic: z
+        .string()
+        .describe("Short human-readable description of the meeting."),
+      attendee: z
+        .string()
+        .optional()
+        .describe("Who the meeting is with (optional)."),
+    }),
+    // Async handler: returns a Promise that resolves only once the user
+    // acts on the picker. This is the AG2 shim for LangGraph's
+    // `interrupt()`/`resolve()` pair.
+    handler: async (): Promise<string> => {
+      const result = await new Promise<PickerResult>((resolve) => {
+        resolverRef.current = resolve;
+      });
+      if ("cancelled" in result && result.cancelled) {
+        return "User cancelled. Meeting NOT scheduled.";
+      }
+      if ("chosen_label" in result) {
+        return `Meeting scheduled for ${result.chosen_label}.`;
+      }
+      return "User did not pick a time. Meeting NOT scheduled.";
+    },
+    render: ({ args, status }) => {
+      if (status === "complete") return null;
+      const topic =
+        (args as { topic?: string } | undefined)?.topic ?? "a meeting";
+      const attendee = (args as { attendee?: string } | undefined)?.attendee;
+      return (
+        <TimePickerCard
+          topic={topic}
+          attendee={attendee}
+          slots={DEFAULT_SLOTS}
+          onSubmit={(result) => {
+            const fn = resolverRef.current;
+            resolverRef.current = null;
+            fn?.(result);
+          }}
+        />
+      );
+    },
+  });
+  // @endregion[frontend-promise-handler]
+
+  return (
+    <CopilotChat agentId="gen-ui-interrupt" className="h-full rounded-2xl" />
   );
 }

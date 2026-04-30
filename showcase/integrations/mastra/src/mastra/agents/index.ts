@@ -321,6 +321,47 @@ Do NOT call \`read_me\`, do NOT iterate, do NOT make multiple calls. Ship on the
  * route) so the vision-tier cost is scoped to exactly the cell that
  * exercises it.
  */
+// @region[interrupt-agent]
+/**
+ * Scheduling agent for the interrupt-adapted demos (gen-ui-interrupt,
+ * interrupt-headless).
+ *
+ * This agent powers the "Strategy B" adaptation of the LangGraph interrupt
+ * demos. LangGraph has a native `interrupt()` primitive with
+ * checkpoint/resume; Mastra does not. Instead, we register a frontend tool
+ * (`schedule_meeting`) via `useFrontendTool` with an async handler. The
+ * handler returns a Promise that only resolves once the user picks a time
+ * slot (or cancels), producing the same UX as `interrupt()`.
+ *
+ * The agent defines NO backend tools — `schedule_meeting` is satisfied
+ * entirely by the frontend. The system prompt directs the model to always
+ * call `schedule_meeting` when asked to book/schedule.
+ */
+export const interruptAgent = new Agent({
+  id: "interrupt-agent",
+  name: "Interrupt Agent",
+  tools: {},
+  model: openai("gpt-4o-mini"),
+  instructions: `You are a scheduling assistant. Whenever the user asks you to book a call or schedule a meeting, you MUST call the \`schedule_meeting\` tool. Pass a short \`topic\` describing the purpose of the meeting and, if known, an \`attendee\` describing who the meeting is with.
+
+The \`schedule_meeting\` tool is implemented on the client: it surfaces a time-picker UI to the user and returns the user's selection. After the tool returns, briefly confirm whether the meeting was scheduled and at what time, or note that the user cancelled. Do NOT ask for approval yourself — always call the tool and let the picker handle the decision.
+
+Keep responses short and friendly. After you finish executing tools, always send a brief final assistant message summarizing what happened so the message persists.`,
+  memory: new Memory({
+    storage: new LibSQLStore({
+      id: "interrupt-agent-memory",
+      url: WORKING_MEMORY_DB_URL,
+    }),
+    options: {
+      workingMemory: {
+        enabled: true,
+        schema: AgentState,
+      },
+    },
+  }),
+});
+// @endregion[interrupt-agent]
+
 export const multimodalAgent = new Agent({
   id: "multimodal-demo",
   name: "Multimodal Agent",

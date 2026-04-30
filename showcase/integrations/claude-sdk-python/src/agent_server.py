@@ -51,6 +51,7 @@ from agents.agent_config_agent import build_system_prompt, read_properties
 from agents.byoc_hashbrown_agent import BYOC_HASHBROWN_SYSTEM_PROMPT
 from agents.byoc_json_render_agent import BYOC_JSON_RENDER_SYSTEM_PROMPT
 from agents.hitl_in_chat_agent import run_hitl_in_chat_agent
+from agents.interrupt_agent import run_interrupt_agent
 from agents.mcp_apps_agent import run_mcp_apps_agent
 from agents.multimodal_agent import SYSTEM_PROMPT as MULTIMODAL_SYSTEM_PROMPT
 from agents.multimodal_agent import convert_part_for_claude
@@ -294,6 +295,29 @@ async def hitl_in_chat_endpoint(request: Request) -> StreamingResponse:
 
     async def event_stream() -> AsyncIterator[str]:
         async for chunk in run_hitl_in_chat_agent(input_data):
+            yield chunk
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
+@app.post("/interrupt-adapted")
+async def interrupt_adapted_endpoint(request: Request) -> StreamingResponse:
+    """Interrupt-adapted scheduling agent — shared by gen-ui-interrupt and
+    interrupt-headless. The ``schedule_meeting`` tool is registered on the
+    frontend via ``useFrontendTool``; the backend only provides the system
+    prompt and forwards frontend tools to Claude."""
+    body = await request.json()
+    input_data = RunAgentInput(**body)
+
+    async def event_stream() -> AsyncIterator[str]:
+        async for chunk in run_interrupt_agent(input_data):
             yield chunk
 
     return StreamingResponse(

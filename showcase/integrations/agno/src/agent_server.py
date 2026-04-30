@@ -55,6 +55,7 @@ from agents.agent_config_agent import (
 )
 from agents.byoc_hashbrown_agent import agent as byoc_hashbrown_agent
 from agents.byoc_json_render_agent import agent as byoc_json_render_agent
+from agents.interrupt_agent import agent as interrupt_agent
 from agents.main import agent as main_agent
 from agents.mcp_apps_agent import agent as mcp_apps_agent
 from agents.multimodal_agent import agent as multimodal_agent
@@ -457,6 +458,7 @@ def _attach_agent_config_route(app: FastAPI, prefix: str) -> None:
 agent_os = AgentOS(
     agents=[
         main_agent,
+        interrupt_agent,
         a2ui_dynamic_agent,
         a2ui_fixed_agent,
         agent_config_agent,
@@ -507,6 +509,11 @@ app = agent_os.get_app()
 # are forwarded to the LLM on the second leg of HITL flows instead of being
 # silently dropped by ``extract_agui_user_input()``.
 _attach_hitl_aware_route(app, main_agent, "")
+
+# Interrupt-adapted scheduling agent. Shared by gen-ui-interrupt and
+# interrupt-headless demos -- backend has tools=[], the frontend provides
+# `schedule_meeting` via `useFrontendTool` with an async Promise handler.
+_attach_hitl_aware_route(app, interrupt_agent, "/interrupt-adapted")
 
 # State-aware routes (bidirectional shared state via StateSnapshotEvent).
 # Mounted directly on the AgentOS FastAPI app so they share routing and

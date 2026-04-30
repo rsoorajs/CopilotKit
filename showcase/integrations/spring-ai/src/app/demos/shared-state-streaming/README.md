@@ -1,22 +1,29 @@
-# Shared State Streaming — Not Supported by Spring AI
+# Shared State Streaming — Spring AI
 
-## What This Demo Would Show
+Per-token state streaming for Spring AI. The agent defines a `write_document`
+tool; as the LLM streams the tool-call arguments, the controller extracts the
+growing `content` value and emits `STATE_SNAPSHOT` events. The frontend's
+`useAgent({ updates: [OnStateChanged] })` subscription re-renders the document
+panel on each snapshot, producing live per-token updates.
 
-The agent emits **mid-stream state deltas** (partial state snapshots) while
-its run is still in progress, so the UI updates live as the agent thinks —
-typically via LangGraph's `copilotkit_emit_state` helper streamed through
-the AG-UI `STATE_DELTA` event.
+## How It Works
 
-## Why Spring AI Cannot Support This
+1. `ChatClient.stream()` runs with `internalToolExecutionEnabled=false` and a
+   registered `write_document` tool callback. The model sees the tool and
+   generates a tool call.
 
-The ag-ui Spring AI adapter has **no mid-stream state-delta API analogous
-to `copilotkit_emit_state`**. Spring AI's `ChatClient` streams tokens and
-tool calls, but it does not expose a hook for the agent to push partial
-state snapshots between tokens. The Spring AI integration emits a single
-`STATE_SNAPSHOT` per tool round (see `shared-state-read-write` for that
-pattern), not a continuous delta stream.
+2. Each streaming chunk that carries tool-call data for `write_document` has
+   accumulated arguments (e.g. `{"content": "Once upon a ti`). The controller
+   parses the partial JSON to extract the growing content string.
 
-## Where This Works
+3. On each increment, a `STATE_SNAPSHOT` is emitted with the updated
+   `state.document`. The CopilotKit runtime merges this into agent state and
+   the frontend re-renders.
 
-See the LangGraph Python integration:
-[`showcase/integrations/langgraph-python/src/app/demos/shared-state-streaming`](../../../../../langgraph-python/src/app/demos/shared-state-streaming).
+4. After streaming completes, the controller emits the tool-call envelope
+   events (start/args/end/result) and a final state snapshot.
+
+## Reference
+
+The LangGraph Python reference uses `StateStreamingMiddleware` for the same
+effect — see `showcase/integrations/langgraph-python/src/agents/shared_state_streaming.py`.

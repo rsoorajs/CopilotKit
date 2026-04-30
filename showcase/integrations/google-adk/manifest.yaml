@@ -14,9 +14,6 @@ copilotkit_version: 2.0.0
 backend_url: https://showcase-google-adk-production.up.railway.app
 deployed: true
 sort_order: 15
-not_supported_features:
-  - gen-ui-interrupt
-  - interrupt-headless
 generative_ui:
   - constrained-explicit
   - a2ui-fixed-schema
@@ -67,6 +64,8 @@ features:
   - voice
   - agent-config
   - mcp-apps
+  - gen-ui-interrupt
+  - interrupt-headless
 a2ui_pattern: schema-loading
 agent_config_pattern: shared-state
 auth_pattern: runtime-onrequest
@@ -511,4 +510,27 @@ demos:
     highlight:
       - src/agents/agent_config_agent.py
       - src/app/demos/agent-config/page.tsx
+      - src/app/api/copilotkit/route.ts
+  - id: gen-ui-interrupt
+    name: Gen UI Interrupt (Strategy B)
+    description: Interrupt-style scheduling via useFrontendTool with an async Promise — time-picker card rendered inline in chat
+    tags:
+      - interactivity
+    route: /demos/gen-ui-interrupt
+    animated_preview_url:
+    highlight:
+      - src/agents/interrupt_agent.py
+      - src/app/demos/gen-ui-interrupt/page.tsx
+      - src/app/demos/gen-ui-interrupt/time-picker-card.tsx
+      - src/app/api/copilotkit/route.ts
+  - id: interrupt-headless
+    name: Headless Interrupt (Strategy B)
+    description: Headless interrupt via useFrontendTool — time-picker popup appears in the app surface outside the chat
+    tags:
+      - interactivity
+    route: /demos/interrupt-headless
+    animated_preview_url:
+    highlight:
+      - src/agents/interrupt_agent.py
+      - src/app/demos/interrupt-headless/page.tsx
       - src/app/api/copilotkit/route.ts

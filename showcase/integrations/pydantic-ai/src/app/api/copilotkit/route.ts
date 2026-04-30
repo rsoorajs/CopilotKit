@@ -97,6 +97,16 @@ agents["tool-rendering-reasoning-chain"] = new HttpAgent({
   url: `${AGENT_URL}/tool_rendering_reasoning_chain/`,
 });
 
+// Interrupt-adapted scheduling demos — both gen-ui-interrupt and
+// interrupt-headless share the same backend agent; only the frontend UX
+// differs (inline picker in chat vs. external popup).
+agents["gen-ui-interrupt"] = new HttpAgent({
+  url: `${AGENT_URL}/interrupt/`,
+});
+agents["interrupt-headless"] = new HttpAgent({
+  url: `${AGENT_URL}/interrupt/`,
+});
+
 console.log(
   `[copilotkit/route] Registered ${Object.keys(agents).length} agent names: ${Object.keys(agents).join(", ")}`,
 );

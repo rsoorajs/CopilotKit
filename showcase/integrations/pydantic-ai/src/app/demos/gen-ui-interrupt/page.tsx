@@ -1,44 +1,121 @@
 "use client";
 
-/**
- * Gen UI (Interrupt) — placeholder.
- *
- * PydanticAI's AG-UI bridge does not expose a graph-interrupt primitive,
- * so this feature is marked unsupported in `manifest.yaml`. See the
- * sibling README.md for the full rationale and a pointer to the working
- * reference in the langgraph-python integration.
- */
+// Gen UI Interrupt demo (PydanticAI port).
+//
+// The LangGraph version of this demo uses `useInterrupt` with LangGraph's
+// native `interrupt()` primitive — the backend pauses the run and surfaces
+// a payload that the frontend renders into the chat via the `useInterrupt`
+// hook. PydanticAI does NOT have an equivalent interrupt primitive, so we
+// adapt the demo by registering a frontend tool with `useFrontendTool`.
+// The handler returns a Promise that only resolves once the user picks a
+// time (or cancels), which produces the same UX: the picker appears inline
+// in the chat and the agent's tool call blocks until the user decides.
 
-import React from "react";
+import React, { useRef } from "react";
+import { CopilotKit } from "@copilotkit/react-core";
+import {
+  CopilotChat,
+  useConfigureSuggestions,
+  useFrontendTool,
+} from "@copilotkit/react-core/v2";
+import { z } from "zod";
+import { TimePickerCard, TimeSlot } from "./time-picker-card";
 
-export default function GenUIInterruptUnsupported() {
+const DEFAULT_SLOTS: TimeSlot[] = [
+  { label: "Tomorrow 10:00 AM", iso: "2026-04-25T10:00:00-07:00" },
+  { label: "Tomorrow 2:00 PM", iso: "2026-04-25T14:00:00-07:00" },
+  { label: "Monday 9:00 AM", iso: "2026-04-28T09:00:00-07:00" },
+  { label: "Monday 3:30 PM", iso: "2026-04-28T15:30:00-07:00" },
+];
+
+type PickerResult =
+  | { chosen_time: string; chosen_label: string }
+  | { cancelled: true };
+
+export default function GenUiInterruptDemo() {
   return (
-    <div className="flex justify-center items-center h-screen w-full bg-[#FAFAFC]">
-      <div className="max-w-md w-full rounded-2xl border border-[#DBDBE5] bg-white p-6 shadow-sm">
-        <span className="inline-block rounded-full border border-[#FFAC4D33] bg-[#FFAC4D]/15 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.14em] text-[#57575B]">
-          Not supported by pydantic-ai
-        </span>
-        <h1 className="mt-3 text-xl font-semibold text-[#010507]">
-          Gen UI (Interrupt)
-        </h1>
-        <p className="mt-2 text-sm text-[#57575B]">
-          PydanticAI's AG-UI bridge has no equivalent of LangGraph's{" "}
-          <code className="rounded bg-[#F0F0F4] px-1 py-0.5 font-mono text-xs">
-            interrupt()
-          </code>{" "}
-          primitive — runs are linear and cannot pause to await a frontend
-          response, then resume the same call with that value.
-        </p>
-        <p className="mt-3 text-sm text-[#57575B]">
-          See the working reference in the{" "}
-          <span className="font-medium text-[#010507]">langgraph-python</span>{" "}
-          integration, and{" "}
-          <code className="rounded bg-[#F0F0F4] px-1 py-0.5 font-mono text-xs">
-            src/app/demos/gen-ui-interrupt/README.md
-          </code>{" "}
-          for the full rationale.
-        </p>
+    <CopilotKit runtimeUrl="/api/copilotkit" agent="gen-ui-interrupt">
+      <div className="flex justify-center items-center h-screen w-full">
+        <div className="h-full w-full max-w-4xl">
+          <Chat />
+        </div>
       </div>
-    </div>
+    </CopilotKit>
+  );
+}
+
+function Chat() {
+  // Pending-resolver ref: set by the async handler, called by the render
+  // prop when the user clicks a slot or cancels. This is the PydanticAI
+  // adaptation of the LangGraph `resolve(...)` callback.
+  const resolverRef = useRef<((result: PickerResult) => void) | null>(null);
+
+  useConfigureSuggestions({
+    suggestions: [
+      {
+        title: "Book a call with sales",
+        message: "Book an intro call with the sales team to discuss pricing.",
+      },
+      {
+        title: "Schedule a 1:1 with Alice",
+        message: "Schedule a 1:1 with Alice next week to review Q2 goals.",
+      },
+    ],
+    available: "always",
+  });
+
+  // @region[frontend-promise-handler]
+  useFrontendTool({
+    name: "schedule_meeting",
+    description:
+      "Ask the user to pick a time slot for a meeting via an in-chat " +
+      "picker. Blocks until the user chooses a slot or cancels.",
+    parameters: z.object({
+      topic: z
+        .string()
+        .describe("Short human-readable description of the meeting."),
+      attendee: z
+        .string()
+        .optional()
+        .describe("Who the meeting is with (optional)."),
+    }),
+    // Async handler: returns a Promise that resolves only once the user
+    // acts on the picker. This is the PydanticAI shim for LangGraph's
+    // `interrupt()`/`resolve()` pair.
+    handler: async (): Promise<string> => {
+      const result = await new Promise<PickerResult>((resolve) => {
+        resolverRef.current = resolve;
+      });
+      if ("cancelled" in result && result.cancelled) {
+        return "User cancelled. Meeting NOT scheduled.";
+      }
+      if ("chosen_label" in result) {
+        return `Meeting scheduled for ${result.chosen_label}.`;
+      }
+      return "User did not pick a time. Meeting NOT scheduled.";
+    },
+    render: ({ args, status }) => {
+      if (status === "complete") return null;
+      const topic =
+        (args as { topic?: string } | undefined)?.topic ?? "a meeting";
+      const attendee = (args as { attendee?: string } | undefined)?.attendee;
+      return (
+        <TimePickerCard
+          topic={topic}
+          attendee={attendee}
+          slots={DEFAULT_SLOTS}
+          onSubmit={(result) => {
+            const fn = resolverRef.current;
+            resolverRef.current = null;
+            fn?.(result);
+          }}
+        />
+      );
+    },
+  });
+  // @endregion[frontend-promise-handler]
+
+  return (
+    <CopilotChat agentId="gen-ui-interrupt" className="h-full rounded-2xl" />
   );
 }

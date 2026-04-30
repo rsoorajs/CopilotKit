@@ -18,9 +18,6 @@ interaction_modalities:
   - sidebar
   - embedded
   - chat
-not_supported_features:
-  - gen-ui-interrupt
-  - interrupt-headless
 features:
   - cli-start
   - agentic-chat
@@ -37,6 +34,8 @@ features:
   - hitl-in-app
   - hitl-in-chat
   - hitl-in-chat-booking
+  - gen-ui-interrupt
+  - interrupt-headless
   - headless-complete
   - tool-rendering
   - tool-rendering-default-catchall
@@ -61,7 +60,7 @@ features:
   - auth
   - a2ui-fixed-schema
 agent_config_pattern: shared-state
-
+interrupt_pattern: promise-based
 a2ui_pattern: schema-loading
 auth_pattern: runtime-onrequest
 demos:
@@ -484,6 +483,29 @@ demos:
     highlight:
       - src/app/demos/hitl-in-chat/page.tsx
       - src/app/demos/hitl-in-chat/time-picker-card.tsx
+      - src/app/api/copilotkit/route.ts
+  - id: gen-ui-interrupt
+    name: In-Chat HITL (useInterrupt — low-level primitive)
+    description: Interactive time-picker component rendered inline in the chat via useFrontendTool with an async handler — the Promise resolves only when the user picks a slot or cancels
+    tags:
+      - generative-ui
+    route: /demos/gen-ui-interrupt
+    animated_preview_url:
+    highlight:
+      - src/agent_server.ts
+      - src/app/demos/gen-ui-interrupt/page.tsx
+      - src/app/demos/gen-ui-interrupt/time-picker-card.tsx
+      - src/app/api/copilotkit/route.ts
+  - id: interrupt-headless
+    name: Headless Interrupt (testing)
+    description: Resolve interrupts from a plain button grid — no chat, no useInterrupt render prop; the time-picker popup appears in the app surface outside the chat
+    tags:
+      - interactivity
+    route: /demos/interrupt-headless
+    animated_preview_url:
+    highlight:
+      - src/agent_server.ts
+      - src/app/demos/interrupt-headless/page.tsx
       - src/app/api/copilotkit/route.ts
   - id: headless-complete
     name: Headless Chat (Complete)

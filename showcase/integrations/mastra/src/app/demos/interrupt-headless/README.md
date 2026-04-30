@@ -1,14 +1,14 @@
-# interrupt-headless — Not supported by mastra
+# interrupt-headless — Mastra (Strategy B: Frontend Tool)
 
-**Feature:** Headless interrupt — resolve agent interrupts from a plain
-button grid using `useHeadlessInterrupt`, without a chat surface or render
-prop.
+**Feature:** Headless time-picker popup rendered outside the chat in the app
+surface. Blocks the agent until the user picks a slot or cancels. Same
+mechanism as `gen-ui-interrupt` but the picker is an external popup, not an
+inline chat card.
 
-**Why it is not supported on Mastra:** Mastra's workflow `suspend` /
-`resume` semantics are not bridged through `getLocalAgent` into the AG-UI
-protocol. `useHeadlessInterrupt` listens for AG-UI `INTERRUPT` custom
-events, and the Mastra adapter never emits them, so there is nothing to
-resolve.
+**How it works:** The backend defines a scheduling agent with no tools. The
+frontend registers `schedule_meeting` via `useFrontendTool`; the async handler
+sets a `pending` state to render the external popup, then returns a Promise
+that resolves when the user picks a slot. The `render` callback returns null
+so nothing appears inline in the chat.
 
-**Working reference:** see the `langgraph-python` integration —
-`src/app/demos/interrupt-headless/page.tsx`.
+**LangGraph reference:** see `langgraph-python` — `src/app/demos/interrupt-headless/page.tsx`.

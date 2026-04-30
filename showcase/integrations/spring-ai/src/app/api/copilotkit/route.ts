@@ -13,8 +13,8 @@ const AGENT_URL = process.env.AGENT_URL || "http://localhost:8000";
 console.log("[copilotkit/route] Initializing CopilotKit runtime");
 console.log(`[copilotkit/route] AGENT_URL: ${AGENT_URL}`);
 
-function createAgent() {
-  return new HttpAgent({ url: `${AGENT_URL}/` });
+function createAgent(path = "/") {
+  return new HttpAgent({ url: `${AGENT_URL}${path}` });
 }
 
 // Register the same Spring AI agent (backed by a single Spring-AI ChatClient
@@ -57,9 +57,18 @@ const agentNames = [
   "byoc-hashbrown",
 ];
 
+// Agent names routed to the interrupt-adapted scheduling backend. Both
+// gen-ui-interrupt and interrupt-headless share the same Spring AI scheduling
+// agent; only the frontend UX differs (inline picker in chat vs. external
+// popup driven by useFrontendTool).
+const interruptAgentNames = ["gen-ui-interrupt", "interrupt-headless"];
+
 const agents: Record<string, AbstractAgent> = {};
 for (const name of agentNames) {
   agents[name] = createAgent();
+}
+for (const name of interruptAgentNames) {
+  agents[name] = createAgent("/interrupt-adapted");
 }
 agents["default"] = createAgent();
 
