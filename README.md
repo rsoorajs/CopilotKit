@@ -56,6 +56,7 @@ CopilotKit is a best-in-class SDK for building full-stack agentic applications, 
 We are the company behind the **AG-UI Protocol**, adopted by Google, LangChain, AWS, Microsoft, Mastra, PydanticAI, and more!
 
 https://github.com/user-attachments/assets/6f06c63f-9bd1-4762-99ac-24898ee227bc
+
 <div align="center"> Add AI to your app in 1 minute</div>
 
 **Features:**

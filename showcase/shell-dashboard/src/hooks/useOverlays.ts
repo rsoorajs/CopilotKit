@@ -63,7 +63,11 @@ function parseHash(): {
       ALL_OVERLAYS.includes(p as Overlay),
     );
     if (valid.length > 0) {
-      return { tab: "matrix", overlays: new Set(valid) as OverlaySet, probeId: null };
+      return {
+        tab: "matrix",
+        overlays: new Set(valid) as OverlaySet,
+        probeId: null,
+      };
     }
     return { tab: "matrix", overlays: null, probeId: null };
   }
@@ -154,13 +158,17 @@ export function useOverlays(): UseOverlaysReturn {
     () => new Set(DEFAULT_OVERLAYS) as OverlaySet,
   );
   const [activeTab, setActiveTabRaw] = useState<"matrix" | "ops">("matrix");
-  const [selectedProbeId, setSelectedProbeIdRaw] = useState<string | null>(null);
+  const [selectedProbeId, setSelectedProbeIdRaw] = useState<string | null>(
+    null,
+  );
 
   // Sync from URL hash / localStorage after hydration
   useEffect(() => {
     const { tab, overlays: fromHash, probeId } = parseHash();
     const resolved =
-      fromHash ?? loadFromStorage() ?? (new Set(DEFAULT_OVERLAYS) as OverlaySet);
+      fromHash ??
+      loadFromStorage() ??
+      (new Set(DEFAULT_OVERLAYS) as OverlaySet);
     setOverlays(resolved);
     setActiveTabRaw(tab);
     setSelectedProbeIdRaw(probeId);
@@ -180,7 +188,9 @@ export function useOverlays(): UseOverlaysReturn {
     function onPopState() {
       const { tab, overlays: fromHash, probeId } = parseHash();
       const resolved =
-        fromHash ?? loadFromStorage() ?? (new Set(DEFAULT_OVERLAYS) as OverlaySet);
+        fromHash ??
+        loadFromStorage() ??
+        (new Set(DEFAULT_OVERLAYS) as OverlaySet);
       setOverlays(resolved);
       setActiveTabRaw(tab);
       setSelectedProbeIdRaw(probeId);
@@ -232,13 +242,10 @@ export function useOverlays(): UseOverlaysReturn {
     [overlays],
   );
 
-  const selectProbe = useCallback(
-    (probeId: string | null) => {
-      setSelectedProbeIdRaw(probeId);
-      writeHash("ops", undefined, probeId, true);
-    },
-    [],
-  );
+  const selectProbe = useCallback((probeId: string | null) => {
+    setSelectedProbeIdRaw(probeId);
+    writeHash("ops", undefined, probeId, true);
+  }, []);
 
   const activePreset = useMemo(() => {
     for (const preset of PRESETS) {

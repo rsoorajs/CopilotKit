@@ -352,7 +352,8 @@ export async function fillAndVerifySend(
   },
 ): Promise<void> {
   const maxAttempts = overrides?.maxAttempts ?? SEND_VERIFY_MAX_ATTEMPTS;
-  const initialDelay = overrides?.initialDelayMs ?? SEND_VERIFY_INITIAL_DELAY_MS;
+  const initialDelay =
+    overrides?.initialDelayMs ?? SEND_VERIFY_INITIAL_DELAY_MS;
   const timeout = overrides?.timeoutMs ?? SEND_VERIFY_TIMEOUT_MS;
 
   const baseline = await readUserMessageCount(page);

@@ -51,10 +51,7 @@ import {
  * a coherent reply" — not "are these exact phrases present." Per-word
  * fidelity is a D3 concern.
  */
-const EXPECTED_REPLY_FRAGMENTS = [
-  "remote work",
-  "talent pool",
-] as const;
+const EXPECTED_REPLY_FRAGMENTS = ["remote work", "talent pool"] as const;
 
 /**
  * Single user prompt that triggers the chain. Verbatim match against the

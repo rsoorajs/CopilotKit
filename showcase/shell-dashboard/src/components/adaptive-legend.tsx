@@ -178,7 +178,10 @@ export function AdaptiveLegend({ overlays }: AdaptiveLegendProps) {
           onClick={() => setOpen((v) => !v)}
           className="flex items-center gap-1 text-[10px] uppercase tracking-wider font-medium text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer bg-transparent border-none p-0"
         >
-          <span className="inline-block transition-transform" style={{ transform: open ? "rotate(90deg)" : "rotate(0deg)" }}>
+          <span
+            className="inline-block transition-transform"
+            style={{ transform: open ? "rotate(90deg)" : "rotate(0deg)" }}
+          >
             ▶
           </span>
           Legend
