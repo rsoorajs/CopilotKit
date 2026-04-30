@@ -25,17 +25,17 @@ import {
   ofType,
   on,
   props,
-  type Store,
 } from "./utils/micro-redux";
+import type { Store } from "./utils/micro-redux";
 import {
   ɵphoenixChannel$,
   ɵphoenixSocket$,
-  type ɵPhoenixChannelSession,
   ɵobservePhoenixEvent$,
   ɵobservePhoenixJoinOutcome$,
   ɵobservePhoenixSocketHealth$,
   ɵobservePhoenixSocketSignals$,
 } from "./utils/phoenix-observable";
+import type { ɵPhoenixChannelSession } from "./utils/phoenix-observable";
 
 const THREADS_CHANNEL_EVENT = "thread_metadata";
 const THREAD_SUBSCRIBE_PATH = "/threads/subscribe";
@@ -1019,3 +1019,10 @@ export const ɵselectThreadsError = selectThreadsError;
 export const ɵselectHasNextPage = selectHasNextPage;
 export const ɵselectIsFetchingNextPage = selectIsFetchingNextPage;
 export { createThreadStore as ɵcreateThreadStore };
+/**
+ * Number of consecutive WebSocket connection failures after which the
+ * threads channel tears itself down rather than retrying indefinitely.
+ * Exposed for tests so they can assert teardown semantics without
+ * hardcoding the threshold separately from production.
+ */
+export const ɵMAX_SOCKET_RETRIES = MAX_SOCKET_RETRIES;
