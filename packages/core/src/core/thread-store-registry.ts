@@ -9,17 +9,32 @@ export class ThreadStoreRegistry {
 
   register(agentId: string, store: ɵThreadStore): void {
     if (agentId in this._stores) {
+      // Capture and clear the previous store before notifying so subscribers
+      // observing `onThreadStoreUnregistered` see a registry without `agentId`.
+      // Note: subscribers must NOT rely on `registry.get(agentId)` inside the
+      // unregister callback to recover the previous store — by the time the
+      // microtask runs the new store is already registered. If a subscriber
+      // needs the previous store, the unregister payload should carry it.
       delete this._stores[agentId];
-      void this.notifyUnregistered(agentId);
+      this.notifyUnregistered(agentId).catch((err) => {
+        console.error(
+          "ThreadStoreRegistry notifyUnregistered failed:",
+          err,
+        );
+      });
     }
     this._stores[agentId] = store;
-    void this.notifyRegistered(agentId, store);
+    this.notifyRegistered(agentId, store).catch((err) => {
+      console.error("ThreadStoreRegistry notifyRegistered failed:", err);
+    });
   }
 
   unregister(agentId: string): void {
     if (!(agentId in this._stores)) return;
     delete this._stores[agentId];
-    void this.notifyUnregistered(agentId);
+    this.notifyUnregistered(agentId).catch((err) => {
+      console.error("ThreadStoreRegistry notifyUnregistered failed:", err);
+    });
   }
 
   get(agentId: string): ɵThreadStore | undefined {
@@ -27,7 +42,9 @@ export class ThreadStoreRegistry {
   }
 
   getAll(): Readonly<Record<string, ɵThreadStore>> {
-    return this._stores;
+    // Return a shallow copy so callers cannot mutate the registry's
+    // internal state via the returned reference.
+    return { ...this._stores };
   }
 
   private async notifyRegistered(

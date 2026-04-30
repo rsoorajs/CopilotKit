@@ -1,18 +1,27 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { ThreadStoreRegistry } from "../core/thread-store-registry";
 import type { CopilotKitCore, CopilotKitCoreSubscriber } from "../core/core";
 import type { ɵThreadStore } from "../threads";
 
-// Minimal mock of CopilotKitCore that supports subscribing and notification
+// Minimal mock of CopilotKitCore that supports subscribing and notification.
+// Mirrors the real CopilotKitCore.notifySubscribers contract: takes a handler
+// plus an errorMessage, and wraps each subscriber call in try/catch so that
+// a single subscriber throwing does not abort delivery to siblings.
 function createMockCore() {
   const subscribers = new Set<CopilotKitCoreSubscriber>();
 
   const core = {
-    // Friends-access method used by ThreadStoreRegistry internally
     notifySubscribers: vi.fn(
-      async (fn: (s: CopilotKitCoreSubscriber) => unknown) => {
+      async (
+        fn: (s: CopilotKitCoreSubscriber) => unknown,
+        errorMessage: string,
+      ) => {
         for (const subscriber of subscribers) {
-          await fn(subscriber);
+          try {
+            await fn(subscriber);
+          } catch (err) {
+            console.error(errorMessage, err);
+          }
         }
       },
     ),
@@ -25,13 +34,23 @@ function createMockCore() {
   return { core, subscribers };
 }
 
-function makeStore(id = "store-a"): ɵThreadStore {
+// Build a typed minimal stub of ɵThreadStore. The registry only stores and
+// hands the reference back to subscribers; the methods are never invoked in
+// these tests. Using `vi.fn()` for every property keeps the shape honest
+// against the real interface without an `as unknown` cast.
+function makeStore(_id = "store-a"): ɵThreadStore {
   return {
-    id,
-    select: vi.fn(),
+    start: vi.fn(),
+    stop: vi.fn(),
+    setContext: vi.fn(),
+    refresh: vi.fn(),
+    fetchNextPage: vi.fn(),
+    renameThread: vi.fn(),
+    archiveThread: vi.fn(),
+    deleteThread: vi.fn(),
     getState: vi.fn(),
-    dispatch: vi.fn(),
-  } as unknown as ɵThreadStore;
+    select: vi.fn(),
+  } satisfies ɵThreadStore;
 }
 
 describe("ThreadStoreRegistry", () => {
@@ -88,6 +107,12 @@ describe("ThreadStoreRegistry", () => {
     expect(onRegistered).toHaveBeenCalledTimes(2);
     expect(onRegistered).toHaveBeenLastCalledWith(
       expect.objectContaining({ agentId: "agent-1", store: second }),
+    );
+    // The unregister notification for the previous store must fire before
+    // the second register notification — subscribers rely on this ordering
+    // to tear down stale subscriptions before wiring up the replacement.
+    expect(onUnregistered.mock.invocationCallOrder[0]).toBeLessThan(
+      onRegistered.mock.invocationCallOrder[1],
     );
   });
 
@@ -154,5 +179,67 @@ describe("ThreadStoreRegistry", () => {
     await Promise.resolve();
 
     expect(onUnregistered).not.toHaveBeenCalled();
+  });
+
+  describe("subscriber error isolation", () => {
+    let errorSpy: ReturnType<typeof vi.spyOn>;
+
+    beforeEach(() => {
+      errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+      errorSpy.mockRestore();
+    });
+
+    it("a throwing subscriber does not prevent register from succeeding or other subscribers from firing", async () => {
+      const throwing = vi.fn(() => {
+        throw new Error("subscriber boom");
+      });
+      const ok = vi.fn();
+      const subscriberA: CopilotKitCoreSubscriber = {
+        onThreadStoreRegistered: throwing,
+      };
+      const subscriberB: CopilotKitCoreSubscriber = {
+        onThreadStoreRegistered: ok,
+      };
+      (
+        core as unknown as { subscribe: (s: CopilotKitCoreSubscriber) => unknown }
+      ).subscribe(subscriberA);
+      (
+        core as unknown as { subscribe: (s: CopilotKitCoreSubscriber) => unknown }
+      ).subscribe(subscriberB);
+
+      const store = makeStore();
+      registry.register("agent-1", store);
+
+      // Registration must complete synchronously and the store must be
+      // retrievable even though one subscriber threw.
+      expect(registry.get("agent-1")).toBe(store);
+
+      await Promise.resolve();
+
+      expect(throwing).toHaveBeenCalledTimes(1);
+      expect(ok).toHaveBeenCalledTimes(1);
+      expect(errorSpy).toHaveBeenCalled();
+    });
+  });
+
+  describe("getAll() snapshot isolation", () => {
+    it("mutating the returned record does not affect the registry's internal state", () => {
+      const storeA = makeStore("a");
+      const storeB = makeStore("b");
+      registry.register("agent-1", storeA);
+      registry.register("agent-2", storeB);
+
+      const snapshot = registry.getAll() as Record<string, ɵThreadStore>;
+      // Mutate the returned reference — registry must be unaffected.
+      delete snapshot["agent-1"];
+      snapshot["agent-3"] = makeStore("c");
+
+      expect(registry.get("agent-1")).toBe(storeA);
+      expect(registry.get("agent-2")).toBe(storeB);
+      expect(registry.get("agent-3")).toBeUndefined();
+    });
   });
 });
