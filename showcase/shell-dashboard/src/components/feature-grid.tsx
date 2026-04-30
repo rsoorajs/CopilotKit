@@ -525,7 +525,7 @@ export function FeatureGrid({
                 const tallyTitle = tally.unknown
                   ? "dashboard offline — live signal unavailable (§5.3)"
                   : total
-                    ? `${tally.green} green · ${tally.amber} amber · ${tally.red} red of ${total} countable signals (E2E per feature; Health counted once per integration)`
+                    ? `${tally.green} green · ${tally.amber} amber · ${tally.red} red of ${total} countable signals (RT per feature; Health counted once per integration)`
                     : "no countable signals for this column";
                 return (
                   <th

@@ -2,7 +2,7 @@
  * Unit tests for the header `LiveIndicator` color-map (spec §5.7) and
  * `computeColumnTally` (§5.4 rollup + §5.3 offline handling).
  *
- * Phase 3: QA removed, smoke removed from per-cell tally. E2E uses
+ * Phase 3: QA removed, smoke removed from per-cell tally. RT uses
  * e2e dimension. Tally now counts health (once) + e2e per feature.
  */
 import { describe, it, expect } from "vitest";

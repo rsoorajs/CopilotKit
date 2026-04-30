@@ -51,10 +51,10 @@ describe("CellDrilldown", () => {
     );
     expect(getByTestId("cell-drilldown")).toBeDefined();
     expect(getByText("Health")).toBeDefined();
-    expect(getByText("E2E")).toBeDefined();
+    expect(getByText("RT (Round Trip)")).toBeDefined();
     expect(getByText("Smoke")).toBeDefined();
-    expect(getByText("D5 (Deep)")).toBeDefined();
-    expect(getByText("D6 (Parity)")).toBeDefined();
+    expect(getByText("CV (Conversation)")).toBeDefined();
+    expect(getByText("FP (Feature Parity)")).toBeDefined();
   });
 
   it("shows integration and feature name in header", () => {
