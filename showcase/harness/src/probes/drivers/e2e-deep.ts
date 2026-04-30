@@ -1124,13 +1124,18 @@ async function runFeature(opts: {
         },
         { timeout: 15_000 },
       );
-      console.debug("[e2e-deep] runFeature — React hydration detected", { url });
+      console.debug("[e2e-deep] runFeature — React hydration detected", {
+        url,
+      });
     } catch {
       // Non-fatal — proceed anyway; worst case is a downstream timeout
       // error that's more diagnosable than "assistant did not respond".
-      console.debug("[e2e-deep] runFeature — React hydration wait timed out (proceeding anyway)", {
-        url,
-      });
+      console.debug(
+        "[e2e-deep] runFeature — React hydration wait timed out (proceeding anyway)",
+        {
+          url,
+        },
+      );
     }
 
     const turns = script.buildTurns(buildCtx);
