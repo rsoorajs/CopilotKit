@@ -148,6 +148,10 @@ describe("thread handlers", () => {
 
       expect(response.status).toBe(500);
       expect(intelligence.ɵsubscribeToThreads).not.toHaveBeenCalled();
+      // The handler must log the auth failure so an operator looking at
+      // the runtime logs sees why the request 500ed. Asserting this
+      // catches a regression that quietly drops the diagnostic.
+      expect(errorSpy).toHaveBeenCalled();
     } finally {
       errorSpy.mockRestore();
     }
@@ -410,6 +414,11 @@ describe("thread handlers", () => {
         request: new Request("https://example.com/threads"),
       });
 
+      // Lock the synchronous contract: a regression that starts awaiting
+      // I/O inside this handler must update the call sites that rely on
+      // the synchronous return shape. Asserting `not.toBeInstanceOf(Promise)`
+      // catches that drift at runtime.
+      expect(response).not.toBeInstanceOf(Promise);
       expect(response.status).toBe(204);
       expect(clearThreadsSpy).toHaveBeenCalledTimes(1);
     });
@@ -423,6 +432,8 @@ describe("thread handlers", () => {
         request: new Request("https://example.com/threads"),
       });
 
+      // Same synchronous-contract guard as the in-memory branch above.
+      expect(response).not.toBeInstanceOf(Promise);
       expect(response.status).toBe(204);
       expect(intelligence.listThreads).not.toHaveBeenCalled();
     });
@@ -697,7 +708,14 @@ describe("thread handlers", () => {
     });
 
     it("returns 501 when intelligence is configured (not yet implemented)", async () => {
-      const intelligence = { listThreads: vi.fn() };
+      // Stub spies for both `listThreads` (existing intelligence shape) and
+      // a hypothetical `getThreadEvents` so a future regression that wires
+      // the handler to a platform method would still fail this test even
+      // after the response code is changed from 501 to 200.
+      const intelligence = {
+        listThreads: vi.fn(),
+        getThreadEvents: vi.fn(),
+      };
       const runtime = createIntelligenceRuntime({ intelligence });
 
       const response = await handleGetThreadEvents({
@@ -707,6 +725,11 @@ describe("thread handlers", () => {
       });
 
       expect(response.status).toBe(501);
+      // The 501 branch must short-circuit before touching intelligence —
+      // asserting this guards against a regression that silently falls
+      // through to call platform methods anyway.
+      expect(intelligence.listThreads).not.toHaveBeenCalled();
+      expect(intelligence.getThreadEvents).not.toHaveBeenCalled();
     });
 
     it("returns 500 when the runner throws", async () => {
@@ -759,7 +782,14 @@ describe("thread handlers", () => {
     });
 
     it("returns 501 when intelligence is configured (not yet implemented)", async () => {
-      const intelligence = { listThreads: vi.fn() };
+      // Same defensive setup as the events-handler 501 test: spy both the
+      // existing intelligence method and a hypothetical `getThreadState`
+      // so a future regression that wires the handler to a platform call
+      // would fail this test even after 501 becomes 200.
+      const intelligence = {
+        listThreads: vi.fn(),
+        getThreadState: vi.fn(),
+      };
       const runtime = createIntelligenceRuntime({ intelligence });
 
       const response = await handleGetThreadState({
@@ -769,6 +799,8 @@ describe("thread handlers", () => {
       });
 
       expect(response.status).toBe(501);
+      expect(intelligence.listThreads).not.toHaveBeenCalled();
+      expect(intelligence.getThreadState).not.toHaveBeenCalled();
     });
 
     it("returns 500 when the runner throws", async () => {

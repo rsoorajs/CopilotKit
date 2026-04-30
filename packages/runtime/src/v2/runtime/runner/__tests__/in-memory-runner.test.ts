@@ -386,10 +386,15 @@ class MessagePopulatingTestAgent extends AbstractAgent {
   // with the full conversation (input + generated) then call the subscriber callbacks.
   // Aligns with TestAgent above — `onEvent` is required so the in-memory runner
   // contract (always supply an event sink) is exercised exactly the same way.
+  // `onNewMessage` is declared optional to match TestAgent and the actual
+  // runner call site, which always passes it. Without the declaration the
+  // mock's options shape silently drifts from production and a regression
+  // that starts depending on `onNewMessage` here would compile cleanly.
   async runAgent(
     input: RunAgentInput,
     options: {
       onEvent: (params: { event: BaseEvent }) => void;
+      onNewMessage?: (args: { message: Message }) => void;
       onRunStartedEvent?: () => void;
     },
   ): Promise<{ result: unknown; newMessages: Message[] }> {
@@ -606,11 +611,8 @@ describe("InMemoryAgentRunner — listThreads / getThreadMessages", () => {
     it("returns stored events for a completed thread", () => {
       const events = runner.getThreadEvents("list-threads-thread-1");
       // The beforeEach runs a single turn. The MessagePopulatingTestAgent
-      // emits RUN_STARTED + a TEXT_MESSAGE triple for the assistant reply.
-      // Note: finalizeRunEvents mutates the events array to append a
-      // synthetic terminal event (RUN_ERROR with code INCOMPLETE_STREAM)
-      // when the agent does not emit one itself, so a terminal event is
-      // present here even though the agent did not produce it.
+      // emits RUN_STARTED + a TEXT_MESSAGE triple for the assistant reply
+      // and never emits a terminal event itself.
       expect(events.length).toBeGreaterThan(0);
       const types = events.map((e) => e.type);
       expect(types).toContain(EventType.RUN_STARTED);
@@ -620,6 +622,19 @@ describe("InMemoryAgentRunner — listThreads / getThreadMessages", () => {
       expect(types).toContain(EventType.TEXT_MESSAGE_START);
       expect(types).toContain(EventType.TEXT_MESSAGE_CONTENT);
       expect(types).toContain(EventType.TEXT_MESSAGE_END);
+      // finalizeRunEvents mutates the events array to append a synthetic
+      // terminal event when the agent does not emit one itself: a
+      // RUN_ERROR with code INCOMPLETE_STREAM. Asserting this explicitly
+      // guards against a regression where the synthetic event is dropped
+      // (the inspector would render an in-progress thread forever) or
+      // where the code is silently changed to something inspectors don't
+      // recognise.
+      const terminal = events.find(
+        (e): e is BaseEvent & { code?: string } =>
+          e.type === EventType.RUN_ERROR,
+      );
+      expect(terminal).toBeDefined();
+      expect((terminal as { code?: string }).code).toBe("INCOMPLETE_STREAM");
     });
 
     it("returns an empty array for an unknown threadId", () => {
