@@ -141,6 +141,12 @@ services:
     profiles: ["langgraph-typescript", "all"]
     volumes:
       - ./integrations/langgraph-typescript/src:/app/src
+      # Preserve the agent's node_modules from the Docker image.  The bind
+      # mount above overlays the host's src/ (no node_modules) on top of the
+      # container's /app/src, which clobbers src/agent/node_modules installed
+      # during the build.  This anonymous volume pins the image's copy so
+      # `node --import tsx` can resolve tsx at runtime.
+      - /app/src/agent/node_modules
 
   langgraph-fastapi:
     <<: *integration-defaults
