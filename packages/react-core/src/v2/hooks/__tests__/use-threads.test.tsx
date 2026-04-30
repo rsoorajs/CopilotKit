@@ -53,7 +53,6 @@ vi.mock("phoenix", () => {
     topic: string;
     params: Record<string, unknown>;
     left = false;
-    channels: MockChannel[] = [];
 
     private handlers = new Map<
       string,
@@ -125,14 +124,13 @@ vi.mock("phoenix", () => {
     }
 
     connect(): void {
+      // Phoenix sockets fire `onOpen` exactly once per WebSocket upgrade,
+      // and the upgrade is asynchronous. Tests must drive that transition
+      // explicitly via `triggerOpen()` so we exercise one open per
+      // connection — auto-firing here would either double-fire (when a
+      // test also calls `triggerOpen()`) or hide cases where production
+      // code forgets to await the open before joining a channel.
       this.connected = true;
-      // Mirror real Phoenix sockets: fire open handlers synchronously
-      // once the WebSocket upgrade completes. Production code that
-      // awaits onOpen (e.g. to start a join sequence) must be exercised
-      // by the same lifecycle here.
-      for (const handler of this.openHandlers) {
-        handler();
-      }
     }
 
     disconnect(): void {
@@ -231,6 +229,10 @@ describe("useThreads", () => {
   beforeEach(() => {
     phoenix.sockets.splice(0);
     fetchMock.mockReset();
+    // Reset before re-priming. setupCopilotKit() uses mockReturnValue, so a
+    // future test that uses mockReturnValueOnce would otherwise leak any
+    // un-consumed queued returns into the next test.
+    mockUseCopilotKit.mockReset();
     setupCopilotKit();
   });
 
@@ -416,17 +418,31 @@ describe("useThreads", () => {
       await result.current.deleteThread("t-1");
     });
 
-    expect(fetchMock.mock.calls[2][0]).toContain("/threads/t-2/archive");
-    expect(fetchMock.mock.calls[2][1].method).toBe("POST");
-    expect(JSON.parse(fetchMock.mock.calls[2][1].body)).toMatchObject({
-      agentId: "agent-1",
-    });
+    // Filter by URL+method rather than fixed indices (mirrors the rename
+    // test above). A future change to the startup fetch order — adding an
+    // /info call, splitting the join token, etc. — must not silently miss
+    // the actual archive/delete requests.
+    const archiveCall = fetchMock.mock.calls.find(
+      (args: unknown[]) =>
+        typeof args[0] === "string" &&
+        (args[0] as string).includes("/threads/t-2/archive") &&
+        (args[1] as { method?: string } | undefined)?.method === "POST",
+    );
+    expect(archiveCall).toBeDefined();
+    expect(
+      JSON.parse((archiveCall![1] as { body: string }).body),
+    ).toMatchObject({ agentId: "agent-1" });
 
-    expect(fetchMock.mock.calls[3][0]).toContain("/threads/t-1");
-    expect(fetchMock.mock.calls[3][1].method).toBe("DELETE");
-    expect(JSON.parse(fetchMock.mock.calls[3][1].body)).toMatchObject({
-      agentId: "agent-1",
-    });
+    const deleteCall = fetchMock.mock.calls.find(
+      (args: unknown[]) =>
+        typeof args[0] === "string" &&
+        (args[0] as string).includes("/threads/t-1") &&
+        (args[1] as { method?: string } | undefined)?.method === "DELETE",
+    );
+    expect(deleteCall).toBeDefined();
+    expect(JSON.parse((deleteCall![1] as { body: string }).body)).toMatchObject(
+      { agentId: "agent-1" },
+    );
   });
 
   it("exposes thread-scoped pagination properties", async () => {
