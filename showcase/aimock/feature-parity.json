@@ -86,6 +86,86 @@
     },
     {
       "match": {
+        "toolCallId": "call_fp_pie_chart_001"
+      },
+      "response": {
+        "content": "Pie chart rendered above — Electronics is the largest slice, followed by Clothing, Food, and Books."
+      }
+    },
+    {
+      "match": {
+        "toolCallId": "call_fp_bar_chart_001"
+      },
+      "response": {
+        "content": "Bar chart rendered above — Salaries dominate monthly spend, with Rent, Marketing, and Travel rounding out the breakdown."
+      }
+    },
+    {
+      "match": {
+        "toolCallId": "call_fp_pie_chart_002"
+      },
+      "response": {
+        "content": "Pie chart rendered above — Organic Search drives most traffic, followed by Direct, Social, and Referral."
+      }
+    },
+    {
+      "match": {
+        "toolCallId": "call_fp_pie_chart_003"
+      },
+      "response": {
+        "content": "Pie chart rendered above — Apple and Samsung lead, with Xiaomi third and the long tail under \"Others\"."
+      }
+    },
+    {
+      "match": {
+        "toolCallId": "call_fp_bar_chart_002"
+      },
+      "response": {
+        "content": "Bar chart rendered above — Q4 was the strongest quarter, with Q2 close behind."
+      }
+    },
+    {
+      "match": {
+        "toolCallId": "call_fp_pie_chart_004"
+      },
+      "response": {
+        "content": "Pie chart rendered above — Electronics is the largest slice, followed by Clothing, Food, and Books."
+      }
+    },
+    {
+      "match": {
+        "toolCallId": "call_fp_bar_chart_003"
+      },
+      "response": {
+        "content": "Bar chart rendered above — monthly expenses ranged from $12k in January to $15.8k in April."
+      }
+    },
+    {
+      "match": {
+        "toolCallId": "call_fp_schedule_time_001"
+      },
+      "response": {
+        "content": "Meeting scheduled — calendar invite is on its way."
+      }
+    },
+    {
+      "match": {
+        "toolCallId": "call_fp_search_flights_001"
+      },
+      "response": {
+        "content": "Two flights shown above — United at $349 (08:00) and Delta at $289 (10:15), both on time."
+      }
+    },
+    {
+      "match": {
+        "toolCallId": "call_fp_toggle_theme_001"
+      },
+      "response": {
+        "content": "Theme toggled."
+      }
+    },
+    {
+      "match": {
         "userMessage": "good name for a goldfish"
       },
       "response": {
@@ -215,6 +295,7 @@
       "response": {
         "toolCalls": [
           {
+            "id": "call_fp_pie_chart_001",
             "name": "pieChart",
             "arguments": "{\"title\":\"Revenue by Category\",\"description\":\"Breakdown of revenue across product categories\",\"data\":[{\"label\":\"Electronics\",\"value\":42000},{\"label\":\"Clothing\",\"value\":28000},{\"label\":\"Food\",\"value\":18000},{\"label\":\"Books\",\"value\":12000}]}"
           }
@@ -228,6 +309,7 @@
       "response": {
         "toolCalls": [
           {
+            "id": "call_fp_bar_chart_001",
             "name": "barChart",
             "arguments": "{\"title\":\"Expenses by Category\",\"description\":\"Monthly expense breakdown\",\"data\":[{\"label\":\"Rent\",\"value\":15000},{\"label\":\"Salaries\",\"value\":80000},{\"label\":\"Marketing\",\"value\":12000},{\"label\":\"Travel\",\"value\":5000}]}"
           }
@@ -241,6 +323,7 @@
       "response": {
         "toolCalls": [
           {
+            "id": "call_fp_pie_chart_002",
             "name": "render_pie_chart",
             "arguments": "{\"title\":\"Website Traffic by Source\",\"description\":\"Traffic sources this month\",\"data\":[{\"label\":\"Organic Search\",\"value\":45},{\"label\":\"Direct\",\"value\":25},{\"label\":\"Social\",\"value\":18},{\"label\":\"Referral\",\"value\":12}]}"
           }
@@ -254,6 +337,7 @@
       "response": {
         "toolCalls": [
           {
+            "id": "call_fp_pie_chart_003",
             "name": "render_pie_chart",
             "arguments": "{\"title\":\"Smartphone Market Share\",\"description\":\"Global smartphone market share by brand\",\"data\":[{\"label\":\"Apple\",\"value\":28},{\"label\":\"Samsung\",\"value\":22},{\"label\":\"Xiaomi\",\"value\":14},{\"label\":\"Others\",\"value\":36}]}"
           }
@@ -267,6 +351,7 @@
       "response": {
         "toolCalls": [
           {
+            "id": "call_fp_bar_chart_002",
             "name": "render_bar_chart",
             "arguments": "{\"title\":\"Quarterly Sales\",\"description\":\"Sales across Q1-Q4\",\"data\":[{\"label\":\"Q1\",\"value\":145000},{\"label\":\"Q2\",\"value\":178000},{\"label\":\"Q3\",\"value\":162000},{\"label\":\"Q4\",\"value\":215000}]}"
           }
@@ -328,6 +413,7 @@
       "response": {
         "toolCalls": [
           {
+            "id": "call_fp_pie_chart_004",
             "name": "render_pie_chart",
             "arguments": "{\"title\":\"Revenue by Category\",\"description\":\"Revenue breakdown by product category\",\"data\":[{\"label\":\"Electronics\",\"value\":42000},{\"label\":\"Clothing\",\"value\":28000},{\"label\":\"Food\",\"value\":18000},{\"label\":\"Books\",\"value\":12000}]}"
           }
@@ -341,6 +427,7 @@
       "response": {
         "toolCalls": [
           {
+            "id": "call_fp_bar_chart_003",
             "name": "render_bar_chart",
             "arguments": "{\"title\":\"Monthly Expenses\",\"description\":\"Expense breakdown by month\",\"data\":[{\"label\":\"Jan\",\"value\":12000},{\"label\":\"Feb\",\"value\":14500},{\"label\":\"Mar\",\"value\":13200},{\"label\":\"Apr\",\"value\":15800}]}"
           }
@@ -354,6 +441,7 @@
       "response": {
         "toolCalls": [
           {
+            "id": "call_fp_schedule_time_001",
             "name": "scheduleTime",
             "arguments": "{\"reasonForScheduling\":\"Learn about CopilotKit\",\"meetingDuration\":30}"
           }
@@ -367,6 +455,7 @@
       "response": {
         "toolCalls": [
           {
+            "id": "call_fp_search_flights_001",
             "name": "search_flights",
             "arguments": "{\"flights\":[{\"airline\":\"United Airlines\",\"airlineLogo\":\"https://www.google.com/s2/favicons?domain=united.com&sz=128\",\"flightNumber\":\"UA123\",\"origin\":\"SFO\",\"destination\":\"JFK\",\"date\":\"Tue, Apr 15\",\"departureTime\":\"08:00\",\"arrivalTime\":\"16:30\",\"duration\":\"5h 30m\",\"status\":\"On Time\",\"statusColor\":\"#22c55e\",\"price\":\"$349\",\"currency\":\"USD\"},{\"airline\":\"Delta\",\"airlineLogo\":\"https://www.google.com/s2/favicons?domain=delta.com&sz=128\",\"flightNumber\":\"DL456\",\"origin\":\"SFO\",\"destination\":\"JFK\",\"date\":\"Tue, Apr 15\",\"departureTime\":\"10:15\",\"arrivalTime\":\"18:45\",\"duration\":\"5h 30m\",\"status\":\"On Time\",\"statusColor\":\"#22c55e\",\"price\":\"$289\",\"currency\":\"USD\"}]}"
           }
@@ -380,6 +469,7 @@
       "response": {
         "toolCalls": [
           {
+            "id": "call_fp_toggle_theme_001",
             "name": "toggleTheme",
             "arguments": "{}"
           }
