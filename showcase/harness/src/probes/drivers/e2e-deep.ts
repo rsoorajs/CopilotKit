@@ -636,6 +636,13 @@ export function createE2eDeepDriver(
         });
       }
 
+      const serviceStart = Date.now();
+      ctx.logger.info("probe.e2e-deep.service-start", {
+        slug,
+        featureCount: requestedFeatures.length,
+        backendUrl,
+      });
+
       // Partition features into "registered" (script available) vs
       // "skipped" (no script). The skipped set short-circuits before
       // chromium so we don't pay for a launch per slug when Wave 2b
@@ -799,6 +806,7 @@ export function createE2eDeepDriver(
           const url = `${backendUrl}${route}`;
 
           await sem.acquire();
+          const featureStart = Date.now();
           try {
             if (abort.signal.aborted) {
               await sideEmit(ctx, {
@@ -816,6 +824,15 @@ export function createE2eDeepDriver(
                     : "aborted",
                 },
                 observedAt: ctx.now().toISOString(),
+              });
+              ctx.logger.info("probe.e2e-deep.feature-complete", {
+                slug,
+                featureType: ft,
+                pass: false,
+                errorDesc: timedOut
+                  ? `timeout after ${timeoutMs}ms`
+                  : "aborted",
+                durationMs: Date.now() - featureStart,
               });
               return {
                 ft,
@@ -856,6 +873,12 @@ export function createE2eDeepDriver(
                 },
                 observedAt: ctx.now().toISOString(),
               });
+              ctx.logger.info("probe.e2e-deep.feature-complete", {
+                slug,
+                featureType: ft,
+                pass: true,
+                durationMs: Date.now() - featureStart,
+              });
               return { ft, ok: true as const };
             } else {
               await sideEmit(ctx, {
@@ -877,6 +900,13 @@ export function createE2eDeepDriver(
                   diagnostics: featureResult.diagnostics,
                 },
                 observedAt: ctx.now().toISOString(),
+              });
+              ctx.logger.info("probe.e2e-deep.feature-complete", {
+                slug,
+                featureType: ft,
+                pass: false,
+                errorDesc: featureResult.errorDesc,
+                durationMs: Date.now() - featureStart,
               });
               return {
                 ft,
@@ -944,6 +974,15 @@ export function createE2eDeepDriver(
         }
 
         const aggregateGreen = failed.length === 0;
+        ctx.logger.info("probe.e2e-deep.service-complete", {
+          slug,
+          passed,
+          failed: failed.length,
+          skipped: skipped.length,
+          total: requestedFeatures.length,
+          state: aggregateGreen ? "green" : "red",
+          durationMs: Date.now() - serviceStart,
+        });
         return {
           key: input.key,
           state: aggregateGreen ? "green" : "red",

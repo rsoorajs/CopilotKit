@@ -272,7 +272,7 @@ export async function boot(opts: BootOptions = {}): Promise<{
   const poolSize = process.env.BROWSER_POOL_SIZE
     ? parseInt(process.env.BROWSER_POOL_SIZE, 10) || 4
     : 4;
-  const browserPool = new BrowserPool(poolSize);
+  const browserPool = new BrowserPool(poolSize, undefined, logger);
   let browserPoolReady = false;
   try {
     await browserPool.init();

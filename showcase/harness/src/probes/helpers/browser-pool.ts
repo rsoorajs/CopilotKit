@@ -17,6 +17,15 @@ export interface BrowserPoolStats {
   totalRecycles: number;
 }
 
+/**
+ * Minimal logger surface the pool uses for lifecycle events. Matches the
+ * harness-wide `Logger` interface but only the `info` method is required.
+ * Optional so existing callers (tests, legacy boot paths) don't break.
+ */
+interface PoolLogger {
+  info(msg: string, meta?: Record<string, unknown>): void;
+}
+
 export class BrowserPool {
   private readonly poolSize: number;
   private readonly recycleAfter: number;
@@ -26,13 +35,19 @@ export class BrowserPool {
   private totalRecycles = 0;
   private inFlightRecycles = new Set<Promise<void>>();
   private isShutdown = false;
+  private readonly logger?: PoolLogger;
 
   // Tracks which Browser instance maps to which Slot, so release() can find
   // the slot in O(1) even after the slot was removed from `available`.
   private browserToSlot = new Map<Browser, Slot>();
 
-  constructor(size = 4, recycleAfter?: number) {
+  constructor(
+    size = 4,
+    recycleAfter?: number,
+    logger?: PoolLogger,
+  ) {
     this.poolSize = size;
+    this.logger = logger;
     const envRecycle = process.env.BROWSER_POOL_RECYCLE_AFTER
       ? parseInt(process.env.BROWSER_POOL_RECYCLE_AFTER, 10)
       : undefined;
@@ -71,6 +86,10 @@ export class BrowserPool {
 
     const slot = this.available.shift();
     if (slot) {
+      this.logger?.info("browser-pool.acquire", {
+        available: this.available.length,
+        inUse: this.slots.length - this.available.length,
+      });
       return slot.browser;
     }
 
@@ -119,6 +138,11 @@ export class BrowserPool {
     } else {
       this.available.push(slot);
     }
+    const s = this.stats();
+    this.logger?.info("browser-pool.release", {
+      available: s.available,
+      inUse: s.inUse,
+    });
   }
 
   async shutdown(): Promise<void> {
@@ -158,6 +182,13 @@ export class BrowserPool {
 
   private recycleSlot(slot: Slot): void {
     this.totalRecycles++;
+    const slotIdx = this.slots.indexOf(slot);
+    this.logger?.info("browser-pool.recycle", {
+      slotIndex: slotIdx,
+      contextCount: slot.contextCount,
+      recycleAfter: this.recycleAfter,
+      totalRecycles: this.totalRecycles,
+    });
 
     // Remove the old browser from the lookup map immediately so a
     // double-release of the stale reference is a no-op.
