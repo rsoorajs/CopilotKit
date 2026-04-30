@@ -56,7 +56,7 @@ Every meaningful configuration value that is sensitive — database URL, Redis U
 
 ### Install
 
-A `helm install` creates one namespace (by default `copilot-intelligence`), the Deployments above, their Services and ServiceAccounts, PodDisruptionBudgets, HorizontalPodAutoscalers, an Ingress resource, and any `ExternalSecret` resources you enabled. A pre-install `Job` runs schema migrations against your Postgres database; the chart blocks the rollout until migrations complete.
+A `helm install` creates one namespace (by default `copilot-intelligence`), the Deployments above, their Services and ServiceAccounts, PodDisruptionBudgets, HorizontalPodAutoscalers, an Ingress resource, and any `ExternalSecret` resources you enabled. If you set `migrations.enabled: true`, a pre-install `Job` runs schema migrations against your Postgres database; the chart blocks the rollout until migrations complete. The Job is opt-in (`migrations.enabled` defaults to `false`) — leave it disabled if you manage migrations out-of-band.
 
 ### Runtime lifecycle
 

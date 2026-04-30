@@ -32,9 +32,8 @@ const DIMENSIONS: Array<{
   key: keyof Omit<CellState, "rollup">;
   label: string;
 }> = [
-  { key: "d6", label: "D6 (Feature Parity)" },
-  { key: "d5", label: "D5 (Conversation)" },
-  { key: "e2e", label: "D4 (Round Trip)" },
+  { key: "d5", label: "CV (Conversation)" },
+  { key: "e2e", label: "RT (Round Trip)" },
   { key: "health", label: "Health" },
   { key: "smoke", label: "Smoke" },
 ];
