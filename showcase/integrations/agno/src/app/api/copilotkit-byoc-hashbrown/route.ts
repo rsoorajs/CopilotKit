@@ -10,9 +10,7 @@ import { AbstractAgent, HttpAgent } from "@ag-ui/client";
 
 const AGENT_URL = process.env.AGENT_URL || "http://localhost:8000";
 
-console.log(
-  `[copilotkit-byoc-hashbrown/route] AGENT_URL: ${AGENT_URL}`,
-);
+console.log(`[copilotkit-byoc-hashbrown/route] AGENT_URL: ${AGENT_URL}`);
 
 function createByocHashbrownAgent() {
   return new HttpAgent({
@@ -47,12 +45,8 @@ export const POST = async (req: NextRequest) => {
     return response;
   } catch (error: unknown) {
     const e = error as { message?: string; stack?: string };
-    console.error(
-      `[copilotkit-byoc-hashbrown/route] ERROR: ${e.message}`,
-    );
-    console.error(
-      `[copilotkit-byoc-hashbrown/route] Stack: ${e.stack}`,
-    );
+    console.error(`[copilotkit-byoc-hashbrown/route] ERROR: ${e.message}`);
+    console.error(`[copilotkit-byoc-hashbrown/route] Stack: ${e.stack}`);
     return NextResponse.json(
       { error: e.message, stack: e.stack },
       { status: 500 },
