@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { startTransition, useEffect, useState } from "react";
 import { pb, pbIsMisconfigured, PB_MISCONFIG_MESSAGE } from "../lib/pb";
 import type { StatusRow } from "../lib/live-status";
 import { upsertByKey } from "../lib/live-status";
@@ -144,27 +144,34 @@ export function useLiveStatus(dimension?: string): UseLiveStatusResult {
       if (!alive || pendingByKey.size === 0) return;
       const ops = Array.from(pendingByKey);
       pendingByKey.clear();
-      setRows((prev) => {
-        let next = prev;
-        let mutated = false;
-        for (const [key, op] of ops) {
-          if (op.op === "delete") {
-            const idx = next.findIndex((r) => r.key === key);
-            if (idx === -1) continue;
-            if (!mutated) {
-              next = next.slice();
-              mutated = true;
-            }
-            next.splice(idx, 1);
-          } else {
-            const candidate = upsertByKey(next, op.row);
-            if (candidate !== next) {
-              next = candidate;
-              mutated = true;
+      // SSE deltas drive a non-urgent visual update — flag the commit as a
+      // transition so React 19 can yield to user input (scroll, click,
+      // keyboard) while it walks the matrix tree. Without this, a large
+      // burst still renders synchronously and noticeably stalls the page
+      // even though the burst was coalesced into a single setRows call.
+      startTransition(() => {
+        setRows((prev) => {
+          let next = prev;
+          let mutated = false;
+          for (const [key, op] of ops) {
+            if (op.op === "delete") {
+              const idx = next.findIndex((r) => r.key === key);
+              if (idx === -1) continue;
+              if (!mutated) {
+                next = next.slice();
+                mutated = true;
+              }
+              next.splice(idx, 1);
+            } else {
+              const candidate = upsertByKey(next, op.row);
+              if (candidate !== next) {
+                next = candidate;
+                mutated = true;
+              }
             }
           }
-        }
-        return mutated ? next : prev;
+          return mutated ? next : prev;
+        });
       });
     }
 
@@ -232,30 +239,60 @@ export function useLiveStatus(dimension?: string): UseLiveStatusResult {
     }
 
     async function fetchInitial(): Promise<StatusRow[]> {
-      // Paginated fetch with a hard total cap. `getFullList({batch})`
-      // would keep pulling every page of matching rows; we instead loop
-      // `getList` and break once we hit INITIAL_CAP.
-      const collected: StatusRow[] = [];
-      let page = 1;
-      while (collected.length < INITIAL_CAP) {
-        const remaining = INITIAL_CAP - collected.length;
-        const perPage = Math.min(INITIAL_PAGE_SIZE, remaining);
-        const resp = await pb
-          .collection("status")
-          .getList<StatusRow>(page, perPage, { filter });
-        if (!resp.items || resp.items.length === 0) break;
-        collected.push(...resp.items);
-        if (collected.length >= resp.totalItems) break;
-        page += 1;
+      // Pull page 1 sequentially so we learn `totalItems` before deciding
+      // how many additional pages to issue. After that, the remaining
+      // pages are independent reads from the same collection — fire them
+      // in parallel so wall-clock latency tracks the slowest page rather
+      // than the sum. With 2000-row datasets paginated at 200/page that
+      // turns ~10 sequential round-trips into one round-trip per slot of
+      // network parallelism, which is the difference between a
+      // multi-second loading hitch and a single network frame.
+      const firstResp = await pb
+        .collection("status")
+        .getList<StatusRow>(1, INITIAL_PAGE_SIZE, { filter });
+      if (!firstResp.items || firstResp.items.length === 0) return [];
+
+      const total = Math.min(firstResp.totalItems, INITIAL_CAP);
+      if (firstResp.items.length >= total) {
+        return firstResp.items.slice(0, total);
       }
-      return collected;
+
+      const lastPage = Math.ceil(total / INITIAL_PAGE_SIZE);
+      const pageRequests: Promise<StatusRow[]>[] = [];
+      for (let p = 2; p <= lastPage; p++) {
+        const perPage = Math.min(
+          INITIAL_PAGE_SIZE,
+          total - (p - 1) * INITIAL_PAGE_SIZE,
+        );
+        pageRequests.push(
+          pb
+            .collection("status")
+            .getList<StatusRow>(p, perPage, { filter })
+            .then((resp) => resp.items ?? []),
+        );
+      }
+      const restPages = await Promise.all(pageRequests);
+      const collected = firstResp.items.slice();
+      for (const items of restPages) {
+        collected.push(...items);
+        if (collected.length >= total) break;
+      }
+      return collected.length > total ? collected.slice(0, total) : collected;
     }
 
     async function connect(): Promise<void> {
       try {
         const initial = await fetchInitial();
         if (!alive) return;
-        setRows(initial);
+        // The first time real data lands, every cell in the matrix has to
+        // re-render (empty map → populated map invalidates per-key memo
+        // checks). That commit is a hundreds-of-cells walk; flag it as a
+        // transition so React can interleave user input. `setStatus`
+        // remains urgent so the "connecting → live" indicator flips
+        // immediately, before the heavy commit lands.
+        startTransition(() => {
+          setRows(initial);
+        });
         setStatus("live");
         setError(null);
         // Reset the reconnect counter on a SUCCESSFUL connection. This is
