@@ -1,9 +1,8 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { InMemoryAgentRunner, type InMemoryThread } from "../in-memory";
-import {
-  AbstractAgent,
+import { InMemoryAgentRunner } from "../in-memory";
+import type { InMemoryThread } from "../in-memory";
+import type {
   BaseEvent,
-  EventType,
   Message,
   RunAgentInput,
   RunErrorEvent,
@@ -13,6 +12,7 @@ import {
   TextMessageStartEvent,
   ToolCallResultEvent,
 } from "@ag-ui/client";
+import { AbstractAgent, EventType } from "@ag-ui/client";
 import { EMPTY, firstValueFrom } from "rxjs";
 import { toArray } from "rxjs/operators";
 
@@ -375,7 +375,11 @@ describe("InMemoryAgentRunner", () => {
 // ---------------------------------------------------------------------------
 class MessagePopulatingTestAgent extends AbstractAgent {
   constructor(
-    agentId: string,
+    // Accept undefined so `clone()` can forward `this.agentId` losslessly.
+    // `AbstractAgent.agentId` is optional (`AgentConfig.agentId?: string`),
+    // so coercing undefined to "" would silently turn "no agent id" into
+    // "empty agent id" — a different state.
+    agentId: string | undefined,
     private readonly inputMessages: Message[],
     private readonly generatedMessages: Message[],
   ) {
@@ -433,13 +437,20 @@ class MessagePopulatingTestAgent extends AbstractAgent {
 
   clone(): AbstractAgent {
     return new MessagePopulatingTestAgent(
-      this.agentId ?? "",
+      this.agentId,
       this.inputMessages,
       this.generatedMessages,
     );
   }
 
   protected run(): ReturnType<AbstractAgent["run"]> {
+    return EMPTY;
+  }
+
+  // Mirror `TestAgent` and `ThrowingAgent` — `AbstractAgent.connect()` would
+  // otherwise inherit production behavior that may try to open a transport.
+  // Returning EMPTY keeps clones inert in tests.
+  protected connect(): ReturnType<AbstractAgent["connect"]> {
     return EMPTY;
   }
 }
@@ -757,7 +768,9 @@ describe("InMemoryAgentRunner — listThreads / getThreadMessages", () => {
       const otherThreadSnapshot = { step: 999 };
       await run("thread-other", "run-other", otherThreadSnapshot);
 
-      expect(runner.getThreadState("thread-other")).toEqual(otherThreadSnapshot);
+      expect(runner.getThreadState("thread-other")).toEqual(
+        otherThreadSnapshot,
+      );
       expect(runner.getThreadState("thread-multi-state")).toEqual(second);
     });
   });
