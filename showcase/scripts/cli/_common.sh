@@ -107,3 +107,65 @@ wait_healthy() {
   done
   success "$slug is healthy (${elapsed}s)"
 }
+
+# ── Isolation helpers ───────────────────────────────────────────────────────
+
+ISOLATE_NAME=""
+ISOLATE_PORT_OFFSET=200
+ISOLATE_ACTIVE=false
+
+apply_isolation() {
+  local name="${1:-isolate-$$}"
+  ISOLATE_NAME="$name"
+  ISOLATE_ACTIVE=true
+  export COMPOSE_PROJECT_NAME="$name"
+
+  # Backup originals
+  cp "$PORTS_FILE" "${PORTS_FILE}.iso-bak"
+  cp "$COMPOSE_FILE" "${COMPOSE_FILE}.iso-bak"
+
+  # Offset ports in local-ports.json
+  python3 -c "
+import json
+with open('$PORTS_FILE') as f:
+    ports = json.load(f)
+offset = {k: v + $ISOLATE_PORT_OFFSET for k, v in ports.items()}
+with open('$PORTS_FILE', 'w') as f:
+    json.dump(offset, f, indent=2)
+    f.write('\n')
+"
+
+  # Offset host ports and container names in docker-compose.local.yml
+  python3 -c "
+import re
+with open('$COMPOSE_FILE') as f:
+    content = f.read()
+
+def offset_port(m):
+    indent = m.group(1)
+    host = int(m.group(2))
+    container = m.group(3)
+    return f'{indent}- \"{host + $ISOLATE_PORT_OFFSET}:{container}\"'
+
+content = re.sub(r'(\s+)- \"(\d+):(\d+)\"', offset_port, content)
+content = content.replace('container_name: showcase-', 'container_name: $name-')
+
+with open('$COMPOSE_FILE', 'w') as f:
+    f.write(content)
+"
+
+  # Idempotent: tear down any prior run with this name
+  $COMPOSE_CMD down --remove-orphans 2>/dev/null || true
+
+  info "Isolation active: project=$name ports=+$ISOLATE_PORT_OFFSET"
+}
+
+restore_isolation() {
+  if $ISOLATE_ACTIVE; then
+    info "Tearing down isolated group: $ISOLATE_NAME"
+    $COMPOSE_CMD down --remove-orphans 2>/dev/null || true
+    [ -f "${PORTS_FILE}.iso-bak" ] && mv "${PORTS_FILE}.iso-bak" "$PORTS_FILE"
+    [ -f "${COMPOSE_FILE}.iso-bak" ] && mv "${COMPOSE_FILE}.iso-bak" "$COMPOSE_FILE"
+    ISOLATE_ACTIVE=false
+  fi
+}
