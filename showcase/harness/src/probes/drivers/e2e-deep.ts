@@ -1064,6 +1064,13 @@ async function runFeature(opts: {
     context = await browser.newContext();
     page = await context.newPage();
 
+    console.debug("[e2e-deep] runFeature — navigating", {
+      url,
+      pageTimeoutMs,
+      featureType: buildCtx.featureType,
+      slug: buildCtx.integrationSlug,
+    });
+
     // Navigate. The conversation-runner's first action is a
     // chat-input selector probe with its own short timeout, so we
     // don't need to waitForSelector again here — a clean goto is
@@ -1073,8 +1080,13 @@ async function runFeature(opts: {
         waitUntil: "load",
         timeout: pageTimeoutMs,
       });
+      console.debug("[e2e-deep] runFeature — navigation complete", { url });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
+      console.debug("[e2e-deep] runFeature — navigation FAILED", {
+        url,
+        error: msg,
+      });
       return {
         ok: false,
         errorClass: "goto-error",
@@ -1087,6 +1099,10 @@ async function runFeature(opts: {
     // Without this, the SSR'd textarea is visible but Enter has no
     // handler, so the first turn's keypress is a no-op and the probe
     // times out waiting for an assistant response that never comes.
+    console.debug("[e2e-deep] runFeature — waiting for React hydration", {
+      url,
+      timeout: 15_000,
+    });
     try {
       await page.waitForFunction(
         () => {
@@ -1108,16 +1124,37 @@ async function runFeature(opts: {
         },
         { timeout: 15_000 },
       );
+      console.debug("[e2e-deep] runFeature — React hydration detected", { url });
     } catch {
       // Non-fatal — proceed anyway; worst case is a downstream timeout
       // error that's more diagnosable than "assistant did not respond".
+      console.debug("[e2e-deep] runFeature — React hydration wait timed out (proceeding anyway)", {
+        url,
+      });
     }
 
     const turns = script.buildTurns(buildCtx);
+    console.debug("[e2e-deep] runFeature — built conversation turns", {
+      turnCount: turns.length,
+      featureType: buildCtx.featureType,
+      slug: buildCtx.integrationSlug,
+    });
     const conversation = await runConversation(page, turns);
 
     if (conversation.failure_turn !== undefined) {
+      console.debug("[e2e-deep] runFeature — conversation FAILED", {
+        featureType: buildCtx.featureType,
+        slug: buildCtx.integrationSlug,
+        failureTurn: conversation.failure_turn,
+        turnsCompleted: conversation.turns_completed,
+        totalTurns: conversation.total_turns,
+        error: conversation.error,
+      });
       const diagnostics = await captureDiagnostics(page);
+      console.debug("[e2e-deep] runFeature — failure diagnostics captured", {
+        featureType: buildCtx.featureType,
+        diagnosticKeys: diagnostics ? Object.keys(diagnostics) : [],
+      });
       return {
         ok: false,
         errorClass: "conversation-error",
@@ -1130,6 +1167,12 @@ async function runFeature(opts: {
       };
     }
 
+    console.debug("[e2e-deep] runFeature — conversation succeeded", {
+      featureType: buildCtx.featureType,
+      slug: buildCtx.integrationSlug,
+      turnsCompleted: conversation.turns_completed,
+      turnDurations: conversation.turn_durations_ms,
+    });
     return { ok: true, conversation };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);

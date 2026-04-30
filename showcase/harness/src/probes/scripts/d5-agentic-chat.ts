@@ -112,6 +112,11 @@ function expectAssistantContains(opts: {
 }): (page: Page) => Promise<void> {
   return async (page: Page) => {
     const transcript = (await readAssistantTranscript(page)) ?? "";
+    console.debug(`[d5-agentic-chat] ${opts.label} — checking assistant contains`, {
+      expectedFragments: opts.fragments,
+      transcriptLength: transcript.length,
+      transcriptSnippet: transcript.slice(0, 300),
+    });
     if (transcript.trim().length === 0) {
       throw new Error(`${opts.label}: assistant response was empty`);
     }
@@ -126,6 +131,7 @@ function expectAssistantContains(opts: {
           .join(", ")}]`,
       );
     }
+    console.debug(`[d5-agentic-chat] ${opts.label} — assertion passed`);
   };
 }
 
@@ -137,9 +143,14 @@ function expectAssistantContains(opts: {
 function expectAssistantNonEmpty(label: string): (page: Page) => Promise<void> {
   return async (page: Page) => {
     const transcript = (await readAssistantTranscript(page)) ?? "";
+    console.debug(`[d5-agentic-chat] ${label} — checking non-empty`, {
+      transcriptLength: transcript.length,
+      transcriptSnippet: transcript.slice(0, 300),
+    });
     if (transcript.trim().length === 0) {
       throw new Error(`${label}: assistant response was empty`);
     }
+    console.debug(`[d5-agentic-chat] ${label} — non-empty assertion passed`);
   };
 }
 

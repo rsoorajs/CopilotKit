@@ -226,6 +226,10 @@ export function buildToolRenderingAssertion(opts?: {
 }): (page: Page) => Promise<void> {
   const pollTimeout = opts?.pollTimeoutMs ?? PROBE_POLL_TIMEOUT_MS;
   return async (page: Page): Promise<void> => {
+    console.debug("[d5-tool-rendering] waiting for tool card", {
+      canonicalSelector: TOOL_CARD_SELECTORS[0],
+      pollTimeoutMs: pollTimeout,
+    });
     // Best-effort wait for the canonical selector. We don't fail here
     // if it times out — the cascade probe below covers integrations
     // that use a different selector. This wait exists so that, on the
@@ -236,28 +240,53 @@ export function buildToolRenderingAssertion(opts?: {
         state: "visible",
         timeout: SELECTOR_PROBE_TIMEOUT_MS,
       });
+      console.debug("[d5-tool-rendering] canonical selector matched", {
+        selector: TOOL_CARD_SELECTORS[0],
+      });
     } catch {
       // Canonical selector didn't appear — let the cascade probe try
       // the fallbacks. A genuine "no card at all" outcome surfaces
       // through the probe result below.
+      console.debug("[d5-tool-rendering] canonical selector miss — trying cascade probe");
     }
 
     // Poll probeToolCard until the card is structurally complete or
     // the deadline passes. First probe is immediate (no initial sleep).
     const deadline = Date.now() + pollTimeout;
     let lastError: string | null = null;
+    let probeCount = 0;
 
     while (Date.now() < deadline) {
       const probe = await probeToolCard(page);
+      probeCount++;
       lastError = validateProbe(probe);
       if (lastError === null) {
         // All checks passed — card is structurally complete.
+        console.debug("[d5-tool-rendering] tool card structurally complete", {
+          selector: probe.selector,
+          text: probe.text.slice(0, 200),
+          childCount: probe.childCount,
+          probeAttempts: probeCount,
+        });
         return;
+      }
+      if (probeCount === 1 || probeCount % 10 === 0) {
+        console.debug("[d5-tool-rendering] tool card probe — not ready yet", {
+          probeCount,
+          selector: probe.selector,
+          text: probe.text.slice(0, 100),
+          childCount: probe.childCount,
+          validationError: lastError,
+        });
       }
       // Card not ready yet — sleep briefly and retry.
       await new Promise<void>((r) => setTimeout(r, PROBE_POLL_INTERVAL_MS));
     }
 
+    console.debug("[d5-tool-rendering] tool card probe TIMEOUT", {
+      probeCount,
+      lastError,
+    });
     // Deadline elapsed — throw the last validation error.
     throw new Error(lastError!);
   };
