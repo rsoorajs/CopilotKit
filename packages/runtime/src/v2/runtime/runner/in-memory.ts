@@ -12,6 +12,7 @@ import {
   EventType,
   Message,
   RunStartedEvent,
+  StateSnapshotEvent,
   compactEvents,
 } from "@ag-ui/client";
 import { finalizeRunEvents } from "@copilotkit/shared";
@@ -413,9 +414,9 @@ export class InMemoryAgentRunner extends AgentRunner {
    * Returns all AG-UI events for a thread, compacted across historic runs.
    *
    * Powers the local-dev fallback for `GET /threads/:threadId/events` when the
-   * Intelligence platform is not configured. The compaction logic matches the
-   * SQLite runner and the connection-replay path in {@link connect}, so the
-   * stream a late-joining inspector sees matches what this method returns.
+   * Intelligence platform is not configured. The compaction logic matches
+   * the connection-replay path in {@link connect}, so the stream a
+   * late-joining inspector sees matches what this method returns.
    */
   getThreadEvents(threadId: string): BaseEvent[] {
     const store = GLOBAL_STORE.get(threadId);
@@ -441,7 +442,7 @@ export class InMemoryAgentRunner extends AgentRunner {
     for (let i = events.length - 1; i >= 0; i--) {
       const event = events[i]!;
       if (event.type === EventType.STATE_SNAPSHOT) {
-        const snapshot = (event as { snapshot?: unknown }).snapshot;
+        const snapshot = (event as StateSnapshotEvent).snapshot;
         if (snapshot && typeof snapshot === "object") {
           return snapshot as Record<string, unknown>;
         }
@@ -454,11 +455,11 @@ export class InMemoryAgentRunner extends AgentRunner {
   /**
    * Clears all in-memory thread history.
    *
-   * Called by the inspector when a new browser session starts (i.e. on page
-   * load). This gives local development a "fresh slate" on every page refresh
-   * without requiring a server restart. It is intentionally not exposed for
-   * the Intelligence platform path — there, thread history is stored in a
-   * real database and should never be wiped this way.
+   * Powers the local-dev fallback for `POST /threads/clear`, letting consumers
+   * (e.g. the demo's Clear button) reset to an empty thread list without
+   * restarting the runtime. Intentionally not exposed on the Intelligence
+   * platform path: there, thread history lives in a real database and must
+   * not be wiped this way.
    */
   clearThreads(): void {
     GLOBAL_STORE.clear();

@@ -1233,7 +1233,7 @@ class CpkThreadDetails extends LitElement {
     }
   `;
 
-  updated(changed: Map<string, unknown>): void {
+  updated(_changed: Map<string, unknown>): void {
     if (this.threadId !== this._lastFetchedThreadId) {
       this._lastFetchedThreadId = this.threadId;
       this._tab = "conversation";

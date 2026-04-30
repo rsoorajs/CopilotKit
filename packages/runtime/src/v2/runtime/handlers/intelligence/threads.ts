@@ -125,11 +125,11 @@ export async function handleListThreads({
 /**
  * Clears all in-memory thread history for the local-dev InMemory fallback.
  *
- * The inspector calls this once when a new browser session starts so that
- * a page refresh gives a clean slate without requiring a server restart.
- * This endpoint is intentionally a no-op when the Intelligence platform is
- * configured — real thread history lives in the database and must not be
- * wiped by a client-side page load.
+ * The local-dev fallback exposes this so consumers (e.g. the demo's Clear
+ * button) can wipe in-memory thread history without restarting the runtime.
+ * Intentionally a no-op when the Intelligence platform is configured: real
+ * thread history lives in the database and must not be wiped by a
+ * client-side page load.
  */
 export function handleClearThreads({
   runtime,
@@ -285,36 +285,45 @@ export async function handleGetThreadMessages({
   // Local in-memory fallback — useful for local development without Intelligence
   if (runtime.runner instanceof InMemoryAgentRunner) {
     const messages = runtime.runner.getThreadMessages(threadId);
-    // Map ag-ui Message objects to the same shape the Intelligence platform returns
+    // Map ag-ui Message objects to the same shape the Intelligence platform
+    // returns. Switching on the discriminant `role` lets each branch read
+    // the narrowed message arm directly, instead of laundering through
+    // `Record<string, unknown>` and chained `as` casts.
     const mapped = messages.map((msg) => {
-      const m = msg as Record<string, unknown>;
-      return {
-        id: m["id"],
-        role: m["role"],
-        ...(m["content"] !== undefined ? { content: m["content"] } : {}),
-        ...(Array.isArray(m["toolCalls"]) && m["toolCalls"].length > 0
-          ? {
-              toolCalls: (m["toolCalls"] as Array<Record<string, unknown>>).map(
-                (tc) => {
-                  const fn = tc["function"] as
-                    | Record<string, unknown>
-                    | undefined;
-                  return {
-                    id: tc["id"],
-                    name: fn?.["name"] ?? tc["name"],
-                    args:
-                      typeof fn?.["arguments"] === "string"
-                        ? fn["arguments"]
-                        : JSON.stringify(fn?.["arguments"] ?? tc["args"] ?? {}),
-                  };
-                },
-              ),
-            }
-          : {}),
-        ...(m["toolCallId"] !== undefined
-          ? { toolCallId: m["toolCallId"] }
-          : {}),
-      };
+      switch (msg.role) {
+        case "assistant": {
+          const toolCalls = msg.toolCalls ?? [];
+          return {
+            id: msg.id,
+            role: msg.role,
+            ...(msg.content !== undefined ? { content: msg.content } : {}),
+            ...(toolCalls.length > 0
+              ? {
+                  toolCalls: toolCalls.map((tc) => ({
+                    id: tc.id,
+                    name: tc.function.name,
+                    args: tc.function.arguments,
+                  })),
+                }
+              : {}),
+          };
+        }
+        case "tool":
+          return {
+            id: msg.id,
+            role: msg.role,
+            content: msg.content,
+            toolCallId: msg.toolCallId,
+          };
+        default:
+          return {
+            id: msg.id,
+            role: msg.role,
+            ...("content" in msg && msg.content !== undefined
+              ? { content: msg.content }
+              : {}),
+          };
+      }
     });
     return Response.json({ messages: mapped });
   }
