@@ -3,9 +3,9 @@
  * CellDrilldown — popover panel showing per-badge dimension detail for a
  * single (integration, feature) cell.
  *
- * Renders all 5 badge dimensions (health, e2e, smoke, d5, d6) with tone,
- * label, tooltip, and — for red/amber badges — failure metadata: fail_count,
- * first_failure_at, and the signal payload.
+ * Renders all badge dimensions (d2/API, d5/CV, e2e/RT, health, smoke) with
+ * tone, label, tooltip, and — for red/amber badges — failure metadata:
+ * fail_count, first_failure_at, and the signal payload.
  */
 import { resolveCell } from "@/lib/live-status";
 import type {
@@ -32,7 +32,7 @@ const DIMENSIONS: Array<{
   key: keyof Omit<CellState, "rollup">;
   label: string;
 }> = [
-  { key: "d6", label: "FP (Feature Parity)" },
+  { key: "d2", label: "API (Agent)" },
   { key: "d5", label: "CV (Conversation)" },
   { key: "e2e", label: "RT (Round Trip)" },
   { key: "health", label: "Health" },

@@ -88,6 +88,7 @@ Missing any of these means that provider's integrations bypass aimock and hit re
 ### Harness probe logging
 
 The harness emits structured logs at INFO level for probe lifecycle events:
+
 - `probe.tick-start` / `probe.tick-complete` — probe run lifecycle
 - `probe.target-start` / `probe.target-complete` — per-service results
 - `probe.e2e-deep.service-start` / `probe.e2e-deep.service-complete` — D5 per-service
@@ -143,6 +144,7 @@ docker build --platform linux/amd64 -f showcase/aimock/Dockerfile -t ghcr.io/cop
 After pushing, redeploy the Railway service so it pulls the new image (the CI workflow does this automatically via `serviceInstanceRedeploy`).
 
 When adding a **new** fixture file, update both:
+
 1. `showcase/docker-compose.local.yml` -- add a volume mount for the new file
 2. `showcase/aimock/Dockerfile` -- add a `COPY` line for the new file
 

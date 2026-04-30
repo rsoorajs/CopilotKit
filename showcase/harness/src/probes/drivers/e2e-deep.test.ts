@@ -1276,7 +1276,10 @@ describe("createPooledE2eDeepLauncher abort release", () => {
     );
 
     // Simulate a probe run that acquires all 4 pool slots.
-    const abortCtrls = Array.from({ length: POOL_SIZE }, () => new AbortController());
+    const abortCtrls = Array.from(
+      { length: POOL_SIZE },
+      () => new AbortController(),
+    );
     const browsers = await Promise.all(
       abortCtrls.map((ac) => launcher(ac.signal)),
     );
@@ -1294,7 +1297,10 @@ describe("createPooledE2eDeepLauncher abort release", () => {
     expect(pool._releaseLog).toHaveLength(POOL_SIZE);
 
     // Next probe run can now acquire all 4 browsers.
-    const nextAbortCtrls = Array.from({ length: POOL_SIZE }, () => new AbortController());
+    const nextAbortCtrls = Array.from(
+      { length: POOL_SIZE },
+      () => new AbortController(),
+    );
     const nextBrowsers = await Promise.all(
       nextAbortCtrls.map((ac) => launcher(ac.signal)),
     );

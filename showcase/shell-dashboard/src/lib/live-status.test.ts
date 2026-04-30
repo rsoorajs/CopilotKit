@@ -279,6 +279,32 @@ describe("resolveCell — post-Phase 3 (rollup uses health + e2e only)", () => {
     expect(c).not.toHaveProperty("qa");
   });
 
+  it("resolves d2 (agent) integration-scoped row when present", () => {
+    const live = mapOf([row("agent:agno", "agent", "green")]);
+    const c = resolveCell(live, "agno", "agentic-chat");
+    expect(c.d2.tone).toBe("green");
+    expect(c.d2.label).toBe("✓");
+    expect(c.d2.row?.key).toBe("agent:agno");
+  });
+
+  it("falls through to gray '?' when d2 (agent) row is absent", () => {
+    const c = resolveCell(mapOf([]), "agno", "agentic-chat");
+    expect(c.d2.tone).toBe("gray");
+    expect(c.d2.label).toBe("?");
+    expect(c.d2.row).toBeNull();
+  });
+
+  it("d2 (agent) does NOT contribute to the rollup (informational only)", () => {
+    const live = mapOf([
+      row("health:agno", "health", "green"),
+      row("agent:agno", "agent", "red"),
+    ]);
+    const c = resolveCell(live, "agno", "ac");
+    // health is green but e2e is missing → rollup is gray (not red from agent)
+    expect(c.rollup).toBe("gray");
+    expect(c.d2.tone).toBe("red");
+  });
+
   it("resolves d5 / d6 per-feature rows when present", () => {
     const live = mapOf([
       row("d5:agno/agentic-chat", "d5", "green"),

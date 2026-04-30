@@ -203,10 +203,10 @@ describe("Overlay selector integration — real UI components", () => {
     expect(queryByTestId("depth-chip")).not.toBeInTheDocument();
     expect(queryByTestId("depth-layer")).not.toBeInTheDocument();
 
-    // No health badges (RT, CV, FP)
+    // No health badges (API, RT, CV)
+    expect(queryByText("API")).not.toBeInTheDocument();
     expect(queryByText("RT")).not.toBeInTheDocument();
     expect(queryByText("CV")).not.toBeInTheDocument();
-    expect(queryByText("FP")).not.toBeInTheDocument();
 
     // No docs indicators
     expect(queryByText("docs-og")).not.toBeInTheDocument();
@@ -246,7 +246,7 @@ describe("Overlay selector integration — real UI components", () => {
   // -------------------------------------------------------------------------
   // 3. Health only — the critical case (no docs indicators must appear)
   // -------------------------------------------------------------------------
-  it("health only: RT/CV/FP badges visible, NO docs indicators", () => {
+  it("health only: API/RT/CV badges visible, NO docs indicators", () => {
     const ctx = makeCtx();
     const { getByTestId, getByText, queryByText, queryByTestId } = render(
       <ComposedCell ctx={ctx} overlays={overlaySet("health")} />,
@@ -254,9 +254,9 @@ describe("Overlay selector integration — real UI components", () => {
 
     // Health layer present with real badges
     expect(getByTestId("health-layer")).toBeInTheDocument();
+    expect(getByText("API")).toBeInTheDocument();
     expect(getByText("RT")).toBeInTheDocument();
     expect(getByText("CV")).toBeInTheDocument();
-    expect(getByText("FP")).toBeInTheDocument();
 
     // No docs indicators — this is the critical regression test for B2's fix
     expect(queryByText("docs-og")).not.toBeInTheDocument();
@@ -327,9 +327,9 @@ describe("Overlay selector integration — real UI components", () => {
 
     // Health layer
     expect(getByTestId("health-layer")).toBeInTheDocument();
+    expect(getByText("API")).toBeInTheDocument();
     expect(getByText("RT")).toBeInTheDocument();
     expect(getByText("CV")).toBeInTheDocument();
-    expect(getByText("FP")).toBeInTheDocument();
 
     // Docs layer
     expect(getByTestId("docs-layer")).toBeInTheDocument();
@@ -406,9 +406,9 @@ describe("Overlay selector integration — real UI components", () => {
   });
 
   // -------------------------------------------------------------------------
-  // 9. Testing-kind features: CV/FP badges hidden
+  // 9. Testing-kind features: CV badges hidden
   // -------------------------------------------------------------------------
-  it("testing-kind feature with health: CV/FP badges hidden, RT still shown", () => {
+  it("testing-kind feature with health: CV badges hidden, API/RT still shown", () => {
     const ctx = makeTestingCtx();
     const { getByTestId, getByText, queryByText } = render(
       <ComposedCell ctx={ctx} overlays={overlaySet("health")} />,
@@ -417,12 +417,12 @@ describe("Overlay selector integration — real UI components", () => {
     // Health layer present
     expect(getByTestId("health-layer")).toBeInTheDocument();
 
-    // RT badge still visible for testing-kind
+    // API and RT badges still visible for testing-kind
+    expect(getByText("API")).toBeInTheDocument();
     expect(getByText("RT")).toBeInTheDocument();
 
-    // CV/FP hidden for testing-kind features (CellStatus hides them)
+    // CV hidden for testing-kind features (CellStatus hides them)
     expect(queryByText("CV")).not.toBeInTheDocument();
-    expect(queryByText("FP")).not.toBeInTheDocument();
   });
 
   // -------------------------------------------------------------------------
