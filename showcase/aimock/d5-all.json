@@ -1,6 +1,14 @@
 {
-  "_comment": "Bundled D5 (e2e-deep) fixtures. Source files: showcase/harness/fixtures/d5/*.json. Uses hasToolResult matching for multi-turn disambiguation. Loaded by aimock before feature-parity.json for match precedence.",
+  "_comment": "Bundled D5 (e2e-deep) fixtures. Source files: showcase/harness/fixtures/d5/*.json (auto-merged). Uses hasToolResult matching for multi-turn disambiguation. Loaded by aimock before feature-parity.json for match precedence.",
   "fixtures": [
+    {
+      "match": {
+        "userMessage": "introduce yourself per your config"
+      },
+      "response": {
+        "content": "Hello — I'm operating with the configured tone, expertise, and responseLength forwarded by the CopilotKit provider. Adjust the controls above the chat and my system prompt will rebuild on the next turn."
+      }
+    },
     {
       "match": {
         "userMessage": "good name for a goldfish"
@@ -23,6 +31,78 @@
       },
       "response": {
         "content": "We named the goldfish Bubbles, and the tank The Bubble Bowl."
+      }
+    },
+    {
+      "match": {
+        "userMessage": "auth check turn 1"
+      },
+      "response": {
+        "content": "Authenticated session is active. The runtime accepted your request because the Authorization header carried the demo bearer token."
+      }
+    },
+    {
+      "match": {
+        "userMessage": "render a byoc hashbrown"
+      },
+      "response": {
+        "content": "The hashbrown BYOC component received the agent's structured payload and rendered it through the user-supplied component. The bring-your-own-component contract worked end-to-end."
+      }
+    },
+    {
+      "match": {
+        "userMessage": "render a byoc json"
+      },
+      "response": {
+        "content": "The JSON-render BYOC component received the agent's structured payload and rendered it. The user-supplied component formatted the JSON output correctly."
+      }
+    },
+    {
+      "match": {
+        "userMessage": "verify the css theme rendering"
+      },
+      "response": {
+        "content": "The chat is themed with hot pink user bubbles and amber assistant bubbles. CSS variables are scoped to .chat-css-demo-scope so the theme does not leak."
+      }
+    },
+    {
+      "match": {
+        "userMessage": "verify chat slots are wired"
+      },
+      "response": {
+        "content": "Confirmed — the chat-slots demo is rendering through the custom slot wrappers. The CustomAssistantMessage component should be visible as a tinted card with a 'slot' badge in the corner."
+      }
+    },
+    {
+      "match": {
+        "userMessage": "fetch the async metric"
+      },
+      "response": {
+        "content": "The async tool resolved with the requested metric. The frontend handler awaited completion before forwarding the result back to the agent — async-streaming behavior confirmed."
+      }
+    },
+    {
+      "match": {
+        "userMessage": "switch theme to dark mode"
+      },
+      "response": {
+        "content": "Done — the change_theme tool was invoked and the page is now in dark mode. Frontend tools were registered via useCopilotAction and the agent dispatched the call client-side."
+      }
+    },
+    {
+      "match": {
+        "userMessage": "render the a2ui schema"
+      },
+      "response": {
+        "content": "The A2UI fixed-schema component was rendered. The schema-driven UI received the agent's payload and produced the corresponding UI element from the locked schema definition."
+      }
+    },
+    {
+      "match": {
+        "userMessage": "have the agent emit a ui"
+      },
+      "response": {
+        "content": "The agent emitted a UI block as part of its turn. The agent acts as the UI generator: its response payload describes the component and the renderer materialized it inline with the assistant message."
       }
     },
     {
@@ -75,6 +155,14 @@
     },
     {
       "match": {
+        "userMessage": "render the declarative card"
+      },
+      "response": {
+        "content": "The declarative gen-UI specification has been resolved into a rendered card. The component descriptor was forwarded to the frontend renderer which materialized the card declaratively from the schema."
+      }
+    },
+    {
+      "match": {
         "userMessage": "Show me a profile card for Ada Lovelace",
         "hasToolResult": false
       },
@@ -95,6 +183,38 @@
       },
       "response": {
         "content": "Here is a quick card for Ada Lovelace — the rendered card above shows a short biography. Let me know if you want a deeper dive on her work or a different historical figure."
+      }
+    },
+    {
+      "match": {
+        "userMessage": "request the gen-ui interrupt"
+      },
+      "response": {
+        "content": "The agent paused at a gen-UI interrupt and rendered a choice component for the user. Choose to continue."
+      }
+    },
+    {
+      "match": {
+        "userMessage": "confirm the gen-ui choice"
+      },
+      "response": {
+        "content": "Gen-UI interrupt resolved. The agent received the user's choice and resumed, completing the workflow."
+      }
+    },
+    {
+      "match": {
+        "userMessage": "render an open gen-ui element"
+      },
+      "response": {
+        "content": "The open gen-UI element was rendered. The LLM produced an arbitrary-shape JSON payload and the renderer materialized it as a UI block."
+      }
+    },
+    {
+      "match": {
+        "userMessage": "continue the advanced gen-ui flow"
+      },
+      "response": {
+        "content": "The advanced gen-UI flow continued with the second-step component. The chained payloads from turns 1 and 2 form the complete advanced gen-UI sequence."
       }
     },
     {
@@ -167,6 +287,22 @@
       },
       "response": {
         "content": "Booked Alice's onboarding call for the time you selected — calendar invite is on its way."
+      }
+    },
+    {
+      "match": {
+        "userMessage": "trigger the headless interrupt"
+      },
+      "response": {
+        "content": "Interrupt raised. The agent has paused at a graph-level interrupt and is waiting for user input. Reply with 'yes' or 'no' to resume."
+      }
+    },
+    {
+      "match": {
+        "userMessage": "resolve the interrupt with yes"
+      },
+      "response": {
+        "content": "Interrupt resolved with 'yes'. The agent resumed execution from the suspended node and produced its final answer."
       }
     },
     {
@@ -252,6 +388,62 @@
     },
     {
       "match": {
+        "userMessage": "describe the sample image"
+      },
+      "response": {
+        "content": "The image attachment shows a small abstract test pattern used by the multimodal demo to validate the image-upload pipeline. Successful render of this response confirms the binary attachment round-tripped through the runtime."
+      }
+    },
+    {
+      "match": {
+        "userMessage": "summarize the sample document"
+      },
+      "response": {
+        "content": "The PDF document contains a single test page used by the multimodal demo. Its text was flattened by pypdf on the Python side and forwarded as text content to the model. Receiving this response confirms the document upload path works."
+      }
+    },
+    {
+      "match": {
+        "userMessage": "hi from the popup test"
+      },
+      "response": {
+        "content": "Hello from the popup — the CopilotPopup prebuilt component is wired up and reachable. The launcher floats in the corner and the chat sits in an overlay panel."
+      }
+    },
+    {
+      "match": {
+        "userMessage": "hi from the sidebar test"
+      },
+      "response": {
+        "content": "Hello from the sidebar — the CopilotSidebar prebuilt component is wired up and reachable. Anything else you would like me to confirm from inside the sidebar?"
+      }
+    },
+    {
+      "match": {
+        "userMessage": "recall the user preference"
+      },
+      "response": {
+        "content": "Per the read-only context the user prefers concise responses. The agent received this preference via the shared-state context and is honoring it without writing back to state."
+      }
+    },
+    {
+      "match": {
+        "userMessage": "show your reasoning step by step"
+      },
+      "response": {
+        "content": "Reasoning: first, I identified the question requires step-by-step thinking. Then, I broke it into sub-steps and worked through each one. Finally, I aggregated the partial answers into a single response. The reasoning block above the answer demonstrates intermediate-thought rendering."
+      }
+    },
+    {
+      "match": {
+        "userMessage": "stream the counter to 5"
+      },
+      "response": {
+        "content": "Streaming state updates: counter advanced from 0 through 1, 2, 3, 4 to 5. Each intermediate value was reflected in the shared state and visible to the UI mid-stream."
+      }
+    },
+    {
+      "match": {
         "userMessage": "remember that my favorite color is blue",
         "hasToolResult": false
       },
@@ -280,6 +472,14 @@
       },
       "response": {
         "content": "Your favorite color is blue — I noted it earlier."
+      }
+    },
+    {
+      "match": {
+        "userMessage": "analyze data and call the tool"
+      },
+      "response": {
+        "content": "Reasoning step 1: I considered the query. Reasoning step 2: I decided to invoke the analysis tool. The tool returned its structured payload, and the reasoning chain wraps the rendered tool card. Both the reasoning block and the tool card should be visible in the transcript."
       }
     },
     {

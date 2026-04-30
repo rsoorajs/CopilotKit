@@ -20,16 +20,13 @@
  * One turn matches the recorded fixture (`chat-css.json`).
  */
 
-import {
-  registerD5Script,
-  type D5BuildContext,
-} from "../helpers/d5-registry.js";
+import { registerD5Script } from "../helpers/d5-registry.js";
+import type { D5BuildContext } from "../helpers/d5-registry.js";
 import type { ConversationTurn, Page } from "../helpers/conversation-runner.js";
 
 /** User-bubble selector used by both the runner's settle poll and the
  *  computed-style probe. */
-export const USER_BUBBLE_SELECTOR =
-  ".copilotKitMessage.copilotKitUserMessage";
+export const USER_BUBBLE_SELECTOR = ".copilotKitMessage.copilotKitUserMessage";
 /** Assistant-bubble selector. */
 export const ASSISTANT_BUBBLE_SELECTOR =
   ".copilotKitMessage.copilotKitAssistantMessage";
@@ -55,12 +52,20 @@ export interface ChatCssProbeResult {
  *  inside the demo scope. */
 export async function probeChatCss(page: Page): Promise<ChatCssProbeResult> {
   return (await page.evaluate(() => {
-    const win = globalThis as unknown as {
+    // The harness package does not pull in DOM lib types — use a
+    // narrow structural type cast for the browser-side globals we
+    // touch. Real Window satisfies this at runtime.
+    interface CssLike {
+      background?: string;
+      backgroundColor?: string;
+    }
+    interface NarrowWin {
       document: {
-        querySelector(sel: string): Element | null;
+        querySelector(sel: string): unknown;
       };
-      getComputedStyle(el: Element): CSSStyleDeclaration;
-    };
+      getComputedStyle(el: unknown): CssLike;
+    }
+    const win = globalThis as unknown as NarrowWin;
     const readBg = (sel: string): string | null => {
       const el = win.document.querySelector(sel);
       if (!el) return null;
