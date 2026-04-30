@@ -203,10 +203,10 @@ describe("Overlay selector integration — real UI components", () => {
     expect(queryByTestId("depth-chip")).not.toBeInTheDocument();
     expect(queryByTestId("depth-layer")).not.toBeInTheDocument();
 
-    // No health badges (D4, D5, D6)
-    expect(queryByText("D4")).not.toBeInTheDocument();
-    expect(queryByText("D5")).not.toBeInTheDocument();
-    expect(queryByText("D6")).not.toBeInTheDocument();
+    // No health badges (RT, CV, FP)
+    expect(queryByText("RT")).not.toBeInTheDocument();
+    expect(queryByText("CV")).not.toBeInTheDocument();
+    expect(queryByText("FP")).not.toBeInTheDocument();
 
     // No docs indicators
     expect(queryByText("docs-og")).not.toBeInTheDocument();
@@ -236,7 +236,7 @@ describe("Overlay selector integration — real UI components", () => {
     expect(queryByText("</>")).not.toBeInTheDocument();
 
     // No health badges
-    expect(queryByText("D4")).not.toBeInTheDocument();
+    expect(queryByText("RT")).not.toBeInTheDocument();
 
     // No docs indicators
     expect(queryByText("docs-og")).not.toBeInTheDocument();
@@ -246,7 +246,7 @@ describe("Overlay selector integration — real UI components", () => {
   // -------------------------------------------------------------------------
   // 3. Health only — the critical case (no docs indicators must appear)
   // -------------------------------------------------------------------------
-  it("health only: D4/D5/D6 badges visible, NO docs indicators", () => {
+  it("health only: RT/CV/FP badges visible, NO docs indicators", () => {
     const ctx = makeCtx();
     const { getByTestId, getByText, queryByText, queryByTestId } = render(
       <ComposedCell ctx={ctx} overlays={overlaySet("health")} />,
@@ -254,9 +254,9 @@ describe("Overlay selector integration — real UI components", () => {
 
     // Health layer present with real badges
     expect(getByTestId("health-layer")).toBeInTheDocument();
-    expect(getByText("D4")).toBeInTheDocument();
-    expect(getByText("D5")).toBeInTheDocument();
-    expect(getByText("D6")).toBeInTheDocument();
+    expect(getByText("RT")).toBeInTheDocument();
+    expect(getByText("CV")).toBeInTheDocument();
+    expect(getByText("FP")).toBeInTheDocument();
 
     // No docs indicators — this is the critical regression test for B2's fix
     expect(queryByText("docs-og")).not.toBeInTheDocument();
@@ -289,7 +289,7 @@ describe("Overlay selector integration — real UI components", () => {
     expect(queryByText("Demo")).not.toBeInTheDocument();
 
     // No health badges
-    expect(queryByText("D4")).not.toBeInTheDocument();
+    expect(queryByText("RT")).not.toBeInTheDocument();
 
     // No depth chip
     expect(queryByTestId("depth-layer")).not.toBeInTheDocument();
@@ -311,7 +311,7 @@ describe("Overlay selector integration — real UI components", () => {
 
     // Nothing visible
     expect(queryByText("Demo")).not.toBeInTheDocument();
-    expect(queryByText("D4")).not.toBeInTheDocument();
+    expect(queryByText("RT")).not.toBeInTheDocument();
     expect(queryByText("docs-og")).not.toBeInTheDocument();
     expect(queryByTestId("depth-chip")).not.toBeInTheDocument();
   });
@@ -327,9 +327,9 @@ describe("Overlay selector integration — real UI components", () => {
 
     // Health layer
     expect(getByTestId("health-layer")).toBeInTheDocument();
-    expect(getByText("D4")).toBeInTheDocument();
-    expect(getByText("D5")).toBeInTheDocument();
-    expect(getByText("D6")).toBeInTheDocument();
+    expect(getByText("RT")).toBeInTheDocument();
+    expect(getByText("CV")).toBeInTheDocument();
+    expect(getByText("FP")).toBeInTheDocument();
 
     // Docs layer
     expect(getByTestId("docs-layer")).toBeInTheDocument();
@@ -362,7 +362,7 @@ describe("Overlay selector integration — real UI components", () => {
     expect(getByTestId("depth-layer")).toBeInTheDocument();
     expect(getByTestId("depth-chip")).toBeInTheDocument();
     expect(getByTestId("health-layer")).toBeInTheDocument();
-    expect(getByText("D4")).toBeInTheDocument();
+    expect(getByText("RT")).toBeInTheDocument();
     expect(getByTestId("docs-layer")).toBeInTheDocument();
     expect(getByText("docs-og")).toBeInTheDocument();
     expect(getByText("docs-shell")).toBeInTheDocument();
@@ -378,8 +378,8 @@ describe("Overlay selector integration — real UI components", () => {
     expect(
       children[1]?.querySelector("[data-testid='depth-chip']"),
     ).toBeTruthy();
-    // Third child: health (contains D4 badge)
-    expect(children[2]?.textContent).toContain("D4");
+    // Third child: health (contains RT badge)
+    expect(children[2]?.textContent).toContain("RT");
     // Fourth child: docs (contains docs-og)
     expect(children[3]?.textContent).toContain("docs-og");
   });
@@ -395,7 +395,7 @@ describe("Overlay selector integration — real UI components", () => {
 
     // Health badges present
     expect(getByTestId("health-layer")).toBeInTheDocument();
-    expect(getByText("D4")).toBeInTheDocument();
+    expect(getByText("RT")).toBeInTheDocument();
 
     // Docs explicitly absent — this is the bug B2 fixed: CellStatus used to
     // render DocsRow, so "health only" would still show docs indicators.
@@ -406,9 +406,9 @@ describe("Overlay selector integration — real UI components", () => {
   });
 
   // -------------------------------------------------------------------------
-  // 9. Testing-kind features: D5/D6 badges hidden
+  // 9. Testing-kind features: CV/FP badges hidden
   // -------------------------------------------------------------------------
-  it("testing-kind feature with health: D5/D6 badges hidden, D4 still shown", () => {
+  it("testing-kind feature with health: CV/FP badges hidden, RT still shown", () => {
     const ctx = makeTestingCtx();
     const { getByTestId, getByText, queryByText } = render(
       <ComposedCell ctx={ctx} overlays={overlaySet("health")} />,
@@ -417,12 +417,12 @@ describe("Overlay selector integration — real UI components", () => {
     // Health layer present
     expect(getByTestId("health-layer")).toBeInTheDocument();
 
-    // D4 badge still visible for testing-kind
-    expect(getByText("D4")).toBeInTheDocument();
+    // RT badge still visible for testing-kind
+    expect(getByText("RT")).toBeInTheDocument();
 
-    // D5/D6 hidden for testing-kind features (CellStatus hides them)
-    expect(queryByText("D5")).not.toBeInTheDocument();
-    expect(queryByText("D6")).not.toBeInTheDocument();
+    // CV/FP hidden for testing-kind features (CellStatus hides them)
+    expect(queryByText("CV")).not.toBeInTheDocument();
+    expect(queryByText("FP")).not.toBeInTheDocument();
   });
 
   // -------------------------------------------------------------------------
@@ -459,7 +459,7 @@ describe("Overlay selector integration — real UI components", () => {
 
     // Health badges
     expect(getByTestId("health-layer")).toBeInTheDocument();
-    expect(getByText("D4")).toBeInTheDocument();
+    expect(getByText("RT")).toBeInTheDocument();
 
     // Docs indicators
     expect(getByTestId("docs-layer")).toBeInTheDocument();
@@ -491,7 +491,7 @@ describe("Overlay selector integration — real UI components", () => {
 
     // Health badges
     expect(getByTestId("health-layer")).toBeInTheDocument();
-    expect(getByText("D4")).toBeInTheDocument();
+    expect(getByText("RT")).toBeInTheDocument();
 
     // No docs — critical: Assessment does NOT include docs
     expect(queryByText("docs-og")).not.toBeInTheDocument();
@@ -542,12 +542,12 @@ describe("Overlay selector integration — real UI components", () => {
       <ComposedCell ctx={ctx} overlays={overlaySet("health")} />,
     );
 
-    // With green live status rows, D4 badge should show the green check
-    const d4Badge = getByText("D4");
-    expect(d4Badge).toBeInTheDocument();
+    // With green live status rows, RT badge should show the green check
+    const rtBadge = getByText("RT");
+    expect(rtBadge).toBeInTheDocument();
     // The badge label "✓" (green state) should appear as a sibling span
-    const d4Container = d4Badge.closest("[class*='whitespace-nowrap']");
-    expect(d4Container?.textContent).toContain("✓");
+    const rtContainer = rtBadge.closest("[class*='whitespace-nowrap']");
+    expect(rtContainer?.textContent).toContain("✓");
   });
 
   // -------------------------------------------------------------------------
