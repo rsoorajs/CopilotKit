@@ -1,9 +1,9 @@
 name: "Showcase: Verify Deploy"
 
 # Triggered after "Showcase: Build & Push" completes. This workflow verifies
-# that Railway picked up the new images (via environmentPatchCommit auto-update)
-# and that each service is healthy. It does NOT do the actual deploy — Railway
-# auto-update handles that.
+# that Railway deployed the new images and that each service is healthy.
+# The build workflow triggers Railway redeploys after pushing GHCR images;
+# this workflow only verifies the result.
 #
 # This workflow CAN use cancel-in-progress: true because verification is
 # idempotent. If a newer build completes while we're still verifying an
@@ -169,11 +169,11 @@ jobs:
             exit 1
           fi
 
-          echo "Verifying Railway auto-deploy for ${{ matrix.service.dispatch_name }}..."
+          echo "Verifying Railway deploy for ${{ matrix.service.dispatch_name }}..."
 
-          # Railway auto-update (environmentPatchCommit) picks up the new
-          # :latest tag and triggers a redeploy. We poll until the service
-          # is healthy. 600s budget accommodates JVM/slow-boot services.
+          # The build workflow triggers Railway redeploys after pushing
+          # GHCR images. We poll until the service is healthy. 600s
+          # budget accommodates JVM/slow-boot services.
           # Require 2 consecutive healthy polls before declaring success.
           HEALTHY_STREAK=0
           REQUIRED_STREAK=2
