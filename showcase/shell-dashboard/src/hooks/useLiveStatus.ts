@@ -75,9 +75,7 @@ export function useLiveStatus(dimension?: string): UseLiveStatusResult {
     // within 16ms is vanishingly rare and the latest one is always the
     // intended state). Keeping a Map keyed by `record.key` keeps the
     // buffer O(unique_keys_in_burst) rather than O(events_in_burst).
-    type PendingOp =
-      | { op: "upsert"; row: StatusRow }
-      | { op: "delete" };
+    type PendingOp = { op: "upsert"; row: StatusRow } | { op: "delete" };
     const pendingByKey = new Map<string, PendingOp>();
     let flushTimer: ReturnType<typeof setTimeout> | null = null;
     // Zombie-detection note: an earlier revision tracked
