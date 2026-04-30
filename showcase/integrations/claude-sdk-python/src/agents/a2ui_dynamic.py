@@ -186,7 +186,7 @@ async def run_a2ui_dynamic_agent(input_data: RunAgentInput) -> AsyncIterator[str
                                 tool_call_id=current_tool_id or "",
                                 delta=delta.partial_json,
                             ))
-                    elif etype == "RawContentBlockStopEvent":
+                    elif etype in ("RawContentBlockStopEvent", "ParsedContentBlockStopEvent"):
                         if current_tool_id and current_tool_name:
                             yield encoder.encode(ToolCallEndEvent(
                                 type=EventType.TOOL_CALL_END,

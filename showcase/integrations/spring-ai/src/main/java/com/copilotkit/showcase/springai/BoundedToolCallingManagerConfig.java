@@ -68,16 +68,20 @@ public class BoundedToolCallingManagerConfig {
     private static final Logger log = LoggerFactory.getLogger(BoundedToolCallingManagerConfig.class);
 
     /**
-     * Default cap: one tool iteration is plenty for the CopilotKit showcase
-     * demos (weather, single chart, meeting scheduling) and ensures a
-     * deterministic aimock fixture can't pull the agent into an infinite
-     * tool-call loop.
+     * Default cap: five tool iterations covers all CopilotKit showcase D5
+     * fixtures including subagents (research → writing → critique = 3 tool
+     * iterations, plus headroom). The previous default of 1 caused
+     * {@code returnDirect=true} after the very first tool execution,
+     * preventing the model from being re-invoked to produce a follow-up
+     * text response — this broke every D5 feature that expected text
+     * after a tool call.
      *
-     * <p>Interpretation: {@code N=1} allows exactly one tool round per turn;
-     * Spring-AI executes the tool, we flip {@code returnDirect=true}, and the
-     * outer loop terminates. Override via {@code copilotkit.tool.max-iterations}.
+     * <p>Interpretation: {@code N=5} allows up to five tool rounds per
+     * turn; after the Nth execution Spring-AI flips
+     * {@code returnDirect=true} and the outer loop terminates. Override
+     * via {@code copilotkit.tool.max-iterations}.
      */
-    static final int DEFAULT_TOOL_ITERATION_CAP_INCLUSIVE = 1;
+    static final int DEFAULT_TOOL_ITERATION_CAP_INCLUSIVE = 5;
 
     private final int toolIterationCapInclusive;
 

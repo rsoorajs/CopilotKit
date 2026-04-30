@@ -140,7 +140,19 @@ _BASE_SYSTEM_PROMPT = (
 
 
 class SharedStateReadWriteFlow(Flow[AgentState]):
-    """Single-step chat flow that reads `preferences` and writes `notes`."""
+    """Chat flow with tool-execution loop that reads `preferences` and writes `notes`.
+
+    Mirrors the LangGraph reference implementation's automatic tool loop:
+    after the LLM returns a tool call, this flow executes the tool,
+    appends the tool result to the message history, and calls the LLM
+    again so it can produce the follow-up text response.  Without the
+    loop the frontend never sees the assistant's confirmation text
+    ("Got it — I noted …") after a `set_notes` call.
+    """
+
+    # Maximum number of LLM round-trips per user turn.  Prevents
+    # infinite loops if the model keeps calling tools.
+    _MAX_ITERATIONS = 5
 
     @start()
     async def chat(self) -> None:
@@ -159,14 +171,11 @@ class SharedStateReadWriteFlow(Flow[AgentState]):
         if prefs_block:
             system_content = prefs_block + "\n\n" + system_content
 
-        messages = [
-            {
-                "role": "system",
-                "content": system_content,
-                "id": str(uuid.uuid4()) + "-system",
-            },
-            *self.state.messages,
-        ]
+        system_message = {
+            "role": "system",
+            "content": system_content,
+            "id": str(uuid.uuid4()) + "-system",
+        }
 
         # Frontend-registered actions + our backend `set_notes` tool.
         tools = [
@@ -174,79 +183,89 @@ class SharedStateReadWriteFlow(Flow[AgentState]):
             SET_NOTES_TOOL,
         ]
 
-        response = await copilotkit_stream(
-            await acompletion(
-                model="openai/gpt-4o-mini",
-                messages=messages,
-                tools=tools,
-                parallel_tool_calls=False,
-                stream=True,
+        for _iteration in range(self._MAX_ITERATIONS):
+            messages = [system_message, *self.state.messages]
+
+            response = await copilotkit_stream(
+                await acompletion(
+                    model="openai/gpt-4o-mini",
+                    messages=messages,
+                    tools=tools,
+                    parallel_tool_calls=False,
+                    stream=True,
+                )
             )
-        )
 
-        message = response.choices[0].message
-        self.state.messages.append(message)
+            message = response.choices[0].message
+            self.state.messages.append(message)
 
-        tool_calls = message.get("tool_calls") or []
-        if not tool_calls:
-            return
+            tool_calls = message.get("tool_calls") or []
+            if not tool_calls:
+                # No tool calls — the LLM produced a text response.
+                # We're done.
+                return
 
-        # Iterate ALL tool calls — `parallel_tool_calls=False` is set on
-        # the LLM call but providers can still emit multiple under
-        # certain conditions. Indexing `[0]` would silently drop the
-        # rest, leaving an assistant `tool_calls` message with no
-        # matching `role: "tool"` reply, which most chat APIs reject on
-        # the next turn ("an assistant message with tool_calls must be
-        # followed by tool messages").
-        notes_changed = False
-        for tool_call in tool_calls:
-            tool_call_id = tool_call["id"]
-            tool_name = tool_call["function"]["name"]
+            # Iterate ALL tool calls — `parallel_tool_calls=False` is
+            # set on the LLM call but providers can still emit multiple
+            # under certain conditions.  Indexing `[0]` would silently
+            # drop the rest, leaving an assistant `tool_calls` message
+            # with no matching `role: "tool"` reply, which most chat
+            # APIs reject on the next turn.
+            notes_changed = False
+            for tool_call in tool_calls:
+                tool_call_id = tool_call["id"]
+                tool_name = tool_call["function"]["name"]
 
-            if tool_name != "set_notes":
-                # Frontend-registered action: the AG-UI client owns the
-                # round-trip for those. We still need a placeholder tool
-                # result here so the message thread stays valid for the
-                # supervisor's next turn (an assistant tool_calls message
-                # with no matching `role: "tool"` reply causes most chat
-                # APIs to reject the next turn). The client-side handler
-                # will produce the real result on its own pass.
+                if tool_name != "set_notes":
+                    # Frontend-registered action: the AG-UI client owns
+                    # the round-trip.  We still need a placeholder tool
+                    # result so the message thread stays valid.
+                    self.state.messages.append(
+                        {
+                            "role": "tool",
+                            "content": "frontend tool — handled client-side",
+                            "tool_call_id": tool_call_id,
+                        }
+                    )
+                    continue
+
+                try:
+                    args = json.loads(
+                        tool_call["function"]["arguments"] or "{}"
+                    )
+                except json.JSONDecodeError:
+                    args = {}
+                notes = args.get("notes")
+                if not isinstance(notes, list):
+                    notes = []
+                # Coerce every entry to a non-empty string — defensive
+                # against the model occasionally yielding non-string
+                # list entries.
+                cleaned = [
+                    str(n) for n in notes if n is not None and str(n)
+                ]
+                self.state.notes = cleaned
+                notes_changed = True
+
                 self.state.messages.append(
                     {
                         "role": "tool",
-                        "content": "frontend tool — handled client-side",
+                        "content": "Notes updated.",
                         "tool_call_id": tool_call_id,
                     }
                 )
-                continue
 
-            try:
-                args = json.loads(tool_call["function"]["arguments"] or "{}")
-            except json.JSONDecodeError:
-                args = {}
-            notes = args.get("notes")
-            if not isinstance(notes, list):
-                notes = []
-            # Coerce every entry to a non-empty string — defensive against
-            # the model occasionally yielding non-string list entries.
-            cleaned = [str(n) for n in notes if n is not None and str(n)]
-            self.state.notes = cleaned
-            notes_changed = True
+            # Emit a state snapshot so the UI's
+            # `useAgent({updates: [OnStateChanged]})` subscription fires
+            # and the notes-card re-renders immediately without waiting
+            # for the next turn.  Only emit if notes actually changed;
+            # pure frontend-tool turns don't mutate shared state.
+            if notes_changed:
+                await copilotkit_emit_state(self.state)
 
-            self.state.messages.append(
-                {
-                    "role": "tool",
-                    "content": "Notes updated.",
-                    "tool_call_id": tool_call_id,
-                }
-            )
-
-        # Emit a state snapshot so the UI's `useAgent({updates: [OnStateChanged]})`
-        # subscription fires and the notes-card re-renders immediately
-        # without waiting for the next turn. Only emit if notes actually
-        # changed; pure frontend-tool turns don't mutate shared state.
-        if notes_changed:
-            await copilotkit_emit_state(self.state)
+            # Loop back to call the LLM again with the tool results
+            # appended — the LLM will now produce the follow-up text
+            # response confirming the tool action.
 
 
 # Module-level singleton — `add_crewai_flow_fastapi_endpoint` deepcopies

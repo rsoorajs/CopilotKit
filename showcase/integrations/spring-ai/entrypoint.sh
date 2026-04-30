@@ -19,7 +19,19 @@ echo "[entrypoint] Starting Spring Boot agent backend..."
 # request. Setting this as a JVM arg guarantees it lands before any
 # java.net.http.HttpClient is constructed. This is the authoritative path;
 # WebClientConfig's static initializer is a defensive fallback only.
-java -Djdk.httpclient.keepalive.timeout=0 -jar /app/agent.jar &
+#
+# copilotkit.tool.max-iterations: override the BoundedToolCallingManager's
+# cap via a JVM property so the pre-built jar picks it up without a
+# rebuild. The application.properties inside the jar defaults to 5 via
+# ${COPILOTKIT_TOOL_MAX_ITERATIONS:5}, but passing it as -D here ensures
+# it takes effect even on images built before that property was added.
+# D5 fixtures need at least 3 (subagents: research -> writing -> critique);
+# 5 gives headroom for future multi-tool demos.
+TOOL_MAX_ITER="${COPILOTKIT_TOOL_MAX_ITERATIONS:-5}"
+echo "[entrypoint] copilotkit.tool.max-iterations=${TOOL_MAX_ITER}"
+java -Djdk.httpclient.keepalive.timeout=0 \
+     -Dcopilotkit.tool.max-iterations="${TOOL_MAX_ITER}" \
+     -jar /app/agent.jar &
 JAVA_PID=$!
 
 # Wait for Spring Boot to be ready (up to 60 seconds). Cold-start JVM warmup
