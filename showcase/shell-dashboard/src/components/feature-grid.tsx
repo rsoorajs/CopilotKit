@@ -304,7 +304,7 @@ function CategorySection({
                 </div>
               </td>
               {showRefDepth &&
-                (refCell && refDepth ? (
+                (refCell && refDepth && !docsOnly ? (
                   <RefDepthCell
                     depth={refDepth.achieved}
                     status={
