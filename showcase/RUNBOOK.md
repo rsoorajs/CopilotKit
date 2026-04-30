@@ -94,6 +94,22 @@ Earned by bugs. Do not repeat.
 - **NEVER** assume "agent says done" means "D5 is green." Always run the actual test.
 - **NEVER** add a backend tool for something that should be a frontend HITL tool.
 
+## Aimock Fixture Deployment
+
+When adding or modifying fixture files in `showcase/aimock/`, the `showcase-aimock` image must be rebuilt so production picks up the changes. CI handles this automatically -- any push to `main` that touches `showcase/aimock/**` triggers the Build & Deploy workflow to rebuild and redeploy the image.
+
+For manual iteration (e.g. testing a fixture change before merging), build and push directly:
+
+```
+docker build --platform linux/amd64 -f showcase/aimock/Dockerfile -t ghcr.io/copilotkit/showcase-aimock:latest showcase/aimock/ --push
+```
+
+After pushing, redeploy the Railway service so it pulls the new image (the CI workflow does this automatically via `serviceInstanceRedeploy`).
+
+When adding a **new** fixture file, update both:
+1. `showcase/docker-compose.local.yml` -- add a volume mount for the new file
+2. `showcase/aimock/Dockerfile` -- add a `COPY` line for the new file
+
 ## Dev Iteration Speed
 
 Each integration service bind-mounts its host `src/` directory into the container via the `volumes` entry in `docker-compose.local.yml`:
