@@ -387,6 +387,15 @@ export class CopilotKitCore {
     this.agentRegistry.setRuntimeTransport(runtimeTransport);
     this.agentRegistry.setRuntimeUrl(runtimeUrl);
 
+    // Seed the previous-agents snapshot from the constructor-supplied agents.
+    // `agentRegistry.initialize` does not emit `onAgentsChanged`, so the
+    // subscriber below would otherwise see its first non-empty notification
+    // as an "addition" relative to an empty baseline — and a later removal
+    // of those same agents would NOT trigger the auto-unregister branch
+    // because the guard would think the agentId was never previously
+    // present. Seeding the set here keeps the guard honest.
+    this.previousAgentIds = new Set(Object.keys(agents__unsafe_dev_only));
+
     // Subscribe to agent changes to track state for new agents
     this.subscribe({
       onAgentsChanged: ({ agents }) => {
