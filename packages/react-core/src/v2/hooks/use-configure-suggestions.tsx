@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useCopilotKit } from "../providers/CopilotKitProvider";
 import { useCopilotChatConfiguration } from "../providers/CopilotChatConfigurationProvider";
 import { DEFAULT_AGENT_ID } from "@copilotkit/shared";
-import {
+import type {
   DynamicSuggestionsConfig,
   StaticSuggestionsConfig,
   SuggestionsConfig,
@@ -211,7 +211,13 @@ export function useConfigureSuggestions(
     return () => {
       subscription.unsubscribe();
     };
-  }, [copilotkit, normalizedConfig, isDynamicConfigType, targetAgentId, requestReload]);
+  }, [
+    copilotkit,
+    normalizedConfig,
+    isDynamicConfigType,
+    targetAgentId,
+    requestReload,
+  ]);
 }
 
 function isDynamicConfig(
