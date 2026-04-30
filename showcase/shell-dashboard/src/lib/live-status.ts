@@ -45,6 +45,15 @@ export interface CellState {
   smoke: BadgeRender;
   health: BadgeRender;
   /**
+   * D2 (API) per-integration badge. Sourced from `agent:<slug>` rows
+   * emitted by the agent-check probe. Integration-scoped — every feature
+   * within the same integration sees the same D2 badge. Does NOT
+   * contribute to the rollup (agent is informational, same model as
+   * smoke). Stays `gray` / `?` until the agent probe has ticked for
+   * this integration.
+   */
+  d2: BadgeRender;
+  /**
    * D5 (deep / multi-turn conversation) per-feature badge. Sourced from
    * `d5:<slug>/<featureId>` rows emitted by the `e2e-deep` driver. Stays
    * `gray` / `?` until the driver has ticked for this (slug, featureType)
@@ -344,6 +353,11 @@ export function resolveCell(
   // shape always misses, leaving every smoke badge gray. Use the
   // integration-scoped key so the badge actually populates.
   const smokeRow = live.get(keyFor("smoke", slug)) ?? null;
+  // D2 / agent row: integration-scoped `agent:<slug>`, emitted by the
+  // agent-check probe. Every feature within the same integration sees
+  // the same D2 badge. Informational — does NOT contribute to the
+  // rollup (same model as smoke).
+  const agentRow = live.get(keyFor("agent", slug)) ?? null;
   // D5 / D6 per-feature rows (`d5:<slug>/<featureType>` /
   // `d6:<slug>/<featureType>`) emitted by the e2e-deep / e2e-parity
   // drivers. Informational — they do NOT contribute to the rollup
@@ -407,6 +421,12 @@ export function resolveCell(
       label: formatLabel("health", healthRow),
       tooltip: formatTooltip("health", healthRow, connection),
       row: healthRow,
+    },
+    d2: {
+      tone: rowTone(agentRow),
+      label: formatLabel("agent", agentRow),
+      tooltip: formatTooltip("agent", agentRow, connection),
+      row: agentRow,
     },
     d5: {
       tone: rowTone(d5Row),
