@@ -99,6 +99,7 @@ public class SharedStateReadWriteController {
 
     @PostMapping("/shared-state-read-write/run")
     public ResponseEntity<SseEmitter> run(@RequestBody AgUiParameters params) throws Exception {
+        MessageListFilter.filterNulls(params);
         SharedStateAgent agent = new SharedStateAgent(chatModel);
         SseEmitter emitter = agUiService.runAgent(agent, params);
         return ResponseEntity.ok()
