@@ -213,7 +213,10 @@ const AssistantMessageRenderer = memo(function AssistantMessageRenderer({
   const { value } = useJsonParser(message.content ?? "", kit.schema);
   if (!value) return null;
   return (
-    <div className="mt-2 flex w-full justify-start">
+    <div
+      data-testid="copilot-assistant-message"
+      className="mt-2 flex w-full justify-start"
+    >
       <div className="w-full px-1 py-1">{kit.render(value)}</div>
     </div>
   );
