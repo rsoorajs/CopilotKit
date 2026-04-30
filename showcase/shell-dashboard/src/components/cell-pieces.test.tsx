@@ -94,7 +94,7 @@ function redE2eRow(): StatusRow {
 }
 
 /**
- * Find the inner Badge span for a given badge name (RT / CV / FP) inside
+ * Find the inner Badge span for a given badge name (D4 / D5 / D6) inside
  * a CellStatus render. The Badge renders `<span title>...<span>name</span>
  * <span>label</span></span>`, so we locate the parent span whose first
  * child text matches `name`.
@@ -127,7 +127,7 @@ describe("CP1: tooltipOpen resets on mouseleave/blur", () => {
       liveStatus: new Map([[redE2eRow().key, redE2eRow()]]) as LiveStatusMap,
     });
     const { container } = render(<CellStatus ctx={ctx} />);
-    const rtBadge = findBadgeByName(container, "RT");
+    const rtBadge = findBadgeByName(container, "D4");
     fireEvent.mouseEnter(rtBadge);
     // Allow microtask to flush.
     await Promise.resolve();
@@ -158,11 +158,11 @@ describe("CP2: transitionLine discriminates first/error", () => {
       liveStatus: new Map([[redE2eRow().key, redE2eRow()]]) as LiveStatusMap,
     });
     const { container } = render(<CellStatus ctx={ctx} />);
-    const rtBadge = findBadgeByName(container, "RT");
+    const rtBadge = findBadgeByName(container, "D4");
     fireEvent.mouseEnter(rtBadge);
     // Wait for the lazy fetch + state update.
     await new Promise((r) => setTimeout(r, 10));
-    const updated = findBadgeByName(container, "RT");
+    const updated = findBadgeByName(container, "D4");
     expect(updated.getAttribute("title")).toContain("(initial: green)");
   });
 
@@ -181,14 +181,14 @@ describe("CP2: transitionLine discriminates first/error", () => {
       liveStatus: new Map([[redE2eRow().key, redE2eRow()]]) as LiveStatusMap,
     });
     const { container } = render(<CellStatus ctx={ctx} />);
-    const rtBadge = findBadgeByName(container, "RT");
+    const rtBadge = findBadgeByName(container, "D4");
     fireEvent.mouseEnter(rtBadge);
     await waitFor(() => {
-      const el = findBadgeByName(container, "RT");
+      const el = findBadgeByName(container, "D4");
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       expect(el.getAttribute("title")!).toMatch(/since 2025-02-02/);
     });
-    const updated = findBadgeByName(container, "RT");
+    const updated = findBadgeByName(container, "D4");
     expect(updated.getAttribute("title")).toContain("(error → red)");
   });
 
@@ -207,14 +207,14 @@ describe("CP2: transitionLine discriminates first/error", () => {
       liveStatus: new Map([[redE2eRow().key, redE2eRow()]]) as LiveStatusMap,
     });
     const { container } = render(<CellStatus ctx={ctx} />);
-    const rtBadge = findBadgeByName(container, "RT");
+    const rtBadge = findBadgeByName(container, "D4");
     fireEvent.mouseEnter(rtBadge);
     await waitFor(() => {
-      const el = findBadgeByName(container, "RT");
+      const el = findBadgeByName(container, "D4");
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       expect(el.getAttribute("title")!).toMatch(/since 2025-02-02/);
     });
-    const updated = findBadgeByName(container, "RT");
+    const updated = findBadgeByName(container, "D4");
     expect(updated.getAttribute("title")).toContain("(green → red)");
   });
 });
@@ -263,36 +263,36 @@ describe("CP5: missing-state tooltip distinguishes opt-out vs absent", () => {
   });
 });
 
-describe("CP8: CV/FP chips hidden for testing-kind features", () => {
-  it("hides CV/FP LiveBadges when feature.kind === 'testing'", () => {
+describe("CP8: D5/D6 chips hidden for testing-kind features", () => {
+  it("hides D5/D6 LiveBadges when feature.kind === 'testing'", () => {
     const ctx = makeCtx({
       feature: makeFeature({ kind: "testing" }),
     });
     const { container } = render(<CellStatus ctx={ctx} />);
     const text = container.textContent ?? "";
-    expect(text).toContain("RT");
-    expect(text).not.toContain("CV");
-    expect(text).not.toContain("FP");
+    expect(text).toContain("D4");
+    expect(text).not.toContain("D5");
+    expect(text).not.toContain("D6");
   });
 
-  it("renders CV/FP LiveBadges for primary features", () => {
+  it("renders D5/D6 LiveBadges for primary features", () => {
     const ctx = makeCtx({
       feature: makeFeature({ kind: "primary" }),
     });
     const { container } = render(<CellStatus ctx={ctx} />);
     const text = container.textContent ?? "";
-    expect(text).toContain("RT");
-    expect(text).toContain("CV");
-    expect(text).toContain("FP");
+    expect(text).toContain("D4");
+    expect(text).toContain("D5");
+    expect(text).toContain("D6");
   });
 
-  it("renders CV/FP by default when feature.kind is undefined", () => {
+  it("renders D5/D6 by default when feature.kind is undefined", () => {
     const ctx = makeCtx({
       feature: makeFeature(),
     });
     const { container } = render(<CellStatus ctx={ctx} />);
     const text = container.textContent ?? "";
-    expect(text).toContain("CV");
-    expect(text).toContain("FP");
+    expect(text).toContain("D5");
+    expect(text).toContain("D6");
   });
 });
