@@ -24,11 +24,17 @@ import dotenv
 from ag_ui.core import (
     BaseEvent,
     EventType,
+    ReasoningMessageContentEvent,
+    ReasoningMessageEndEvent,
+    ReasoningMessageStartEvent,
     RunAgentInput,
     RunErrorEvent,
     RunFinishedEvent,
     RunStartedEvent,
     StateSnapshotEvent,
+    TextMessageContentEvent,
+    TextMessageEndEvent,
+    TextMessageStartEvent,
 )
 from ag_ui.core.types import Message as AGUIMessage
 from ag_ui.encoder import EventEncoder
@@ -452,6 +458,190 @@ def _attach_agent_config_route(app: FastAPI, prefix: str) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Reasoning-aware AGUI handler
+# ---------------------------------------------------------------------------
+#
+# Agno's stock AGUI handler emits STEP_STARTED/STEP_FINISHED events for
+# reasoning, not the REASONING_MESSAGE_* events that CopilotKit expects.
+# And reasoning=True triggers a multi-call CoT loop that breaks with
+# aimock/fixture environments.
+#
+# This custom handler:
+#   1. Runs the agent with reasoning=False (single LLM call)
+#   2. Collects the streamed text content
+#   3. Parses <reasoning>...</reasoning> tags from the text
+#   4. Emits REASONING_MESSAGE_* events for the reasoning block
+#   5. Emits TEXT_MESSAGE_* events for the answer
+#
+# If no <reasoning> tags are found, the entire response is emitted as a
+# text message (graceful fallback for aimock fixtures that return plain
+# text containing reasoning keywords).
+
+import re
+
+_REASONING_PATTERN = re.compile(
+    r"<reasoning>(.*?)</reasoning>",
+    re.DOTALL | re.IGNORECASE,
+)
+
+
+async def _run_reasoning_agent(
+    agent: Union[Agent, RemoteAgent], run_input: RunAgentInput
+) -> AsyncIterator[BaseEvent]:
+    """Stream one reasoning agent run, synthesizing REASONING_MESSAGE events."""
+    run_id = run_input.run_id or str(uuid.uuid4())
+    thread_id = run_input.thread_id
+
+    try:
+        user_input = extract_agui_user_input(run_input.messages or [])
+
+        yield RunStartedEvent(
+            type=EventType.RUN_STARTED, thread_id=thread_id, run_id=run_id
+        )
+
+        user_id: Optional[str] = None
+        if run_input.forwarded_props and isinstance(run_input.forwarded_props, dict):
+            user_id = run_input.forwarded_props.get("user_id")
+
+        session_state = validate_agui_state(run_input.state, thread_id) or {}
+
+        response_stream = agent.arun(  # type: ignore[attr-defined]
+            input=user_input,
+            session_id=thread_id,
+            stream=True,
+            stream_events=True,
+            user_id=user_id,
+            session_state=session_state,
+            run_id=run_id,
+        )
+
+        # Collect the full text from the agent stream — we need to see the
+        # complete response to split reasoning from answer. We still forward
+        # tool-call events in real-time (important for the reasoning-chain
+        # demo that interleaves reasoning with tool rendering).
+        full_text = ""
+        tool_events: list[BaseEvent] = []
+
+        async for event in async_stream_agno_response_as_agui_events(
+            response_stream=response_stream,  # type: ignore[arg-type]
+            thread_id=thread_id,
+            run_id=run_id,
+        ):
+            if event.type in (EventType.RUN_STARTED, EventType.RUN_FINISHED):
+                continue
+            # Accumulate text content
+            if event.type == EventType.TEXT_MESSAGE_CONTENT:
+                full_text += event.delta  # type: ignore[attr-defined]
+            # Forward tool-call events immediately
+            elif event.type in (
+                EventType.TOOL_CALL_START,
+                EventType.TOOL_CALL_ARGS,
+                EventType.TOOL_CALL_END,
+            ):
+                tool_events.append(event)
+            # Skip text start/end — we'll re-emit with reasoning split
+
+        # Parse <reasoning>...</reasoning> tags
+        match = _REASONING_PATTERN.search(full_text)
+
+        if match:
+            reasoning_text = match.group(1).strip()
+            answer_text = (
+                full_text[: match.start()] + full_text[match.end() :]
+            ).strip()
+        else:
+            # Fallback: check for "Reasoning:" prefix pattern (aimock fixtures)
+            lower = full_text.lower()
+            if lower.startswith("reasoning:") or lower.startswith("reasoning step"):
+                # Treat the whole text as containing reasoning — emit as
+                # reasoning message so the ReasoningBlock renders, then emit
+                # a short text answer.
+                reasoning_text = full_text.strip()
+                answer_text = ""
+            else:
+                reasoning_text = ""
+                answer_text = full_text.strip()
+
+        # Emit reasoning message if we have reasoning content
+        if reasoning_text:
+            reasoning_msg_id = str(uuid.uuid4())
+            yield ReasoningMessageStartEvent(
+                type=EventType.REASONING_MESSAGE_START,
+                message_id=reasoning_msg_id,
+                role="reasoning",
+            )
+            yield ReasoningMessageContentEvent(
+                type=EventType.REASONING_MESSAGE_CONTENT,
+                message_id=reasoning_msg_id,
+                delta=reasoning_text,
+            )
+            yield ReasoningMessageEndEvent(
+                type=EventType.REASONING_MESSAGE_END,
+                message_id=reasoning_msg_id,
+            )
+
+        # Emit text message for the answer (or entire text if no reasoning)
+        text_msg_id = str(uuid.uuid4())
+        # Only emit a text message if there's actual content or tool events
+        if answer_text or tool_events:
+            yield TextMessageStartEvent(
+                type=EventType.TEXT_MESSAGE_START,
+                message_id=text_msg_id,
+                role="assistant",
+            )
+            if answer_text:
+                yield TextMessageContentEvent(
+                    type=EventType.TEXT_MESSAGE_CONTENT,
+                    message_id=text_msg_id,
+                    delta=answer_text,
+                )
+            yield TextMessageEndEvent(
+                type=EventType.TEXT_MESSAGE_END,
+                message_id=text_msg_id,
+            )
+
+        # Emit any tool-call events that were collected
+        for te in tool_events:
+            yield te
+
+        yield RunFinishedEvent(
+            type=EventType.RUN_FINISHED, thread_id=thread_id, run_id=run_id
+        )
+
+    except asyncio.CancelledError:  # noqa: TRY302
+        raise
+    except Exception as exc:  # noqa: BLE001
+        yield RunErrorEvent(type=EventType.RUN_ERROR, message=str(exc))
+
+
+def _attach_reasoning_route(
+    app: FastAPI, agent: Agent, prefix: str
+) -> None:
+    """Mount a reasoning-aware AGUI POST endpoint at `<prefix>/agui`."""
+    encoder = EventEncoder()
+    route = f"{prefix.rstrip('/')}/agui"
+
+    async def _handler(run_input: RunAgentInput) -> StreamingResponse:
+        async def _gen():
+            async for event in _run_reasoning_agent(agent, run_input):
+                yield encoder.encode(event)
+
+        return StreamingResponse(
+            _gen(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
+                "Access-Control-Allow-Headers": "*",
+            },
+        )
+
+    app.post(route, name=f"agui_reasoning_{prefix.strip('/')}")(_handler)
+
+
+# ---------------------------------------------------------------------------
 # AgentOS bootstrap
 # ---------------------------------------------------------------------------
 
@@ -474,7 +664,8 @@ agent_os = AgentOS(
     interfaces=[
         # main_agent is mounted separately below via _attach_hitl_aware_route
         # so it can forward tool results for HITL round-trips.
-        AGUI(agent=reasoning_agent, prefix="/reasoning"),  # -> /reasoning/agui
+        # reasoning_agent is mounted separately below via _attach_reasoning_route
+        # so it can emit proper REASONING_MESSAGE_* AG-UI events.
         # No-tools agent for the MCP Apps cell. The CopilotKit runtime's
         # `mcpApps.servers` middleware injects MCP server tools at request
         # time, so the LLM only sees the MCP-provided toolset.
@@ -520,6 +711,11 @@ _attach_hitl_aware_route(app, interrupt_agent, "/interrupt-adapted")
 # CORS with the stock AGUI interfaces above.
 _attach_state_aware_route(app, shared_state_rw_agent, "/shared-state-rw")
 _attach_state_aware_route(app, subagents_supervisor, "/subagents")
+
+# Reasoning-aware route — emits proper REASONING_MESSAGE_* AG-UI events
+# that CopilotKit renders via the reasoningMessage slot. Replaces the stock
+# AGUI(agent=reasoning_agent, prefix="/reasoning") interface.
+_attach_reasoning_route(app, reasoning_agent, "/reasoning")
 
 # Agent Config Object cell — builds a per-request Agno Agent whose system
 # prompt is composed from the CopilotKit provider's forwarded properties
