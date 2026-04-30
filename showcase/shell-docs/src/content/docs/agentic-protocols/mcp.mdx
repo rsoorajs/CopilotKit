@@ -102,6 +102,7 @@ For further reading, check out the [Model Context Protocol](https://modelcontext
         ```tsx
         "use client";
 
+        import { CopilotKit } from "@copilotkit/react-core/v2";
 
         export default function App() {
           return (
@@ -120,6 +121,8 @@ For further reading, check out the [Model Context Protocol](https://modelcontext
         ```tsx
         "use client";
 
+        import { useEffect } from "react";
+        import { useCopilotKit } from "@copilotkit/react-core/v2";
 
         function McpServerManager() {
           const { setMcpServers } = useCopilotKit();
@@ -148,6 +151,7 @@ For further reading, check out the [Model Context Protocol](https://modelcontext
         ```tsx
         "use client";
 
+        import { CopilotChat } from "@copilotkit/react-core/v2";
 
         export default function ChatInterface() {
           return (
@@ -169,6 +173,7 @@ For further reading, check out the [Model Context Protocol](https://modelcontext
         ```tsx
         "use client";
 
+        import {
           useFrontendTool,
           CatchAllActionRenderProps,
         } from "@copilotkit/react-core/v2";
@@ -195,6 +200,7 @@ For further reading, check out the [Model Context Protocol](https://modelcontext
         ```tsx
         "use client";
 
+        import { CopilotKit, CopilotChat } from "@copilotkit/react-core/v2";
 
         export default function Page() {
           return (
@@ -331,10 +337,12 @@ For detailed implementation guidance, refer to the [official MCP SDK documentati
 Here's a basic example of configuring the runtime:
 
 ```tsx
+import {
   CopilotRuntime,
   OpenAIAdapter,
   copilotRuntimeNextJSAppRouterEndpoint,
 } from "@copilotkit/runtime";
+import { NextRequest } from "next/server";
 
 const serviceAdapter = new OpenAIAdapter();
 

@@ -40,6 +40,8 @@ export const POST = async (req: NextRequest) => {
 Then point your frontend at the endpoint:
 
 ```tsx
+import { CopilotKitProvider } from "@copilotkit/react-core/v2";
+
 <CopilotKitProvider runtimeUrl="/api/copilotkit">
   <YourApp />
 </CopilotKitProvider>
@@ -59,6 +61,8 @@ The runtime supports multiple agent types. `BuiltInAgent` is the primary agent c
 If you register an agent under the name `"default"`, CopilotKit's prebuilt UI components will use it automatically without any additional configuration on the frontend. This is useful when you have one primary agent and don't want to specify an `agentId` everywhere.
 
 ```ts title="app/api/copilotkit/route.ts"
+import { BuiltInAgent } from "@copilotkit/runtime/v2";
+
 const runtime = new CopilotRuntime({
   agents: {
     // This agent is used automatically by CopilotPopup, CopilotSidebar, etc.
@@ -111,6 +115,8 @@ a2ui: { agents: ["my-agent"] }
 On the frontend, the A2UI renderer activates automatically — no extra configuration needed. If you want to override the default theme, pass an `a2ui` prop to `<CopilotKitProvider>`:
 
 ```tsx
+import { CopilotKitProvider } from "@copilotkit/react-core/v2";
+
 <CopilotKitProvider runtimeUrl="/api/copilotkit" a2ui={{ theme: myCustomTheme }}>
   {children}
 </CopilotKitProvider>
@@ -139,6 +145,7 @@ CopilotKit is built on the [AG-UI protocol](./ag-ui), which is an open standard.
 
 ```tsx
 import { HttpAgent } from "@ag-ui/client";
+import { CopilotKitProvider } from "@copilotkit/react-core/v2";
 
 const myAgent = new HttpAgent({
   url: "https://my-agent.example.com",

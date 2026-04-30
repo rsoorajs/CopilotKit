@@ -149,7 +149,7 @@ Before you begin, you'll need the following:
                 from agno.os.interfaces.agui import AGUI
 
                 agent = Agent(
-                    model=OpenAIChat(id="gpt-5.2"),
+                    model=OpenAIChat(id="gpt-5.4"),
                     description="A helpful assistant that can answer questions and provide information.",
                     instructions="Be helpful and friendly. Format your responses using markdown where appropriate.",
                 )
@@ -188,10 +188,13 @@ Before you begin, you'll need the following:
                 Create an API route to connect CopilotKit to your Agno agent:
 
                 ```tsx title="app/api/copilotkit/route.ts"
+                import {
                   CopilotRuntime,
                   ExperimentalEmptyAdapter,
                   copilotRuntimeNextJSAppRouterEndpoint,
                 } from "@copilotkit/runtime";
+                import { AgnoAgent } from "@ag-ui/agno";
+                import { NextRequest } from "next/server";
 
                 const serviceAdapter = new ExperimentalEmptyAdapter();
 
@@ -218,6 +221,9 @@ Before you begin, you'll need the following:
                 Wrap your application with the CopilotKit provider:
 
                 ```tsx title="app/layout.tsx"
+                import { CopilotKit } from "@copilotkit/react-core/v2"; // [!code highlight]
+                import "@copilotkit/react-ui/v2/styles.css"; // [!code highlight]
+                import './globals.css';
 
                 // ...
 
@@ -241,6 +247,7 @@ Before you begin, you'll need the following:
               Add the CopilotSidebar component to your page:
 
               ```tsx title="app/page.tsx"
+              import { CopilotSidebar } from "@copilotkit/react-core/v2"; // [!code highlight]
 
               export default function Page() {
                 return (
