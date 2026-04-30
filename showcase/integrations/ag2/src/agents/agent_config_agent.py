@@ -19,8 +19,6 @@ References:
 - src/agents/shared_state_read_write.py — same ContextVariables pattern.
 """
 
-from __future__ import annotations
-
 import logging
 
 from autogen import ConversableAgent, LLMConfig
