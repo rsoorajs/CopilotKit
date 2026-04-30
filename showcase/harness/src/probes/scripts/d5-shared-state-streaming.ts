@@ -18,7 +18,9 @@ async function readAssistantTranscript(page: Page): Promise<string> {
   return (await page.evaluate(() => {
     const win = globalThis as unknown as {
       document: {
-        querySelectorAll(sel: string): ArrayLike<{ textContent: string | null }>;
+        querySelectorAll(
+          sel: string,
+        ): ArrayLike<{ textContent: string | null }>;
       };
     };
     const sels = [

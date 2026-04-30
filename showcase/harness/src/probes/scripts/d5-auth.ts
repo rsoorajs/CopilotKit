@@ -25,7 +25,8 @@ import type { ConversationTurn, Page } from "../helpers/conversation-runner.js";
 
 export const SIGN_OUT_BUTTON_SELECTOR = '[data-testid="auth-sign-out-button"]';
 export const ERROR_BANNER_SELECTOR = '[data-testid="auth-demo-error"]';
-export const ERROR_BOUNDARY_SELECTOR = '[data-testid="auth-demo-chat-boundary"]';
+export const ERROR_BOUNDARY_SELECTOR =
+  '[data-testid="auth-demo-chat-boundary"]';
 
 const POST_SIGN_OUT_TIMEOUT_MS = 8_000;
 const POLL_INTERVAL_MS = 200;
@@ -40,7 +41,7 @@ async function probeErrorSurfaceVisible(page: Page): Promise<boolean> {
     };
     return Boolean(
       win.document.querySelector('[data-testid="auth-demo-error"]') ||
-        win.document.querySelector('[data-testid="auth-demo-chat-boundary"]'),
+      win.document.querySelector('[data-testid="auth-demo-chat-boundary"]'),
     );
   })) as boolean;
 }

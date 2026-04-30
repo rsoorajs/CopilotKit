@@ -7,10 +7,14 @@ import {
   POPUP_ROOT_SELECTOR,
 } from "./d5-prebuilt-popup.js";
 
-function makePage(opts: { throwOnWait?: boolean; messageInside?: boolean }): Page {
+function makePage(opts: {
+  throwOnWait?: boolean;
+  messageInside?: boolean;
+}): Page {
   return {
     async waitForSelector() {
-      if (opts.throwOnWait) throw new Error("waitForSelector timeout (test fake)");
+      if (opts.throwOnWait)
+        throw new Error("waitForSelector timeout (test fake)");
     },
     async fill() {},
     async press() {},
@@ -46,9 +50,9 @@ describe("d5-prebuilt-popup script", () => {
       rootTimeoutMs: 50,
       scopedTimeoutMs: 50,
     });
-    await expect(
-      assertion(makePage({ throwOnWait: true })),
-    ).rejects.toThrow(/popup root.*did not appear/);
+    await expect(assertion(makePage({ throwOnWait: true }))).rejects.toThrow(
+      /popup root.*did not appear/,
+    );
   });
 
   it("assertion fails when the popup is up but no message inside", async () => {
@@ -56,9 +60,9 @@ describe("d5-prebuilt-popup script", () => {
       rootTimeoutMs: 50,
       scopedTimeoutMs: 50,
     });
-    await expect(
-      assertion(makePage({ messageInside: false })),
-    ).rejects.toThrow(/did not land inside/);
+    await expect(assertion(makePage({ messageInside: false }))).rejects.toThrow(
+      /did not land inside/,
+    );
   });
 
   it("assertion succeeds when popup is up and message lands inside", async () => {

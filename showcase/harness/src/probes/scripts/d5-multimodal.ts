@@ -42,7 +42,9 @@ async function readAssistantTranscript(page: Page): Promise<string> {
   return (await page.evaluate(() => {
     const win = globalThis as unknown as {
       document: {
-        querySelectorAll(sel: string): ArrayLike<{ textContent: string | null }>;
+        querySelectorAll(
+          sel: string,
+        ): ArrayLike<{ textContent: string | null }>;
       };
     };
     const sels = [
@@ -70,10 +72,7 @@ async function readAssistantTranscript(page: Page): Promise<string> {
  *  isn't visible (proves the demo didn't render the sample buttons —
  *  a regression in their wiring would otherwise look like a generic
  *  "no response" failure). */
-async function clickSampleButton(
-  page: Page,
-  selector: string,
-): Promise<void> {
+async function clickSampleButton(page: Page, selector: string): Promise<void> {
   try {
     await page.waitForSelector(selector, {
       state: "visible",

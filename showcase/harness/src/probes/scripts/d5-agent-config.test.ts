@@ -32,7 +32,9 @@ describe("d5-agent-config script", () => {
       featureType: "agent-config",
       baseUrl: "https://x.test",
     };
-    expect(buildTurns(ctx)[0]!.input).toBe("introduce yourself per your config");
+    expect(buildTurns(ctx)[0]!.input).toBe(
+      "introduce yourself per your config",
+    );
   });
 
   it("CONFIG_KEYWORDS lists the three forwarded properties", () => {

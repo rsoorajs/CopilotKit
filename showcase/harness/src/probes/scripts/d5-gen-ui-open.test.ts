@@ -1,6 +1,11 @@
 import { describe, it, expect } from "vitest";
 import { getD5Script, type D5BuildContext } from "../helpers/d5-registry.js";
-import { buildTurns, preNavigateRoute, OPEN_KEYWORDS, ADVANCED_KEYWORDS } from "./d5-gen-ui-open.js";
+import {
+  buildTurns,
+  preNavigateRoute,
+  OPEN_KEYWORDS,
+  ADVANCED_KEYWORDS,
+} from "./d5-gen-ui-open.js";
 
 describe("d5-gen-ui-open script", () => {
   it("registers under featureType 'gen-ui-open'", () => {

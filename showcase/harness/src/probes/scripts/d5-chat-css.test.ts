@@ -12,7 +12,8 @@ import {
 function makePage(probe: unknown, opts: { throwOnWait?: boolean } = {}): Page {
   return {
     async waitForSelector() {
-      if (opts.throwOnWait) throw new Error("waitForSelector timeout (test fake)");
+      if (opts.throwOnWait)
+        throw new Error("waitForSelector timeout (test fake)");
     },
     async fill() {},
     async press() {},
@@ -42,7 +43,9 @@ describe("d5-chat-css script", () => {
   });
 
   it("exposes the bubble selectors", () => {
-    expect(USER_BUBBLE_SELECTOR).toBe(".copilotKitMessage.copilotKitUserMessage");
+    expect(USER_BUBBLE_SELECTOR).toBe(
+      ".copilotKitMessage.copilotKitUserMessage",
+    );
     expect(ASSISTANT_BUBBLE_SELECTOR).toBe(
       ".copilotKitMessage.copilotKitAssistantMessage",
     );
@@ -78,9 +81,9 @@ describe("d5-chat-css script", () => {
     });
 
     it("returns error when bubbles missing entirely", () => {
-      expect(
-        validateChatCss({ userBg: null, assistantBg: null }),
-      ).toMatch(/user bubble.*not found/);
+      expect(validateChatCss({ userBg: null, assistantBg: null })).toMatch(
+        /user bubble.*not found/,
+      );
     });
   });
 
@@ -96,7 +99,8 @@ describe("d5-chat-css script", () => {
     await expect(
       assertion(
         makePage({
-          userBg: "linear-gradient(135deg, rgb(255, 0, 110) 0%, rgb(194, 24, 91) 100%)",
+          userBg:
+            "linear-gradient(135deg, rgb(255, 0, 110) 0%, rgb(194, 24, 91) 100%)",
           assistantBg: "rgb(253, 224, 71)",
         }),
       ),

@@ -1,6 +1,10 @@
 import { describe, it, expect } from "vitest";
 import { getD5Script, type D5BuildContext } from "../helpers/d5-registry.js";
-import { buildTurns, RENDERED_KEYWORDS, COMPLETE_KEYWORDS } from "./d5-gen-ui-interrupt.js";
+import {
+  buildTurns,
+  RENDERED_KEYWORDS,
+  COMPLETE_KEYWORDS,
+} from "./d5-gen-ui-interrupt.js";
 
 describe("d5-gen-ui-interrupt script", () => {
   it("registers under featureType 'gen-ui-interrupt'", () => {

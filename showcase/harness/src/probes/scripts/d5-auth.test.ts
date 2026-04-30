@@ -14,7 +14,9 @@ interface FakeOpts {
   errorAfterClick?: boolean;
 }
 
-function makePage(opts: FakeOpts): Page & { click: (s: string) => Promise<void> } {
+function makePage(
+  opts: FakeOpts,
+): Page & { click: (s: string) => Promise<void> } {
   let clicked = false;
   return {
     async waitForSelector() {
@@ -52,7 +54,9 @@ describe("d5-auth script", () => {
   });
 
   it("exposes the sign-out + error selectors", () => {
-    expect(SIGN_OUT_BUTTON_SELECTOR).toBe('[data-testid="auth-sign-out-button"]');
+    expect(SIGN_OUT_BUTTON_SELECTOR).toBe(
+      '[data-testid="auth-sign-out-button"]',
+    );
     expect(ERROR_BANNER_SELECTOR).toBe('[data-testid="auth-demo-error"]');
     expect(ERROR_BOUNDARY_SELECTOR).toBe(
       '[data-testid="auth-demo-chat-boundary"]',

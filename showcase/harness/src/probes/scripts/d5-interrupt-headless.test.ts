@@ -1,6 +1,10 @@
 import { describe, it, expect } from "vitest";
 import { getD5Script, type D5BuildContext } from "../helpers/d5-registry.js";
-import { buildTurns, RAISED_KEYWORDS, RESOLVED_KEYWORDS } from "./d5-interrupt-headless.js";
+import {
+  buildTurns,
+  RAISED_KEYWORDS,
+  RESOLVED_KEYWORDS,
+} from "./d5-interrupt-headless.js";
 
 describe("d5-interrupt-headless script", () => {
   it("registers under featureType 'interrupt-headless'", () => {
