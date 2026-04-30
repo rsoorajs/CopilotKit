@@ -2,7 +2,6 @@ package com.copilotkit.showcase.springai;
 
 import com.agui.server.spring.AgUiParameters;
 import com.agui.server.spring.AgUiService;
-import com.agui.spring.ai.SpringAIAgent;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.CacheControl;
 import org.springframework.http.ResponseEntity;
@@ -15,16 +14,17 @@ import java.util.Map;
 public class AgentController {
 
     private final AgUiService agUiService;
-    private final SpringAIAgent agent;
+    private final StreamingToolAgent agent;
 
     @Autowired
-    public AgentController(AgUiService agUiService, SpringAIAgent agent) {
+    public AgentController(AgUiService agUiService, StreamingToolAgent agent) {
         this.agUiService = agUiService;
         this.agent = agent;
     }
 
     @PostMapping("/")
     public ResponseEntity<SseEmitter> run(@RequestBody AgUiParameters params) {
+        MessageListFilter.filterNulls(params);
         SseEmitter emitter = agUiService.runAgent(agent, params);
         return ResponseEntity.ok()
                 .cacheControl(CacheControl.noCache())

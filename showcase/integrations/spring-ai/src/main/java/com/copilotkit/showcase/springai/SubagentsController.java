@@ -131,6 +131,7 @@ public class SubagentsController {
 
     @PostMapping("/subagents/run")
     public ResponseEntity<SseEmitter> run(@RequestBody AgUiParameters params) throws Exception {
+        MessageListFilter.filterNulls(params);
         SubagentsAgent agent = new SubagentsAgent(chatModel);
         SseEmitter emitter = agUiService.runAgent(agent, params);
         return ResponseEntity.ok()
