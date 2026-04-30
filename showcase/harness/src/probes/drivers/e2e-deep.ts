@@ -202,7 +202,9 @@ export interface E2eDeepBrowser {
   close(): Promise<void>;
 }
 
-export type E2eDeepBrowserLauncher = () => Promise<E2eDeepBrowser>;
+export type E2eDeepBrowserLauncher = (
+  abortSignal?: AbortSignal,
+) => Promise<E2eDeepBrowser>;
 
 /**
  * Script loader — invoked once per driver invocation (the registry is
@@ -362,11 +364,56 @@ const defaultLauncher: E2eDeepBrowserLauncher =
 export function createPooledE2eDeepLauncher(
   pool: BrowserPool,
 ): E2eDeepBrowserLauncher {
-  return async (): Promise<E2eDeepBrowser> => {
+  return async (abortSignal?: AbortSignal): Promise<E2eDeepBrowser> => {
     const browser = await pool.acquire();
+
+    // Track whether the browser was force-released by an abort so the
+    // driver's normal `browser.close()` in the finally block doesn't
+    // double-release (BrowserPool.release is a no-op for unknown refs
+    // after the browserToSlot entry is removed, but the close() would
+    // fail on an already-closed browser without the guard).
+    let forceReleased = false;
+
+    // Track open browser contexts so abort can close them before
+    // releasing the browser back to the pool. Without this, orphaned
+    // contexts keep the browser busy and the pool slot is effectively
+    // dead until the contexts are GC'd or the browser process crashes.
+    const openContexts = new Set<{ close(): Promise<void> }>();
+
+    // Abort listener: when the invoker's timeout fires, the abort
+    // signal triggers. Force-close all open contexts and release the
+    // browser back to the pool immediately so the next probe run can
+    // acquire it. This prevents pool starvation when Promise.race
+    // abandons the driver promise but the driver keeps running with
+    // the pooled browser held.
+    if (abortSignal) {
+      const onAbort = (): void => {
+        if (forceReleased) return;
+        forceReleased = true;
+        // Close contexts first (best-effort), then release. The
+        // close calls may throw if the context is already torn down
+        // -- that's fine, the pool release is what matters.
+        const contextClosePromises = Array.from(openContexts).map((ctx) =>
+          ctx.close().catch(() => {}),
+        );
+        void Promise.allSettled(contextClosePromises).then(() => {
+          pool.release(browser);
+        });
+      };
+      if (abortSignal.aborted) {
+        // Already aborted before we even acquired -- release immediately.
+        forceReleased = true;
+        pool.release(browser);
+      } else {
+        abortSignal.addEventListener("abort", onAbort, { once: true });
+      }
+    }
+
     return {
       async newContext(): Promise<E2eDeepBrowserContext> {
         const ctx = await browser.newContext();
+        const ctxHandle = { close: () => ctx.close() };
+        openContexts.add(ctxHandle);
         return {
           async newPage(): Promise<E2eDeepPage> {
             const page = await ctx.newPage();
@@ -411,10 +458,14 @@ export function createPooledE2eDeepLauncher(
             };
             return wrapped;
           },
-          close: () => ctx.close(),
+          close: async () => {
+            openContexts.delete(ctxHandle);
+            await ctx.close();
+          },
         };
       },
       close: async () => {
+        if (forceReleased) return;
         pool.release(browser);
       },
     };
@@ -678,7 +729,7 @@ export function createE2eDeepDriver(
       let browser: E2eDeepBrowser | undefined;
       try {
         try {
-          browser = await launcher();
+          browser = await launcher(abort.signal);
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err);
           ctx.logger.warn("probe.e2e-deep.launcher-error", { slug, err: msg });
