@@ -66,7 +66,7 @@ jobs:
               .update(`${pr}:${checkRunId}`)
               .digest('hex');
 
-            const baseUrl = 'https://eval-webhook-production.up.railway.app';
+            const baseUrl = 'https://hooks.showcase.copilotkit.ai';
             const triggerUrl = `${baseUrl}/trigger/eval?pr=${pr}&check_run_id=${checkRunId}&sig=${sig}`;
 
             const marker = '<!-- showcase-eval-button -->';
