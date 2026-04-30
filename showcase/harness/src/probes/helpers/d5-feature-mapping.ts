@@ -101,6 +101,65 @@ const REGISTRY_TO_D5: Readonly<Record<string, readonly D5FeatureType[]>> = {
   // covers both featureTypes via one /demos/subagents conversation).
   "mcp-apps": ["mcp-apps"],
   subagents: ["subagents"],
+
+  // ── LGP D5 coverage wave (Phase 2) ─────────────────────────────────
+  // See `.claude/specs/lgp-d5-coverage.md` for the full design plan.
+
+  // Chat-surface family: each surface gets its own D5 literal because
+  // assertions are surface-specific (custom slot rendered, computed
+  // theme colors, sidebar/popup root scoping).
+  "beautiful-chat": ["agentic-chat"], // reuses agentic-chat conversation
+  "chat-slots": ["chat-slots"],
+  "chat-customization-css": ["chat-css"],
+  "prebuilt-sidebar": ["prebuilt-sidebar"],
+  "prebuilt-popup": ["prebuilt-popup"],
+
+  // Platform family.
+  auth: ["auth"],
+  multimodal: ["multimodal"],
+  "agent-config": ["agent-config"],
+
+  // Frontend-tools family — split because async-streaming completion
+  // semantics differ from sync (settle assertions are not reusable).
+  "frontend-tools": ["frontend-tools"],
+  "frontend-tools-async": ["frontend-tools-async"],
+
+  // Reasoning family — single `reasoning-display` literal covers both
+  // demo routes via preNavigateRoute. tool-rendering-reasoning-chain is
+  // split because its assertion shape interleaves tool render with
+  // reasoning block.
+  "agentic-chat-reasoning": ["reasoning-display"],
+  "reasoning-default-render": ["reasoning-display"],
+  "tool-rendering-reasoning-chain": ["tool-rendering-reasoning-chain"],
+
+  // State family — `shared-state-read` registry feature reuses the
+  // existing `shared-state-read` D5 literal (already paired with
+  // `shared-state-write` on the read-write demo). Streaming and
+  // readonly variants get their own literals.
+  "shared-state-streaming": ["shared-state-streaming"],
+  "readonly-state-agent-context": ["readonly-state-context"],
+  "shared-state-read": ["shared-state-read"],
+
+  // Generative-UI family — split per protocol shape (declarative spec,
+  // A2UI fixed schema, open LLM-shape, agent-emitted UI). Open-tier
+  // collapses simple + advanced into one literal.
+  "declarative-gen-ui": ["gen-ui-declarative"],
+  "a2ui-fixed-schema": ["gen-ui-a2ui-fixed"],
+  "open-gen-ui": ["gen-ui-open"],
+  "open-gen-ui-advanced": ["gen-ui-open"],
+  "gen-ui-agent": ["gen-ui-agent"],
+
+  // Interrupt family — LangGraph interrupt-driven HITL, distinct from
+  // useHumanInTheLoop hook patterns. Two demos = two literals (one
+  // headless, one gen-UI yielding interrupt).
+  "interrupt-headless": ["interrupt-headless"],
+  "gen-ui-interrupt": ["gen-ui-interrupt"],
+
+  // BYOC family — single literal covers hashbrown + json-render via
+  // preNavigateRoute swap (both render structured-output via a user
+  // component; only the schema/component differs).
+  "byoc-hashbrown": ["byoc"],
+  "byoc-json-render": ["byoc"],
 };
 
 /**
