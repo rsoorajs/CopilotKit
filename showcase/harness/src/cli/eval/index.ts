@@ -16,7 +16,8 @@
  *  10. Cleanup
  */
 
-import { Command, Option } from "commander";
+import type { Command } from "commander";
+import { Option } from "commander";
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
@@ -28,22 +29,20 @@ import { createLogger, reloadLogLevel } from "../../logger.js";
 // Sibling modules created by other blitz agents — imports written against
 // the agreed interfaces. These will not resolve until the sibling branches
 // are merged into the integration branch.
-import { classifyScope, type ScopeResult } from "./scope.js";
-import {
-  pullBaseline,
-  loadBaseline,
-  captureBaseline,
-  type EvalBaseline,
-} from "./baseline.js";
+import { classifyScope } from "./scope.js";
+import type { ScopeResult } from "./scope.js";
+import { pullBaseline, loadBaseline, captureBaseline } from "./baseline.js";
+import type { EvalBaseline } from "./baseline.js";
 import {
   collectResults,
   formatMatrix,
   formatVerdict,
   computeRegressions,
   saveResults,
-  type EvalResults,
 } from "./matrix.js";
-import { runTiered, type TieredRunResult, type RunOptions } from "./runner.js";
+import type { EvalResults } from "./matrix.js";
+import { runTiered } from "./runner.js";
+import type { TieredRunResult, RunOptions } from "./runner.js";
 
 const log = createLogger({ component: "eval" });
 
@@ -430,19 +429,16 @@ export async function runEval(opts: EvalOptions): Promise<void> {
     }
   })();
 
-  const evalResults: EvalResults = collectResults(
-    tieredResult.results,
-    {
-      branch: branchName,
-      base: "origin/main",
-      level,
-      scope: {
-        mode: scopeResult.mode,
-        reason: scopeResult.reason,
-        slugs: scopeResult.slugs,
-      },
+  const evalResults: EvalResults = collectResults(tieredResult.results, {
+    branch: branchName,
+    base: "origin/main",
+    level,
+    scope: {
+      mode: scopeResult.mode,
+      reason: scopeResult.reason,
+      slugs: scopeResult.slugs,
     },
-  );
+  });
 
   // -- 9. Format + print -----------------------------------------------------
   // Adapt EvalBaseline to EvalResults for comparison. Both share the
