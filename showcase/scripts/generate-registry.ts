@@ -218,6 +218,8 @@ interface CatalogMetadata {
   stub: number;
   unshipped: number;
   unsupported: number;
+  /** Cells for docs-only features — excluded from wired/stub/unshipped/unsupported. */
+  docs_only: number;
   generated_at: string;
 }
 
@@ -272,7 +274,7 @@ function determineCellStatus(
  */
 function generateCatalog(
   featureRegistry: {
-    features: Array<{ id: string; name: string; category: string }>;
+    features: Array<{ id: string; name: string; category: string; kind?: string }>;
     categories: Array<{ id: string; name: string }>;
   },
   integrations: Record<string, unknown>[],
@@ -296,6 +298,16 @@ function generateCatalog(
   }
 
   const allFeatureIds = featureRegistry.features.map((f) => f.id);
+
+  // docs-only features (e.g. cli-start) exist for documentation coverage
+  // tracking only — they have no route, no depth probes, and no health
+  // signals. Exclude them from the wired/stub/unshipped/unsupported metadata
+  // so the stats bar reflects only meaningful matrix cells.
+  const docsOnlyFeatureIds = new Set(
+    featureRegistry.features
+      .filter((f) => f.kind === "docs-only")
+      .map((f) => f.id),
+  );
 
   // Step 1: Cross-join to produce integrated cells and collect wired features
   // and unsupported features per integration.
@@ -440,20 +452,29 @@ function generateCatalog(
   }
 
   // Step 6: Compute metadata
-  const wiredCount = cells.filter((c) => c.status === "wired").length;
-  const stubCount = cells.filter((c) => c.status === "stub").length;
-  const unshippedCount = cells.filter((c) => c.status === "unshipped").length;
-  const unsupportedCount = cells.filter(
+  // Exclude docs-only cells from the headline counts — they are purely
+  // informational and don't participate in depth, health, or coverage.
+  const countableCells = cells.filter(
+    (c) => c.feature === null || !docsOnlyFeatureIds.has(c.feature),
+  );
+  const docsOnlyCount = cells.length - countableCells.length;
+  const wiredCount = countableCells.filter((c) => c.status === "wired").length;
+  const stubCount = countableCells.filter((c) => c.status === "stub").length;
+  const unshippedCount = countableCells.filter(
+    (c) => c.status === "unshipped",
+  ).length;
+  const unsupportedCount = countableCells.filter(
     (c) => c.status === "unsupported",
   ).length;
 
   const metadata: CatalogMetadata = {
     reference: referenceSlug,
-    total_cells: cells.length,
+    total_cells: countableCells.length,
     wired: wiredCount,
     stub: stubCount,
     unshipped: unshippedCount,
     unsupported: unsupportedCount,
+    docs_only: docsOnlyCount,
     generated_at: new Date().toISOString(),
   };
 
