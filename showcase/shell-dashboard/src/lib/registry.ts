@@ -1,7 +1,7 @@
 import registryData from "@/data/registry.json";
 import { sortOrder } from "./sort-order";
 
-export type FeatureKind = "primary" | "testing";
+export type FeatureKind = "primary" | "testing" | "docs-only";
 
 export interface Feature {
   id: string;
