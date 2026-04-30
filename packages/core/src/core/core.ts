@@ -1,11 +1,7 @@
-import {
-  AbstractAgent,
-  type AgentSubscriber,
-  Context,
-  State,
-} from "@ag-ui/client";
+import type { AbstractAgent, Context, State } from "@ag-ui/client";
+import { type AgentSubscriber } from "@ag-ui/client";
 import { Throttler } from "@tanstack/pacer";
-import {
+import type {
   FrontendTool,
   SuggestionsConfig,
   Suggestion,
@@ -14,21 +10,22 @@ import {
   RuntimeLicenseStatus,
   IntelligenceRuntimeInfo,
 } from "../types";
-import { AgentRegistry, CopilotKitCoreAddAgentParams } from "./agent-registry";
+import type { CopilotKitCoreAddAgentParams } from "./agent-registry";
+import { AgentRegistry } from "./agent-registry";
 import { ContextStore } from "./context-store";
 import { SuggestionEngine } from "./suggestion-engine";
-import {
-  RunHandler,
+import type {
   CopilotKitCoreRunAgentParams,
   CopilotKitCoreConnectAgentParams,
   CopilotKitCoreGetToolParams,
   CopilotKitCoreRunToolParams,
   CopilotKitCoreRunToolResult,
 } from "./run-handler";
-import { DebugConfig } from "@copilotkit/shared";
+import { RunHandler } from "./run-handler";
+import type { DebugConfig } from "@copilotkit/shared";
 import { StateManager } from "./state-manager";
 import { ThreadStoreRegistry } from "./thread-store-registry";
-import { type ɵThreadStore } from "../threads";
+import type { ɵThreadStore } from "../threads";
 
 /** Configuration options for `CopilotKitCore`. */
 export interface CopilotKitCoreConfig {
@@ -349,6 +346,13 @@ export class CopilotKitCore {
   private runHandler: RunHandler;
   private stateManager: StateManager;
   private threadStoreRegistry: ThreadStoreRegistry;
+  /**
+   * Tracks the agent IDs from the most recent `onAgentsChanged` notification.
+   * Used to gate thread-store auto-unregister so the FIRST empty-agents
+   * notification (before published agents are merged in) does not rip out a
+   * store that was registered prior to that initial notification.
+   */
+  private previousAgentIds: Set<string> = new Set();
 
   constructor({
     runtimeUrl,
@@ -392,13 +396,25 @@ export class CopilotKitCore {
           }
         });
 
-        // Unregister thread stores for agents that are no longer present
+        // Unregister thread stores for agents that have been removed.
+        //
+        // Critically, only unregister an agentId that was present in the
+        // PREVIOUS agents snapshot AND is missing from the new one. Without
+        // the "previously had" guard, the FIRST `onAgentsChanged({ agents: {} })`
+        // delivered to a freshly-published core would tear out a thread store
+        // that a consumer (e.g. useThreads) just registered — `core.agents`
+        // is asynchronously populated and the empty-map notification fires
+        // before the published agents are merged in.
         const currentAgentIds = new Set(Object.keys(agents));
         for (const agentId of Object.keys(this.threadStoreRegistry.getAll())) {
-          if (!currentAgentIds.has(agentId)) {
+          if (
+            this.previousAgentIds.has(agentId) &&
+            !currentAgentIds.has(agentId)
+          ) {
             this.threadStoreRegistry.unregister(agentId);
           }
         }
+        this.previousAgentIds = currentAgentIds;
       },
     });
   }
