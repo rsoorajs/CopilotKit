@@ -30,18 +30,19 @@ const runtime = new CopilotRuntime({
   a2ui: { injectA2UITool: false },
 });
 
+const { handleRequest } = copilotRuntimeNextJSAppRouterEndpoint({
+  endpoint: "/api/copilotkit-declarative-gen-ui",
+  serviceAdapter: new ExperimentalEmptyAdapter(),
+  runtime,
+});
+
 export const POST = async (req: NextRequest) => {
   try {
-    const { handleRequest } = copilotRuntimeNextJSAppRouterEndpoint({
-      endpoint: "/api/copilotkit-declarative-gen-ui",
-      serviceAdapter: new ExperimentalEmptyAdapter(),
-      runtime,
-    });
     return await handleRequest(req);
   } catch (error: unknown) {
-    console.error("[copilotkit-declarative-gen-ui]", error);
+    const e = error as { message?: string; stack?: string };
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: e.message, stack: e.stack },
       { status: 500 },
     );
   }
