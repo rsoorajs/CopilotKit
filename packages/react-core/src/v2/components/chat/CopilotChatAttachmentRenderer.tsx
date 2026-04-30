@@ -36,7 +36,10 @@ const ImageAttachment = memo(function ImageAttachment({
     <img
       src={src}
       alt="Image attachment"
-      className={cn("cpk:max-w-full cpk:h-auto cpk:rounded-lg", className)}
+      className={cn(
+        "cpk:max-w-[300px] cpk:max-h-[300px] cpk:w-auto cpk:h-auto cpk:rounded-xl cpk:object-cover",
+        className,
+      )}
       onError={() => setError(true)}
     />
   );
