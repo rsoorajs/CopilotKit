@@ -7,7 +7,16 @@ export interface TimeSlot {
   iso: string;
 }
 
-export type TimePickerStatus = "InProgress" | "Executing" | "Complete";
+// Status strings from CopilotKit v2 useHumanInTheLoop are lowercase
+// ("inProgress", "executing", "complete"). Accept both cases for
+// backward compatibility with v1 ("InProgress", "Executing", "Complete").
+export type TimePickerStatus =
+  | "InProgress"
+  | "Executing"
+  | "Complete"
+  | "inProgress"
+  | "executing"
+  | "complete";
 
 export interface TimePickerCardProps {
   topic: string;
@@ -33,7 +42,9 @@ export function TimePickerCard({
 }: TimePickerCardProps) {
   const [picked, setPicked] = useState<TimeSlot | null>(null);
   const [cancelled, setCancelled] = useState(false);
-  const disabled = status !== "Executing" || picked !== null || cancelled;
+  const normalizedStatus = status?.toLowerCase();
+  const disabled =
+    normalizedStatus !== "executing" || picked !== null || cancelled;
 
   if (cancelled) {
     return (
