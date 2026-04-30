@@ -51,7 +51,6 @@ function useThreads(input: UseThreadsInput): UseThreadsResult
     - `archived: boolean` — whether the thread is archived
     - `createdAt: string` — ISO 8601 timestamp
     - `updatedAt: string` — ISO 8601 timestamp
-    - `lastRunAt?: string` — ISO 8601 timestamp of the most recent run on this thread. Only present when the thread has had at least one run. Useful for surfacing "last activity" timing distinct from `updatedAt` (which also bumps on metadata changes like rename/archive).
   </PropertyReference>
 
   <PropertyReference name="isLoading" type="boolean">
@@ -133,8 +132,8 @@ function ThreadList() {
 
 ## Next steps
 
-- **Understand how it works:** [How Threads & Persistence Work](/premium/threads-explained) — architecture, event replay model, and WebSocket sync
+- **Understand how it works:** [How Threads & Persistence Work](/learn/threads) — architecture, event replay model, and WebSocket sync
 - **Step-by-step guide:** [Threads](/threads) — set up thread management in your app
-- **Tutorial:** [Build a Multi-Conversation Chat App](/tutorials/multi-conversation-chat) — end-to-end walkthrough building a chat app with thread history
+- **Tutorial:** [Build a Multi-Conversation Chat App](/learn/tutorials/multi-conversation-chat) — end-to-end walkthrough building a chat app with thread history
 
 </ThreadsEarlyAccess>
