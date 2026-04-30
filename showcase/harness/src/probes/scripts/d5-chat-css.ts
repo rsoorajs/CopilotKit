@@ -21,8 +21,14 @@
  */
 
 import { registerD5Script } from "../helpers/d5-registry.js";
-import type { D5BuildContext } from "../helpers/d5-registry.js";
+import type { D5BuildContext, D5FeatureType } from "../helpers/d5-registry.js";
 import type { ConversationTurn, Page } from "../helpers/conversation-runner.js";
+
+/** Default `/demos/<featureType>` would be `/demos/chat-css` which does
+ *  not exist — the actual route uses the registry-id `chat-customization-css`. */
+export function preNavigateRoute(_ft: D5FeatureType): string {
+  return "/demos/chat-customization-css";
+}
 
 /** User-bubble selector used by both the runner's settle poll and the
  *  computed-style probe. */
@@ -49,36 +55,38 @@ export interface ChatCssProbeResult {
 }
 
 /** Read computed `background` / `background-color` for both bubbles
- *  inside the demo scope. */
+ *  inside the demo scope.
+ *
+ *  Notes on the page.evaluate body shape:
+ *  - We do NOT declare local const-arrows or TS interfaces inside the
+ *    evaluated function. tsx (esbuild) injects a `__name(fn, "fn")`
+ *    helper to attach names for error stack frames; that helper is
+ *    not defined in the browser, so any tagged-name emit causes
+ *    `ReferenceError: __name is not defined` at evaluate time.
+ *  - Inline-only style (single returns, no helpers) keeps the
+ *    transpiled output free of __name calls. */
 export async function probeChatCss(page: Page): Promise<ChatCssProbeResult> {
   return (await page.evaluate(() => {
-    // The harness package does not pull in DOM lib types — use a
-    // narrow structural type cast for the browser-side globals we
-    // touch. Real Window satisfies this at runtime.
-    interface CssLike {
-      background?: string;
-      backgroundColor?: string;
-    }
-    interface NarrowWin {
-      document: {
-        querySelector(sel: string): unknown;
+    const win = globalThis as unknown as {
+      document: { querySelector(sel: string): unknown };
+      getComputedStyle(el: unknown): {
+        background?: string;
+        backgroundColor?: string;
       };
-      getComputedStyle(el: unknown): CssLike;
-    }
-    const win = globalThis as unknown as NarrowWin;
-    const readBg = (sel: string): string | null => {
-      const el = win.document.querySelector(sel);
-      if (!el) return null;
-      const cs = win.getComputedStyle(el);
-      // `background` is a shorthand. Browsers may return either the
-      // shorthand or just `background-color`; concatenate both so
-      // gradient values land in the result.
-      return `${cs.background ?? ""} ${cs.backgroundColor ?? ""}`.trim();
     };
-    return {
-      userBg: readBg(".copilotKitMessage.copilotKitUserMessage"),
-      assistantBg: readBg(".copilotKitMessage.copilotKitAssistantMessage"),
-    };
+    const userEl = win.document.querySelector(
+      ".copilotKitMessage.copilotKitUserMessage",
+    );
+    const assistantEl = win.document.querySelector(
+      ".copilotKitMessage.copilotKitAssistantMessage",
+    );
+    const userBg = userEl
+      ? `${win.getComputedStyle(userEl).background ?? ""} ${win.getComputedStyle(userEl).backgroundColor ?? ""}`.trim()
+      : null;
+    const assistantBg = assistantEl
+      ? `${win.getComputedStyle(assistantEl).background ?? ""} ${win.getComputedStyle(assistantEl).backgroundColor ?? ""}`.trim()
+      : null;
+    return { userBg, assistantBg };
   })) as ChatCssProbeResult;
 }
 
@@ -133,4 +141,5 @@ registerD5Script({
   featureTypes: ["chat-css"],
   fixtureFile: "chat-css.json",
   buildTurns,
+  preNavigateRoute,
 });

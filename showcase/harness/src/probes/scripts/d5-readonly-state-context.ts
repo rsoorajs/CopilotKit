@@ -10,8 +10,16 @@
 import {
   registerD5Script,
   type D5BuildContext,
+  type D5FeatureType,
 } from "../helpers/d5-registry.js";
 import type { ConversationTurn, Page } from "../helpers/conversation-runner.js";
+
+/** Default `/demos/<featureType>` would be `/demos/readonly-state-context`,
+ *  which does not exist — the actual route uses the registry-id
+ *  `readonly-state-agent-context`. */
+export function preNavigateRoute(_ft: D5FeatureType): string {
+  return "/demos/readonly-state-agent-context";
+}
 
 const TRANSCRIPT_TIMEOUT_MS = 5_000;
 
@@ -78,4 +86,5 @@ registerD5Script({
   featureTypes: ["readonly-state-context"],
   fixtureFile: "readonly-state-context.json",
   buildTurns,
+  preNavigateRoute,
 });

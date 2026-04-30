@@ -56,18 +56,24 @@ export interface AuthAssertionOpts {
 }
 
 /** Default click implementation: assumes the underlying Page has a
- *  `click()` method (real Playwright Page satisfies this). */
+ *  `click()` method (real Playwright Page satisfies this). Uses
+ *  `force: true` to bypass actionability checks — the dev `<cpk-web-inspector>`
+ *  overlay intercepts pointer events on the auth demo, making a normal
+ *  click time out even though the button is visible and enabled. */
 const defaultClick = async (page: Page, selector: string): Promise<void> => {
   // Real playwright.Page has click(); structurally we cast through.
   const clickable = page as unknown as {
-    click: (sel: string, opts?: { timeout?: number }) => Promise<void>;
+    click: (
+      sel: string,
+      opts?: { timeout?: number; force?: boolean },
+    ) => Promise<void>;
   };
   if (typeof clickable.click !== "function") {
     throw new Error(
       "auth: page does not support click() — cannot simulate sign-out",
     );
   }
-  await clickable.click(selector, { timeout: 5_000 });
+  await clickable.click(selector, { timeout: 5_000, force: true });
 };
 
 export function buildAuthAssertion(
@@ -91,15 +97,37 @@ export function buildAuthAssertion(
     }
     await click(page, SIGN_OUT_BUTTON_SELECTOR);
 
-    // Step 2 — wait for either error surface. The /info refetch should
-    // 401 on the very next tick after auth state flips.
+    // Step 2 — trigger a chat send while signed-out. The auth demo does
+    // not auto-refetch /info on header change, so the 401 surface only
+    // appears after the next outgoing request. Filling+pressing the
+    // chat input is the cheapest way to force one — the request 401s
+    // and the demo's onError handler renders the error banner.
+    try {
+      await page.fill(
+        '[data-testid="copilot-chat-textarea"]',
+        "post-signout probe",
+        { timeout: 2_000 },
+      );
+      await page.press(
+        '[data-testid="copilot-chat-textarea"]',
+        "Enter",
+        { timeout: 2_000 },
+      );
+    } catch {
+      // Chat input may have already been replaced by the error
+      // boundary — that itself satisfies the assertion. Fall through
+      // to the surface poll below.
+    }
+
+    // Step 3 — wait for either error surface. The probe-send above
+    // should 401 within a few hundred ms; budget covers slow CI.
     const deadline = Date.now() + timeout;
     while (Date.now() < deadline) {
       if (await probeErrorSurfaceVisible(page)) return;
       await new Promise<void>((r) => setTimeout(r, POLL_INTERVAL_MS));
     }
     throw new Error(
-      `auth: after clicking sign-out, neither ${ERROR_BANNER_SELECTOR} nor ${ERROR_BOUNDARY_SELECTOR} appeared within ${timeout}ms — auth gate may have regressed`,
+      `auth: after clicking sign-out and triggering a probe send, neither ${ERROR_BANNER_SELECTOR} nor ${ERROR_BOUNDARY_SELECTOR} appeared within ${timeout}ms — auth gate may have regressed`,
     );
   };
 }

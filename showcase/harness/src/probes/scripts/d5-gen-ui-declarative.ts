@@ -8,8 +8,16 @@
 import {
   registerD5Script,
   type D5BuildContext,
+  type D5FeatureType,
 } from "../helpers/d5-registry.js";
 import type { ConversationTurn, Page } from "../helpers/conversation-runner.js";
+
+/** Default `/demos/<featureType>` would be `/demos/gen-ui-declarative`,
+ *  which does not exist — the actual route uses the registry-id
+ *  `declarative-gen-ui`. */
+export function preNavigateRoute(_ft: D5FeatureType): string {
+  return "/demos/declarative-gen-ui";
+}
 
 const TRANSCRIPT_TIMEOUT_MS = 5_000;
 
@@ -73,4 +81,5 @@ registerD5Script({
   featureTypes: ["gen-ui-declarative"],
   fixtureFile: "gen-ui-declarative.json",
   buildTurns,
+  preNavigateRoute,
 });

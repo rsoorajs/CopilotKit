@@ -8,8 +8,16 @@
 import {
   registerD5Script,
   type D5BuildContext,
+  type D5FeatureType,
 } from "../helpers/d5-registry.js";
 import type { ConversationTurn, Page } from "../helpers/conversation-runner.js";
+
+/** Default `/demos/<featureType>` would be `/demos/gen-ui-a2ui-fixed`,
+ *  which does not exist — the actual route uses the registry-id
+ *  `a2ui-fixed-schema`. */
+export function preNavigateRoute(_ft: D5FeatureType): string {
+  return "/demos/a2ui-fixed-schema";
+}
 
 const TRANSCRIPT_TIMEOUT_MS = 5_000;
 
@@ -70,4 +78,5 @@ registerD5Script({
   featureTypes: ["gen-ui-a2ui-fixed"],
   fixtureFile: "gen-ui-a2ui-fixed.json",
   buildTurns,
+  preNavigateRoute,
 });
