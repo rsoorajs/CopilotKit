@@ -286,6 +286,62 @@ This filters out all log output from before your test started, showing only what
 | `OPENAI_API_KEY`    | Required for all integrations (even with aimock, some init code validates the key) | none                                                                            |
 | `ANTHROPIC_API_KEY` | Required for Claude Agent SDK demos                                                | none                                                                            |
 
+## D5 Failure Classification
+
+Every D5 failure falls into one of these categories. Identify which FIRST — the fix is completely different for each.
+
+### Text-only features pass, tool features fail
+The backend streams text correctly but tool execution events aren't reaching the frontend. Check:
+- Is the agent classifying tools correctly (frontend vs backend)?
+- Are AG-UI tool events (TOOL_CALL_START/ARGS/END) being emitted?
+- Does the CopilotKit runtime's SSE event processing throw (check for ZodError in Next.js server logs)?
+
+### Probe reads wrong text from DOM
+The conversation runner extracted rendered component text (chart labels, card data) instead of the assistant's text message. Error looks like: `missing tokens [pie, chart]; last assistant text: revenue by category...42%`. Fix: check `_gen-ui-shared.ts:readLastAssistantText()` — it should read `[class*="prose"]` child, not the full container.
+
+### Assistant messages appear then disappear (count 1→0)
+The CopilotKit frontend renders the first response, then the re-invocation cycle clears it. This happens when the AG-UI agent doesn't properly terminate — the runtime thinks it needs another round. Compare the agent's SSE event stream with langgraph-python's using browser DevTools Network tab.
+
+### chatMemory pollution across features
+Spring AI's `chatMemory` saves conversation history and leaks it across D5 features when running against the same container. Feature A's context appears in Feature B's request. Fix: scope memory per-request or disable it for D5 testing.
+
+## Framework-Specific Debugging
+
+### LlamaIndex
+- `AGUIChatWorkflow` only emits AG-UI events for tools in `frontend_tools`. Every frontend tool needs a `FunctionTool` stub registered there — without it, the workflow silently drops the tool call.
+- `FixedAGUIChatWorkflow` works around 3 upstream bugs in `llama-index-protocols-ag-ui` v0.2.2: missing `parentMessageId`, duplicate tool calls from MESSAGES_SNAPSHOT, tool results sent as `role="user"`.
+- Pattern: copy from `hitl_in_chat_agent.py` — it has the full fix.
+
+### Spring AI
+- `StreamingToolAgent`: Phase 1 (stream, `internalToolExecutionEnabled=false`) + Phase 2 (call with tools). Text-only features work via Phase 1. Tool features need Phase 2.
+- `SubagentsController` and `SharedStateReadWriteController` are separate Java classes — fixes to StreamingToolAgent don't apply to them.
+- `JacksonConfig`: disable `FAIL_ON_INVALID_SUBTYPE` for unknown message roles ("activity", "reasoning").
+- `MessageListFilter`: strip null entries from message lists after deserialization.
+
+### Built-in Agent (TanStack)
+- TanStack's multi-turn loop re-emits `TOOL_CALL_END` for frontend tools. Needs deduplication in a custom stream converter.
+- Frontend tools must be registered as TanStack `toolDefinition()` declarations.
+- `ToolCallStatus` uses lowercase strings (`"executing"`) — watch for case mismatches in TimePickerCard and similar components.
+
+### MS Agent Python
+- FastAPI `redirect_slashes=True` returns 307 for POST to `/path/`. AG-UI HttpAgent doesn't follow POST redirects. Never use trailing slashes in HttpAgent URLs.
+
+### AG2
+- `from __future__ import annotations` breaks pydantic `TypeAdapter` at tool registration time. Remove the import if the file doesn't use PEP 585/604 syntax.
+
+## Production vs Local Parity Checklist
+
+When a feature passes locally but fails in production, check these in order:
+
+| # | Check | How |
+|---|-------|-----|
+| 1 | All provider base URLs set on Railway | `railway variables --service showcase-<slug> --json` — must have OPENAI_BASE_URL, ANTHROPIC_BASE_URL, GOOGLE_GEMINI_BASE_URL all pointing to aimock |
+| 2 | GHCR image is current | `gh api /orgs/CopilotKit/packages/container/showcase-<slug>/versions --jq '.[0].updated_at'` |
+| 3 | Aimock has latest fixtures | Production aimock loads via HTTPS from raw.githubusercontent.com — ~5 min CDN cache after merge |
+| 4 | Service is healthy | `curl -sf https://showcase-<slug>-production.up.railway.app/api/health` |
+| 5 | No browser pool starvation | Check harness logs for `pool-abort-release` events |
+| 6 | Correct package versions | Built-in-agent uses pkg-pr-new URL — check it hasn't expired |
+
 ## Quick Diagnostic Commands
 
 ```sh
