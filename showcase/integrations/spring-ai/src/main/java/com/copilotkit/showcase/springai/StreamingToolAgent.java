@@ -5,13 +5,20 @@ import com.agui.core.agent.AgentSubscriberParams;
 import com.agui.core.agent.RunAgentInput;
 import com.agui.core.event.BaseEvent;
 import com.agui.core.exception.AGUIException;
+import com.agui.core.function.FunctionCall;
 import com.agui.core.message.AssistantMessage;
+import com.agui.core.message.BaseMessage;
 import com.agui.core.message.Role;
+import com.agui.core.message.ToolMessage;
 import com.agui.core.state.State;
+import com.agui.core.tool.Tool;
+import com.agui.core.tool.ToolCall;
 import com.agui.server.LocalAgent;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.PromptChatMemoryAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
+import org.springframework.ai.chat.messages.Message;
+import org.springframework.ai.chat.messages.ToolResponseMessage;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.Prompt;
@@ -22,11 +29,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static com.agui.server.EventFactory.runErrorEvent;
@@ -121,17 +130,57 @@ public class StreamingToolAgent extends LocalAgent {
         try {
             // Phase 1: Stream WITHOUT tool callbacks to detect whether tools
             // are needed. Text chunks are emitted in real time.
-            boolean toolCallsDetected = streamFirstTurn(
+            List<DetectedToolCall> detectedToolCalls = streamFirstTurn(
                     input, userContent, messageId, assistantMessage, subscriber);
 
-            if (toolCallsDetected) {
-                // Phase 2: Tools needed. Discard the streamed text (it was
-                // just the model's tool-call request, not a final answer).
-                // Re-invoke with .call() + tool callbacks so Spring AI's
-                // internal loop handles execution.
-                assistantMessage.setContent("");
-                callWithTools(input, userContent, messageId,
-                        assistantMessage, deferredEvents, subscriber);
+            if (!detectedToolCalls.isEmpty()) {
+                // Classify tool calls as frontend vs backend.
+                Set<String> backendToolNames = getBackendToolNames();
+                Set<String> frontendToolNames = getFrontendToolNames(input);
+
+                boolean hasFrontendToolCalls = detectedToolCalls.stream()
+                        .anyMatch(tc -> !backendToolNames.contains(tc.name())
+                                && frontendToolNames.contains(tc.name()));
+                boolean hasBackendToolCalls = detectedToolCalls.stream()
+                        .anyMatch(tc -> backendToolNames.contains(tc.name()));
+
+                if (hasFrontendToolCalls && !hasBackendToolCalls) {
+                    // All tool calls are frontend tools (HITL, useFrontendTool).
+                    // Emit TOOL_CALL_START/ARGS/END events WITHOUT TOOL_CALL_RESULT
+                    // so the CopilotKit runtime's processAgentResult detects the
+                    // missing result and executes the frontend tool handler.
+                    // The runtime will then re-invoke the agent with the tool result.
+                    for (DetectedToolCall dtc : detectedToolCalls) {
+                        String toolCallId = dtc.id() != null ? dtc.id()
+                                : UUID.randomUUID().toString();
+
+                        // AG-UI tool call envelope: start, args, end (NO result)
+                        deferredEvents.add(toolCallStartEvent(messageId, dtc.name(), toolCallId));
+                        deferredEvents.add(toolCallArgsEvent(
+                                dtc.arguments() != null ? dtc.arguments() : "{}", toolCallId));
+                        deferredEvents.add(toolCallEndEvent(toolCallId));
+
+                        // Attach to assistant message so the runtime sees it
+                        FunctionCall fc = new FunctionCall(dtc.name(),
+                                dtc.arguments() != null ? dtc.arguments() : "{}");
+                        ToolCall call = new ToolCall(toolCallId, "function", fc);
+                        if (assistantMessage.getToolCalls() == null) {
+                            assistantMessage.setToolCalls(new ArrayList<>());
+                        }
+                        assistantMessage.getToolCalls().add(call);
+                        subscriber.onNewToolCall(call);
+                    }
+                    // Clear any streamed text (it was the model's tool-call
+                    // request preamble, not a final answer).
+                    assistantMessage.setContent("");
+                } else {
+                    // Backend tools needed (or mixed). Discard the streamed
+                    // text and re-invoke with .call() + tool callbacks so
+                    // Spring AI's internal loop handles execution.
+                    assistantMessage.setContent("");
+                    callWithTools(input, userContent, messageId,
+                            assistantMessage, deferredEvents, subscriber);
+                }
             }
         } catch (Exception e) {
             log.error("Agent run failed", e);
@@ -154,18 +203,23 @@ public class StreamingToolAgent extends LocalAgent {
                 new AgentSubscriberParams(input.messages(), state, this, input));
     }
 
+    /** Captured tool call from the streaming phase. */
+    private record DetectedToolCall(String id, String name, String arguments) {}
+
     /**
      * Streams the first model turn WITHOUT tool callbacks. Text chunks are
-     * emitted as AG-UI events in real time. Returns true if the model
-     * requested tool calls (meaning we need a follow-up .call()).
+     * emitted as AG-UI events in real time. Returns a list of detected tool
+     * calls (empty if none). Each entry captures the tool call id, name, and
+     * arguments so the caller can decide whether to handle them as frontend
+     * tools or fall back to Phase 2.
      */
-    private boolean streamFirstTurn(
+    private List<DetectedToolCall> streamFirstTurn(
             RunAgentInput input, String userContent, String messageId,
             AssistantMessage assistantMessage, AgentSubscriber subscriber)
             throws InterruptedException {
 
         StringBuilder textAccumulator = new StringBuilder();
-        AtomicBoolean sawToolCalls = new AtomicBoolean(false);
+        CopyOnWriteArrayList<DetectedToolCall> detectedToolCalls = new CopyOnWriteArrayList<>();
         AtomicReference<Throwable> streamError = new AtomicReference<>();
         CountDownLatch latch = new CountDownLatch(1);
 
@@ -181,7 +235,11 @@ public class StreamingToolAgent extends LocalAgent {
                 .subscribe(
                         evt -> {
                             if (evt.hasToolCalls()) {
-                                sawToolCalls.set(true);
+                                var tcs = evt.getResult().getOutput().getToolCalls();
+                                for (var tc : tcs) {
+                                    detectedToolCalls.add(new DetectedToolCall(
+                                            tc.id(), tc.name(), tc.arguments()));
+                                }
                             }
                             String content = evt.getResult().getOutput().getText();
                             if (StringUtils.hasText(content)) {
@@ -208,7 +266,32 @@ public class StreamingToolAgent extends LocalAgent {
         }
 
         assistantMessage.setContent(textAccumulator.toString());
-        return sawToolCalls.get();
+        return new ArrayList<>(detectedToolCalls);
+    }
+
+    /** Returns the set of tool names registered as backend tool callbacks. */
+    private Set<String> getBackendToolNames() {
+        Set<String> names = new HashSet<>();
+        for (ToolCallback cb : toolCallbacks) {
+            names.add(cb.getToolDefinition().name());
+        }
+        return names;
+    }
+
+    /**
+     * Returns the set of tool names injected by the CopilotKit runtime
+     * (frontend tools). These are tools registered on the frontend via
+     * useHumanInTheLoop, useFrontendTool, etc.
+     */
+    private Set<String> getFrontendToolNames(RunAgentInput input) {
+        Set<String> names = new HashSet<>();
+        List<Tool> tools = input.tools();
+        if (tools != null) {
+            for (Tool tool : tools) {
+                names.add(tool.name());
+            }
+        }
+        return names;
     }
 
     /**
@@ -253,8 +336,15 @@ public class StreamingToolAgent extends LocalAgent {
     }
 
     /**
-     * Builds a base ChatClient request with system prompt and memory
-     * but WITHOUT tool callbacks.
+     * Builds a base ChatClient request with system prompt and the full
+     * conversation history converted from AG-UI messages to Spring AI messages.
+     *
+     * <p>Including the full history (not just the latest user message) is
+     * essential for multi-turn conversations, especially HITL flows where
+     * the CopilotKit runtime re-invokes the agent with tool result messages.
+     * Without the full history, the LLM (or aimock fixture matcher) would
+     * not see the tool result and would repeat the tool call instead of
+     * producing a follow-up text response.
      *
      * @param disableInternalToolExecution when {@code true}, sets
      *        {@code internalToolExecutionEnabled=false} on the request
@@ -268,9 +358,27 @@ public class StreamingToolAgent extends LocalAgent {
     private ChatClient.ChatClientRequestSpec buildBaseRequest(
             RunAgentInput input, String userContent,
             boolean disableInternalToolExecution) {
-        ChatClient.ChatClientRequestSpec request = chatClient.prompt(
-                Prompt.builder().content(userContent).build())
-                .system(systemMessage);
+
+        // Check if the INPUT messages (not the persistent singleton messages)
+        // contain tool results. If so, we need to send the full conversation
+        // history so aimock (and the LLM) can see the tool result and produce
+        // a follow-up text response instead of repeating the tool call. This
+        // is essential for HITL re-invocation where the CopilotKit runtime
+        // sends back the tool result from the frontend handler.
+        List<? extends BaseMessage> inputMessages = input.messages();
+        boolean hasToolResults = inputMessages != null && inputMessages.stream()
+                .anyMatch(m -> m != null && m.getRole() == Role.tool);
+
+        ChatClient.ChatClientRequestSpec request;
+        if (hasToolResults) {
+            List<Message> springMessages = convertMessages(inputMessages);
+            request = chatClient.prompt(new Prompt(springMessages))
+                    .system(systemMessage);
+        } else {
+            request = chatClient.prompt(
+                    Prompt.builder().content(userContent).build())
+                    .system(systemMessage);
+        }
 
         if (disableInternalToolExecution) {
             request = request.options(
@@ -286,6 +394,67 @@ public class StreamingToolAgent extends LocalAgent {
         }
 
         return request;
+    }
+
+    /**
+     * Converts AG-UI messages to Spring AI messages. This preserves the full
+     * conversation history including assistant messages with tool calls and
+     * tool result messages, which is essential for aimock fixture matching
+     * (hasToolResult) and for LLMs to understand the conversation context.
+     */
+    private List<Message> convertMessages(List<? extends BaseMessage> aguiMessages) {
+        List<Message> result = new ArrayList<>();
+        if (aguiMessages == null) return result;
+
+        for (BaseMessage msg : aguiMessages) {
+            if (msg == null) continue;
+            Role role = msg.getRole();
+            if (role == null) continue;
+
+            switch (role) {
+                case user -> {
+                    String content = msg.getContent();
+                    if (StringUtils.hasText(content)) {
+                        result.add(new org.springframework.ai.chat.messages.UserMessage(content));
+                    }
+                }
+                case assistant -> {
+                    if (msg instanceof AssistantMessage am) {
+                        List<org.springframework.ai.chat.messages.AssistantMessage.ToolCall> springToolCalls
+                                = new ArrayList<>();
+                        if (am.getToolCalls() != null) {
+                            for (ToolCall tc : am.getToolCalls()) {
+                                springToolCalls.add(
+                                    new org.springframework.ai.chat.messages.AssistantMessage.ToolCall(
+                                        tc.id(),
+                                        tc.type() != null ? tc.type() : "function",
+                                        tc.function() != null ? tc.function().name() : "",
+                                        tc.function() != null ? tc.function().arguments() : "{}"));
+                            }
+                        }
+                        String content = am.getContent() != null ? am.getContent() : "";
+                        result.add(new org.springframework.ai.chat.messages.AssistantMessage(
+                                content, java.util.Map.of(), springToolCalls));
+                    }
+                }
+                case tool -> {
+                    if (msg instanceof ToolMessage tm) {
+                        String toolCallId = tm.getToolCallId();
+                        String content = tm.getContent() != null ? tm.getContent() : "";
+                        // Spring AI uses ToolResponseMessage with ToolResponse entries
+                        var response = new ToolResponseMessage.ToolResponse(
+                                toolCallId != null ? toolCallId : "",
+                                "",  // name not available on ToolMessage
+                                content);
+                        result.add(new ToolResponseMessage(List.of(response), java.util.Map.of()));
+                    }
+                }
+                default -> {
+                    // system, developer messages — skip (system is set separately)
+                }
+            }
+        }
+        return result;
     }
 
     /**
