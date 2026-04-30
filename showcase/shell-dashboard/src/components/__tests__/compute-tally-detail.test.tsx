@@ -62,6 +62,7 @@ function makeCellState(e2eTone: string): CellState {
     e2e: makeBadge(e2eTone),
     smoke: makeBadge("gray"),
     health: makeBadge("gray"),
+    d2: makeBadge("gray"),
     d5: makeBadge("gray"),
     d6: makeBadge("gray"),
     rollup: e2eTone as CellState["rollup"],

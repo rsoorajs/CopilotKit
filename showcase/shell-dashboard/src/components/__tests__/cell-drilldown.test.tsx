@@ -38,6 +38,7 @@ describe("CellDrilldown", () => {
       row("health:lgp", "health", "green"),
       row("e2e:lgp/agentic-chat", "e2e", "green"),
       row("smoke:lgp", "smoke", "green"),
+      row("agent:lgp", "agent", "green"),
     ]);
     const { getByTestId, getByText } = render(
       <CellDrilldown
@@ -50,11 +51,11 @@ describe("CellDrilldown", () => {
       />,
     );
     expect(getByTestId("cell-drilldown")).toBeDefined();
+    expect(getByText("API (Agent)")).toBeDefined();
     expect(getByText("Health")).toBeDefined();
     expect(getByText("RT (Round Trip)")).toBeDefined();
     expect(getByText("Smoke")).toBeDefined();
     expect(getByText("CV (Conversation)")).toBeDefined();
-    expect(getByText("FP (Feature Parity)")).toBeDefined();
   });
 
   it("shows integration and feature name in header", () => {
