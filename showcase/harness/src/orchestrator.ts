@@ -891,7 +891,9 @@ export function registerAllProbeDrivers(
       createE2eSmokeDriver({ launcher: createPooledE2eSmokeLauncher(pool) }),
     );
     probeRegistry.register(
-      createE2eDemosDriver({ launcher: createPooledE2eDemosLauncher(pool) }),
+      createE2eDemosDriver({
+        launcher: createPooledE2eDemosLauncher(pool, logger),
+      }),
     );
     probeRegistry.register(
       createE2eDeepDriver({

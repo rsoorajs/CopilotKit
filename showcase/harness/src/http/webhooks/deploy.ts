@@ -67,6 +67,23 @@ const deployPayloadSchema = z
     // workflow can always pass the jq `--arg gateReason` shape without
     // branching on presence.
     gateReason: z.string().optional(),
+    // After PR #4471 split build and deploy into separate workflows, the
+    // deploy workflow co-sends the upstream build run's identifiers so
+    // Slack alerts and dashboard tooltips can link the deploy result back
+    // to the build that produced its images. Both fields are optional
+    // because the schema also accepts payloads from the legacy single-
+    // workflow shape and from manually-triggered redeploys.
+    buildRunId: z.string().optional(),
+    buildRunUrl: z
+      .string()
+      .url()
+      // Same http(s)-only refinement as `runUrl` — this field is also
+      // rendered as a link in Slack / dashboard UIs and a signed sender
+      // with a typo must not be able to plant a `javascript:` URL.
+      .refine((u) => /^https?:\/\//i.test(u), {
+        message: "buildRunUrl must be http(s)",
+      })
+      .optional(),
   })
   .strict();
 
@@ -273,6 +290,8 @@ export function registerDeployWebhook(
       cancelled: result.data.cancelled,
       gateSkipped: result.data.gateSkipped,
       gateReason,
+      buildRunId: result.data.buildRunId,
+      buildRunUrl: result.data.buildRunUrl,
     };
     deps.bus.emit("deploy.result", event);
     deps.logger.info("webhook.deploy.accepted", {
