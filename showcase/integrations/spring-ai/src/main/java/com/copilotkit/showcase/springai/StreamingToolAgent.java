@@ -135,16 +135,22 @@ public class StreamingToolAgent extends LocalAgent {
 
             if (!detectedToolCalls.isEmpty()) {
                 // Classify tool calls as frontend vs backend.
+                // A tool registered on BOTH sides (e.g. useRenderTool for
+                // a backend-registered tool) is treated as FRONTEND because
+                // the frontend registration means "I want to render this
+                // tool's result in a custom component". The runtime will
+                // re-invoke the agent with the tool result after the
+                // frontend handler runs.
                 Set<String> backendToolNames = getBackendToolNames();
                 Set<String> frontendToolNames = getFrontendToolNames(input);
 
                 boolean hasFrontendToolCalls = detectedToolCalls.stream()
-                        .anyMatch(tc -> !backendToolNames.contains(tc.name())
-                                && frontendToolNames.contains(tc.name()));
-                boolean hasBackendToolCalls = detectedToolCalls.stream()
-                        .anyMatch(tc -> backendToolNames.contains(tc.name()));
+                        .anyMatch(tc -> frontendToolNames.contains(tc.name()));
+                boolean hasBackendOnlyToolCalls = detectedToolCalls.stream()
+                        .anyMatch(tc -> backendToolNames.contains(tc.name())
+                                && !frontendToolNames.contains(tc.name()));
 
-                if (hasFrontendToolCalls && !hasBackendToolCalls) {
+                if (hasFrontendToolCalls && !hasBackendOnlyToolCalls) {
                     // All tool calls are frontend tools (HITL, useFrontendTool).
                     // Emit TOOL_CALL_START/ARGS/END events WITHOUT TOOL_CALL_RESULT
                     // so the CopilotKit runtime's processAgentResult detects the
@@ -174,9 +180,10 @@ public class StreamingToolAgent extends LocalAgent {
                     // request preamble, not a final answer).
                     assistantMessage.setContent("");
                 } else {
-                    // Backend tools needed (or mixed). Discard the streamed
-                    // text and re-invoke with .call() + tool callbacks so
-                    // Spring AI's internal loop handles execution.
+                    // Backend-only tools needed (or mixed with backend-only).
+                    // Discard the streamed text and re-invoke with .call()
+                    // + tool callbacks so Spring AI's internal loop handles
+                    // execution.
                     assistantMessage.setContent("");
                     callWithTools(input, userContent, messageId,
                             assistantMessage, deferredEvents, subscriber);
@@ -494,8 +501,14 @@ public class StreamingToolAgent extends LocalAgent {
             deferredEvents.add(toolCallStartEvent(parentMessageId, toolName, toolCallId));
             deferredEvents.add(toolCallArgsEvent(toolInput, toolCallId));
             deferredEvents.add(toolCallEndEvent(toolCallId));
+            // The tool result message MUST have its own unique messageId.
+            // Reusing parentMessageId causes the React deduplicateMessages()
+            // to overwrite the assistant message with the tool message (they
+            // share the same id key in the Map), hiding the assistant text
+            // from the DOM.
+            String toolResultMessageId = UUID.randomUUID().toString();
             deferredEvents.add(toolCallResultEvent(
-                    toolCallId, result, parentMessageId, Role.tool));
+                    toolCallId, result, toolResultMessageId, Role.tool));
 
             return result;
         }

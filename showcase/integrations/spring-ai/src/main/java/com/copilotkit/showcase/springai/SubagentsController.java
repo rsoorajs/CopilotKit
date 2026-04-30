@@ -281,8 +281,12 @@ public class SubagentsController {
                             messageId, inv.subAgentName(), toolCallId));
                     deferredEvents.add(toolCallArgsEvent(inv.argsJson(), toolCallId));
                     deferredEvents.add(toolCallEndEvent(toolCallId));
+                    // Tool result message must have its own unique messageId —
+                    // reusing the assistant's messageId causes the React
+                    // deduplicateMessages() to overwrite the assistant message.
                     deferredEvents.add(toolCallResultEvent(
-                            toolCallId, inv.result(), messageId, Role.tool));
+                            toolCallId, inv.result(),
+                            UUID.randomUUID().toString(), Role.tool));
                     deferredEvents.add(stateSnapshotEvent(inv.snapshot()));
                 }
             } catch (Exception e) {
@@ -293,10 +297,12 @@ public class SubagentsController {
                 return;
             }
 
-            this.emitEvent(textMessageEndEvent(messageId), subscriber);
+            // Emit tool call events BEFORE textMessageEnd so the frontend's
+            // useRenderTool sees them while the message is still "open".
             for (BaseEvent ev : deferredEvents) {
                 this.emitEvent(ev, subscriber);
             }
+            this.emitEvent(textMessageEndEvent(messageId), subscriber);
             subscriber.onNewMessage(assistantMessage);
             this.emitEvent(runFinishedEvent(threadId, runId), subscriber);
             subscriber.onRunFinalized(
