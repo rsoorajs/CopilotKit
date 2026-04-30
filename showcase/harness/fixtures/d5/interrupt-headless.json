@@ -1,0 +1,17 @@
+{
+  "_comment": "D5 fixture for /demos/interrupt-headless. Two-turn flow: trigger interrupt, then resolve it. Substrings 'trigger the headless interrupt' and 'resolve the interrupt with yes' are unique.",
+  "fixtures": [
+    {
+      "match": { "userMessage": "trigger the headless interrupt" },
+      "response": {
+        "content": "Interrupt raised. The agent has paused at a graph-level interrupt and is waiting for user input. Reply with 'yes' or 'no' to resume."
+      }
+    },
+    {
+      "match": { "userMessage": "resolve the interrupt with yes" },
+      "response": {
+        "content": "Interrupt resolved with 'yes'. The agent resumed execution from the suspended node and produced its final answer."
+      }
+    }
+  ]
+}
