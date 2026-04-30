@@ -82,7 +82,7 @@ export function JsonRenderAssistantMessage(
               parseResult.spec as unknown as Parameters<
                 typeof Renderer
               >[0]["spec"]
-              }
+            }
             registry={registry}
           />
         </JSONUIProvider>
