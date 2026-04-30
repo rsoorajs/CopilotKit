@@ -313,5 +313,16 @@ services:
     volumes:
       - ./integrations/spring-ai/src:/app/src
 
+  built-in-agent:
+    <<: *integration-defaults
+    build: ./integrations/built-in-agent
+    image: showcase-built-in-agent:local
+    container_name: showcase-built-in-agent
+    ports:
+      - "3117:10000"
+    profiles: ["built-in-agent", "all"]
+    volumes:
+      - ./integrations/built-in-agent/src:/app/src
+
 volumes:
   showcase-pb-data:
