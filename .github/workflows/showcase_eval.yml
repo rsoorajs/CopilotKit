@@ -296,7 +296,7 @@ jobs:
           # Build the command. EVAL_SCOPE_FLAG may contain spaces (e.g. "--slug mastra,agno")
           # so we intentionally leave it unquoted for word splitting.
           # shellcheck disable=SC2086
-          CMD="showcase/bin/showcase eval --${EVAL_LEVEL} ${EVAL_SCOPE_FLAG} --parallel 8 --json --baseline compare --timeout 60000"
+          CMD="showcase/bin/showcase eval --${EVAL_LEVEL} ${EVAL_SCOPE_FLAG} --parallel 8 --json --baseline compare --timeout 60000 --ci"
           echo "::group::Running: $CMD"
 
           EXIT_CODE=0
