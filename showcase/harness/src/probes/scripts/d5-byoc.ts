@@ -20,11 +20,11 @@
  * so a single selector cascade works for both.
  */
 
-import {
-  registerD5Script,
-  type D5BuildContext,
-  type D5FeatureType,
-  type D5RouteContext,
+import { registerD5Script } from "../helpers/d5-registry.js";
+import type {
+  D5BuildContext,
+  D5FeatureType,
+  D5RouteContext,
 } from "../helpers/d5-registry.js";
 import type { ConversationTurn, Page } from "../helpers/conversation-runner.js";
 
@@ -47,9 +47,11 @@ const RENDER_TIMEOUT_MS = 15_000;
 
 /** Probe whether the metric-card AND at least one chart selector are
  *  visible in DOM. Returns null on success, error string on timeout. */
-async function probeRenderedComponents(
-  page: Page,
-): Promise<{ hasMetric: boolean; hasChart: boolean; matchedChart: string | null }> {
+async function probeRenderedComponents(page: Page): Promise<{
+  hasMetric: boolean;
+  hasChart: boolean;
+  matchedChart: string | null;
+}> {
   return (await page.evaluate(() => {
     const win = globalThis as unknown as {
       document: { querySelector(sel: string): unknown };
@@ -77,7 +79,11 @@ export function buildByocAssertion(opts?: {
   const timeout = opts?.timeoutMs ?? RENDER_TIMEOUT_MS;
   return async (page: Page): Promise<void> => {
     const deadline = Date.now() + timeout;
-    let last = { hasMetric: false, hasChart: false, matchedChart: null as string | null };
+    let last = {
+      hasMetric: false,
+      hasChart: false,
+      matchedChart: null as string | null,
+    };
     while (Date.now() < deadline) {
       last = await probeRenderedComponents(page);
       if (last.hasMetric && last.hasChart) return;
@@ -85,8 +91,7 @@ export function buildByocAssertion(opts?: {
     }
     const missing: string[] = [];
     if (!last.hasMetric) missing.push(METRIC_CARD_SELECTOR);
-    if (!last.hasChart)
-      missing.push(`one of [${CHART_SELECTORS.join(", ")}]`);
+    if (!last.hasChart) missing.push(`one of [${CHART_SELECTORS.join(", ")}]`);
     throw new Error(
       `byoc: structured-output renderer did not produce expected components within ${timeout}ms — missing: ${missing.join(", ")}`,
     );
