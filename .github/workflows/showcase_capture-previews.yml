@@ -2,7 +2,7 @@ name: "Showcase: Capture Previews"
 
 on:
   workflow_run:
-    workflows: ["Showcase: Build & Deploy"]
+    workflows: ["Showcase: Build & Push"]
     types: [completed]
     branches: [main]
   workflow_dispatch:
