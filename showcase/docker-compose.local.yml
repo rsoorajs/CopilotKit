@@ -29,6 +29,12 @@ services:
     # Local aimock so the 17 integration containers can hit a stable LLM mock
     # on the compose network at http://aimock:4010 instead of the prod Railway
     # aimock (which can OOM) or direct-to-OpenAI (which costs).
+    #
+    # Local vs. production parity: local uses volume mounts (below) so fixture
+    # edits take effect on container restart without rebuilding. Production
+    # bakes fixtures into the image via showcase/aimock/Dockerfile. When adding
+    # a new fixture file, add it to BOTH the volumes list here AND the COPY
+    # lines in showcase/aimock/Dockerfile.
     image: ghcr.io/copilotkit/aimock:latest
     container_name: showcase-aimock
     env_file: .env
