@@ -149,9 +149,15 @@ describe("thread handlers", () => {
       expect(response.status).toBe(500);
       expect(intelligence.ɵsubscribeToThreads).not.toHaveBeenCalled();
       // The handler must log the auth failure so an operator looking at
-      // the runtime logs sees why the request 500ed. Asserting this
-      // catches a regression that quietly drops the diagnostic.
-      expect(errorSpy).toHaveBeenCalled();
+      // the runtime logs sees why the request 500ed. Asserting the
+      // operation name ("identifying intelligence user") catches a
+      // regression that swaps the diagnostic for a generic placeholder.
+      // The throw originates inside `resolveIntelligenceUser`, which
+      // logs and returns 500 before `subscribeToThreads` is reached.
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.stringContaining("Error identifying intelligence user"),
+        expect.any(Error),
+      );
     } finally {
       errorSpy.mockRestore();
     }

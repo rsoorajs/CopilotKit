@@ -41,9 +41,12 @@ function createMockCore() {
 // Build a typed minimal stub of ɵThreadStore. The registry only stores and
 // hands the reference back to subscribers; the methods are never invoked in
 // these tests. Using `vi.fn()` for every property keeps the shape honest
-// against the real interface without an `as unknown` cast.
-function makeStore(_id = "store-a"): ɵThreadStore {
-  return {
+// against the real interface without an `as unknown` cast. The `id` tag is
+// attached through an intersection so callers can distinguish stubs at a
+// glance during debugging — `makeStore("a") !== makeStore("b")` carries
+// semantic meaning, not just identity-by-allocation.
+function makeStore(id = "store-a"): ɵThreadStore & { __testId: string } {
+  const store: ɵThreadStore = {
     start: vi.fn(),
     stop: vi.fn(),
     setContext: vi.fn(),
@@ -54,7 +57,8 @@ function makeStore(_id = "store-a"): ɵThreadStore {
     deleteThread: vi.fn(),
     getState: vi.fn(),
     select: vi.fn(),
-  } satisfies ɵThreadStore;
+  };
+  return Object.assign(store, { __testId: id });
 }
 
 describe("ThreadStoreRegistry", () => {
@@ -236,7 +240,13 @@ describe("ThreadStoreRegistry", () => {
 
       expect(throwing).toHaveBeenCalledTimes(1);
       expect(ok).toHaveBeenCalledTimes(1);
-      expect(errorSpy).toHaveBeenCalled();
+      // Verify the diagnostic content, not just that *some* error was logged
+      // — a regression that swapped the message for an opaque "error" string
+      // would silently pass a bare `toHaveBeenCalled()` assertion.
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.stringContaining("Subscriber onThreadStoreRegistered error"),
+        expect.any(Error),
+      );
     });
   });
 
