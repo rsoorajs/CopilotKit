@@ -1,6 +1,6 @@
 import React from "react";
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { useCopilotKit } from "../../providers/CopilotKitProvider";
 import {
   CopilotKitCoreRuntimeConnectionStatus,
@@ -83,9 +83,16 @@ vi.mock("phoenix", () => {
         return;
       }
 
+      // Re-check after the early returns above: `off(event)` deletes the
+      // entry, so a subsequent `off(event, ref)` would otherwise hit a
+      // non-null assertion that lies and `.filter` on undefined.
+      const entries = this.handlers.get(event);
+      if (entries === undefined) {
+        return;
+      }
       this.handlers.set(
         event,
-        this.handlers.get(event)!.filter((entry) => entry.ref !== ref),
+        entries.filter((entry) => entry.ref !== ref),
       );
     }
 
@@ -134,6 +141,12 @@ vi.mock("phoenix", () => {
     }
 
     disconnect(): void {
+      // Real Phoenix sockets flip `connected` back to false on disconnect —
+      // a mock that only sets `disconnected = true` lets a regression that
+      // forgets to clear `connected` slip through, since assertions like
+      // `socket.connected === false` would be vacuously satisfied by the
+      // initial value but never re-checked after a reconnect cycle.
+      this.connected = false;
       this.disconnected = true;
     }
 
@@ -168,7 +181,10 @@ vi.mock("phoenix", () => {
 });
 
 const fetchMock = vi.fn();
-globalThis.fetch = fetchMock;
+// Use `vi.stubGlobal` so the original `fetch` is restored automatically
+// by `vi.unstubAllGlobals()` below — direct `globalThis.fetch = ...`
+// assignment leaks the mock across test files in the same vitest worker.
+vi.stubGlobal("fetch", fetchMock);
 
 function getMockSockets(): MockSocketLike[] {
   return phoenix.sockets;
@@ -234,6 +250,13 @@ describe("useThreads", () => {
     // un-consumed queued returns into the next test.
     mockUseCopilotKit.mockReset();
     setupCopilotKit();
+  });
+
+  afterAll(() => {
+    // Pair with `vi.stubGlobal("fetch", fetchMock)` above. Without this
+    // restoration the mock leaks into any sibling test file that runs in
+    // the same vitest worker and assumes a real `fetch`.
+    vi.unstubAllGlobals();
   });
 
   it("fetches threads and subscribes to the user metadata channel", async () => {
