@@ -316,6 +316,44 @@ const nextConfig: NextConfig = {
         destination: "/concepts/generative-ui-overview",
         permanent: true,
       },
+
+      // Stale pages hidden pre-launch. 302 (not permanent) — these
+      // URLs may be restored once the underlying content is rewritten.
+      // Tutorials are broken end-to-end and pulled from nav; files
+      // remain on disk under content/docs/tutorials/ for post-launch
+      // rewrite.
+      {
+        source: "/tutorials/:path*",
+        destination: "/",
+        permanent: false,
+      },
+      // Old-name straggler from the coding-agents rename; the page
+      // moved to /coding-agents.
+      {
+        source: "/coding-agent-setup",
+        destination: "/coding-agents",
+        permanent: false,
+      },
+      // Orphaned broken stub.
+      {
+        source: "/copilot-suggestions",
+        destination: "/",
+        permanent: false,
+      },
+      // AI-slop placeholder pulled from nav until properly authored;
+      // file stays on disk for rewrite.
+      {
+        source: "/generative-ui/open-json-ui",
+        destination: "/generative-ui",
+        permanent: false,
+      },
+      // ~1-year-old migration target, no longer a meaningful jump-off
+      // point.
+      {
+        source: "/migrate/1.10.X",
+        destination: "/migrate",
+        permanent: false,
+      },
     ];
   },
 };
