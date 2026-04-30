@@ -144,9 +144,12 @@ const script: D5Script = {
           baselineCount,
         });
         await pickTimeSlot(hitlPage);
-        console.debug("[d5-hitl-text-input] waiting for follow-up assistant message", {
-          baselineCount,
-        });
+        console.debug(
+          "[d5-hitl-text-input] waiting for follow-up assistant message",
+          {
+            baselineCount,
+          },
+        );
         const followup = await waitForNextAssistantMessage(
           hitlPage,
           baselineCount,

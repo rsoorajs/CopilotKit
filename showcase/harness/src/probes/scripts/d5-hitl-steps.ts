@@ -86,7 +86,9 @@ const script: D5Script = {
           "steps card",
           HITL_CARD_TIMEOUT_MS,
         );
-        console.debug("[d5-hitl-steps] steps card found — waiting for confirm button");
+        console.debug(
+          "[d5-hitl-steps] steps card found — waiting for confirm button",
+        );
         const confirmSelector = await selectorCascade(
           hitlPage,
           CONFIRM_BUTTON_SELECTORS,
@@ -97,9 +99,12 @@ const script: D5Script = {
           confirmSelector,
         });
         await hitlPage.click(confirmSelector);
-        console.debug("[d5-hitl-steps] waiting for follow-up assistant message", {
-          baselineCount,
-        });
+        console.debug(
+          "[d5-hitl-steps] waiting for follow-up assistant message",
+          {
+            baselineCount,
+          },
+        );
         const followup = await waitForNextAssistantMessage(
           hitlPage,
           baselineCount,
