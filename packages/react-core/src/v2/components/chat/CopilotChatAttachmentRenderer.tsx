@@ -2,6 +2,7 @@ import React, { memo, useState } from "react";
 import type { InputContentSource } from "@copilotkit/shared";
 import { getSourceUrl, getDocumentIcon } from "@copilotkit/shared";
 import { cn } from "../../lib/utils";
+import { Lightbox, useLightbox } from "./Lightbox";
 
 interface CopilotChatAttachmentRendererProps {
   type: "image" | "audio" | "video" | "document";
@@ -18,6 +19,8 @@ const ImageAttachment = memo(function ImageAttachment({
   className?: string;
 }) {
   const [error, setError] = useState(false);
+  const { thumbnailRef, vtName, open, openLightbox, closeLightbox } =
+    useLightbox();
 
   if (error) {
     return (
@@ -33,15 +36,29 @@ const ImageAttachment = memo(function ImageAttachment({
   }
 
   return (
-    <img
-      src={src}
-      alt="Image attachment"
-      className={cn(
-        "cpk:max-w-[300px] cpk:max-h-[300px] cpk:w-auto cpk:h-auto cpk:rounded-xl cpk:object-cover",
-        className,
+    <>
+      <img
+        ref={thumbnailRef as React.Ref<HTMLImageElement>}
+        src={src}
+        alt="Image attachment"
+        className={cn(
+          "cpk:max-w-[80px] cpk:max-h-[80px] cpk:w-auto cpk:h-auto cpk:rounded-xl cpk:object-cover cpk:cursor-pointer cpk:bg-muted",
+          className,
+        )}
+        onClick={openLightbox}
+        onError={() => setError(true)}
+      />
+      {open && (
+        <Lightbox onClose={closeLightbox}>
+          <img
+            style={{ viewTransitionName: vtName }}
+            src={src}
+            alt="Image attachment"
+            className="cpk:max-w-[90vw] cpk:max-h-[90vh] cpk:object-contain cpk:rounded-lg"
+          />
+        </Lightbox>
       )}
-      onError={() => setError(true)}
-    />
+    </>
   );
 });
 
