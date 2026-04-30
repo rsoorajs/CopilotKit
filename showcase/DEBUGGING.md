@@ -20,25 +20,25 @@ The unified CLI is at `bin/showcase`. It wraps Docker Compose and adds debugging
 
 ### Core Commands
 
-| Command | Description |
-|---------|-------------|
-| `showcase up [slug...]` | Start containers (rebuilds if source changed). No args = infra only (aimock, pocketbase, dashboard) |
-| `showcase down [slug...]` | Stop containers. No args = stop everything |
-| `showcase build [slug...]` | Build Docker images without starting containers |
-| `showcase ps` | Show running containers and their status |
-| `showcase ports` | Print slug-to-host-port mapping (from `shared/local-ports.json`) |
-| `showcase logs <slug>` | Follow container logs (supports `--grep`, `--since`, `-n`, `--no-follow`) |
+| Command                    | Description                                                                                         |
+| -------------------------- | --------------------------------------------------------------------------------------------------- |
+| `showcase up [slug...]`    | Start containers (rebuilds if source changed). No args = infra only (aimock, pocketbase, dashboard) |
+| `showcase down [slug...]`  | Stop containers. No args = stop everything                                                          |
+| `showcase build [slug...]` | Build Docker images without starting containers                                                     |
+| `showcase ps`              | Show running containers and their status                                                            |
+| `showcase ports`           | Print slug-to-host-port mapping (from `shared/local-ports.json`)                                    |
+| `showcase logs <slug>`     | Follow container logs (supports `--grep`, `--since`, `-n`, `--no-follow`)                           |
 
 ### Debugging Commands
 
-| Command | Description |
-|---------|-------------|
-| `showcase aimock-rebuild` | Rebuild local aimock from a source checkout and redeploy the container |
-| `showcase recreate <slug>` | Force-recreate a service (picks up a newly built image) |
-| `showcase test <slug>` | Run probe tests against a running service |
-| `showcase fixtures validate` | Check fixture JSON files for structural errors, duplicates, and common mistakes |
-| `showcase doctor` | Diagnose common local stack issues (Docker engine, Depot interception, stale images, port conflicts) |
-| `showcase diff-logs <slug>` | Show log output for a specific time window, filtering out noise from before your change |
+| Command                      | Description                                                                                          |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `showcase aimock-rebuild`    | Rebuild local aimock from a source checkout and redeploy the container                               |
+| `showcase recreate <slug>`   | Force-recreate a service (picks up a newly built image)                                              |
+| `showcase test <slug>`       | Run probe tests against a running service                                                            |
+| `showcase fixtures validate` | Check fixture JSON files for structural errors, duplicates, and common mistakes                      |
+| `showcase doctor`            | Diagnose common local stack issues (Docker engine, Depot interception, stale images, port conflicts) |
+| `showcase diff-logs <slug>`  | Show log output for a specific time window, filtering out noise from before your change              |
 
 ## The Debugging Loop
 
@@ -278,13 +278,13 @@ This filters out all log output from before your test started, showing only what
 
 ## Environment Variables
 
-| Variable | Purpose | Default |
-|----------|---------|---------|
-| `AIMOCK_SRC` | Path to local aimock checkout for `aimock-rebuild` | `../../aimock` relative to `showcase/` (sibling of repo root), then `../aimock` |
-| `SHOWCASE_LOCAL` | Use localhost ports instead of Railway URLs in the shell app | unset |
-| `DEPOT_DISABLE` | Bypass Depot CLI for local Docker builds | unset (set to `1` to disable) |
-| `OPENAI_API_KEY` | Required for all integrations (even with aimock, some init code validates the key) | none |
-| `ANTHROPIC_API_KEY` | Required for Claude Agent SDK demos | none |
+| Variable            | Purpose                                                                            | Default                                                                         |
+| ------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| `AIMOCK_SRC`        | Path to local aimock checkout for `aimock-rebuild`                                 | `../../aimock` relative to `showcase/` (sibling of repo root), then `../aimock` |
+| `SHOWCASE_LOCAL`    | Use localhost ports instead of Railway URLs in the shell app                       | unset                                                                           |
+| `DEPOT_DISABLE`     | Bypass Depot CLI for local Docker builds                                           | unset (set to `1` to disable)                                                   |
+| `OPENAI_API_KEY`    | Required for all integrations (even with aimock, some init code validates the key) | none                                                                            |
+| `ANTHROPIC_API_KEY` | Required for Claude Agent SDK demos                                                | none                                                                            |
 
 ## Quick Diagnostic Commands
 

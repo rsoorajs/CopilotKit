@@ -89,6 +89,11 @@ class AgentState(CopilotKitState):
 _LLM = "gpt-4o-mini"
 
 
+# @region[subagent-setup]
+# Each sub-agent is a real, single-agent CrewAI Crew with its own
+# Agent role/goal/backstory and a single Task. They don't share
+# memory or tools with the supervisor — the supervisor only sees
+# the crew's final raw output (returned via `Crew.kickoff(...)`).
 def _build_research_crew() -> Crew:
     researcher = Agent(
         role="Researcher",
@@ -177,6 +182,7 @@ def _build_critique_crew() -> Crew:
         verbose=False,
         chat_llm=_LLM,
     )
+# @endregion[subagent-setup]
 
 
 # Lazy singletons — each Crew is hot once built, so reuse across requests.
@@ -231,6 +237,14 @@ async def _kickoff_crew(crew: Crew, task: str) -> str:
 # ---------------------------------------------------------------------------
 
 
+# @region[supervisor-delegation-tools]
+# Each entry below is one "delegation tool" the supervisor LLM can call.
+# CrewAI's hierarchical Process orchestrates sub-agents internally and
+# only surfaces the final crew output to the AG-UI bridge, which would
+# hide every intermediate delegation. Instead, we expose each sub-crew
+# as a plain OpenAI-compatible tool schema and let the supervisor call
+# them via litellm; the wrapper flow runs the matching crew on each call
+# and records a Delegation entry into shared state.
 def _delegation_tool(name: SubAgentName, description: str) -> dict:
     return {
         "type": "function",
@@ -282,6 +296,7 @@ CRITIQUE_TOOL = _delegation_tool(
 
 DELEGATION_TOOLS = [RESEARCH_TOOL, WRITING_TOOL, CRITIQUE_TOOL]
 DELEGATION_TOOL_NAMES = {t["function"]["name"] for t in DELEGATION_TOOLS}
+# @endregion[supervisor-delegation-tools]
 
 
 SUPERVISOR_SYSTEM_PROMPT = (

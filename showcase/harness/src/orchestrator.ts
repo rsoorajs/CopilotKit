@@ -272,7 +272,7 @@ export async function boot(opts: BootOptions = {}): Promise<{
   const poolSize = process.env.BROWSER_POOL_SIZE
     ? parseInt(process.env.BROWSER_POOL_SIZE, 10) || 4
     : 4;
-  const browserPool = new BrowserPool(poolSize);
+  const browserPool = new BrowserPool(poolSize, undefined, logger);
   let browserPoolReady = false;
   try {
     await browserPool.init();
@@ -891,10 +891,14 @@ export function registerAllProbeDrivers(
       createE2eSmokeDriver({ launcher: createPooledE2eSmokeLauncher(pool) }),
     );
     probeRegistry.register(
-      createE2eDemosDriver({ launcher: createPooledE2eDemosLauncher(pool) }),
+      createE2eDemosDriver({
+        launcher: createPooledE2eDemosLauncher(pool, logger),
+      }),
     );
     probeRegistry.register(
-      createE2eDeepDriver({ launcher: createPooledE2eDeepLauncher(pool) }),
+      createE2eDeepDriver({
+        launcher: createPooledE2eDeepLauncher(pool, logger),
+      }),
     );
     probeRegistry.register(
       createE2eParityDriver({ launcher: createPooledE2eParityLauncher(pool) }),

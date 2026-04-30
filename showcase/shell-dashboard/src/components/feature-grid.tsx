@@ -250,8 +250,9 @@ function CategorySection({
         onToggle={toggle}
       />
       {isOpen &&
-        cat.features.map((feature) => {
+        cat.features.map((feature, idx) => {
           const testing = feature.kind === "testing";
+          const stripe = idx % 2 === 1;
           const refCell = showRefDepth
             ? refCellsByFeature.get(feature.id)
             : undefined;
@@ -262,8 +263,23 @@ function CategorySection({
             <tr
               key={feature.id}
               className="border-t border-[var(--border)] hover:bg-[var(--bg-hover)]"
+              style={
+                stripe
+                  ? {
+                      backgroundColor:
+                        "color-mix(in srgb, var(--bg-surface) 50%, var(--bg-muted))",
+                    }
+                  : undefined
+              }
             >
-              <td className="sticky left-0 z-10 bg-[var(--bg-surface)] px-1 py-1 border-r border-[var(--border)] align-top">
+              <td
+                className="sticky left-0 z-10 px-1 py-1 border-r border-[var(--border)] align-top"
+                style={{
+                  backgroundColor: stripe
+                    ? "color-mix(in srgb, var(--bg-surface) 50%, var(--bg-muted))"
+                    : "var(--bg-surface)",
+                }}
+              >
                 <div
                   className={
                     testing
@@ -299,6 +315,9 @@ function CategorySection({
                 ))}
               {integrations.map((integration) => {
                 const demo = integration.demos.find((d) => d.id === feature.id);
+                const isNotSupported =
+                  integration.not_supported_features?.includes(feature.id) ??
+                  false;
                 return (
                   <td
                     key={integration.slug}
@@ -316,6 +335,16 @@ function CategorySection({
                         liveStatus,
                         connection,
                       })
+                    ) : isNotSupported ? (
+                      // Architectural limit — framework cannot support this
+                      // feature. Distinct from the unshipped "no demo" ✗ so
+                      // viewers can tell "won't be done" apart from "to do".
+                      <span
+                        className="inline-flex items-center justify-center px-1.5 py-0.5 rounded text-base border border-slate-500/40 bg-slate-500/10 text-slate-400"
+                        title="Not supported by this framework"
+                      >
+                        🚫
+                      </span>
                     ) : (
                       <div
                         className="text-center text-base text-[var(--danger)]"
@@ -453,7 +482,10 @@ export function FeatureGrid({
 
       {connection === "error" && <OfflineBanner />}
 
-      <div className="rounded-lg border border-[var(--border)] bg-[var(--bg-surface)]" style={{ width: 'fit-content', minWidth: '100%' }}>
+      <div
+        className="rounded-lg border border-[var(--border)] bg-[var(--bg-surface)]"
+        style={{ width: "fit-content", minWidth: "100%" }}
+      >
         <table className="border-collapse text-sm">
           <thead>
             <tr>

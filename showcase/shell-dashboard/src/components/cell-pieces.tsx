@@ -9,16 +9,6 @@ import type { Feature, Integration } from "@/lib/registry";
 import { useLastTransition, deriveFromTo } from "@/hooks/useLastTransition";
 import { formatTs } from "@/lib/format-ts";
 
-/**
- * Magic path segment used by the shell when no framework column is selected.
- * Coupled to the shell's routing under `/<slug>/<framework-or-unselected>/...`
- * — if the shell ever renames or removes this fallback segment, this constant
- * MUST move in lockstep. Kept here as a local const because no shared
- * registry constant exists today; promote to a shared module if a second
- * caller appears.
- */
-const SHELL_UNSELECTED_PATH = "unselected";
-
 export function urlsFor(ctx: CellContext): {
   demoUrl: string;
   codeUrl: string;
@@ -48,14 +38,24 @@ export function DocsRow({
   const probed = getDocsStatus(feature.id);
   const override = integration.docs_links?.features?.[feature.id];
 
-  const ogHref = override?.og_docs_url ?? feature.og_docs_url ?? undefined;
-  const shellPath = override?.shell_docs_path ?? undefined;
-  const shellHref = shellPath
-    ? `${shellUrl}/${integration.slug}/${SHELL_UNSELECTED_PATH}${shellPath}`
-    : undefined;
-
   const hasOgOverride = override?.og_docs_url !== undefined;
   const hasShellOverride = override?.shell_docs_path !== undefined;
+  // Override resolution. When the framework has an explicit override (even
+  // an explicit null = opt-out), it wins. When no override is set, fall
+  // back to the feature-registry default so cells inherit the canonical
+  // doc location without each integration having to repeat it.
+  const ogHref = hasOgOverride
+    ? (override?.og_docs_url ?? undefined)
+    : (feature.og_docs_url ?? undefined);
+  const shellPath = hasShellOverride
+    ? (override?.shell_docs_path ?? undefined)
+    : (feature.shell_docs_path ?? undefined);
+  // The shell-docs route handler resolves `/<framework>/<slug>` directly —
+  // the legacy `/<framework>/unselected/<slug>` shape was retired by the
+  // JTBD IA restructure (commit c11976819).
+  const shellHref = shellPath
+    ? `${shellUrl}/${integration.slug}${shellPath}`
+    : undefined;
   // CP5: distinguish the two "missing" sub-cases so the tooltip is honest.
   // The override shape (`og_docs_url: string | null`) lets us tell apart:
   //   (a) framework explicitly set `og_docs_url: null` → opt-out

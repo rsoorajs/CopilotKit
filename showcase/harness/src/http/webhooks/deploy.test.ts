@@ -525,6 +525,69 @@ describe("POST /webhooks/deploy — gateSkipped pass-through", () => {
   });
 });
 
+describe("POST /webhooks/deploy — buildRunId / buildRunUrl pass-through", () => {
+  // Regression coverage for PR #4471: the deploy workflow co-sends the
+  // upstream build run's identifiers so Slack/dashboard surfaces can link
+  // a red deploy back to the build that produced its images. The strict
+  // schema MUST accept these fields — pre-fix it returned 400 with
+  // "Unrecognized key(s) in object: 'buildRunId', 'buildRunUrl'", which
+  // broke every Showcase: Verify Deploy run.
+  it("accepts buildRunId and buildRunUrl and propagates them to the emitted event", async () => {
+    const { app, seen } = buildApp();
+    const payload = JSON.stringify({
+      runId: "deploy-1",
+      runUrl: "https://github.com/CopilotKit/CopilotKit/actions/runs/deploy-1",
+      services: ["mastra"],
+      failed: [],
+      succeeded: ["mastra"],
+      cancelled: false,
+      buildRunId: "build-99",
+      buildRunUrl:
+        "https://github.com/CopilotKit/CopilotKit/actions/runs/build-99",
+    });
+    const { headers, body } = signed(payload);
+    const res = await app.request(PATH, { method: "POST", headers, body });
+    expect(res.status).toBe(202);
+    expect(seen).toHaveLength(1);
+    expect(seen[0]!.buildRunId).toBe("build-99");
+    expect(seen[0]!.buildRunUrl).toBe(
+      "https://github.com/CopilotKit/CopilotKit/actions/runs/build-99",
+    );
+  });
+
+  it("accepts payload without buildRunId/buildRunUrl (legacy senders / manual redeploys)", async () => {
+    const { app, seen } = buildApp();
+    const payload = JSON.stringify({
+      runId: "deploy-2",
+      services: ["mastra"],
+      failed: [],
+      succeeded: ["mastra"],
+      cancelled: false,
+    });
+    const { headers, body } = signed(payload);
+    const res = await app.request(PATH, { method: "POST", headers, body });
+    expect(res.status).toBe(202);
+    expect(seen[0]!.buildRunId).toBeUndefined();
+    expect(seen[0]!.buildRunUrl).toBeUndefined();
+  });
+
+  it("rejects buildRunUrl with a non-http(s) scheme (mirrors runUrl refinement)", async () => {
+    const { app } = buildApp();
+    const payload = JSON.stringify({
+      runId: "deploy-bad",
+      services: [],
+      failed: [],
+      succeeded: [],
+      cancelled: false,
+      buildRunId: "build-99",
+      buildRunUrl: "javascript:alert(1)",
+    });
+    const { headers, body } = signed(payload);
+    const res = await app.request(PATH, { method: "POST", headers, body });
+    expect(res.status).toBe(400);
+  });
+});
+
 describe("POST /webhooks/deploy — idempotency (composite runId+bodySha)", () => {
   it("returns 200 (not 202) on duplicate runId+body and does NOT re-emit", async () => {
     const { app, seen } = buildApp();

@@ -99,35 +99,35 @@ export async function waitForGenUiComponent(
     await sleep(POLL_INTERVAL_MS);
   }
 
-  const domSnapshot = await page.evaluate(() => {
-    const win = globalThis as unknown as {
-      document: {
-        querySelectorAll(sel: string): ArrayLike<{
-          tagName: string;
-          childElementCount: number;
-          className: string;
-          textContent: string | null;
-        }>;
-      };
-    };
-    const probe = (label: string, sel: string): string => {
-      const nodes = win.document.querySelectorAll(sel);
-      if (nodes.length === 0) return `${label}: no elements found`;
-      const summary: string[] = [];
-      for (let i = 0; i < Math.min(nodes.length, 5); i++) {
-        const el = nodes[i]!;
-        summary.push(
-          `<${el.tagName.toLowerCase()} class="${el.className}" children=${el.childElementCount}>` +
-            `${(el.textContent ?? "").slice(0, 80)}`,
-        );
+  // Build the DOM-snapshot probe as a string-based function to avoid
+  // esbuild's keepNames transform injecting `__name()` wrappers inside
+  // the browser context (where `__name` is not defined).
+  const domSnapshotCode = `
+    (() => {
+      var doc = globalThis.document;
+      function probe(label, sel) {
+        var nodes = doc.querySelectorAll(sel);
+        if (nodes.length === 0) return label + ": no elements found";
+        var summary = [];
+        for (var i = 0; i < Math.min(nodes.length, 5); i++) {
+          var el = nodes[i];
+          summary.push(
+            "<" + el.tagName.toLowerCase() + " class=\\"" + el.className + "\\" children=" + el.childElementCount + ">" +
+            (el.textContent || "").slice(0, 80)
+          );
+        }
+        return label + ": " + summary.join(" | ");
       }
-      return `${label}: ${summary.join(" | ")}`;
-    };
-    return [
-      probe("[role=article]", '[role="article"]'),
-      probe("[data-message-role=assistant]", '[data-message-role="assistant"]'),
-    ].join(" || ");
-  });
+      return [
+        probe("[role=article]", '[role="article"]'),
+        probe("[data-message-role=assistant]", '[data-message-role="assistant"]')
+      ].join(" || ");
+    })()
+  `;
+  const domSnapshotFn = new Function(
+    `return ${domSnapshotCode.trim()};`,
+  ) as () => string;
+  const domSnapshot = await page.evaluate(domSnapshotFn);
   throw new Error(
     `gen-ui component did not render within ${timeoutMs}ms (${
       lastError ?? "no candidate selector matched"
@@ -148,10 +148,10 @@ async function findFirstNonTrivial(
   return await page.evaluate(() => {
     const win = globalThis as unknown as {
       document: {
-        querySelector(sel: string): {
+        querySelectorAll(sel: string): ArrayLike<{
           childElementCount: number;
           tagName: string;
-        } | null;
+        }>;
       };
     };
     // The selector list is duplicated here (NOT imported) because this
@@ -174,23 +174,28 @@ async function findFirstNonTrivial(
     ];
     let lastReason = "no selector matched";
     for (const selector of selectors) {
-      const node = win.document.querySelector(selector);
-      if (!node) {
+      // Use querySelectorAll and check ALL matches — querySelector
+      // only returns the first match, and if that first match is an
+      // empty wrapper (children=0) the cascade would skip the selector
+      // entirely even when a later match has content. This happens in
+      // headless chat pages where the first assistant message div is
+      // empty but a subsequent one contains the rendered component.
+      const nodes = win.document.querySelectorAll(selector);
+      if (nodes.length === 0) {
         lastReason = `no match for ${selector}`;
         continue;
       }
-      if (
-        node.childElementCount === 0 &&
-        node.tagName.toLowerCase() !== "svg"
-      ) {
-        // SVG can legitimately be a leaf at the cascade-test level
-        // (its <circle>/<path> children are inspected by the structural
-        // walker). For non-SVG nodes, an empty wrapper is exactly the
-        // failure mode this check exists to catch.
-        lastReason = `${selector} matched but is an empty wrapper`;
-        continue;
+      for (let i = 0; i < nodes.length; i++) {
+        const node = nodes[i]!;
+        if (
+          node.childElementCount === 0 &&
+          node.tagName.toLowerCase() !== "svg"
+        ) {
+          lastReason = `${selector} matched but is an empty wrapper`;
+          continue;
+        }
+        return { selector };
       }
-      return { selector };
     }
     return { reason: lastReason };
   });
@@ -270,14 +275,26 @@ export async function readSvgChartShape(page: Page): Promise<SvgChartShape> {
  * component (per the recorded fixture, the second-leg response is a
  * short narration of what was shown). Returns the empty string when
  * no assistant text is present.
+ *
+ * IMPORTANT: The canonical CopilotKit assistant message DOM is:
+ *
+ *   <div data-testid="copilot-assistant-message">
+ *     <div class="cpk:prose ...">   ← text content (markdown)
+ *     tool-call renders             ← rendered components (SVG charts, cards, etc.)
+ *     toolbar                       ← copy/thumbs/read-aloud buttons
+ *   </div>
+ *
+ * Reading `textContent` on the outer wrapper picks up EVERYTHING —
+ * including rendered tool-component labels (e.g. pie-chart SVG text
+ * like "Electronics42,000" or "Clothing28,000"). This function
+ * targets ONLY the prose div (first child) to extract the actual
+ * assistant text message, not rendered component output.
+ *
+ * For non-canonical selectors (role="article", data-message-role)
+ * the prose-scoping is attempted but falls back to the full element
+ * when the expected DOM structure isn't present.
  */
 export async function readLastAssistantText(page: Page): Promise<string> {
-  // Mirror the message-count probe in conversation-runner.ts: prefer
-  // the canonical CopilotKit testid, fall back to a `[role="article"]`
-  // selector that explicitly EXCLUDES user-tagged bubbles. The
-  // exclusion is load-bearing — composers that tag their user bubbles
-  // `data-message-role="user"` would otherwise have their input
-  // counted as the "last assistant message".
   const code = `
     (() => {
       const doc = globalThis.document;
@@ -296,7 +313,42 @@ export async function readLastAssistantText(page: Page): Promise<string> {
       }
       if (list.length === 0) return "";
       const last = list[list.length - 1];
-      return (last && last.textContent ? last.textContent : "").trim();
+      if (!last) return "";
+
+      // Scope to the prose/markdown child to exclude rendered tool
+      // components (charts, cards) and toolbar buttons. The prose div
+      // is always the first child of the canonical assistant-message
+      // wrapper and carries a class containing "prose".
+      var proseChild = last.querySelector && last.querySelector('[class*="prose"]');
+      if (!proseChild) {
+        // Fallback: first child div (the prose wrapper is always the
+        // first <div> child in the canonical layout).
+        var firstDiv = last.querySelector && last.querySelector(':scope > div:first-child');
+        if (firstDiv) {
+          // Only use this if the assistant message has more than one
+          // child (i.e. there's a tool-call render or toolbar sibling).
+          // If there's only one child, the whole element IS the text.
+          if (last.childElementCount > 1) {
+            proseChild = firstDiv;
+          }
+        }
+      }
+
+      var target = proseChild || last;
+      var text = (target.textContent || "").trim();
+
+      // Debug: log what we're reading so production traces show exactly
+      // which element was selected and what text was extracted.
+      if (typeof console !== "undefined" && console.log) {
+        console.log(
+          "[readLastAssistantText] selector=" +
+          (canonical.length > 0 ? ${JSON.stringify(ASSISTANT_MESSAGE_PRIMARY_SELECTOR)} : "fallback") +
+          " scoped=" + (proseChild ? "prose" : "full") +
+          " text=" + JSON.stringify(text.slice(0, 120))
+        );
+      }
+
+      return text;
     })()
   `;
   const fn = new Function(`return ${code.trim()};`) as () => string;

@@ -2,7 +2,6 @@ package com.copilotkit.showcase.springai;
 
 import com.agui.server.spring.AgUiParameters;
 import com.agui.server.spring.AgUiService;
-import com.agui.spring.ai.SpringAIAgent;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.ai.chat.memory.ChatMemory;
@@ -72,7 +71,8 @@ public class AgentConfigController {
         String systemPrompt = buildSystemPrompt(tone, expertise, length);
 
         AgUiParameters params = objectMapper.readValue(rawBody, AgUiParameters.class);
-        SpringAIAgent perRequestAgent = buildAgent(systemPrompt);
+        MessageListFilter.filterNulls(params);
+        StreamingToolAgent perRequestAgent = buildAgent(systemPrompt);
 
         SseEmitter emitter = agUiService.runAgent(perRequestAgent, params);
         return ResponseEntity.ok()
@@ -84,21 +84,17 @@ public class AgentConfigController {
         return value != null && allowed.contains(value) ? value : fallback;
     }
 
-    private SpringAIAgent buildAgent(String systemPrompt) {
+    private StreamingToolAgent buildAgent(String systemPrompt) {
         ChatMemory memory = MessageWindowChatMemory.builder()
                 .chatMemoryRepository(new InMemoryChatMemoryRepository())
                 .maxMessages(10)
                 .build();
-        try {
-            return SpringAIAgent.builder()
-                    .agentId("agent-config-demo")
-                    .chatModel(chatModel)
-                    .chatMemory(memory)
-                    .systemMessage(systemPrompt)
-                    .build();
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to build agent-config agent", e);
-        }
+        return StreamingToolAgent.builder()
+                .agentId("agent-config-demo")
+                .chatModel(chatModel)
+                .chatMemory(memory)
+                .systemMessage(systemPrompt)
+                .build();
     }
 
     private static String buildSystemPrompt(String tone, String expertise, String length) {

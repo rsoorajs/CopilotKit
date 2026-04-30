@@ -34,10 +34,17 @@ export default function SharedStateReadWriteDemo() {
 }
 
 function DemoContent() {
+  // @region[use-agent]
+  // @region[use-agent-read]
+  // Subscribe the component to agent state changes. Any time the agent
+  // mutates its state (e.g. via its `set_notes` tool) this hook fires,
+  // we re-render, and the sidebar panels reflect the new values.
   const { agent } = useAgent({
     agentId: "shared-state-read-write",
     updates: [UseAgentUpdate.OnStateChanged],
   });
+  // @endregion[use-agent-read]
+  // @endregion[use-agent]
 
   useConfigureSuggestions({
     suggestions: [
@@ -77,6 +84,9 @@ function DemoContent() {
     }
   }, [agent, agentState]);
 
+  // @region[set-state]
+  // @region[use-agent-write]
+  // WRITE: every edit in the sidebar goes straight into agent state.
   // Each handler closes over the latest committed snapshot via re-render,
   // so spreading `agentState` preserves any keys the runtime owns
   // (`copilotkit` slot, future framework additions). `agent.setState`
@@ -88,6 +98,8 @@ function DemoContent() {
       notes: agentState?.notes ?? [],
     } as RWAgentState);
   };
+  // @endregion[use-agent-write]
+  // @endregion[set-state]
 
   const handleClearNotes = () => {
     agent.setState({

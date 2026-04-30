@@ -52,6 +52,7 @@ const voiceDemoAgent = new HttpAgent({ url: `${AGENT_URL}/` });
  * a deterministic message funnels the missing-key case into that 4xx path
  * instead of leaking an opaque 500/503 through the provider-error fallback.
  */
+// @region[transcription-service-guard]
 class GuardedOpenAITranscriptionService extends TranscriptionService {
   private delegate: TranscriptionServiceOpenAI | null;
 
@@ -77,6 +78,7 @@ class GuardedOpenAITranscriptionService extends TranscriptionService {
     return this.delegate.transcribeFile(options);
   }
 }
+// @endregion[transcription-service-guard]
 
 // Construct the runtime + transcription service lazily on first request so
 // the Next.js build step (which imports and page-data-collects every route
@@ -91,6 +93,7 @@ function getRuntime(): CopilotRuntime {
     default: voiceDemoAgent,
   };
 
+  // @region[voice-runtime]
   const runtime = new CopilotRuntime({
     // @ts-ignore -- see main route.ts
     agents,
@@ -128,3 +131,4 @@ export const POST = async (req: NextRequest) => {
 // to single-route POST on failure. Exporting `GET` here keeps the 405 we'd
 // otherwise return from being treated as a server error in logs.
 export const GET = POST;
+// @endregion[voice-runtime]

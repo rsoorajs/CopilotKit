@@ -74,7 +74,7 @@ function Layout() {
     available: "always",
   });
 
-  // @region[ms-agent-frontend-tool-headless]
+  // @region[headless-promise-primitives]
   useFrontendTool({
     name: "schedule_meeting",
     description:
@@ -117,7 +117,7 @@ function Layout() {
     // Render nothing inside the chat — the UI lives in the app surface.
     render: () => null,
   });
-  // @endregion[ms-agent-frontend-tool-headless]
+  // @endregion[headless-promise-primitives]
 
   const resolve = (result: PickerResult) => {
     const fn = resolverRef.current;

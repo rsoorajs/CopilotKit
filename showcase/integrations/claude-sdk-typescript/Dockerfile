@@ -10,8 +10,8 @@ RUN npm run build
 # instead of `npx tsx` (which does a fresh in-process TS compile on each
 # cold start).
 RUN npx tsc --outDir /app/dist --module commonjs --moduleResolution node \
-    --target es2020 --esModuleInterop true --skipLibCheck true \
-    src/agent_server.ts
+    --target es2020 --esModuleInterop true --resolveJsonModule true \
+    --skipLibCheck true src/agent_server.ts
 
 # Stage 2: Production image — runtime only (no build tools)
 FROM node:22-slim AS runner

@@ -208,6 +208,7 @@ export function buildProbeInvoker(
     // produce zero workers and drop every input on the floor.
     const concurrency = Math.max(cfg.max_concurrency, 1);
     const timeoutMs = "timeout_ms" in cfg ? cfg.timeout_ms : undefined;
+    const tickStart = Date.now();
 
     // B7: tracker registration. Read the slot's `triggeredRun` flag — set
     // by scheduler.trigger() before the handler runs — so the snapshot the
@@ -289,6 +290,14 @@ export function buildProbeInvoker(
     // the synthetic-error tile is emitted below and there's nothing to
     // fan out across.
     const allInputs: ResolvedInput[] = resolved.ok ? resolved.inputs : [];
+
+    logger.info("probe.tick-start", {
+      probeId: cfg.id,
+      kind: cfg.kind,
+      discoveredTargets: allInputs.length,
+      discoveryOk: resolved.ok,
+      triggered,
+    });
 
     // CR-A1.1: thread the trigger's slug filter end-to-end. Discover the
     // FULL roster (so logs/diagnostics still see what the source returned)
@@ -516,6 +525,8 @@ export function buildProbeInvoker(
         // a dead defensive guard.
         const idx = cursor++;
         const { input, key, preError } = inputs[idx]!;
+        const targetStart = Date.now();
+        logger.info("probe.target-start", { probeId: cfg.id, key });
         // B7: mark running just before handing the input to the driver.
         tracker.start(key);
         // CR-A1.2: short-circuit on inputs the resolver pre-flagged as
@@ -562,6 +573,12 @@ export function buildProbeInvoker(
           tracker.complete(key, "red");
           failed++;
         }
+        logger.info("probe.target-complete", {
+          probeId: cfg.id,
+          key,
+          state: result.state,
+          durationMs: Date.now() - targetStart,
+        });
         try {
           await writer.write(result);
         } catch (err) {
@@ -662,10 +679,17 @@ export function buildProbeInvoker(
       // B7: finalize the run row. Best-effort: log + swallow on failure so
       // a misbehaving PB never crashes the scheduler tick.
       if (runWriter && runRowId !== null) {
+        const snap = tracker.snapshot();
         const persistSummary: ProbeRunSummary = {
           total: summary.total,
           passed: summary.passed,
           failed: summary.failed,
+          services: snap.services.map((s) => ({
+            slug: s.slug,
+            state: s.state,
+            result: s.result,
+            error: s.error,
+          })),
         };
         try {
           await runWriter.finish({
@@ -681,6 +705,35 @@ export function buildProbeInvoker(
             err: err instanceof Error ? err.message : String(err),
           });
         }
+      }
+      logger.info("probe.tick-complete", {
+        probeId: cfg.id,
+        kind: cfg.kind,
+        total: summary.total,
+        passed: summary.passed,
+        failed: summary.failed,
+        durationMs: Date.now() - tickStart,
+        discoveryFailed: summary.discoveryFailed ?? false,
+      });
+      // Structured per-service run summary — a single log line carrying
+      // every target's outcome so Railway logs give a complete picture
+      // without needing PocketBase.
+      const summarySnap = tracker.snapshot();
+      if (summarySnap.services.length > 0) {
+        logger.info("probe.run-summary", {
+          probeId: cfg.id,
+          kind: cfg.kind,
+          total: summary.total,
+          passed: summary.passed,
+          failed: summary.failed,
+          durationMs: Date.now() - tickStart,
+          services: summarySnap.services.map((s) => ({
+            slug: s.slug,
+            state: s.state,
+            result: s.result,
+            ...(s.error ? { error: s.error } : {}),
+          })),
+        });
       }
       // B7: clear the tracker so the next snapshot reports no inflight run.
       // Done in `finally` so even an unexpected throw still leaves the

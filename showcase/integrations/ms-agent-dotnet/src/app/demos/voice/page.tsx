@@ -29,6 +29,7 @@ const SAMPLE_LABEL = "What is the weather in Tokyo?";
 // its value via the native HTMLTextareaElement value setter and dispatching a
 // synthetic `input` event is the React-compatible way to flip the managed
 // state without reaching into CopilotChat's internals.
+// @region[voice-page]
 export default function VoiceDemoPage() {
   const handleTranscribed = useCallback((text: string) => {
     if (typeof document === "undefined") return;
@@ -84,3 +85,4 @@ export default function VoiceDemoPage() {
     </CopilotKit>
   );
 }
+// @endregion[voice-page]

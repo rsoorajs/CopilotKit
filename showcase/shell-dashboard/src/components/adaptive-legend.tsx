@@ -4,6 +4,8 @@
  * currently active overlays.
  */
 
+import { useState } from "react";
+
 type Overlay = "links" | "depth" | "health" | "parity" | "docs";
 
 export interface AdaptiveLegendProps {
@@ -163,17 +165,38 @@ function AlwaysLegend() {
 /* ------------------------------------------------------------------ */
 
 export function AdaptiveLegend({ overlays }: AdaptiveLegendProps) {
+  const [open, setOpen] = useState(true);
+
   return (
     <div
       data-testid="adaptive-legend"
-      className="fixed bottom-0 left-0 right-0 z-40 px-8 py-3 flex flex-wrap gap-x-6 gap-y-2 text-xs text-[var(--text-muted)] bg-[var(--bg-surface)] border-t border-[var(--border)]"
+      className="fixed bottom-0 left-0 right-0 z-40 bg-[var(--bg-surface)] border-t border-[var(--border)]"
     >
-      {overlays.has("links") && <LinksLegend />}
-      {overlays.has("depth") && <DepthLegend />}
-      {overlays.has("health") && <HealthLegend />}
-      {overlays.has("parity") && <ParityLegend />}
-      {overlays.has("docs") && <DocsLegend />}
-      <AlwaysLegend />
+      <div className="flex items-center px-4 py-1.5">
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          className="flex items-center gap-1 text-[10px] uppercase tracking-wider font-medium text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer bg-transparent border-none p-0"
+        >
+          <span
+            className="inline-block transition-transform"
+            style={{ transform: open ? "rotate(90deg)" : "rotate(0deg)" }}
+          >
+            ▶
+          </span>
+          Legend
+        </button>
+      </div>
+      {open && (
+        <div className="px-8 pb-3 flex flex-wrap gap-x-6 gap-y-2 text-xs text-[var(--text-muted)]">
+          {overlays.has("links") && <LinksLegend />}
+          {overlays.has("depth") && <DepthLegend />}
+          {overlays.has("health") && <HealthLegend />}
+          {overlays.has("parity") && <ParityLegend />}
+          {overlays.has("docs") && <DocsLegend />}
+          <AlwaysLegend />
+        </div>
+      )}
     </div>
   );
 }

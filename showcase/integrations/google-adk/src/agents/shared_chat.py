@@ -24,6 +24,7 @@ from typing import Union
 from google.adk.agents import LlmAgent
 from google.adk.models.google_llm import Gemini
 from google.genai import types
+from ag_ui_adk import AGUIToolset
 
 DEFAULT_MODEL = "gemini-2.5-flash"
 
@@ -47,7 +48,7 @@ def build_simple_chat_agent(
     instruction: str,
     model: str = DEFAULT_MODEL,
 ) -> LlmAgent:
-    return LlmAgent(name=name, model=get_model(model), instruction=instruction, tools=[])
+    return LlmAgent(name=name, model=get_model(model), instruction=instruction, tools=[AGUIToolset()])
 
 
 def build_thinking_chat_agent(
@@ -67,7 +68,7 @@ def build_thinking_chat_agent(
         name=name,
         model=get_model(model),
         instruction=instruction,
-        tools=[],
+        tools=[AGUIToolset()],
         generate_content_config=types.GenerateContentConfig(
             thinking_config=types.ThinkingConfig(
                 include_thoughts=True,

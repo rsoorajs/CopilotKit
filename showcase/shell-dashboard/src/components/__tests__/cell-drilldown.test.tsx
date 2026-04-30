@@ -177,7 +177,7 @@ describe("CellDrilldown", () => {
     expect(closed).toBe(true);
   });
 
-  it("renders gray '?' for dimensions with no data", () => {
+  it("renders strikethrough 'n/a' for dimensions with no data (not '?')", () => {
     const { getByTestId } = render(
       <CellDrilldown
         slug="lgp"
@@ -189,6 +189,9 @@ describe("CellDrilldown", () => {
       />,
     );
     const healthBadge = getByTestId("drilldown-badge-health");
-    expect(healthBadge.textContent).toContain("?");
+    expect(healthBadge.textContent).toContain("n/a");
+    // Verify strikethrough styling is applied
+    const strikethroughEl = healthBadge.querySelector(".line-through");
+    expect(strikethroughEl).not.toBeNull();
   });
 });

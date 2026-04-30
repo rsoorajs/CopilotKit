@@ -10,15 +10,19 @@ import { z } from "zod";
 
 export default function AgenticChat() {
   return (
+    // @region[provider-setup]
     <CopilotKitProvider runtimeUrl="/api/copilotkit" useSingleEndpoint>
       <Demo />
     </CopilotKitProvider>
+    // @endregion[provider-setup]
   );
 }
 
 function Demo() {
   const [bg, setBg] = useState<string>("var(--copilot-kit-background-color)");
 
+  // @region[frontend-tool]
+  // @region[frontend-tool-registration]
   useFrontendTool({
     name: "setBackground",
     description:
@@ -28,11 +32,15 @@ function Demo() {
         .string()
         .describe("CSS background value (color, gradient, etc.)"),
     }),
+    // @region[frontend-tool-handler]
     handler: async ({ background }) => {
       setBg(background);
       return { ok: true, background };
     },
+    // @endregion[frontend-tool-handler]
   });
+  // @endregion[frontend-tool-registration]
+  // @endregion[frontend-tool]
 
   return (
     <main style={{ background: bg, minHeight: "100vh" }} className="p-8">

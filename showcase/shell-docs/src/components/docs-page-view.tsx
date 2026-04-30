@@ -16,6 +16,7 @@ import { SidebarNav } from "@/components/sidebar-nav";
 import { SidebarLink } from "@/components/sidebar-link";
 import { SidebarFrameworkSelector } from "@/components/sidebar-framework-selector";
 import { Snippet } from "@/components/snippet";
+import { WhenFrameworkHas } from "@/components/when-framework-has";
 import { DocsToc } from "@/components/docs-toc";
 import { Tabs as DocsTabs } from "@/components/docs-tabs";
 import { docsComponents } from "@/lib/mdx-registry";
@@ -225,6 +226,17 @@ export async function DocsPageView({
                           {...(props as Record<string, string | undefined>)}
                           defaultFramework={defaultFramework}
                           defaultCell={defaultCell}
+                        />
+                      ),
+                      WhenFrameworkHas: (props: Record<string, unknown>) => (
+                        <WhenFrameworkHas
+                          {...(props as {
+                            flag: "a2ui_pattern" | "interrupt_pattern";
+                            equals: string;
+                            framework?: string;
+                            children?: React.ReactNode;
+                          })}
+                          defaultFramework={defaultFramework}
                         />
                       ),
                       // MDX pages author in-page variant selectors as

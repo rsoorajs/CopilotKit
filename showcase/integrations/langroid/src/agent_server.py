@@ -18,6 +18,11 @@ from starlette.responses import JSONResponse
 from dotenv import load_dotenv
 
 from agents.agui_adapter import handle_run
+from agents.a2ui_fixed_agent import handle_run as handle_a2ui_fixed_schema
+from agents.byoc_hashbrown_agent import handle_run as handle_byoc_hashbrown
+from agents.byoc_json_render_agent import handle_run as handle_byoc_json_render
+from agents.mcp_apps_agent import handle_run as handle_mcp_apps
+from agents.multimodal_agent import handle_run as handle_multimodal
 from agents.shared_state_read_write import (
     handle_run as handle_shared_state_read_write,
 )
@@ -85,6 +90,66 @@ async def run_subagents(request: Request):
     STATE_SNAPSHOT so the UI's live delegation log updates.
     """
     return await handle_subagents(request)
+
+
+@app.post("/multimodal")
+async def run_multimodal(request: Request):
+    """Multimodal demo endpoint — vision-capable (gpt-4o).
+
+    Forwards image attachments to the model natively; flattens PDFs to
+    text via pypdf so the model can read them without needing file-part
+    support on the OpenAI API side.
+    """
+    return await handle_multimodal(request)
+
+
+@app.post("/byoc-hashbrown")
+async def run_byoc_hashbrown(request: Request):
+    """BYOC: Hashbrown demo endpoint.
+
+    Emits a hashbrown-shaped JSON envelope (`{"ui": [...]}`) that the
+    frontend's `useJsonParser` + `useUiKit` parses progressively as the
+    response streams.
+    """
+    return await handle_byoc_hashbrown(request)
+
+
+@app.post("/byoc-json-render")
+async def run_byoc_json_render(request: Request):
+    """BYOC: json-render demo endpoint.
+
+    Emits a flat element-map spec (`{"root", "elements"}`) that
+    @json-render/react renders against a Zod-validated catalog.
+    """
+    return await handle_byoc_json_render(request)
+
+
+@app.post("/a2ui-fixed-schema")
+async def run_a2ui_fixed_schema(request: Request):
+    """A2UI Fixed Schema demo endpoint.
+
+    The agent ships ``flight_schema.json`` as a fixed component tree and
+    only streams *data* into the data model at runtime. The
+    ``display_flight`` tool returns an ``a2ui_operations`` container
+    (``create_surface`` + ``update_components`` + ``update_data_model``)
+    that the Next.js A2UI middleware detects and forwards to the
+    frontend renderer. The dedicated runtime route at
+    ``api/copilotkit-a2ui-fixed-schema/route.ts`` is configured with
+    ``injectA2UITool: false`` because the agent owns the tool itself.
+    """
+    return await handle_a2ui_fixed_schema(request)
+
+
+@app.post("/mcp-apps")
+async def run_mcp_apps(request: Request):
+    """MCP Apps demo endpoint.
+
+    Forwards the runtime-supplied MCP tool catalog to OpenAI; the runtime
+    middleware on the TypeScript side intercepts the resulting tool
+    calls, fetches the MCP UI resource, and renders the sandboxed
+    iframe.
+    """
+    return await handle_mcp_apps(request)
 
 
 def main():

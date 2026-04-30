@@ -1,0 +1,11 @@
+{
+  "_comment": "D5 fixture for /demos/tool-rendering-reasoning-chain. The demo interleaves reasoning chains with tool calls. Substring 'analyze data and call the tool' is unique.",
+  "fixtures": [
+    {
+      "match": { "userMessage": "analyze data and call the tool" },
+      "response": {
+        "content": "Reasoning step 1: I considered the query. Reasoning step 2: I decided to invoke the analysis tool. The tool returned its structured payload, and the reasoning chain wraps the rendered tool card. Both the reasoning block and the tool card should be visible in the transcript."
+      }
+    }
+  ]
+}

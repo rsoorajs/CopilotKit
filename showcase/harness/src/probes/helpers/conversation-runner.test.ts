@@ -611,6 +611,108 @@ describe("runConversation", () => {
     expect(queriedSelectors).not.toContain('[role="article"]');
   });
 
+  it("preFill runs BEFORE fill on each turn", async () => {
+    // Record the order of operations across multiple page methods to
+    // prove preFill executes before the runner-level fill+press.
+    const order: string[] = [];
+    let evalCalls = 0;
+    const page: Page = {
+      async waitForSelector() {},
+      async fill(_selector, value) {
+        order.push(`fill:${value}`);
+      },
+      async press(_selector, _key) {
+        order.push("press");
+      },
+      evaluate: wrapEvaluateForUserMessages(async () => {
+        evalCalls++;
+        // Baseline=0; subsequent reads=1 → growth + stable → settled.
+        return (evalCalls === 1 ? 0 : 1) as never;
+      }),
+    };
+
+    const turns: ConversationTurn[] = [
+      {
+        input: "hello",
+        preFill: async () => {
+          order.push("preFill");
+        },
+      },
+    ];
+
+    const result = await runConversation(page, turns, {
+      assistantSettleMs: 30,
+    });
+
+    expect(result.turns_completed).toBe(1);
+    // preFill MUST appear before the corresponding fill+press for that turn.
+    const preFillIdx = order.indexOf("preFill");
+    const fillIdx = order.indexOf("fill:hello");
+    const pressIdx = order.indexOf("press");
+    expect(preFillIdx).toBeGreaterThanOrEqual(0);
+    expect(fillIdx).toBeGreaterThan(preFillIdx);
+    expect(pressIdx).toBeGreaterThan(fillIdx);
+  });
+
+  it("preFill throwing causes the turn to fail with the thrown error", async () => {
+    const recorded = { fills: [] as string[], presses: [] as string[] };
+    const page = makePage({ recorded });
+
+    let turn2Ran = false;
+    const turns: ConversationTurn[] = [
+      {
+        input: "first",
+        preFill: async () => {
+          throw new Error("attach button missing");
+        },
+      },
+      {
+        input: "second",
+        preFill: async () => {
+          turn2Ran = true;
+        },
+      },
+    ];
+
+    const result = await runConversation(page, turns, {
+      assistantSettleMs: 30,
+    });
+
+    expect(result.turns_completed).toBe(0);
+    expect(result.total_turns).toBe(2);
+    expect(result.failure_turn).toBe(1);
+    expect(result.error).toContain("attach button missing");
+    // The runner did NOT fill/press for the failed turn — preFill threw
+    // before the fill cascade ran.
+    expect(recorded.fills).toEqual([]);
+    expect(recorded.presses).toEqual([]);
+    // Subsequent turns must NOT run after a preFill failure (mirrors
+    // the assertion-failure semantics).
+    expect(turn2Ran).toBe(false);
+    // Failed turn's duration is not recorded.
+    expect(result.turn_durations_ms).toEqual([]);
+  });
+
+  it("turn without preFill works exactly as before (regression guard)", async () => {
+    const recorded = { fills: [] as string[], presses: [] as string[] };
+    const page = makePage({
+      // Simple settle: 0 → 1 stable.
+      evaluateValues: [0, 0, 1, 1, 1, 1, 1, 1, 1, 1],
+      recorded,
+    });
+
+    const turns: ConversationTurn[] = [{ input: "hello" }];
+    const result = await runConversation(page, turns, {
+      assistantSettleMs: 30,
+    });
+
+    expect(result.turns_completed).toBe(1);
+    expect(result.failure_turn).toBeUndefined();
+    expect(result.error).toBeUndefined();
+    expect(recorded.fills).toEqual(["hello"]);
+    expect(recorded.presses).toEqual(["Enter"]);
+  });
+
   it("stringifies non-Error throws (e.g. a thrown string) into result.error", async () => {
     // Some libraries throw non-Error values. The runner's errorMessage
     // helper falls back to String(err) so callers always see a usable

@@ -4,6 +4,7 @@ import React from "react";
 import { CopilotKit } from "@copilotkit/react-core";
 import {
   CopilotChat,
+  useFrontendTool,
   useRenderTool,
   useConfigureSuggestions,
 } from "@copilotkit/react-core/v2";
@@ -27,6 +28,26 @@ export default function ToolRenderingDemo() {
 }
 
 function Chat() {
+  // The Claude Agent SDK backend is a generic pass-through — it forwards
+  // tool calls from Claude but does not execute them server-side. Register
+  // a frontend tool handler so the CopilotKit runtime can execute the tool
+  // and return a result to the agent.
+  useFrontendTool({
+    name: "get_weather",
+    description: "Get the current weather for a given location.",
+    parameters: z.object({
+      location: z.string(),
+    }),
+    handler: async ({ location }: { location: string }) => ({
+      city: location,
+      temperature: 22,
+      humidity: 65,
+      wind_speed: 12,
+      conditions: "Partly Cloudy",
+    }),
+  });
+
+  // @region[render-weather-tool]
   useRenderTool({
     name: "get_weather",
     parameters: z.object({
@@ -61,6 +82,7 @@ function Chat() {
       );
     },
   });
+  // @endregion[render-weather-tool]
 
   useConfigureSuggestions({
     suggestions: [

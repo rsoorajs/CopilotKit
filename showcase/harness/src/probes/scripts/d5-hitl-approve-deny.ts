@@ -82,11 +82,24 @@ const script: D5Script = {
         // click triggers the second LLM leg, which lands a NEW
         // assistant message. We poll for growth past this baseline.
         const baselineCount = await readAssistantCount(hitlPage);
+        console.debug("[d5-hitl-approve-deny] clicking approve", {
+          baselineCount,
+        });
         await approveOrDeny(hitlPage, "approve");
+        console.debug(
+          "[d5-hitl-approve-deny] waiting for follow-up assistant message",
+          {
+            baselineCount,
+          },
+        );
         const followup = await waitForNextAssistantMessage(
           hitlPage,
           baselineCount,
         );
+        console.debug("[d5-hitl-approve-deny] checking follow-up tokens", {
+          expectedTokens: [...REFERENCE_TOKENS],
+          followupSnippet: followup.slice(0, 300),
+        });
         for (const token of REFERENCE_TOKENS) {
           if (!followup.includes(token)) {
             throw new Error(
@@ -94,6 +107,7 @@ const script: D5Script = {
             );
           }
         }
+        console.debug("[d5-hitl-approve-deny] all token assertions passed");
       },
     },
   ],

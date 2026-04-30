@@ -81,7 +81,7 @@ function Chat() {
     [],
   );
 
-  // @region[frontend-tool-schedule-meeting]
+  // @region[frontend-promise-handler]
   useFrontendTool({
     name: "schedule_meeting",
     description:
@@ -150,7 +150,7 @@ function Chat() {
       );
     },
   });
-  // @endregion[frontend-tool-schedule-meeting]
+  // @endregion[frontend-promise-handler]
 
   return (
     <CopilotChat agentId="gen-ui-interrupt" className="h-full rounded-2xl" />

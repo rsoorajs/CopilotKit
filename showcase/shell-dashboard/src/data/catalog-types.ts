@@ -5,12 +5,12 @@
 
 export interface CatalogCell {
   id: string;
-  manifestation: "integrated";
+  manifestation: "integrated" | "starter";
   integration: string;
   integration_name: string;
   feature: string | null;
   feature_name: string | null;
-  status: "wired" | "stub" | "unshipped";
+  status: "wired" | "stub" | "unshipped" | "unsupported";
   parity_tier: "reference" | "at_parity" | "partial" | "minimal" | "not_wired";
   max_depth: number;
   category: string | null;
@@ -23,6 +23,7 @@ export interface CatalogMetadata {
   wired: number;
   stub: number;
   unshipped: number;
+  unsupported: number;
   generated_at: string;
 }
 

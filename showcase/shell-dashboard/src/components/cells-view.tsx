@@ -121,13 +121,18 @@ export function CellsView({ catalog, liveStatus, connection }: CellsViewProps) {
     const unshipped = catalog.cells.filter(
       (c) => c.status === "unshipped",
     ).length;
+    const unsupported = catalog.cells.filter(
+      (c) => c.status === "unsupported",
+    ).length;
 
-    // Max achieved depth + regression count + failure count across all cells
+    // Max achieved depth + regression count + failure count across all cells.
+    // Skip statuses that have no probes attached (unshipped, unsupported) —
+    // they contribute nothing to depth/regression/failure metrics.
     let maxDepth = 0;
     let regressions = 0;
     let failures = 0;
     for (const cell of catalog.cells) {
-      if (cell.status !== "unshipped") {
+      if (cell.status !== "unshipped" && cell.status !== "unsupported") {
         const d = deriveDepth(cell, liveStatus);
         if (d.achieved > maxDepth) maxDepth = d.achieved;
         if (d.isRegression) regressions++;
@@ -143,7 +148,15 @@ export function CellsView({ catalog, liveStatus, connection }: CellsViewProps) {
       }
     }
 
-    return { wired, stub, unshipped, maxDepth, regressions, failures };
+    return {
+      wired,
+      stub,
+      unshipped,
+      unsupported,
+      maxDepth,
+      regressions,
+      failures,
+    };
   }, [catalog.cells, liveStatus]);
 
   const defaultOpenCategories = useMemo(
@@ -158,6 +171,7 @@ export function CellsView({ catalog, liveStatus, connection }: CellsViewProps) {
         wired={stats.wired}
         stub={stats.stub}
         unshipped={stats.unshipped}
+        unsupported={stats.unsupported}
         maxDepth={stats.maxDepth}
         regressions={stats.regressions}
         failures={stats.failures}
@@ -167,6 +181,7 @@ export function CellsView({ catalog, liveStatus, connection }: CellsViewProps) {
           wired={stats.wired}
           stub={stats.stub}
           unshipped={stats.unshipped}
+          unsupported={stats.unsupported}
         />
       </div>
       <div className="mb-4 px-4">

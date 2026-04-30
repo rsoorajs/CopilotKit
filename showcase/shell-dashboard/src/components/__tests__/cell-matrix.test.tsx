@@ -435,6 +435,129 @@ describe("CellMatrix", () => {
     expect(queryByTestId("cell-drilldown")).not.toBeNull();
   });
 
+  it("renders unsupported cells with a distinct chip from unshipped", () => {
+    // crewai/auth is unsupported (architectural limit), lgp/auth is wired,
+    // crewai/agentic-chat is unshipped. The unsupported chip and unshipped
+    // chip must render with different data-status attributes.
+    const mixedCells: CatalogCell[] = [
+      {
+        id: "lgp/agentic-chat",
+        integration: "lgp",
+        integration_name: "LangGraph Python",
+        feature: "agentic-chat",
+        feature_name: "Agentic Chat",
+        status: "wired",
+        max_depth: 0,
+        category: "chat-ui",
+        category_name: "Chat & UI",
+      },
+      {
+        id: "crewai/agentic-chat",
+        integration: "crewai",
+        integration_name: "CrewAI",
+        feature: "agentic-chat",
+        feature_name: "Agentic Chat",
+        status: "unshipped",
+        max_depth: 0,
+        category: "chat-ui",
+        category_name: "Chat & UI",
+      },
+      {
+        id: "lgp/auth",
+        integration: "lgp",
+        integration_name: "LangGraph Python",
+        feature: "auth",
+        feature_name: "Authentication",
+        status: "wired",
+        max_depth: 0,
+        category: "platform",
+        category_name: "Platform",
+      },
+      {
+        id: "crewai/auth",
+        integration: "crewai",
+        integration_name: "CrewAI",
+        feature: "auth",
+        feature_name: "Authentication",
+        status: "unsupported",
+        max_depth: 0,
+        category: "platform",
+        category_name: "Platform",
+      },
+    ];
+
+    const { getAllByTestId } = render(
+      <CellMatrix
+        cells={mixedCells}
+        categories={categories}
+        features={features}
+        integrations={integrations}
+        liveStatus={new Map()}
+        defaultOpenCategories={new Set(["chat-ui", "platform"])}
+        filter="all"
+        referenceSlug="lgp"
+      />,
+    );
+    const chips = getAllByTestId("depth-chip");
+    const statuses = chips.map((c) => c.getAttribute("data-status"));
+    expect(statuses).toContain("unshipped");
+    expect(statuses).toContain("unsupported");
+  });
+
+  it("gaps filter excludes rows where every cell is unsupported (architectural limit, not work)", () => {
+    // crewai/voice is unsupported (framework can't do this), lgp/voice unsupported too.
+    // Under gaps, this row must NOT show — it's not a gap because no work is expected.
+    const extendedCategories: FeatureCategory[] = [
+      { id: "chat-ui", name: "Chat & UI" },
+      { id: "platform", name: "Platform" },
+      { id: "lab", name: "Lab" },
+    ];
+    const extendedFeatures = [
+      ...features,
+      { id: "voice", name: "Voice", category: "lab" },
+    ];
+    const unsupportedCells: CatalogCell[] = [
+      ...cells,
+      {
+        id: "lgp/voice",
+        integration: "lgp",
+        integration_name: "LangGraph Python",
+        feature: "voice",
+        feature_name: "Voice",
+        status: "unsupported",
+        max_depth: 0,
+        category: "lab",
+        category_name: "Lab",
+      },
+      {
+        id: "crewai/voice",
+        integration: "crewai",
+        integration_name: "CrewAI",
+        feature: "voice",
+        feature_name: "Voice",
+        status: "unsupported",
+        max_depth: 0,
+        category: "lab",
+        category_name: "Lab",
+      },
+    ];
+
+    const { queryByText } = render(
+      <CellMatrix
+        cells={unsupportedCells}
+        categories={extendedCategories}
+        features={extendedFeatures}
+        integrations={integrations}
+        liveStatus={new Map()}
+        defaultOpenCategories={new Set(["chat-ui", "platform", "lab"])}
+        filter="gaps"
+        referenceSlug="lgp"
+      />,
+    );
+    // Voice row must NOT be visible — every cell unsupported is not a gap.
+    expect(queryByText("Voice")).toBeNull();
+  });
+
   it("clicking the same cell again closes the drilldown", () => {
     const { getByTestId, queryByTestId } = render(
       <CellMatrix

@@ -607,6 +607,7 @@ def _tool_error(*, error: _ToolErrorKind, message: str) -> str:
     return _json_dumps({"error": error.value, "message": message})
 
 
+# @region[weather-tool-backend]
 class GetWeatherTool(ToolMessage):
     request: str = "get_weather"
     purpose: str = "Get current weather for a location."
@@ -622,6 +623,7 @@ class GetWeatherTool(ToolMessage):
                 error=_ToolErrorKind.GET_WEATHER_FAILED,
                 message=f"{exc.__class__.__name__}: {str(exc)[:200]}",
             )
+# @endregion[weather-tool-backend]
 
 
 class QueryDataTool(ToolMessage):

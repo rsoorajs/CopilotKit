@@ -40,6 +40,10 @@ const ENTRY_BORDER_BY_STATUS: Record<Delegation["status"], string> = {
   failed: "border-red-200 bg-red-50/40",
 };
 
+// @region[delegation-log-frontend]
+// Live delegation log — renders the `delegations` slot of agent state.
+// Each entry corresponds to one invocation of a sub-agent; the list
+// grows in real time as the supervisor fans work out to its children.
 export function DelegationLog({ delegations }: { delegations: Delegation[] }) {
   return (
     <div
@@ -104,3 +108,4 @@ export function DelegationLog({ delegations }: { delegations: Delegation[] }) {
     </div>
   );
 }
+// @endregion[delegation-log-frontend]
