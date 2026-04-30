@@ -15,7 +15,10 @@ import {
   useHumanInTheLoop,
 } from "@copilotkit/react-core/v2";
 import { z } from "zod";
-import { TimePickerCard, TimeSlot } from "../hitl-in-chat-booking/time-picker-card";
+import {
+  TimePickerCard,
+  TimeSlot,
+} from "../hitl-in-chat-booking/time-picker-card";
 
 const DEFAULT_SLOTS: TimeSlot[] = [
   { label: "Tomorrow 10:00 AM", iso: "2026-04-30T10:00:00-07:00" },
@@ -61,8 +64,8 @@ function Demo() {
     <main className="p-8">
       <h1 className="text-2xl font-semibold mb-4">In-Chat Booking (HITL)</h1>
       <p className="text-sm opacity-70 mb-6">
-        Try: &ldquo;Book a 30-minute onboarding call for Alice.&rdquo; The
-        agent renders an inline time picker; pick a slot to confirm.
+        Try: &ldquo;Book a 30-minute onboarding call for Alice.&rdquo; The agent
+        renders an inline time picker; pick a slot to confirm.
       </p>
       <CopilotChat />
     </main>

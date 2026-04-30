@@ -50,7 +50,9 @@ export function buildSubagentTools(parentAbortController: AbortController) {
       name: role.id,
       description: `Delegate a task to the ${role.id.replace(/_/g, " ")}.`,
       inputSchema: z.object({
-        task: z.string().describe(`Task description for the ${role.id.replace(/_/g, " ")}`),
+        task: z
+          .string()
+          .describe(`Task description for the ${role.id.replace(/_/g, " ")}`),
       }),
     }).server(async ({ task }) => {
       const text = await chat({

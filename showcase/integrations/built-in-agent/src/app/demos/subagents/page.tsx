@@ -37,9 +37,9 @@ function Demo() {
         {" / "}
         <code className="px-1 bg-gray-100 rounded">writing_agent</code>
         {" / "}
-        <code className="px-1 bg-gray-100 rounded">critique_agent</code>
-        . Each delegation runs a nested <code>chat()</code> with its own system
-        prompt. Try: &ldquo;Research the benefits of remote work and draft a
+        <code className="px-1 bg-gray-100 rounded">critique_agent</code>. Each
+        delegation runs a nested <code>chat()</code> with its own system prompt.
+        Try: &ldquo;Research the benefits of remote work and draft a
         one-paragraph summary.&rdquo;
       </p>
       <CopilotChat />
