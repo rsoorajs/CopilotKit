@@ -53,6 +53,10 @@ from agents.declarative_gen_ui import DeclarativeGenUI
 from agents.mcp_apps_agent import MCPApps
 from agents.shared_state_read_write import shared_state_read_write_flow
 from agents.subagents import subagents_flow
+try:
+    from agents.tool_rendering import tool_rendering_flow
+except ImportError:
+    tool_rendering_flow = None
 
 app = FastAPI(title="CrewAI (Crews) Agent Server")
 
@@ -424,6 +428,8 @@ add_crewai_flow_fastapi_endpoint(
     app, shared_state_read_write_flow, "/shared-state-read-write"
 )
 add_crewai_flow_fastapi_endpoint(app, subagents_flow, "/subagents")
+if tool_rendering_flow is not None:
+    add_crewai_flow_fastapi_endpoint(app, tool_rendering_flow, "/tool-rendering")
 
 add_crewai_crew_fastapi_endpoint(app, LatestAiDevelopment(), "/")
 

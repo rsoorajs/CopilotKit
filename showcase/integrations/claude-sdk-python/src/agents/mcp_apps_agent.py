@@ -239,7 +239,7 @@ async def run_mcp_apps_agent(input_data: RunAgentInput) -> AsyncIterator[str]:
                                 delta=delta.partial_json,
                             )
                         )
-                elif etype == "RawContentBlockStopEvent":
+                elif etype in ("RawContentBlockStopEvent", "ParsedContentBlockStopEvent"):
                     if current_tool_id:
                         yield encoder.encode(
                             ToolCallEndEvent(

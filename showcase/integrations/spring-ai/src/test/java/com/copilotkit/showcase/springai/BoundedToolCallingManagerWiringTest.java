@@ -38,14 +38,14 @@ class BoundedToolCallingManagerWiringTest {
             .withBean("toolCallbacks", java.util.List.class, Collections::emptyList);
 
     @Test
-    void defaultCapIsOneWhenPropertyUnset() throws Exception {
+    void defaultCapIsFiveWhenPropertyUnset() throws Exception {
         contextRunner.run(context -> {
             assertThat(context).hasNotFailed();
             ToolCallingManager bean = context.getBean(ToolCallingManager.class);
             assertThat(bean).isInstanceOf(BoundedToolCallingManager.class);
             int cap = readCap((BoundedToolCallingManager) bean);
             assertThat(cap).isEqualTo(BoundedToolCallingManagerConfig.DEFAULT_TOOL_ITERATION_CAP_INCLUSIVE);
-            assertThat(cap).isEqualTo(1);
+            assertThat(cap).isEqualTo(5);
         });
     }
 
