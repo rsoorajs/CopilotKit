@@ -111,9 +111,11 @@ describe("ThreadStoreRegistry", () => {
     // The unregister notification for the previous store must fire before
     // the second register notification — subscribers rely on this ordering
     // to tear down stale subscriptions before wiring up the replacement.
-    expect(onUnregistered.mock.invocationCallOrder[0]).toBeLessThan(
-      onRegistered.mock.invocationCallOrder[1],
-    );
+    const unregisterOrder = onUnregistered.mock.invocationCallOrder[0];
+    const secondRegisterOrder = onRegistered.mock.invocationCallOrder[1];
+    expect(unregisterOrder).toBeDefined();
+    expect(secondRegisterOrder).toBeDefined();
+    expect(unregisterOrder!).toBeLessThan(secondRegisterOrder!);
   });
 
   it("unregister removes the store", () => {
@@ -204,10 +206,14 @@ describe("ThreadStoreRegistry", () => {
         onThreadStoreRegistered: ok,
       };
       (
-        core as unknown as { subscribe: (s: CopilotKitCoreSubscriber) => unknown }
+        core as unknown as {
+          subscribe: (s: CopilotKitCoreSubscriber) => unknown;
+        }
       ).subscribe(subscriberA);
       (
-        core as unknown as { subscribe: (s: CopilotKitCoreSubscriber) => unknown }
+        core as unknown as {
+          subscribe: (s: CopilotKitCoreSubscriber) => unknown;
+        }
       ).subscribe(subscriberB);
 
       const store = makeStore();
