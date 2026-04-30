@@ -667,8 +667,7 @@ agent_os = AgentOS(
     interfaces=[
         # main_agent is mounted separately below via _attach_hitl_aware_route
         # so it can forward tool results for HITL round-trips.
-        # reasoning_agent is mounted separately below via _attach_reasoning_route
-        # so it can emit proper REASONING_MESSAGE_* AG-UI events.
+        AGUI(agent=reasoning_agent, prefix="/reasoning"),
         # No-tools agent for the MCP Apps cell. The CopilotKit runtime's
         # `mcpApps.servers` middleware injects MCP server tools at request
         # time, so the LLM only sees the MCP-provided toolset.
@@ -715,10 +714,6 @@ _attach_hitl_aware_route(app, interrupt_agent, "/interrupt-adapted")
 _attach_state_aware_route(app, shared_state_rw_agent, "/shared-state-rw")
 _attach_state_aware_route(app, subagents_supervisor, "/subagents")
 
-# Reasoning-aware route — emits proper REASONING_MESSAGE_* AG-UI events
-# that CopilotKit renders via the reasoningMessage slot. Replaces the stock
-# AGUI(agent=reasoning_agent, prefix="/reasoning") interface.
-_attach_reasoning_route(app, reasoning_agent, "/reasoning")
 
 # Agent Config Object cell — builds a per-request Agno Agent whose system
 # prompt is composed from the CopilotKit provider's forwarded properties
