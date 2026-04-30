@@ -13,15 +13,6 @@ below are the ones where those primitives are genuinely unavailable.
 
 ### LangGraph graph-control primitives (no Spring AI equivalent)
 
-- **gen-ui-interrupt** — Spring AI has no `interrupt` primitive. The
-  `SpringAIAgent` runs a single `ChatClient` call to completion on each
-  HTTP request; there is no graph-level pause/resume API to carry client
-  input across suspensions. LangGraph-specific.
-
-- **interrupt-headless** — Same missing primitive as `gen-ui-interrupt`.
-  No way to pause a `SpringAIAgent` run and resume it from client-supplied
-  state.
-
 - **subagents** — Ported using the tool-composition pattern (each
   sub-agent is a separate `ChatClient` call wired as a supervisor tool;
   see `SubagentsController`). This deviates from LangGraph's
@@ -53,6 +44,20 @@ below are the ones where those primitives are genuinely unavailable.
   dependencies of the Spring AI showcase package.
 
 ## Ported with caveats
+
+- **gen-ui-interrupt** — Ported using **Strategy B** (the same approach
+  used by MS Agent Python). Spring AI has no `interrupt()` primitive, so
+  the backend agent (`InterruptAgentController`) provides a scheduling
+  system prompt with NO backend tool callbacks. The `schedule_meeting`
+  tool is registered entirely on the frontend via `useFrontendTool` with
+  an async handler that renders a `TimePickerCard` and blocks until the
+  user picks a slot or cancels. The UX is identical to the LangGraph
+  version.
+
+- **interrupt-headless** — Same Strategy B adaptation as
+  `gen-ui-interrupt`, but the time-picker popup renders in the app
+  surface (outside the chat) instead of inline. Both demos share the
+  same backend agent (`InterruptAgentController`).
 
 - **byoc-hashbrown** — Ported. The hashbrown UI kit
   (`@hashbrownai/react@0.5.0-beta.4`) consumes streaming text and uses
