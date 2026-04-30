@@ -2,15 +2,37 @@ import React from "react";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useCopilotKit } from "../../providers/CopilotKitProvider";
-import { CopilotKitCoreRuntimeConnectionStatus } from "@copilotkit/core";
+import {
+  CopilotKitCoreRuntimeConnectionStatus,
+  ɵMAX_SOCKET_RETRIES,
+} from "@copilotkit/core";
 
 vi.mock("../../providers/CopilotKitProvider", () => ({
   useCopilotKit: vi.fn(),
 }));
 
 const mockUseCopilotKit = useCopilotKit as ReturnType<typeof vi.fn>;
+
+// Shape of the mock socket exposed via the hoisted `phoenix.sockets`
+// array. Defined as a named type so test-side assertions can drop the
+// blanket `any[]` cast and surface socket-API typos at compile time.
+interface MockChannelLike {
+  topic: string;
+  params: Record<string, unknown>;
+  left: boolean;
+  serverPush(event: string, payload: unknown): void;
+}
+interface MockSocketLike {
+  url: string;
+  connected: boolean;
+  disconnected: boolean;
+  channels: MockChannelLike[];
+  triggerError(error?: unknown): void;
+  triggerOpen(): void;
+}
+
 const phoenix = vi.hoisted(() => ({
-  sockets: [] as any[],
+  sockets: [] as MockSocketLike[],
 }));
 
 vi.mock("phoenix", () => {
@@ -37,7 +59,6 @@ vi.mock("phoenix", () => {
       string,
       Array<{ ref: number; callback: (payload: unknown) => void }>
     >();
-    private joinPush = new MockPush();
     private nextRef = 1;
 
     constructor(topic = "", params: Record<string, unknown> = {}) {
@@ -70,7 +91,10 @@ vi.mock("phoenix", () => {
     }
 
     join(): MockPush {
-      return this.joinPush;
+      // Each rejoin must produce a distinct push instance — sharing
+      // one across joins lets stale "ok"/"error" callbacks from a
+      // prior join fire against a new join's listeners.
+      return new MockPush();
     }
 
     leave(): void {
@@ -102,6 +126,13 @@ vi.mock("phoenix", () => {
 
     connect(): void {
       this.connected = true;
+      // Mirror real Phoenix sockets: fire open handlers synchronously
+      // once the WebSocket upgrade completes. Production code that
+      // awaits onOpen (e.g. to start a join sequence) must be exercised
+      // by the same lifecycle here.
+      for (const handler of this.openHandlers) {
+        handler();
+      }
     }
 
     disconnect(): void {
@@ -141,7 +172,7 @@ vi.mock("phoenix", () => {
 const fetchMock = vi.fn();
 globalThis.fetch = fetchMock;
 
-function getMockSockets(): any[] {
+function getMockSockets(): MockSocketLike[] {
   return phoenix.sockets;
 }
 
@@ -325,6 +356,9 @@ describe("useThreads", () => {
     await waitFor(() => {
       expect(result.current.threads).toHaveLength(1);
     });
+    // Identity-check the remaining thread so a regression that removes
+    // the wrong thread (e.g. a swapped index) is caught.
+    expect(result.current.threads[0].id).toBe("t-1");
   });
 
   it("renames a thread through the runtime contract", async () => {
@@ -345,10 +379,18 @@ describe("useThreads", () => {
       await result.current.renameThread("t-1", "Renamed");
     });
 
-    const [url, options] = fetchMock.mock.calls[2];
-    expect(url).toContain("/threads/t-1");
-    expect(options.method).toBe("PATCH");
-    expect(JSON.parse(options.body)).toMatchObject({
+    // Find the PATCH call by URL+method rather than a hardcoded index —
+    // a future change to the fetch order (or an extra startup fetch) must
+    // not silently miss the actual rename request.
+    const renameCall = fetchMock.mock.calls.find(
+      (args: unknown[]) =>
+        typeof args[0] === "string" &&
+        (args[0] as string).includes("/threads/t-1") &&
+        (args[1] as { method?: string } | undefined)?.method === "PATCH",
+    );
+    expect(renameCall).toBeDefined();
+    const [, renameOptions] = renameCall!;
+    expect(JSON.parse((renameOptions as { body: string }).body)).toMatchObject({
       agentId: "agent-1",
       name: "Renamed",
     });
@@ -514,10 +556,20 @@ describe("useThreads", () => {
     const socket = getMockSockets()[0];
     const channel = socket.channels[0];
 
+    // Threshold is sourced from production (ɵMAX_SOCKET_RETRIES) so a
+    // future change to the retry budget cannot silently desync the test.
+    // We fire all errors inside a single act to keep the rxjs cleanup
+    // synchronous with the assertions, then check the pre-threshold and
+    // post-threshold states by inspecting the socket between iterations.
     act(() => {
-      for (let index = 0; index < 5; index += 1) {
+      for (let index = 0; index < ɵMAX_SOCKET_RETRIES - 1; index += 1) {
         socket.triggerError();
       }
+      // Pre-threshold: teardown must NOT be premature.
+      expect(channel.left).toBe(false);
+      expect(socket.disconnected).toBe(false);
+      // The Nth error crosses the threshold and triggers teardown.
+      socket.triggerError();
     });
 
     expect(channel.left).toBe(true);
@@ -549,9 +601,17 @@ describe("useThreads", () => {
   it("registers thread store on mount and unregisters on unmount", async () => {
     const registerThreadStore = vi.fn();
     const unregisterThreadStore = vi.fn();
-    mockUseCopilotKit.mockReturnValueOnce({
+    // Use mockReturnValue (not mockReturnValueOnce) so the same spies are
+    // returned across all renders, including the cleanup render where
+    // unmount triggers the effect's cleanup function.
+    // runtimeConnectionStatus is set explicitly to Connected — the hook
+    // treats anything other than Connected as "do not dispatch context",
+    // and we want this test to exercise a fully-wired flow.
+    mockUseCopilotKit.mockReturnValue({
       copilotkit: {
         runtimeUrl: "http://localhost:4000",
+        runtimeConnectionStatus:
+          CopilotKitCoreRuntimeConnectionStatus.Connected,
         headers: { Authorization: "Bearer test-token" },
         intelligence: { wsUrl: "ws://localhost:4000/client" },
         registerThreadStore,
@@ -603,8 +663,15 @@ describe("useThreads", () => {
 
     const { result, rerender } = renderHook(() => useThreads(defaultInput));
 
-    // Give effects a tick to settle; no fetch should occur while Connecting.
-    await new Promise((resolve) => setTimeout(resolve, 20));
+    // Flush React effects + microtasks deterministically. A bare
+    // setTimeout(20) raced the store-effect under load on slow machines.
+    // Chained microtask flushes inside `act` give every queued effect a
+    // chance to run without depending on real-time delay.
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
     expect(fetchMock).not.toHaveBeenCalled();
 
     // While waiting for Connected, the hook must surface isLoading=true so
