@@ -30,6 +30,14 @@ const HEARTBEAT_INTERVAL_MS = 30_000;
 // Reconnect backoff: 1s, 2s, 4s, capped at 8s (parity across retry chain).
 const RECONNECT_BACKOFF_BASE_MS = 1000;
 const RECONNECT_BACKOFF_MAX_MS = 8000;
+// Coalesce SSE deltas that arrive within this window into a single React
+// commit. PocketBase realtime fires the subscribe callback once per record;
+// when the harness publishes many rows in quick succession (probe finishing
+// dozens of services, initial-state burst on reconnect), unbuffered setRows
+// calls force the page to re-render the matrix once per record. ~16ms is
+// roughly one frame — short enough to feel "live" to operators, long enough
+// to fold a burst of deltas into one render.
+const SUBSCRIBE_FLUSH_INTERVAL_MS = 16;
 
 /**
  * Subscribes to the `status` collection, scoped by `dimension`. Exposes
@@ -61,6 +69,15 @@ export function useLiveStatus(dimension?: string): UseLiveStatusResult {
     let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
     let reconnecting = false;
+    // Per-key buffer for incoming SSE deltas. The latest event for a given
+    // key supersedes earlier ones (last-write-wins on a single key during
+    // the same flush window — multiple producers updating the same row
+    // within 16ms is vanishingly rare and the latest one is always the
+    // intended state). Keeping a Map keyed by `record.key` keeps the
+    // buffer O(unique_keys_in_burst) rather than O(events_in_burst).
+    type PendingOp = { op: "upsert"; row: StatusRow } | { op: "delete" };
+    const pendingByKey = new Map<string, PendingOp>();
+    let flushTimer: ReturnType<typeof setTimeout> | null = null;
     // Zombie-detection note: an earlier revision tracked
     // `lastRowUpdateAt` and force-reconnected if no SSE delta arrived
     // within 2× heartbeat interval. That produced a reconnect storm on
@@ -114,6 +131,48 @@ export function useLiveStatus(dimension?: string): UseLiveStatusResult {
       }
     }
 
+    function clearFlushTimer(): void {
+      if (flushTimer) {
+        clearTimeout(flushTimer);
+        flushTimer = null;
+      }
+      pendingByKey.clear();
+    }
+
+    function flushPending(): void {
+      flushTimer = null;
+      if (!alive || pendingByKey.size === 0) return;
+      const ops = Array.from(pendingByKey);
+      pendingByKey.clear();
+      setRows((prev) => {
+        let next = prev;
+        let mutated = false;
+        for (const [key, op] of ops) {
+          if (op.op === "delete") {
+            const idx = next.findIndex((r) => r.key === key);
+            if (idx === -1) continue;
+            if (!mutated) {
+              next = next.slice();
+              mutated = true;
+            }
+            next.splice(idx, 1);
+          } else {
+            const candidate = upsertByKey(next, op.row);
+            if (candidate !== next) {
+              next = candidate;
+              mutated = true;
+            }
+          }
+        }
+        return mutated ? next : prev;
+      });
+    }
+
+    function scheduleFlush(): void {
+      if (flushTimer !== null) return;
+      flushTimer = setTimeout(flushPending, SUBSCRIBE_FLUSH_INTERVAL_MS);
+    }
+
     function startReconnect(reason: string, err?: unknown): void {
       // Idempotency guard: if we're already mid-reconnect (e.g. overlapping
       // heartbeat tick, onError callback), drop the redundant kickoff so we
@@ -137,6 +196,11 @@ export function useLiveStatus(dimension?: string): UseLiveStatusResult {
       }
       clearHeartbeat();
       clearReconnectTimer();
+      // Drop any buffered deltas tied to the (now-doomed) subscription —
+      // applying them after teardown would either land stale rows on the
+      // freshly-cleared state on terminal error, or interleave with the
+      // post-reconnect initial fetch and confuse rollup state.
+      clearFlushTimer();
       teardownSubscription();
       // `connect()` chains its own setTimeout-based retries internally,
       // so `reconnecting` must stay `true` for the entire retry chain,
@@ -210,11 +274,18 @@ export function useLiveStatus(dimension?: string): UseLiveStatusResult {
             try {
               if (!alive) return;
               if (dimension && e.record.dimension !== dimension) return;
+              // Buffer the op rather than calling setRows directly. A burst
+              // of deltas (probe finishes 50 services in the same SSE frame,
+              // initial-state replay on reconnect, etc.) folds into a single
+              // React commit on the next flush tick — without this, the
+              // matrix re-renders once per record and freezes the main
+              // thread on large bursts.
               if (e.action === "delete") {
-                setRows((prev) => prev.filter((r) => r.key !== e.record.key));
+                pendingByKey.set(e.record.key, { op: "delete" });
               } else {
-                setRows((prev) => upsertByKey(prev, e.record));
+                pendingByKey.set(e.record.key, { op: "upsert", row: e.record });
               }
+              scheduleFlush();
             } catch (cbErr) {
               // eslint-disable-next-line no-console
               console.error("[useLiveStatus] subscribe callback threw", cbErr);
@@ -290,6 +361,7 @@ export function useLiveStatus(dimension?: string): UseLiveStatusResult {
       alive = false;
       clearHeartbeat();
       clearReconnectTimer();
+      clearFlushTimer();
       teardownSubscription();
     };
   }, [dimension]);

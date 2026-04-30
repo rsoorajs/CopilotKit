@@ -273,7 +273,7 @@ function formatTransitionLine(row: {
 }
 
 /**
- * Shared status row: E2E / D5 / D6 badges.
+ * Shared status row: D4 / D5 / D6 badges (Round Trip / Conversation / Feature Parity).
  * QA and HealthDot removed in Phase 3 (3.3 + 3.4). L1 health now in strip.
  * Smoke per-cell badge removed — integration-scoped smoke lives in the strip.
  * Docs rendering removed — handled exclusively by DocsLayer in ComposedCell,
@@ -301,7 +301,7 @@ export function CellStatus({ ctx }: { ctx: CellContext }) {
   return (
     <div className="flex items-center justify-center gap-2.5">
       <LiveBadge
-        name="E2E"
+        name="D4"
         badge={cell.e2e}
         dimensionKey={keyFor("e2e", ctx.integration.slug, ctx.feature.id)}
       />

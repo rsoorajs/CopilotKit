@@ -618,12 +618,6 @@ async def handle_run(request: Request) -> StreamingResponse:
         content = getattr(response, "content", None) or ""
         oai_tool_calls = getattr(response, "tool_calls", None) or []
 
-        logger.warning(
-            "DEBUG response: content=%r, tool_calls=%d",
-            content[:200] if content else None,
-            len(oai_tool_calls),
-        )
-
         if oai_tool_calls:
             # Emit synthesized tool-call events for each OAI tool call.
             # ``_parse_tool_args`` returns a ``ParsedArgs`` with
@@ -696,10 +690,6 @@ async def handle_run(request: Request) -> StreamingResponse:
                                 tool_cls, tool_name, tool_args
                             )
 
-                        logger.warning(
-                            "DEBUG tool %s result (call_id=%s): %r",
-                            tool_name, call_id, result[:200] if result else None,
-                        )
                         if result:
                             yield _sse_line(ToolCallResultEvent(
                                 type=EventType.TOOL_CALL_RESULT,

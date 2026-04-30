@@ -52,12 +52,15 @@ from llama_index.protocols.ag_ui.agent import (
     LoopEvent,
     ToolCallEvent,
 )
+from llama_index.protocols.ag_ui.agent import ToolCallResultEvent
 from llama_index.protocols.ag_ui.events import (
     MessagesSnapshotWorkflowEvent,
     StateSnapshotWorkflowEvent,
     TextMessageChunkWorkflowEvent,
     ToolCallChunkWorkflowEvent,
+    ToolCallEndWorkflowEvent,
 )
+from ag_ui.core import EventType
 from llama_index.protocols.ag_ui.router import get_ag_ui_workflow_router
 from llama_index.protocols.ag_ui.utils import (
     ag_ui_message_to_llama_index_message,
@@ -113,12 +116,37 @@ def _fix_tool_messages(chat_history: List[ChatMessage]) -> None:
             msg.role = MessageRole.TOOL
 
 
+class ToolCallResultWorkflowEvent(ToolCallEndWorkflowEvent):
+    """Emit a TOOL_CALL_RESULT AG-UI event for backend tools.
+
+    llama-index-protocols-ag-ui v0.2.2 has no built-in workflow event for
+    TOOL_CALL_RESULT — ToolCallChunkWorkflowEvent emits the call but the
+    result is never forwarded to the frontend. Without this event,
+    CopilotKit's useRenderTool never transitions from "executing" to
+    "complete" and rendered tool cards stay in their loading state.
+
+    Subclasses ToolCallEndWorkflowEvent so it passes the AG_UI_EVENTS
+    isinstance filter in the router's stream_events loop.
+    """
+    message_id: str = ""
+    content: str = ""
+    role: Optional[str] = "tool"
+    type: EventType = EventType.TOOL_CALL_RESULT
+
+
 class FixedAGUIChatWorkflow(AGUIChatWorkflow):
     """AGUIChatWorkflow that fixes duplicate tool-call rendering and
     tool-result message formatting.
 
     See module docstring for the three upstream bugs this addresses.
+
+    render_only_tool_names: set of tool names that use useRenderTool
+    on the frontend. For these tools, aggregate_tool_calls emits a
+    TOOL_CALL_RESULT event so the render callback transitions to
+    status "complete". Interactive tools (useHumanInTheLoop,
+    useComponent) must NOT be in this set.
     """
+    render_only_tool_names: set = set()
 
     def _snapshot_messages(
         self, ctx: Context, chat_history: List[ChatMessage]
@@ -302,6 +330,87 @@ class FixedAGUIChatWorkflow(AGUIChatWorkflow):
             return None
 
         return StopEvent()
+
+    @step
+    async def aggregate_tool_calls(
+        self, ctx: Context, ev: ToolCallResultEvent
+    ) -> Optional[Union[StopEvent, LoopEvent]]:
+        """Override to emit TOOL_CALL_RESULT events for backend tools.
+
+        The upstream aggregate_tool_calls processes backend tool results
+        internally (adding to chat_history + MESSAGES_SNAPSHOT) but never
+        emits a TOOL_CALL_RESULT AG-UI event. Without it, CopilotKit's
+        useRenderTool never transitions to "complete" and tool cards stay
+        in their loading state forever.
+        """
+        num_tool_calls = await ctx.store.get("num_tool_calls")
+        tool_call_results: List[ToolCallResultEvent] = ctx.collect_events(
+            ev, [ToolCallResultEvent] * num_tool_calls
+        )
+        if tool_call_results is None:
+            return None
+
+        frontend_tool_calls = [
+            r for r in tool_call_results
+            if r.tool_name in self.frontend_tools
+        ]
+        backend_tool_calls = [
+            r for r in tool_call_results
+            if r.tool_name in self.backend_tools
+        ]
+
+        new_tool_messages = []
+        for tool_result in backend_tool_calls:
+            new_tool_messages.append(
+                ChatMessage(
+                    role="tool",
+                    content=tool_result.tool_output.content,
+                    additional_kwargs={
+                        "tool_call_id": tool_result.tool_call_id,
+                    },
+                )
+            )
+            # Emit TOOL_CALL_RESULT so useRenderTool transitions to "complete"
+            ctx.write_event_to_stream(
+                ToolCallResultWorkflowEvent(
+                    tool_call_id=tool_result.tool_call_id,
+                    message_id=str(uuid.uuid4()),
+                    content=tool_result.tool_output.content,
+                    role="tool",
+                )
+            )
+
+        chat_history = await ctx.store.get("chat_history")
+        if new_tool_messages:
+            chat_history.extend(new_tool_messages)
+            self._snapshot_messages(ctx, [*chat_history])
+            await ctx.store.set("chat_history", chat_history)
+
+        if len(frontend_tool_calls) > 0:
+            # Emit TOOL_CALL_RESULT for render-only frontend tools (those
+            # registered via useRenderTool, like get_weather). These tools
+            # execute server-side and need the result forwarded so the
+            # render callback transitions to status "complete".
+            #
+            # Do NOT emit for interactive frontend tools (those using
+            # useHumanInTheLoop like generate_task_steps, book_call, or
+            # useComponent like show_card). Those tools need CopilotKit to
+            # manage the result lifecycle — premature TOOL_CALL_RESULT
+            # would skip past the "executing" state and disable interactive
+            # buttons.
+            for tool_result in frontend_tool_calls:
+                if tool_result.tool_name in self.render_only_tool_names:
+                    ctx.write_event_to_stream(
+                        ToolCallResultWorkflowEvent(
+                            tool_call_id=tool_result.tool_call_id,
+                            message_id=str(uuid.uuid4()),
+                            content=tool_result.tool_output.content,
+                            role="tool",
+                        )
+                    )
+            return StopEvent()
+
+        return LoopEvent(messages=chat_history)
 
 
 async def _workflow_factory():

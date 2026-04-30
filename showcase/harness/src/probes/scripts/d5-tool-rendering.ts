@@ -247,7 +247,9 @@ export function buildToolRenderingAssertion(opts?: {
       // Canonical selector didn't appear — let the cascade probe try
       // the fallbacks. A genuine "no card at all" outcome surfaces
       // through the probe result below.
-      console.debug("[d5-tool-rendering] canonical selector miss — trying cascade probe");
+      console.debug(
+        "[d5-tool-rendering] canonical selector miss — trying cascade probe",
+      );
     }
 
     // Poll probeToolCard until the card is structurally complete or

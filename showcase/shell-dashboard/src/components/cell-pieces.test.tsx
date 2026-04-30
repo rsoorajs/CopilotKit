@@ -94,7 +94,7 @@ function redE2eRow(): StatusRow {
 }
 
 /**
- * Find the inner Badge span for a given badge name (E2E / D5 / D6) inside
+ * Find the inner Badge span for a given badge name (D4 / D5 / D6) inside
  * a CellStatus render. The Badge renders `<span title>...<span>name</span>
  * <span>label</span></span>`, so we locate the parent span whose first
  * child text matches `name`.
@@ -127,16 +127,16 @@ describe("CP1: tooltipOpen resets on mouseleave/blur", () => {
       liveStatus: new Map([[redE2eRow().key, redE2eRow()]]) as LiveStatusMap,
     });
     const { container } = render(<CellStatus ctx={ctx} />);
-    const e2eBadge = findBadgeByName(container, "E2E");
-    fireEvent.mouseEnter(e2eBadge);
+    const rtBadge = findBadgeByName(container, "D4");
+    fireEvent.mouseEnter(rtBadge);
     // Allow microtask to flush.
     await Promise.resolve();
     expect(mockState.fetchCount).toBeGreaterThanOrEqual(1);
 
     // CP1 wrapper: `onMouseLeave` on the outer span resets `tooltipOpen`.
     // We verify the handler is wired by triggering it on the wrapper
-    // (parent of e2eBadge in the DOM tree) without exception.
-    const wrapper = e2eBadge.parentElement!;
+    // (parent of rtBadge in the DOM tree) without exception.
+    const wrapper = rtBadge.parentElement!;
     fireEvent.mouseLeave(wrapper);
     expect(container).toBeTruthy();
   });
@@ -158,11 +158,11 @@ describe("CP2: transitionLine discriminates first/error", () => {
       liveStatus: new Map([[redE2eRow().key, redE2eRow()]]) as LiveStatusMap,
     });
     const { container } = render(<CellStatus ctx={ctx} />);
-    const e2eBadge = findBadgeByName(container, "E2E");
-    fireEvent.mouseEnter(e2eBadge);
+    const rtBadge = findBadgeByName(container, "D4");
+    fireEvent.mouseEnter(rtBadge);
     // Wait for the lazy fetch + state update.
     await new Promise((r) => setTimeout(r, 10));
-    const updated = findBadgeByName(container, "E2E");
+    const updated = findBadgeByName(container, "D4");
     expect(updated.getAttribute("title")).toContain("(initial: green)");
   });
 
@@ -181,14 +181,14 @@ describe("CP2: transitionLine discriminates first/error", () => {
       liveStatus: new Map([[redE2eRow().key, redE2eRow()]]) as LiveStatusMap,
     });
     const { container } = render(<CellStatus ctx={ctx} />);
-    const e2eBadge = findBadgeByName(container, "E2E");
-    fireEvent.mouseEnter(e2eBadge);
+    const rtBadge = findBadgeByName(container, "D4");
+    fireEvent.mouseEnter(rtBadge);
     await waitFor(() => {
-      const el = findBadgeByName(container, "E2E");
+      const el = findBadgeByName(container, "D4");
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       expect(el.getAttribute("title")!).toMatch(/since 2025-02-02/);
     });
-    const updated = findBadgeByName(container, "E2E");
+    const updated = findBadgeByName(container, "D4");
     expect(updated.getAttribute("title")).toContain("(error → red)");
   });
 
@@ -207,14 +207,14 @@ describe("CP2: transitionLine discriminates first/error", () => {
       liveStatus: new Map([[redE2eRow().key, redE2eRow()]]) as LiveStatusMap,
     });
     const { container } = render(<CellStatus ctx={ctx} />);
-    const e2eBadge = findBadgeByName(container, "E2E");
-    fireEvent.mouseEnter(e2eBadge);
+    const rtBadge = findBadgeByName(container, "D4");
+    fireEvent.mouseEnter(rtBadge);
     await waitFor(() => {
-      const el = findBadgeByName(container, "E2E");
+      const el = findBadgeByName(container, "D4");
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       expect(el.getAttribute("title")!).toMatch(/since 2025-02-02/);
     });
-    const updated = findBadgeByName(container, "E2E");
+    const updated = findBadgeByName(container, "D4");
     expect(updated.getAttribute("title")).toContain("(green → red)");
   });
 });
@@ -270,7 +270,7 @@ describe("CP8: D5/D6 chips hidden for testing-kind features", () => {
     });
     const { container } = render(<CellStatus ctx={ctx} />);
     const text = container.textContent ?? "";
-    expect(text).toContain("E2E");
+    expect(text).toContain("D4");
     expect(text).not.toContain("D5");
     expect(text).not.toContain("D6");
   });
@@ -281,7 +281,7 @@ describe("CP8: D5/D6 chips hidden for testing-kind features", () => {
     });
     const { container } = render(<CellStatus ctx={ctx} />);
     const text = container.textContent ?? "";
-    expect(text).toContain("E2E");
+    expect(text).toContain("D4");
     expect(text).toContain("D5");
     expect(text).toContain("D6");
   });

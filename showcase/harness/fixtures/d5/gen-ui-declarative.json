@@ -1,0 +1,11 @@
+{
+  "_comment": "D5 fixture for /demos/declarative-gen-ui. Substring 'render the declarative card' is unique.",
+  "fixtures": [
+    {
+      "match": { "userMessage": "render the declarative card" },
+      "response": {
+        "content": "The declarative gen-UI specification has been resolved into a rendered card. The component descriptor was forwarded to the frontend renderer which materialized the card declaratively from the schema."
+      }
+    }
+  ]
+}

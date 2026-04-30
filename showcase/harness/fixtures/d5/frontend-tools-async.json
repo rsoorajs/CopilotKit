@@ -1,0 +1,11 @@
+{
+  "_comment": "D5 fixture for /demos/frontend-tools-async. Triggers an async frontend tool that returns its result asynchronously; the agent waits for it before producing the final reply. Substring 'fetch the async metric' is unique.",
+  "fixtures": [
+    {
+      "match": { "userMessage": "fetch the async metric" },
+      "response": {
+        "content": "The async tool resolved with the requested metric. The frontend handler awaited completion before forwarding the result back to the agent — async-streaming behavior confirmed."
+      }
+    }
+  ]
+}

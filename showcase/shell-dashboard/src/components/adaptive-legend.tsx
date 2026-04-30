@@ -63,22 +63,22 @@ function HealthLegend() {
         per-integration health levels shown in column header
       </LegendItem>
       <LegendItem>
-        <span className="text-[var(--ok)]">E2E ✓</span>/
+        <span className="text-[var(--ok)]">D4 ✓</span>/
         <span className="text-[var(--amber)]">~</span>/
         <span className="text-[var(--danger)]">✗</span>
-        end-to-end smoke (green &lt;6h / amber stale / red fail)
+        round-trip check (green &lt;6h / amber stale / red fail)
       </LegendItem>
       <LegendItem>
         <span className="text-[var(--ok)]">D5</span>/
         <span className="text-[var(--amber)]">D5</span>/
         <span className="text-[var(--danger)]">D5</span>
-        depth-5 tool rendering (green pass / amber stale / red fail)
+        conversation check (green pass / amber stale / red fail)
       </LegendItem>
       <LegendItem>
         <span className="text-[var(--ok)]">D6</span>/
         <span className="text-[var(--amber)]">D6</span>/
         <span className="text-[var(--danger)]">D6</span>
-        depth-6 multi-agent (green pass / amber stale / red fail)
+        feature-parity check (green pass / amber stale / red fail)
       </LegendItem>
       <LegendItem>
         <span className="text-[var(--text-muted)]">?</span>
@@ -87,6 +87,20 @@ function HealthLegend() {
       <LegendItem>
         <span className="text-[var(--text-muted)]">—</span>
         supported, no demo yet
+      </LegendItem>
+      {/* Descriptive labels for chip abbreviations */}
+      <LegendItem>
+        <span className="font-semibold text-[var(--text-secondary)]">D4</span>
+        Round Trip (RT): single message, full-stack response verification
+      </LegendItem>
+      <LegendItem>
+        <span className="font-semibold text-[var(--text-secondary)]">D5</span>
+        Conversation (CV): multi-turn scripted dialogue with tool calls and
+        content assertions
+      </LegendItem>
+      <LegendItem>
+        <span className="font-semibold text-[var(--text-secondary)]">D6</span>
+        Feature Parity (FP): cross-framework behavioral consistency check
       </LegendItem>
     </>
   );
