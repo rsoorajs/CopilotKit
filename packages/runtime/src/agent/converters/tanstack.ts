@@ -266,11 +266,29 @@ export async function* convertTanStackStream(
     }
   }
 
+  // TanStack's chat() engine runs a multi-turn agent loop: after the model
+  // returns tool calls, the engine tries to execute them and re-prompt. This
+  // produces a second round of TOOL_CALL_START / TOOL_CALL_END events that
+  // duplicate the ones from the first streaming pass. The CopilotKit runtime
+  // handles tool execution externally (via the frontend SDK), so we must stop
+  // converting events once the TanStack adapter signals the first turn is
+  // complete with RUN_FINISHED.
+  let runFinished = false;
+
   for await (const chunk of stream) {
     if (abortSignal.aborted) break;
 
     const raw = chunk as Record<string, unknown>;
     const type = raw.type as string;
+
+    // Stop converting after the first RUN_FINISHED — any subsequent events
+    // come from TanStack's internal tool-execution loop and would produce
+    // duplicate TOOL_CALL_END events that violate the ag-ui verify middleware.
+    if (type === "RUN_FINISHED") {
+      runFinished = true;
+      continue;
+    }
+    if (runFinished) continue;
 
     if (type === "TEXT_MESSAGE_CONTENT" && raw.delta != null) {
       yield* closeReasoningIfOpen();
