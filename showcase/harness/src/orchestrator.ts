@@ -894,7 +894,9 @@ export function registerAllProbeDrivers(
       createE2eDemosDriver({ launcher: createPooledE2eDemosLauncher(pool) }),
     );
     probeRegistry.register(
-      createE2eDeepDriver({ launcher: createPooledE2eDeepLauncher(pool) }),
+      createE2eDeepDriver({
+        launcher: createPooledE2eDeepLauncher(pool, logger),
+      }),
     );
     probeRegistry.register(
       createE2eParityDriver({ launcher: createPooledE2eParityLauncher(pool) }),
