@@ -326,11 +326,6 @@ export function CellStatus({ ctx }: { ctx: CellContext }) {
             badge={cell.d5}
             dimensionKey={keyFor("d5", ctx.integration.slug, ctx.feature.id)}
           />
-          <LiveBadge
-            name="FP"
-            badge={cell.d6}
-            dimensionKey={keyFor("d6", ctx.integration.slug, ctx.feature.id)}
-          />
         </>
       )}
     </div>
