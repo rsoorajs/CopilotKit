@@ -362,38 +362,44 @@ describe("thread handlers", () => {
 
   it("returns 422 when intelligence is not configured for thread mutations", async () => {
     const runtime = new CopilotRuntime({ agents: {} });
-    const mutationRequest = new Request(
-      "https://example.com/threads/thread-1",
-      {
-        method: "POST",
+    const buildRequest = (method: "PATCH" | "POST" | "DELETE") =>
+      new Request("https://example.com/threads/thread-1", {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId: "user-1", agentId: "agent-1" }),
-      },
-    );
+      });
 
     const updateResponse = await handleUpdateThread({
       runtime,
-      request: mutationRequest.clone(),
+      request: buildRequest("PATCH"),
       threadId: "thread-1",
     });
     expect(updateResponse.status).toBe(422);
 
     const archiveResponse = await handleArchiveThread({
       runtime,
-      request: mutationRequest.clone(),
+      request: buildRequest("POST"),
       threadId: "thread-1",
     });
     expect(archiveResponse.status).toBe(422);
 
+    // Use the real DELETE method here — Request.clone() preserves the
+    // method of the original, so re-using a POST clone for the delete
+    // path silently exercises the wrong verb.
     const deleteResponse = await handleDeleteThread({
       runtime,
-      request: mutationRequest.clone(),
+      request: buildRequest("DELETE"),
       threadId: "thread-1",
     });
     expect(deleteResponse.status).toBe(422);
   });
 
   describe("handleClearThreads", () => {
+    // handleClearThreads is intentionally synchronous — it has no I/O on
+    // either branch (in-memory map mutation or platform no-op), so it
+    // returns a plain Response rather than a Promise. The other handlers
+    // in this suite are awaited because they either parse JSON or hit
+    // the Intelligence platform; this one does neither.
     it("clears in-memory threads and returns 204 for InMemoryAgentRunner", () => {
       const runner = new InMemoryAgentRunner();
       const clearThreadsSpy = vi.spyOn(runner, "clearThreads");
@@ -484,6 +490,11 @@ describe("thread handlers", () => {
       });
 
       expect(response.status).toBe(200);
+      // The handler must propagate the platform's response body verbatim —
+      // assert it explicitly so a regression that swaps in a stubbed body
+      // (e.g. `{ messages: [] }`) is caught.
+      const body = await response.json();
+      expect(body.messages).toEqual([{ id: "m1" }]);
       expect(intelligence.getThreadMessages).toHaveBeenCalledWith({
         threadId: "thread-1",
       });
@@ -501,15 +512,23 @@ describe("thread handlers", () => {
         intelligence,
         identifyUser: vi.fn().mockRejectedValue(new Error("auth failed")),
       });
+      // resolveIntelligenceUser logs via console.error on rejection — silence
+      // it for the duration of this test so the suite output stays clean,
+      // matching the pattern used in the subscribe-throw test above.
+      const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
-      const response = await handleGetThreadMessages({
-        runtime,
-        request: new Request("https://example.com/threads/thread-1/messages"),
-        threadId: "thread-1",
-      });
+      try {
+        const response = await handleGetThreadMessages({
+          runtime,
+          request: new Request("https://example.com/threads/thread-1/messages"),
+          threadId: "thread-1",
+        });
 
-      expect(response.status).toBe(500);
-      expect(intelligence.getThreadMessages).not.toHaveBeenCalled();
+        expect(response.status).toBe(500);
+        expect(intelligence.getThreadMessages).not.toHaveBeenCalled();
+      } finally {
+        errorSpy.mockRestore();
+      }
     });
 
     it("returns 422 when neither in-memory nor intelligence is configured", async () => {

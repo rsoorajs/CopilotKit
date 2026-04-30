@@ -337,6 +337,12 @@ describe("InMemoryAgentRunner", () => {
 
       expect(errorEvent).toBeDefined();
       expect(errorEvent!.message).toBe("HTTP 401: Unauthorized");
+      // RUN_ERROR must be the terminal event — the runner must not also emit
+      // RUN_FINISHED on the failure path, and nothing should follow the error.
+      expect(events[events.length - 1].type).toBe(EventType.RUN_ERROR);
+      expect(
+        events.filter((e) => e.type === EventType.RUN_FINISHED),
+      ).toHaveLength(0);
     });
 
     it("propagates non-HTTP error messages into the RUN_ERROR event", async () => {
@@ -378,10 +384,12 @@ class MessagePopulatingTestAgent extends AbstractAgent {
 
   // Override runAgent to simulate what a real agent does: populate this.messages
   // with the full conversation (input + generated) then call the subscriber callbacks.
+  // Aligns with TestAgent above — `onEvent` is required so the in-memory runner
+  // contract (always supply an event sink) is exercised exactly the same way.
   async runAgent(
     input: RunAgentInput,
-    options?: {
-      onEvent?: (params: { event: BaseEvent }) => void;
+    options: {
+      onEvent: (params: { event: BaseEvent }) => void;
       onRunStartedEvent?: () => void;
     },
   ): Promise<{ result: unknown; newMessages: Message[] }> {
@@ -390,8 +398,8 @@ class MessagePopulatingTestAgent extends AbstractAgent {
       threadId: input.threadId,
       runId: input.runId,
     };
-    options?.onEvent?.({ event: runStarted });
-    options?.onRunStartedEvent?.();
+    options.onEvent({ event: runStarted });
+    options.onRunStartedEvent?.();
 
     for (const msg of this.generatedMessages) {
       const start = {
@@ -408,9 +416,9 @@ class MessagePopulatingTestAgent extends AbstractAgent {
         type: EventType.TEXT_MESSAGE_END,
         messageId: msg.id,
       } as TextMessageEndEvent;
-      options?.onEvent?.({ event: start });
-      options?.onEvent?.({ event: content });
-      options?.onEvent?.({ event: end });
+      options.onEvent({ event: start });
+      options.onEvent({ event: content });
+      options.onEvent({ event: end });
     }
 
     // Populate this.messages — this is what real AbstractAgent.runAgent does
@@ -452,7 +460,6 @@ describe("InMemoryAgentRunner — listThreads / getThreadMessages", () => {
       [userMessage],
       [assistantMessage],
     );
-    agent.agentId = "test-agent";
     await firstValueFrom(
       runner
         .run({
@@ -486,14 +493,16 @@ describe("InMemoryAgentRunner — listThreads / getThreadMessages", () => {
     });
 
     it("returns threads sorted most-recently-updated first", async () => {
-      // Run a second thread after a short delay so timestamps differ
-      await new Promise((r) => setTimeout(r, 5));
+      // Run a second thread after a delay long enough that timer-resolution
+      // jitter on slow CI runners cannot collapse the two timestamps. 20ms
+      // sits comfortably above typical setTimeout granularity (~4ms in Node)
+      // and the file-system timestamp resolution we observed flakes around.
+      await new Promise((r) => setTimeout(r, 20));
       const agent2 = new MessagePopulatingTestAgent(
         "test-agent",
         [userMessage],
         [assistantMessage],
       );
-      agent2.agentId = "test-agent";
       await firstValueFrom(
         runner
           .run({
@@ -570,7 +579,6 @@ describe("InMemoryAgentRunner — listThreads / getThreadMessages", () => {
         [userMessage, assistantMessage, followUp],
         [followUpReply],
       );
-      agent2.agentId = "test-agent";
       await firstValueFrom(
         runner
           .run({
@@ -597,12 +605,21 @@ describe("InMemoryAgentRunner — listThreads / getThreadMessages", () => {
   describe("getThreadEvents", () => {
     it("returns stored events for a completed thread", () => {
       const events = runner.getThreadEvents("list-threads-thread-1");
-      // The beforeEach runs a single turn. Stored events include RUN_STARTED
-      // and any content events. Terminal events (RUN_FINISHED/RUN_ERROR) are
-      // emitted to live subscribers but not persisted to historicRuns[].
+      // The beforeEach runs a single turn. The MessagePopulatingTestAgent
+      // emits RUN_STARTED + a TEXT_MESSAGE triple for the assistant reply.
+      // Note: finalizeRunEvents mutates the events array to append a
+      // synthetic terminal event (RUN_ERROR with code INCOMPLETE_STREAM)
+      // when the agent does not emit one itself, so a terminal event is
+      // present here even though the agent did not produce it.
       expect(events.length).toBeGreaterThan(0);
       const types = events.map((e) => e.type);
       expect(types).toContain(EventType.RUN_STARTED);
+      // Content events must be present so the inspector can replay full
+      // thread history — guard against a regression that strips them
+      // during compaction.
+      expect(types).toContain(EventType.TEXT_MESSAGE_START);
+      expect(types).toContain(EventType.TEXT_MESSAGE_CONTENT);
+      expect(types).toContain(EventType.TEXT_MESSAGE_END);
     });
 
     it("returns an empty array for an unknown threadId", () => {
@@ -620,7 +637,6 @@ describe("InMemoryAgentRunner — listThreads / getThreadMessages", () => {
         [userMessage, assistantMessage, followUp],
         [{ id: "a2", role: "assistant", content: "Sure!" }],
       );
-      agent2.agentId = "test-agent";
       await firstValueFrom(
         runner
           .run({
@@ -718,6 +734,15 @@ describe("InMemoryAgentRunner — listThreads / getThreadMessages", () => {
       await run("thread-multi-state", "run-a", first);
       await run("thread-multi-state", "run-b", second);
 
+      expect(runner.getThreadState("thread-multi-state")).toEqual(second);
+
+      // Cross-thread isolation: a snapshot on a different thread must not
+      // bleed into the original thread's state. This guards against any
+      // accidental "last-write-wins" leak in the per-thread state store.
+      const otherThreadSnapshot = { step: 999 };
+      await run("thread-other", "run-other", otherThreadSnapshot);
+
+      expect(runner.getThreadState("thread-other")).toEqual(otherThreadSnapshot);
       expect(runner.getThreadState("thread-multi-state")).toEqual(second);
     });
   });
