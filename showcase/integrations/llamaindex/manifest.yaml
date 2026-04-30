@@ -301,6 +301,8 @@ demos:
       - src/app/demos/chat-slots/agent.py
       - src/app/demos/chat-slots/page.tsx
       - src/app/demos/chat-slots/custom-welcome-screen.tsx
+      - src/app/demos/chat-slots/custom-assistant-message.tsx
+      - src/app/demos/chat-slots/custom-disclaimer.tsx
       - src/app/api/copilotkit/route.ts
   - id: chat-customization-css
     name: Chat Customization (CSS)
