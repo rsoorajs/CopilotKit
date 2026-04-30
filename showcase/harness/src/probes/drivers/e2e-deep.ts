@@ -363,6 +363,7 @@ const defaultLauncher: E2eDeepBrowserLauncher =
 
 export function createPooledE2eDeepLauncher(
   pool: BrowserPool,
+  logger?: { warn(event: string, meta?: Record<string, unknown>): void },
 ): E2eDeepBrowserLauncher {
   return async (abortSignal?: AbortSignal): Promise<E2eDeepBrowser> => {
     const browser = await pool.acquire();
@@ -390,19 +391,28 @@ export function createPooledE2eDeepLauncher(
       const onAbort = (): void => {
         if (forceReleased) return;
         forceReleased = true;
-        // Close contexts first (best-effort), then release. The
-        // close calls may throw if the context is already torn down
-        // -- that's fine, the pool release is what matters.
+        const ctxCount = openContexts.size;
+        const stats = pool.stats();
+        logger?.warn("probe.e2e-deep.pool-abort-release", {
+          openContexts: ctxCount,
+          poolAvailable: stats.available,
+          poolInUse: stats.inUse,
+          poolSize: stats.size,
+        });
         const contextClosePromises = Array.from(openContexts).map((ctx) =>
           ctx.close().catch(() => {}),
         );
         void Promise.allSettled(contextClosePromises).then(() => {
           pool.release(browser);
+          logger?.warn("probe.e2e-deep.pool-abort-released", {
+            closedContexts: ctxCount,
+            poolAvailable: pool.stats().available,
+          });
         });
       };
       if (abortSignal.aborted) {
-        // Already aborted before we even acquired -- release immediately.
         forceReleased = true;
+        logger?.warn("probe.e2e-deep.pool-pre-aborted-release");
         pool.release(browser);
       } else {
         abortSignal.addEventListener("abort", onAbort, { once: true });
