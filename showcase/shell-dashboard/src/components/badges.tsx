@@ -40,6 +40,11 @@ export function Badge({
     openedRef.current = true;
     onTooltipOpen?.();
   };
+  // When the label is "?" (no probe data), render the dimension name with
+  // strikethrough instead of appending a question mark. This communicates
+  // "this depth doesn't exist / hasn't run" more clearly than "D5 ?".
+  const isUnavailable = state.label === "?";
+
   const inner = (
     <span
       className="whitespace-nowrap"
@@ -47,10 +52,18 @@ export function Badge({
       onMouseEnter={handleOpen}
       onFocus={handleOpen}
     >
-      <span className="text-[var(--text-muted)]">{name}</span>{" "}
-      <span className={`tabular-nums ${TONE_CLASS[state.tone]}`}>
-        {state.label}
-      </span>
+      {isUnavailable ? (
+        <span className="text-[var(--text-muted)] line-through">
+          {name}
+        </span>
+      ) : (
+        <>
+          <span className="text-[var(--text-muted)]">{name}</span>{" "}
+          <span className={`tabular-nums ${TONE_CLASS[state.tone]}`}>
+            {state.label}
+          </span>
+        </>
+      )}
     </span>
   );
   return href ? (
