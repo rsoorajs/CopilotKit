@@ -38,6 +38,19 @@ mechanism.
 
 </WhenFrameworkHas>
 
+<WhenFrameworkHas flag="interrupt_pattern" absent>
+
+> **Not available on this framework.** Headless interrupts are built on
+> top of `useInterrupt` / `useFrontendTool` patterns that require the
+> runtime to expose either a native `interrupt(...)` primitive
+> (LangGraph) or a Promise-resolving frontend-tool path (Microsoft Agent
+> Framework). For all other integrations, use
+> [`useHumanInTheLoop`](../human-in-the-loop) instead — it's the
+> standard hook for tool-call-based pause/resume flows and works on
+> every framework that supports tool calls.
+
+</WhenFrameworkHas>
+
 <InlineDemo demo="interrupt-headless" />
 
 ## When should I use this?
@@ -111,6 +124,8 @@ A few things this pattern is careful about:
 
 </WhenFrameworkHas>
 
+<WhenFrameworkHas flag="interrupt_pattern" equals="native">
+
 ## Driving it from plain UI
 
 Once `useHeadlessInterrupt` returns `{ pending, resolve }`, the rest is
@@ -145,6 +160,8 @@ function HeadlessInterruptPanel() {
   return <button onClick={() => kickOff("Book a call with sales.")}>Book call</button>;
 }
 ```
+
+</WhenFrameworkHas>
 
 ## Going further
 

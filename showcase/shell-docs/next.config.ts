@@ -354,6 +354,17 @@ const nextConfig: NextConfig = {
         destination: "/migrate",
         permanent: false,
       },
+
+      // ag-ui-middleware moved into the agentic-protocols group so it
+      // appears in the sidebar under AG-UI rather than as an orphan
+      // root page. 302 (not 301) since the new home is recent and we
+      // want flexibility to revisit placement without burning the
+      // permanent-redirect cache.
+      {
+        source: "/ag-ui-middleware",
+        destination: "/agentic-protocols/ag-ui-middleware",
+        permanent: false,
+      },
     ];
   },
 };
