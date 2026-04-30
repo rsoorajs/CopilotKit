@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { getD5Script, type D5BuildContext } from "../helpers/d5-registry.js";
+import { getD5Script } from "../helpers/d5-registry.js";
+import type { D5BuildContext } from "../helpers/d5-registry.js";
 import type { Page } from "../helpers/conversation-runner.js";
 import {
   buildTurns,
@@ -74,7 +75,9 @@ describe("d5-auth script", () => {
       signOutTimeoutMs: 50,
       click: fakeClick,
     });
-    await expect(assertion(page)).rejects.toThrow(/sign-out button.*not visible/);
+    await expect(assertion(page)).rejects.toThrow(
+      /sign-out button.*not visible/,
+    );
   });
 
   it("assertion fails when error surfaces never appear after sign-out", async () => {
