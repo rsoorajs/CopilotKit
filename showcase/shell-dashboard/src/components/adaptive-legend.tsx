@@ -63,21 +63,21 @@ function HealthLegend() {
         per-integration health levels shown in column header
       </LegendItem>
       <LegendItem>
-        <span className="text-[var(--ok)]">RT ✓</span>/
+        <span className="text-[var(--ok)]">D4 ✓</span>/
         <span className="text-[var(--amber)]">~</span>/
         <span className="text-[var(--danger)]">✗</span>
         round-trip check (green &lt;6h / amber stale / red fail)
       </LegendItem>
       <LegendItem>
-        <span className="text-[var(--ok)]">CV</span>/
-        <span className="text-[var(--amber)]">CV</span>/
-        <span className="text-[var(--danger)]">CV</span>
+        <span className="text-[var(--ok)]">D5</span>/
+        <span className="text-[var(--amber)]">D5</span>/
+        <span className="text-[var(--danger)]">D5</span>
         conversation check (green pass / amber stale / red fail)
       </LegendItem>
       <LegendItem>
-        <span className="text-[var(--ok)]">FP</span>/
-        <span className="text-[var(--amber)]">FP</span>/
-        <span className="text-[var(--danger)]">FP</span>
+        <span className="text-[var(--ok)]">D6</span>/
+        <span className="text-[var(--amber)]">D6</span>/
+        <span className="text-[var(--danger)]">D6</span>
         feature-parity check (green pass / amber stale / red fail)
       </LegendItem>
       <LegendItem>
@@ -90,17 +90,17 @@ function HealthLegend() {
       </LegendItem>
       {/* Descriptive labels for chip abbreviations */}
       <LegendItem>
-        <span className="font-semibold text-[var(--text-secondary)]">RT</span>
-        Round Trip: single message, full-stack response verification
+        <span className="font-semibold text-[var(--text-secondary)]">D4</span>
+        Round Trip (RT): single message, full-stack response verification
       </LegendItem>
       <LegendItem>
-        <span className="font-semibold text-[var(--text-secondary)]">CV</span>
-        Conversation: multi-turn scripted dialogue with tool calls and content
-        assertions
+        <span className="font-semibold text-[var(--text-secondary)]">D5</span>
+        Conversation (CV): multi-turn scripted dialogue with tool calls and
+        content assertions
       </LegendItem>
       <LegendItem>
-        <span className="font-semibold text-[var(--text-secondary)]">FP</span>
-        Feature Parity: cross-framework behavioral consistency check
+        <span className="font-semibold text-[var(--text-secondary)]">D6</span>
+        Feature Parity (FP): cross-framework behavioral consistency check
       </LegendItem>
     </>
   );
