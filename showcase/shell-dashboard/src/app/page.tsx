@@ -57,8 +57,16 @@ export default function Page() {
   );
 
   // Overlay state management (handles URL hash + localStorage persistence)
-  const { overlays, activeTab, toggle, applyPreset, setTab, activePreset, selectedProbeId, selectProbe } =
-    useOverlays();
+  const {
+    overlays,
+    activeTab,
+    toggle,
+    applyPreset,
+    setTab,
+    activePreset,
+    selectedProbeId,
+    selectProbe,
+  } = useOverlays();
 
   // Build a cell-lookup map: integration slug + feature id -> CatalogCell
   const cellLookup = useMemo(() => {

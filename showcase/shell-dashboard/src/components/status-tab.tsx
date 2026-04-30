@@ -27,7 +27,12 @@ export interface StatusTabProps {
   onSelectProbe: (probeId: string | null) => void;
 }
 
-export function StatusTab({ entries, onTrigger, selectedProbeId, onSelectProbe }: StatusTabProps) {
+export function StatusTab({
+  entries,
+  onTrigger,
+  selectedProbeId,
+  onSelectProbe,
+}: StatusTabProps) {
   return (
     <div data-testid="status-tab" className="flex flex-col">
       <StatusTable

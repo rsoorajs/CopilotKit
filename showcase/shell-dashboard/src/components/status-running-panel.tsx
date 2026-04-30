@@ -47,10 +47,7 @@ const RESULT_ICON: Record<ServiceResult, string> = {
   red: "❌",
 };
 
-function serviceIcon(
-  state: ServiceState,
-  result?: ServiceResult,
-): string {
+function serviceIcon(state: ServiceState, result?: ServiceResult): string {
   if (state === "completed" && result) {
     return RESULT_ICON[result] ?? STATE_ICON[state];
   }
@@ -174,7 +171,9 @@ export function StatusRunningPanel({ entries }: StatusRunningPanelProps) {
                     data-state={s.state}
                     className="flex items-center gap-1.5 px-2 py-1 rounded border border-[var(--border)]"
                   >
-                    <span aria-hidden="true">{serviceIcon(s.state, s.result)}</span>
+                    <span aria-hidden="true">
+                      {serviceIcon(s.state, s.result)}
+                    </span>
                     <span className="font-mono truncate">{s.slug}</span>
                     {sElapsed && (
                       <span className="ml-auto text-[var(--text-muted)] tabular-nums">

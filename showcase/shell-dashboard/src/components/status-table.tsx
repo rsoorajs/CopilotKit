@@ -209,9 +209,7 @@ export function StatusTable({
               durationText = formatDuration(inflight.elapsedMs);
             } else {
               tone = lastRunTone(e.lastRun);
-              lastStartMs = e.lastRun
-                ? Date.parse(e.lastRun.startedAt)
-                : null;
+              lastStartMs = e.lastRun ? Date.parse(e.lastRun.startedAt) : null;
               durationText = e.lastRun
                 ? formatDuration(e.lastRun.durationMs)
                 : "—";
