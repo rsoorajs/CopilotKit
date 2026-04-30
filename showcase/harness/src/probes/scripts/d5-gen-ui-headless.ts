@@ -143,10 +143,21 @@ async function readChildCountForSelector(
   // because the structural Page.evaluate signature is `() => R` — no
   // arg-pass — and we still need the resolved selector to land in the
   // browser context.
+  // Use querySelectorAll and find the LAST matching node with children.
+  // The first assistant message may be an empty wrapper; the rendered
+  // gen-UI component appears in a later message. Fall back to the last
+  // node's childElementCount if none have children.
   const fn = new Function(`
-    const win = globalThis;
-    const node = win.document.querySelector(${encoded});
-    return node ? node.childElementCount : 0;
+    var win = globalThis;
+    var nodes = win.document.querySelectorAll(${encoded});
+    if (nodes.length === 0) return 0;
+    var best = 0;
+    for (var i = 0; i < nodes.length; i++) {
+      if (nodes[i].childElementCount > best) {
+        best = nodes[i].childElementCount;
+      }
+    }
+    return best;
   `) as () => number;
   return await page.evaluate(fn);
 }

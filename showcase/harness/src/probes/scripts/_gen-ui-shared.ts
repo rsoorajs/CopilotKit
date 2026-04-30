@@ -99,35 +99,33 @@ export async function waitForGenUiComponent(
     await sleep(POLL_INTERVAL_MS);
   }
 
-  const domSnapshot = await page.evaluate(() => {
-    const win = globalThis as unknown as {
-      document: {
-        querySelectorAll(sel: string): ArrayLike<{
-          tagName: string;
-          childElementCount: number;
-          className: string;
-          textContent: string | null;
-        }>;
-      };
-    };
-    const probe = (label: string, sel: string): string => {
-      const nodes = win.document.querySelectorAll(sel);
-      if (nodes.length === 0) return `${label}: no elements found`;
-      const summary: string[] = [];
-      for (let i = 0; i < Math.min(nodes.length, 5); i++) {
-        const el = nodes[i]!;
-        summary.push(
-          `<${el.tagName.toLowerCase()} class="${el.className}" children=${el.childElementCount}>` +
-            `${(el.textContent ?? "").slice(0, 80)}`,
-        );
+  // Build the DOM-snapshot probe as a string-based function to avoid
+  // esbuild's keepNames transform injecting `__name()` wrappers inside
+  // the browser context (where `__name` is not defined).
+  const domSnapshotCode = `
+    (() => {
+      var doc = globalThis.document;
+      function probe(label, sel) {
+        var nodes = doc.querySelectorAll(sel);
+        if (nodes.length === 0) return label + ": no elements found";
+        var summary = [];
+        for (var i = 0; i < Math.min(nodes.length, 5); i++) {
+          var el = nodes[i];
+          summary.push(
+            "<" + el.tagName.toLowerCase() + " class=\\"" + el.className + "\\" children=" + el.childElementCount + ">" +
+            (el.textContent || "").slice(0, 80)
+          );
+        }
+        return label + ": " + summary.join(" | ");
       }
-      return `${label}: ${summary.join(" | ")}`;
-    };
-    return [
-      probe("[role=article]", '[role="article"]'),
-      probe("[data-message-role=assistant]", '[data-message-role="assistant"]'),
-    ].join(" || ");
-  });
+      return [
+        probe("[role=article]", '[role="article"]'),
+        probe("[data-message-role=assistant]", '[data-message-role="assistant"]')
+      ].join(" || ");
+    })()
+  `;
+  const domSnapshotFn = new Function(`return ${domSnapshotCode.trim()};`) as () => string;
+  const domSnapshot = await page.evaluate(domSnapshotFn);
   throw new Error(
     `gen-ui component did not render within ${timeoutMs}ms (${
       lastError ?? "no candidate selector matched"
@@ -148,10 +146,10 @@ async function findFirstNonTrivial(
   return await page.evaluate(() => {
     const win = globalThis as unknown as {
       document: {
-        querySelector(sel: string): {
+        querySelectorAll(sel: string): ArrayLike<{
           childElementCount: number;
           tagName: string;
-        } | null;
+        }>;
       };
     };
     // The selector list is duplicated here (NOT imported) because this
@@ -174,23 +172,28 @@ async function findFirstNonTrivial(
     ];
     let lastReason = "no selector matched";
     for (const selector of selectors) {
-      const node = win.document.querySelector(selector);
-      if (!node) {
+      // Use querySelectorAll and check ALL matches — querySelector
+      // only returns the first match, and if that first match is an
+      // empty wrapper (children=0) the cascade would skip the selector
+      // entirely even when a later match has content. This happens in
+      // headless chat pages where the first assistant message div is
+      // empty but a subsequent one contains the rendered component.
+      const nodes = win.document.querySelectorAll(selector);
+      if (nodes.length === 0) {
         lastReason = `no match for ${selector}`;
         continue;
       }
-      if (
-        node.childElementCount === 0 &&
-        node.tagName.toLowerCase() !== "svg"
-      ) {
-        // SVG can legitimately be a leaf at the cascade-test level
-        // (its <circle>/<path> children are inspected by the structural
-        // walker). For non-SVG nodes, an empty wrapper is exactly the
-        // failure mode this check exists to catch.
-        lastReason = `${selector} matched but is an empty wrapper`;
-        continue;
+      for (let i = 0; i < nodes.length; i++) {
+        const node = nodes[i]!;
+        if (
+          node.childElementCount === 0 &&
+          node.tagName.toLowerCase() !== "svg"
+        ) {
+          lastReason = `${selector} matched but is an empty wrapper`;
+          continue;
+        }
+        return { selector };
       }
-      return { selector };
     }
     return { reason: lastReason };
   });
