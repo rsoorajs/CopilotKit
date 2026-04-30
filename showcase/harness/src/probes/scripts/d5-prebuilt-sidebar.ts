@@ -56,8 +56,8 @@ export async function probeMessageInside(
     if (!root) return false;
     return Boolean(
       root.querySelector('[data-testid="copilot-assistant-message"]') ||
-        root.querySelector('[role="article"]:not([data-message-role="user"])') ||
-        root.querySelector('[data-message-role="assistant"]'),
+      root.querySelector('[role="article"]:not([data-message-role="user"])') ||
+      root.querySelector('[data-message-role="assistant"]'),
     );
   })) as boolean;
 }

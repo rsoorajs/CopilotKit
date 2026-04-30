@@ -7,10 +7,14 @@ import {
   SIDEBAR_ROOT_SELECTOR,
 } from "./d5-prebuilt-sidebar.js";
 
-function makePage(opts: { throwOnWait?: boolean; messageInside?: boolean }): Page {
+function makePage(opts: {
+  throwOnWait?: boolean;
+  messageInside?: boolean;
+}): Page {
   return {
     async waitForSelector() {
-      if (opts.throwOnWait) throw new Error("waitForSelector timeout (test fake)");
+      if (opts.throwOnWait)
+        throw new Error("waitForSelector timeout (test fake)");
     },
     async fill() {},
     async press() {},
@@ -46,9 +50,9 @@ describe("d5-prebuilt-sidebar script", () => {
       rootTimeoutMs: 50,
       scopedTimeoutMs: 50,
     });
-    await expect(
-      assertion(makePage({ throwOnWait: true })),
-    ).rejects.toThrow(/sidebar root.*did not appear/);
+    await expect(assertion(makePage({ throwOnWait: true }))).rejects.toThrow(
+      /sidebar root.*did not appear/,
+    );
   });
 
   it("assertion fails when the sidebar root is present but no message inside", async () => {
@@ -56,9 +60,9 @@ describe("d5-prebuilt-sidebar script", () => {
       rootTimeoutMs: 50,
       scopedTimeoutMs: 50,
     });
-    await expect(
-      assertion(makePage({ messageInside: false })),
-    ).rejects.toThrow(/did not land inside/);
+    await expect(assertion(makePage({ messageInside: false }))).rejects.toThrow(
+      /did not land inside/,
+    );
   });
 
   it("assertion succeeds when sidebar root is up and message lands inside", async () => {

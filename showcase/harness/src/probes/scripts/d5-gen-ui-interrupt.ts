@@ -18,7 +18,9 @@ async function readAssistantTranscript(page: Page): Promise<string> {
   return (await page.evaluate(() => {
     const win = globalThis as unknown as {
       document: {
-        querySelectorAll(sel: string): ArrayLike<{ textContent: string | null }>;
+        querySelectorAll(
+          sel: string,
+        ): ArrayLike<{ textContent: string | null }>;
       };
     };
     const sels = [
@@ -29,10 +31,14 @@ async function readAssistantTranscript(page: Page): Promise<string> {
     let nodes: ArrayLike<{ textContent: string | null }> = { length: 0 };
     for (const s of sels) {
       const f = win.document.querySelectorAll(s);
-      if (f.length > 0) { nodes = f; break; }
+      if (f.length > 0) {
+        nodes = f;
+        break;
+      }
     }
     let acc = "";
-    for (let i = 0; i < nodes.length; i++) acc += " " + (nodes[i]!.textContent ?? "");
+    for (let i = 0; i < nodes.length; i++)
+      acc += " " + (nodes[i]!.textContent ?? "");
     return acc.toLowerCase();
   })) as string;
 }
@@ -56,18 +62,27 @@ function buildKeywordAssertion(
   };
 }
 
-export const RENDERED_KEYWORDS = ["gen-ui interrupt", "choice component"] as const;
+export const RENDERED_KEYWORDS = [
+  "gen-ui interrupt",
+  "choice component",
+] as const;
 export const COMPLETE_KEYWORDS = ["resumed", "completing"] as const;
 
 export function buildTurns(_ctx: D5BuildContext): ConversationTurn[] {
   return [
     {
       input: "request the gen-ui interrupt",
-      assertions: buildKeywordAssertion("gen-ui-interrupt turn 1", RENDERED_KEYWORDS),
+      assertions: buildKeywordAssertion(
+        "gen-ui-interrupt turn 1",
+        RENDERED_KEYWORDS,
+      ),
     },
     {
       input: "confirm the gen-ui choice",
-      assertions: buildKeywordAssertion("gen-ui-interrupt turn 2", COMPLETE_KEYWORDS),
+      assertions: buildKeywordAssertion(
+        "gen-ui-interrupt turn 2",
+        COMPLETE_KEYWORDS,
+      ),
     },
   ];
 }

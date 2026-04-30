@@ -18,7 +18,9 @@ async function readAssistantTranscript(page: Page): Promise<string> {
   return (await page.evaluate(() => {
     const win = globalThis as unknown as {
       document: {
-        querySelectorAll(sel: string): ArrayLike<{ textContent: string | null }>;
+        querySelectorAll(
+          sel: string,
+        ): ArrayLike<{ textContent: string | null }>;
       };
     };
     const sels = [
@@ -29,10 +31,14 @@ async function readAssistantTranscript(page: Page): Promise<string> {
     let nodes: ArrayLike<{ textContent: string | null }> = { length: 0 };
     for (const s of sels) {
       const f = win.document.querySelectorAll(s);
-      if (f.length > 0) { nodes = f; break; }
+      if (f.length > 0) {
+        nodes = f;
+        break;
+      }
     }
     let acc = "";
-    for (let i = 0; i < nodes.length; i++) acc += " " + (nodes[i]!.textContent ?? "");
+    for (let i = 0; i < nodes.length; i++)
+      acc += " " + (nodes[i]!.textContent ?? "");
     return acc.toLowerCase();
   })) as string;
 }
@@ -63,11 +69,17 @@ export function buildTurns(_ctx: D5BuildContext): ConversationTurn[] {
   return [
     {
       input: "trigger the headless interrupt",
-      assertions: buildKeywordAssertion("interrupt-headless turn 1", RAISED_KEYWORDS),
+      assertions: buildKeywordAssertion(
+        "interrupt-headless turn 1",
+        RAISED_KEYWORDS,
+      ),
     },
     {
       input: "resolve the interrupt with yes",
-      assertions: buildKeywordAssertion("interrupt-headless turn 2", RESOLVED_KEYWORDS),
+      assertions: buildKeywordAssertion(
+        "interrupt-headless turn 2",
+        RESOLVED_KEYWORDS,
+      ),
     },
   ];
 }

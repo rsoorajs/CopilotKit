@@ -1,6 +1,11 @@
 import { describe, it, expect } from "vitest";
 import { getD5Script, type D5BuildContext } from "../helpers/d5-registry.js";
-import { buildTurns, preNavigateRoute, HASHBROWN_KEYWORDS, JSON_KEYWORDS } from "./d5-byoc.js";
+import {
+  buildTurns,
+  preNavigateRoute,
+  HASHBROWN_KEYWORDS,
+  JSON_KEYWORDS,
+} from "./d5-byoc.js";
 
 describe("d5-byoc script", () => {
   it("registers under featureType 'byoc'", () => {
@@ -23,7 +28,9 @@ describe("d5-byoc script", () => {
 
   it("preNavigateRoute prefers hashbrown when available", () => {
     expect(
-      preNavigateRoute("byoc", { demos: ["byoc-hashbrown", "byoc-json-render"] }),
+      preNavigateRoute("byoc", {
+        demos: ["byoc-hashbrown", "byoc-json-render"],
+      }),
     ).toBe("/demos/byoc-hashbrown");
   });
 

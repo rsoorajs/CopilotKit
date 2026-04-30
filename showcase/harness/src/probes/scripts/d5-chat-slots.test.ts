@@ -12,7 +12,8 @@ const FIXTURE_USER_MESSAGE = "verify chat slots are wired";
 function makePage(opts: { throwOnWait?: boolean } = {}): Page {
   return {
     async waitForSelector() {
-      if (opts.throwOnWait) throw new Error("waitForSelector timeout (test fake)");
+      if (opts.throwOnWait)
+        throw new Error("waitForSelector timeout (test fake)");
     },
     async fill() {},
     async press() {},
