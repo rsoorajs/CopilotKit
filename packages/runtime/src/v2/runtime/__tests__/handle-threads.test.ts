@@ -713,16 +713,24 @@ describe("thread handlers", () => {
       expect(body.events).toEqual([]);
     });
 
-    it("returns 501 when intelligence is configured (not yet implemented)", async () => {
-      // Stub spies for both `listThreads` (existing intelligence shape) and
-      // a hypothetical `getThreadEvents` so a future regression that wires
-      // the handler to a platform method would still fail this test even
-      // after the response code is changed from 501 to 200.
+    it("delegates to intelligence.getThreadEvents when intelligence is configured", async () => {
+      // Mirrors the platform's `_inspect/threads/:id/events` response shape
+      // (Intelligence PR #144). The handler strips the platform-internal
+      // `decodeErrorRowIds` and `truncated` fields before returning, so the
+      // wire shape stays `{ events }` to match the in-memory branch.
+      const platformEvents = [
+        { type: "RUN_STARTED", threadId: "thread-1", runId: "run-a" },
+        { type: "TEXT_MESSAGE_CONTENT", messageId: "m1", delta: "hello" },
+      ];
       const intelligence = {
-        listThreads: vi.fn(),
-        getThreadEvents: vi.fn(),
+        getThreadEvents: vi.fn().mockResolvedValue({
+          events: platformEvents,
+          decodeErrorRowIds: [],
+          truncated: false,
+        }),
       };
-      const runtime = createIntelligenceRuntime({ intelligence });
+      const identifyUser = createIdentifyUser();
+      const runtime = createIntelligenceRuntime({ intelligence, identifyUser });
 
       const response = await handleGetThreadEvents({
         runtime,
@@ -730,12 +738,38 @@ describe("thread handlers", () => {
         threadId: "thread-1",
       });
 
-      expect(response.status).toBe(501);
-      // The 501 branch must short-circuit before touching intelligence —
-      // asserting this guards against a regression that silently falls
-      // through to call platform methods anyway.
-      expect(intelligence.listThreads).not.toHaveBeenCalled();
-      expect(intelligence.getThreadEvents).not.toHaveBeenCalled();
+      expect(response.status).toBe(200);
+      expect(intelligence.getThreadEvents).toHaveBeenCalledWith({
+        threadId: "thread-1",
+      });
+      expect(identifyUser).toHaveBeenCalledTimes(1);
+      const body = await response.json();
+      expect(body).toEqual({ events: platformEvents });
+    });
+
+    it("returns 500 when intelligence.getThreadEvents throws", async () => {
+      const intelligence = {
+        getThreadEvents: vi
+          .fn()
+          .mockRejectedValue(new Error("platform unavailable")),
+      };
+      const runtime = createIntelligenceRuntime({ intelligence });
+
+      const errorSpy = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
+      try {
+        const response = await handleGetThreadEvents({
+          runtime,
+          request: new Request("https://example.com/threads/thread-1/events"),
+          threadId: "thread-1",
+        });
+
+        expect(response.status).toBe(500);
+        expect(intelligence.getThreadEvents).toHaveBeenCalledTimes(1);
+      } finally {
+        errorSpy.mockRestore();
+      }
     });
 
     it("returns 500 when the runner throws", async () => {
@@ -787,14 +821,40 @@ describe("thread handlers", () => {
       expect(body.state).toBeNull();
     });
 
-    it("returns 501 when intelligence is configured (not yet implemented)", async () => {
-      // Same defensive setup as the events-handler 501 test: spy both the
-      // existing intelligence method and a hypothetical `getThreadState`
-      // so a future regression that wires the handler to a platform call
-      // would fail this test even after 501 becomes 200.
+    it("delegates to intelligence.getThreadState and returns the snapshot when intelligence is configured", async () => {
+      // Platform returns a discriminated `ThreadStateResult` (Intelligence
+      // PR #144). The `snapshot` arm carries the folded current state; the
+      // handler flattens it to `{ state }` so the inspector consumes the
+      // same shape as the in-memory branch.
+      const snapshot = { counter: 7, label: "intel" };
       const intelligence = {
-        listThreads: vi.fn(),
-        getThreadState: vi.fn(),
+        getThreadState: vi.fn().mockResolvedValue({
+          kind: "snapshot",
+          state: snapshot,
+          skippedDeltas: 0,
+        }),
+      };
+      const identifyUser = createIdentifyUser();
+      const runtime = createIntelligenceRuntime({ intelligence, identifyUser });
+
+      const response = await handleGetThreadState({
+        runtime,
+        request: new Request("https://example.com/threads/thread-1/state"),
+        threadId: "thread-1",
+      });
+
+      expect(response.status).toBe(200);
+      expect(intelligence.getThreadState).toHaveBeenCalledWith({
+        threadId: "thread-1",
+      });
+      expect(identifyUser).toHaveBeenCalledTimes(1);
+      const body = await response.json();
+      expect(body.state).toEqual(snapshot);
+    });
+
+    it("returns state:null for the no-snapshot kind from intelligence", async () => {
+      const intelligence = {
+        getThreadState: vi.fn().mockResolvedValue({ kind: "no-snapshot" }),
       };
       const runtime = createIntelligenceRuntime({ intelligence });
 
@@ -804,9 +864,55 @@ describe("thread handlers", () => {
         threadId: "thread-1",
       });
 
-      expect(response.status).toBe(501);
-      expect(intelligence.listThreads).not.toHaveBeenCalled();
-      expect(intelligence.getThreadState).not.toHaveBeenCalled();
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body.state).toBeNull();
+    });
+
+    it("returns state:null for the snapshot-decode-error kind from intelligence", async () => {
+      // The platform logs the underlying decode failure server-side; from
+      // the inspector's perspective, "no readable state" is the same UX as
+      // "no snapshot yet."
+      const intelligence = {
+        getThreadState: vi
+          .fn()
+          .mockResolvedValue({ kind: "snapshot-decode-error" }),
+      };
+      const runtime = createIntelligenceRuntime({ intelligence });
+
+      const response = await handleGetThreadState({
+        runtime,
+        request: new Request("https://example.com/threads/thread-1/state"),
+        threadId: "thread-1",
+      });
+
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body.state).toBeNull();
+    });
+
+    it("returns 500 when intelligence.getThreadState throws", async () => {
+      const intelligence = {
+        getThreadState: vi
+          .fn()
+          .mockRejectedValue(new Error("platform unavailable")),
+      };
+      const runtime = createIntelligenceRuntime({ intelligence });
+
+      const errorSpy = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
+      try {
+        const response = await handleGetThreadState({
+          runtime,
+          request: new Request("https://example.com/threads/thread-1/state"),
+          threadId: "thread-1",
+        });
+
+        expect(response.status).toBe(500);
+      } finally {
+        errorSpy.mockRestore();
+      }
     });
 
     it("returns 500 when the runner throws", async () => {

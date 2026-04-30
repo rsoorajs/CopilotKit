@@ -336,16 +336,27 @@ export async function handleGetThreadMessages({
 
 export async function handleGetThreadEvents({
   runtime,
+  request,
   threadId,
 }: ThreadMutationParams): Promise<Response> {
-  // Intelligence platform path: no equivalent API yet. Return a clear 501 so
-  // consumers wiring the inspector against a platform-backed runtime see an
-  // explicit "not implemented" rather than silently empty data.
+  // Intelligence platform path. Delegates to the platform's `_inspect`
+  // endpoint (Intelligence PR #144). Auth still flows through the standard
+  // identifyUser → API key path; threadId scoping happens server-side.
   if (isIntelligenceRuntime(runtime)) {
-    return errorResponse(
-      "GET /threads/:threadId/events is not yet supported on the Intelligence platform runtime. Track progress in the CopilotKit issue tracker or run with the in-memory runner for local development.",
-      501,
-    );
+    try {
+      const user = await resolveIntelligenceUser({ runtime, request });
+      if (isHandlerResponse(user)) return user;
+
+      const data = await runtime.intelligence.getThreadEvents({ threadId });
+      // Strip platform-internal fields (`decodeErrorRowIds`, `truncated`)
+      // before returning to the inspector — those describe persistence-side
+      // concerns the inspector currently has no UI for. The shape becomes
+      // `{ events }`, matching the in-memory branch below.
+      return Response.json({ events: data.events });
+    } catch (error) {
+      logger.error({ err: error, threadId }, "Error fetching thread events");
+      return errorResponse("Failed to fetch thread events", 500);
+    }
   }
 
   // Local in-memory fallback
@@ -367,13 +378,29 @@ export async function handleGetThreadEvents({
 
 export async function handleGetThreadState({
   runtime,
+  request,
   threadId,
 }: ThreadMutationParams): Promise<Response> {
+  // Intelligence platform path. Delegates to the platform's `_inspect`
+  // state endpoint, which folds STATE_DELTA events onto the latest
+  // STATE_SNAPSHOT to return the thread's current state.
   if (isIntelligenceRuntime(runtime)) {
-    return errorResponse(
-      "GET /threads/:threadId/state is not yet supported on the Intelligence platform runtime. Track progress in the CopilotKit issue tracker or run with the in-memory runner for local development.",
-      501,
-    );
+    try {
+      const user = await resolveIntelligenceUser({ runtime, request });
+      if (isHandlerResponse(user)) return user;
+
+      const data = await runtime.intelligence.getThreadState({ threadId });
+      // Flatten the discriminated `ThreadStateResult` to the wire shape the
+      // inspector consumes (`{ state: <value> | null }`). Missing snapshot
+      // and decode-error both surface as `null`; the inspector renders an
+      // empty state branch for null and the platform's decode-error case is
+      // already logged platform-side.
+      const state = data.kind === "snapshot" ? data.state : null;
+      return Response.json({ state });
+    } catch (error) {
+      logger.error({ err: error, threadId }, "Error fetching thread state");
+      return errorResponse("Failed to fetch thread state", 500);
+    }
   }
 
   if (runtime.runner instanceof InMemoryAgentRunner) {

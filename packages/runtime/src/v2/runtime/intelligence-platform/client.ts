@@ -198,6 +198,40 @@ export interface ThreadMessagesResponse {
   messages: ThreadMessage[];
 }
 
+/**
+ * Persisted AG-UI event for the inspector's debugging views. The platform
+ * stores raw events keyed by run; the `_inspect` route returns them in
+ * replay order (oldest first) across every run that targeted the thread.
+ */
+export interface ThreadInspectEvent {
+  type: string;
+  [key: string]: unknown;
+}
+
+/**
+ * Response from {@link CopilotKitIntelligence.getThreadEvents}. Mirrors the
+ * `ThreadEventsResult` shape returned by the platform's
+ * `GET /api/_inspect/threads/:id/events` endpoint.
+ */
+export interface ThreadEventsResponse {
+  events: ThreadInspectEvent[];
+  /** Row IDs the platform failed to decode (raw column corrupted). */
+  decodeErrorRowIds: string[];
+  /** True when the platform hit its per-thread event cap. */
+  truncated: boolean;
+}
+
+/**
+ * Response from {@link CopilotKitIntelligence.getThreadState}. Mirrors the
+ * discriminated `ThreadStateResult` returned by the platform's
+ * `GET /api/_inspect/threads/:id/state` endpoint, which folds RFC 6902
+ * STATE_DELTA events on top of the latest STATE_SNAPSHOT.
+ */
+export type ThreadStateResponse =
+  | { kind: "no-snapshot" }
+  | { kind: "snapshot-decode-error" }
+  | { kind: "snapshot"; state: unknown; skippedDeltas: number };
+
 export interface AcquireThreadLockRequest {
   threadId: string;
   runId: string;
@@ -553,6 +587,48 @@ export class CopilotKitIntelligence {
     return this.#request<ThreadMessagesResponse>(
       "GET",
       `/api/threads/${encodeURIComponent(params.threadId)}/messages`,
+    );
+  }
+
+  /**
+   * Fetch the persisted AG-UI event stream for a thread.
+   *
+   * Backed by the platform's `GET /api/_inspect/threads/:id/events`
+   * introspection endpoint (see Intelligence PR #144). Events are returned
+   * in replay order across every run that targeted the thread. The
+   * `_inspect/` prefix flags this as debug-only — production code paths
+   * must not depend on it.
+   *
+   * @throws {@link PlatformRequestError} on non-2xx responses.
+   */
+  async getThreadEvents(params: {
+    threadId: string;
+  }): Promise<ThreadEventsResponse> {
+    return this.#request<ThreadEventsResponse>(
+      "GET",
+      `/api/_inspect/threads/${encodeURIComponent(params.threadId)}/events`,
+    );
+  }
+
+  /**
+   * Fetch the current agent state for a thread.
+   *
+   * Backed by the platform's `GET /api/_inspect/threads/:id/state`
+   * introspection endpoint (see Intelligence PR #144). The platform folds
+   * RFC 6902 STATE_DELTA events on top of the latest STATE_SNAPSHOT, so
+   * the returned state reflects the thread's current state — not just the
+   * last snapshot. The discriminated response distinguishes "no snapshot
+   * persisted yet" from "snapshot present" so consumers can render the
+   * correct empty state.
+   *
+   * @throws {@link PlatformRequestError} on non-2xx responses.
+   */
+  async getThreadState(params: {
+    threadId: string;
+  }): Promise<ThreadStateResponse> {
+    return this.#request<ThreadStateResponse>(
+      "GET",
+      `/api/_inspect/threads/${encodeURIComponent(params.threadId)}/state`,
     );
   }
 
