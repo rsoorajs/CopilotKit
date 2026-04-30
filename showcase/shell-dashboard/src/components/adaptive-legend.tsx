@@ -38,30 +38,42 @@ function LinksLegend() {
 
 function DepthLegend() {
   return (
-    <>
-      <LegendItem>
-        <span className="font-semibold text-[var(--text-secondary)]">
-          D0-D4
-        </span>
-        integration wiring depth (D0 = listed, D4 = full tool rendering)
-      </LegendItem>
-      <LegendItem>
-        <span className="text-[var(--danger)] font-medium">▼</span>
-        depth regression from previous run
-      </LegendItem>
-    </>
+    <LegendItem>
+      <span className="font-semibold text-[var(--text-secondary)]">D0-D4</span>
+      integration wiring depth (D0 = listed, D4 = full tool rendering)
+    </LegendItem>
   );
 }
 
 function HealthLegend() {
   return (
     <>
+      {/* Depth/level explanations grouped first */}
       <LegendItem>
         <span className="font-semibold text-[var(--text-secondary)]">
           L1-L4 Strip
         </span>
         per-integration health levels shown in column header
       </LegendItem>
+      <LegendItem>
+        <span className="font-semibold text-[var(--text-secondary)]">D2</span>
+        API: responds to a basic CopilotKit API call
+      </LegendItem>
+      <LegendItem>
+        <span className="font-semibold text-[var(--text-secondary)]">D4</span>
+        Round Trip (RT): single message, full-stack response verification
+      </LegendItem>
+      <LegendItem>
+        <span className="font-semibold text-[var(--text-secondary)]">D5</span>
+        Conversation (CV): multi-turn scripted dialogue with tool calls and
+        content assertions
+      </LegendItem>
+      {/* Regression indicator */}
+      <LegendItem>
+        <span className="text-[var(--danger)] font-medium">▼</span>
+        depth regression from previous run
+      </LegendItem>
+      {/* D4/D5 color chips */}
       <LegendItem>
         <span className="text-[var(--ok)]">D4 ✓</span>/
         <span className="text-[var(--amber)]">~</span>/
@@ -74,12 +86,7 @@ function HealthLegend() {
         <span className="text-[var(--danger)]">D5</span>
         conversation check (green pass / amber stale / red fail)
       </LegendItem>
-      <LegendItem>
-        <span className="text-[var(--ok)]">D6</span>/
-        <span className="text-[var(--amber)]">D6</span>/
-        <span className="text-[var(--danger)]">D6</span>
-        feature-parity check (green pass / amber stale / red fail)
-      </LegendItem>
+      {/* Status symbols */}
       <LegendItem>
         <span className="text-[var(--text-muted)]">?</span>
         probe has not yet ticked since deploy
@@ -87,20 +94,6 @@ function HealthLegend() {
       <LegendItem>
         <span className="text-[var(--text-muted)]">—</span>
         supported, no demo yet
-      </LegendItem>
-      {/* Descriptive labels for chip abbreviations */}
-      <LegendItem>
-        <span className="font-semibold text-[var(--text-secondary)]">D4</span>
-        Round Trip (RT): single message, full-stack response verification
-      </LegendItem>
-      <LegendItem>
-        <span className="font-semibold text-[var(--text-secondary)]">D5</span>
-        Conversation (CV): multi-turn scripted dialogue with tool calls and
-        content assertions
-      </LegendItem>
-      <LegendItem>
-        <span className="font-semibold text-[var(--text-secondary)]">D6</span>
-        Feature Parity (FP): cross-framework behavioral consistency check
       </LegendItem>
     </>
   );
