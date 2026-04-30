@@ -15,6 +15,7 @@ import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.util.StringUtils;
 import org.slf4j.Logger;
@@ -51,10 +52,14 @@ import static com.agui.server.EventFactory.toolCallStartEvent;
  *
  * <p>This agent implements a two-phase approach:
  * <ol>
- *   <li><b>Phase 1 — stream:</b> Use {@code .stream()} WITHOUT tool callbacks
- *       to get real-time text delivery. If the model wants to call tools,
- *       the stream will contain tool_calls but since no callbacks are registered
- *       on this path, it just completes with the tool call indication.</li>
+ *   <li><b>Phase 1 — stream:</b> Use {@code .stream()} with
+ *       {@code internalToolExecutionEnabled=false} for real-time text delivery.
+ *       This prevents Spring AI's model layer from auto-executing tool calls
+ *       through the global {@code ToolCallingManager} (which only knows about
+ *       backend tools and would throw on frontend-provided tools like
+ *       {@code generate_task_steps}, {@code show_card}, etc.). If the model
+ *       wants to call tools, the stream will contain tool_calls metadata but
+ *       they are detected without execution.</li>
  *   <li><b>Phase 2 — call with tools:</b> If tool calls were detected, re-invoke
  *       the model via {@code .call()} WITH tool callbacks attached. Spring AI's
  *       built-in tool execution loop handles all tool iterations automatically.
@@ -136,10 +141,13 @@ public class StreamingToolAgent extends LocalAgent {
             return;
         }
 
-        this.emitEvent(textMessageEndEvent(messageId), subscriber);
+        // Emit tool call events BEFORE textMessageEnd so the frontend's
+        // useRenderTool sees them while the message is still "open". Events
+        // emitted after textMessageEnd may be missed by renderers.
         for (BaseEvent ev : deferredEvents) {
             this.emitEvent(ev, subscriber);
         }
+        this.emitEvent(textMessageEndEvent(messageId), subscriber);
         subscriber.onNewMessage(assistantMessage);
         this.emitEvent(runFinishedEvent(threadId, runId), subscriber);
         subscriber.onRunFinalized(
@@ -161,9 +169,12 @@ public class StreamingToolAgent extends LocalAgent {
         AtomicReference<Throwable> streamError = new AtomicReference<>();
         CountDownLatch latch = new CountDownLatch(1);
 
-        // Build request WITHOUT tool callbacks — we just want to stream text
-        // and detect whether tools are needed.
-        ChatClient.ChatClientRequestSpec request = buildBaseRequest(input, userContent);
+        // Build request WITHOUT tool callbacks and with internal tool
+        // execution disabled — we just want to stream text and detect
+        // whether tools are needed without Spring AI's model layer
+        // attempting to execute them through the global ToolCallingManager.
+        ChatClient.ChatClientRequestSpec request = buildBaseRequest(
+                input, userContent, true);
 
         request.stream()
                 .chatResponse()
@@ -204,13 +215,21 @@ public class StreamingToolAgent extends LocalAgent {
      * Re-invokes the model via .call() WITH tool callbacks. Spring AI's
      * built-in tool execution loop handles all iterations. Tool AG-UI events
      * are emitted via the wrapper callbacks.
+     *
+     * <p>Internal tool execution is left ENABLED here (unlike Phase 1) so
+     * Spring AI's loop can execute backend tools. Frontend tools (injected
+     * by the CopilotKit runtime but unknown to this agent) are handled by
+     * the {@code LenientToolCallbackResolver} in
+     * {@link BoundedToolCallingManagerConfig}, which returns a placeholder
+     * callback instead of crashing.
      */
     private void callWithTools(
             RunAgentInput input, String userContent, String messageId,
             AssistantMessage assistantMessage, List<BaseEvent> deferredEvents,
             AgentSubscriber subscriber) {
 
-        ChatClient.ChatClientRequestSpec request = buildBaseRequest(input, userContent);
+        ChatClient.ChatClientRequestSpec request = buildBaseRequest(
+                input, userContent, false);
 
         // Wrap each tool callback to emit AG-UI events when invoked
         if (!toolCallbacks.isEmpty()) {
@@ -236,12 +255,29 @@ public class StreamingToolAgent extends LocalAgent {
     /**
      * Builds a base ChatClient request with system prompt and memory
      * but WITHOUT tool callbacks.
+     *
+     * @param disableInternalToolExecution when {@code true}, sets
+     *        {@code internalToolExecutionEnabled=false} on the request
+     *        options. This prevents Spring AI's model layer from
+     *        auto-executing tool calls through the global
+     *        {@link org.springframework.ai.model.tool.ToolCallingManager}.
+     *        Used by the streaming path (Phase 1) so that tool_calls in
+     *        the stream are detected but not executed — execution happens
+     *        in Phase 2 via {@code .call()} with explicit tool callbacks.
      */
     private ChatClient.ChatClientRequestSpec buildBaseRequest(
-            RunAgentInput input, String userContent) {
+            RunAgentInput input, String userContent,
+            boolean disableInternalToolExecution) {
         ChatClient.ChatClientRequestSpec request = chatClient.prompt(
                 Prompt.builder().content(userContent).build())
                 .system(systemMessage);
+
+        if (disableInternalToolExecution) {
+            request = request.options(
+                    OpenAiChatOptions.builder()
+                            .internalToolExecutionEnabled(false)
+                            .build());
+        }
 
         if (chatMemory != null) {
             request.advisors(PromptChatMemoryAdvisor.builder(chatMemory).build());
