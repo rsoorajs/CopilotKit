@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import os
 
+from llama_index.core.tools import FunctionTool
 from llama_index.llms.openai import OpenAI
 from llama_index.protocols.ag_ui.router import get_ag_ui_workflow_router
 
@@ -29,6 +30,27 @@ from agents.hitl_in_chat_agent import FixedAGUIChatWorkflow
 _openai_kwargs = {}
 if os.environ.get("OPENAI_BASE_URL"):
     _openai_kwargs["api_base"] = os.environ["OPENAI_BASE_URL"]
+
+
+def _request_user_approval_stub(message: str, context: str = "") -> str:
+    """Ask the operator to approve or reject an action before taking it.
+
+    The approval dialog is rendered on the frontend via useFrontendTool.
+    This stub satisfies the AGUIChatWorkflow tool registry so the proper
+    AG-UI TOOL_CALL_CHUNK events are emitted; CopilotKit intercepts the
+    call and opens the modal dialog.
+    """
+    return ""
+
+
+_request_user_approval_tool = FunctionTool.from_defaults(
+    fn=_request_user_approval_stub,
+    name="request_user_approval",
+    description=(
+        "Ask the operator to approve or reject an action before you take it. "
+        "Returns { approved: boolean, reason?: string }."
+    ),
+)
 
 SYSTEM_PROMPT = (
     "You are a support operations copilot working alongside a human operator "
@@ -64,7 +86,7 @@ SYSTEM_PROMPT = (
 async def _workflow_factory():
     return FixedAGUIChatWorkflow(
         llm=OpenAI(model="gpt-4o-mini", **_openai_kwargs),
-        frontend_tools=[],
+        frontend_tools=[_request_user_approval_tool],
         backend_tools=[],
         system_prompt=SYSTEM_PROMPT,
         initial_state={},

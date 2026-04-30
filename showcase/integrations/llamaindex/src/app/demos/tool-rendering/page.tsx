@@ -36,14 +36,6 @@ function Chat() {
       }),
       render: ({ parameters, result, status }) => {
         const loading = status !== "complete";
-        if (loading) {
-          return (
-            <div className="bg-[#667eea] text-white p-4 rounded-lg max-w-md">
-              <span className="animate-spin">Retrieving weather...</span>
-            </div>
-          );
-        }
-
         const parsed = parseJsonResult<any>(result);
         const weatherResult: WeatherToolResult = {
           temperature: parsed?.temperature || 0,
@@ -53,10 +45,13 @@ function Chat() {
           feelsLike: parsed?.feels_like || parsed?.temperature || 0,
         };
 
-        const themeColor = getThemeColor(weatherResult.conditions);
+        const themeColor = loading
+          ? "#667eea"
+          : getThemeColor(weatherResult.conditions);
 
         return (
           <WeatherCard
+            loading={loading}
             location={parameters?.location ?? ""}
             themeColor={themeColor}
             result={weatherResult}
@@ -121,10 +116,12 @@ function getThemeColor(conditions: string): string {
 }
 
 function WeatherCard({
+  loading,
   location,
   themeColor,
   result,
 }: {
+  loading?: boolean;
   location?: string;
   themeColor: string;
   result: WeatherToolResult;
@@ -142,42 +139,52 @@ function WeatherCard({
               data-testid="weather-city"
               className="text-xl font-bold text-white capitalize"
             >
-              {location}
+              {location || "Weather"}
             </h3>
-            <p className="text-white">Current Weather</p>
+            <p className="text-white">
+              {loading ? "Fetching weather..." : "Current Weather"}
+            </p>
           </div>
-          <WeatherIcon conditions={result.conditions} />
+          {!loading && <WeatherIcon conditions={result.conditions} />}
         </div>
 
-        <div className="mt-4 flex items-end justify-between">
-          <div className="text-3xl font-bold text-white">
-            <span>{result.temperature}&deg; C</span>
-            <span className="text-sm text-white/50">
-              {" / "}
-              {((result.temperature * 9) / 5 + 32).toFixed(1)}&deg; F
-            </span>
-          </div>
-          <div className="text-sm text-white capitalize">
-            {result.conditions}
-          </div>
-        </div>
+        {!loading && (
+          <>
+            <div className="mt-4 flex items-end justify-between">
+              <div className="text-3xl font-bold text-white">
+                <span>{result.temperature}&deg; C</span>
+                <span className="text-sm text-white/50">
+                  {" / "}
+                  {((result.temperature * 9) / 5 + 32).toFixed(1)}&deg; F
+                </span>
+              </div>
+              <div className="text-sm text-white capitalize">
+                {result.conditions}
+              </div>
+            </div>
 
-        <div className="mt-4 pt-4 border-t border-white">
-          <div className="grid grid-cols-3 gap-2 text-center">
-            <div data-testid="weather-humidity">
-              <p className="text-white text-xs">Humidity</p>
-              <p className="text-white font-medium">{result.humidity}%</p>
+            <div className="mt-4 pt-4 border-t border-white">
+              <div className="grid grid-cols-3 gap-2 text-center">
+                <div data-testid="weather-humidity">
+                  <p className="text-white text-xs">Humidity</p>
+                  <p className="text-white font-medium">{result.humidity}%</p>
+                </div>
+                <div data-testid="weather-wind">
+                  <p className="text-white text-xs">Wind</p>
+                  <p className="text-white font-medium">
+                    {result.windSpeed} mph
+                  </p>
+                </div>
+                <div data-testid="weather-feels-like">
+                  <p className="text-white text-xs">Feels Like</p>
+                  <p className="text-white font-medium">
+                    {result.feelsLike}&deg;
+                  </p>
+                </div>
+              </div>
             </div>
-            <div data-testid="weather-wind">
-              <p className="text-white text-xs">Wind</p>
-              <p className="text-white font-medium">{result.windSpeed} mph</p>
-            </div>
-            <div data-testid="weather-feels-like">
-              <p className="text-white text-xs">Feels Like</p>
-              <p className="text-white font-medium">{result.feelsLike}&deg;</p>
-            </div>
-          </div>
-        </div>
+          </>
+        )}
       </div>
     </div>
   );

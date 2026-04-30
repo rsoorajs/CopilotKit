@@ -119,6 +119,24 @@ export const rollDiceTool = toolDefinition({
   result: Math.floor(Math.random() * Math.max(2, sides)) + 1,
 }));
 
+// Tool for the shared-state-read-write demo. The `set_notes` tool
+// updates the `notes` slot in shared state, mirroring the LangGraph
+// Python reference agent's `set_notes` tool. The actual state mutation
+// happens client-side when the tool result is returned; here we just
+// echo the notes back so the runtime/frontend can handle it.
+export const setNotesTool = toolDefinition({
+  name: "set_notes",
+  description:
+    "Replace the notes array in shared state with the full updated list. " +
+    "Use this tool whenever the user asks you to 'remember' something, or " +
+    "when you have an observation about the user worth surfacing in the " +
+    "UI's notes panel. Always pass the FULL notes list (existing notes + " +
+    "any new ones), not a diff. Keep each note short (< 120 chars).",
+  inputSchema: z.object({
+    notes: z.array(z.string()).describe("The complete updated list of notes"),
+  }),
+}).server(async ({ notes }) => ({ success: true, notes }));
+
 export const baseServerTools = [
   weatherTool,
   haikuTool,
@@ -126,4 +144,5 @@ export const baseServerTools = [
   searchFlightsTool,
   getStockPriceTool,
   rollDiceTool,
+  setNotesTool,
 ] as const;

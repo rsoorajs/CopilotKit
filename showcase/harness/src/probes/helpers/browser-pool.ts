@@ -26,6 +26,14 @@ interface PoolLogger {
   info(msg: string, meta?: Record<string, unknown>): void;
 }
 
+/**
+ * Factory that produces a fresh `Browser` for the pool. The default
+ * implementation imports `playwright` and calls `chromium.launch`. Tests
+ * inject a fake so the pool's lifecycle logic is exercisable without
+ * spawning a real chromium process.
+ */
+export type LaunchBrowser = () => Promise<Browser>;
+
 export class BrowserPool {
   private readonly poolSize: number;
   private readonly recycleAfter: number;
@@ -34,8 +42,10 @@ export class BrowserPool {
   private waiters: Waiter[] = [];
   private totalRecycles = 0;
   private inFlightRecycles = new Set<Promise<void>>();
+  private recyclingSlots = new Set<Slot>();
   private isShutdown = false;
   private readonly logger?: PoolLogger;
+  private readonly injectedLaunchBrowser?: LaunchBrowser;
 
   // Tracks which Browser instance maps to which Slot, so release() can find
   // the slot in O(1) even after the slot was removed from `available`.
@@ -45,9 +55,11 @@ export class BrowserPool {
     size = 4,
     recycleAfter?: number,
     logger?: PoolLogger,
+    launchBrowser?: LaunchBrowser,
   ) {
     this.poolSize = size;
     this.logger = logger;
+    this.injectedLaunchBrowser = launchBrowser;
     const envRecycle = process.env.BROWSER_POOL_RECYCLE_AFTER
       ? parseInt(process.env.BROWSER_POOL_RECYCLE_AFTER, 10)
       : undefined;
@@ -59,13 +71,17 @@ export class BrowserPool {
   }
 
   async init(): Promise<void> {
-    const { chromium } =
-      (await import("playwright")) as typeof import("playwright");
-    this.launchBrowser = () =>
-      chromium.launch({
-        headless: true,
-        args: ["--no-sandbox", "--disable-dev-shm-usage"],
-      });
+    if (this.injectedLaunchBrowser) {
+      this.launchBrowser = this.injectedLaunchBrowser;
+    } else {
+      const { chromium } =
+        (await import("playwright")) as typeof import("playwright");
+      this.launchBrowser = () =>
+        chromium.launch({
+          headless: true,
+          args: ["--no-sandbox", "--disable-dev-shm-usage"],
+        });
+    }
 
     for (let i = 0; i < this.poolSize; i++) {
       const browser = await this.launchBrowser();
@@ -73,24 +89,37 @@ export class BrowserPool {
       this.slots.push(slot);
       this.available.push(slot);
       this.browserToSlot.set(browser, slot);
+      this.attachDisconnectHandler(slot, browser);
     }
   }
 
   // Assigned during init() after the dynamic import resolves.
-  private launchBrowser!: () => Promise<Browser>;
+  private launchBrowser!: LaunchBrowser;
 
   async acquire(timeoutMs = 30_000): Promise<Browser> {
     if (this.isShutdown) {
       throw new Error("BrowserPool is shut down");
     }
 
-    const slot = this.available.shift();
-    if (slot) {
-      this.logger?.info("browser-pool.acquire", {
-        available: this.available.length,
-        inUse: this.slots.length - this.available.length,
+    // Skip zombie slots whose browser has disconnected but whose disconnect
+    // handler hasn't yet completed the recycle. Without this loop, a single
+    // dead chromium process locks every probe that draws its slot until
+    // either the harness restarts or 100 release-cycles trigger the
+    // contextCount-based recycle. Each zombie is kicked into recycle so the
+    // pool self-heals across ticks.
+    while (this.available.length > 0) {
+      const slot = this.available.shift()!;
+      if (slot.browser.isConnected()) {
+        this.logger?.info("browser-pool.acquire", {
+          available: this.available.length,
+          inUse: this.slots.length - this.available.length,
+        });
+        return slot.browser;
+      }
+      this.logger?.info("browser-pool.skipped-dead-slot", {
+        slotIndex: this.slots.indexOf(slot),
       });
-      return slot.browser;
+      this.recycleSlot(slot);
     }
 
     return new Promise<Browser>((resolve, reject) => {
@@ -128,6 +157,19 @@ export class BrowserPool {
     slot.contextCount++;
 
     if (slot.contextCount >= this.recycleAfter) {
+      this.recycleSlot(slot);
+      return;
+    }
+
+    // Defensive: a release-time isConnected check catches the race where
+    // the disconnect event hasn't fired yet (Playwright's events are
+    // asynchronous) but the underlying process is already dead. Without
+    // this, a dead browser would re-enter `available` and the next
+    // acquire would hand it out before the disconnect handler runs.
+    if (!slot.browser.isConnected()) {
+      this.logger?.info("browser-pool.release-dead-slot", {
+        slotIndex: this.slots.indexOf(slot),
+      });
       this.recycleSlot(slot);
       return;
     }
@@ -180,7 +222,42 @@ export class BrowserPool {
     };
   }
 
+  /**
+   * Register a `disconnected` listener on a browser so a chromium process
+   * that crashes mid-life proactively recycles its slot instead of waiting
+   * for the next release-driven check. Three guards keep stale fires
+   * harmless:
+   *
+   *   1. Pool shutdown: handler may fire as we close everything; ignore.
+   *   2. Slot reassignment: `slot.browser` may already point to a fresh
+   *      browser if recycle completed before the old browser's disconnect
+   *      event drained — the late fire is for the OLD instance, not the
+   *      slot's current one.
+   *   3. Slot eviction: launch failure during recycle removes the slot
+   *      from `this.slots`; a disconnect for a no-longer-tracked slot is
+   *      a no-op.
+   */
+  private attachDisconnectHandler(slot: Slot, browser: Browser): void {
+    browser.on("disconnected", () => {
+      if (this.isShutdown) return;
+      if (slot.browser !== browser) return;
+      if (!this.slots.includes(slot)) return;
+      this.logger?.info("browser-pool.disconnected", {
+        slotIndex: this.slots.indexOf(slot),
+      });
+      this.recycleSlot(slot);
+    });
+  }
+
   private recycleSlot(slot: Slot): void {
+    // Re-entry guard: a second call for the same slot (e.g. zombie-skip in
+    // acquire() racing the disconnect handler) is a no-op. Without this,
+    // both call sites would launch a fresh browser and the second would
+    // overwrite `slot.browser` while the first's relaunch was still in
+    // flight, leaking one browser process.
+    if (this.recyclingSlots.has(slot)) return;
+    this.recyclingSlots.add(slot);
+
     this.totalRecycles++;
     const slotIdx = this.slots.indexOf(slot);
     this.logger?.info("browser-pool.recycle", {
@@ -225,6 +302,7 @@ export class BrowserPool {
         slot.browser = fresh;
         slot.contextCount = 0;
         this.browserToSlot.set(fresh, slot);
+        this.attachDisconnectHandler(slot, fresh);
 
         const waiter = this.waiters.shift();
         if (waiter) {
@@ -259,6 +337,7 @@ export class BrowserPool {
 
     this.inFlightRecycles.add(recyclePromise);
     recyclePromise.finally(() => {
+      this.recyclingSlots.delete(slot);
       this.inFlightRecycles.delete(recyclePromise);
     });
   }
