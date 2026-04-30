@@ -39,8 +39,10 @@ function LinksLegend() {
 function DepthLegend() {
   return (
     <LegendItem>
-      <span className="font-semibold text-[var(--text-secondary)]">D0-D4</span>
-      integration wiring depth (D0 = listed, D4 = full tool rendering)
+      <span className="font-semibold text-[var(--text-secondary)]">
+        L1-L4 Strip
+      </span>
+      per-integration health levels shown in column header
     </LegendItem>
   );
 }
@@ -48,16 +50,14 @@ function DepthLegend() {
 function HealthLegend() {
   return (
     <>
-      {/* Depth/level explanations grouped first */}
-      <LegendItem>
-        <span className="font-semibold text-[var(--text-secondary)]">
-          L1-L4 Strip
-        </span>
-        per-integration health levels shown in column header
-      </LegendItem>
+      {/* Depth explanations in ascending order */}
       <LegendItem>
         <span className="font-semibold text-[var(--text-secondary)]">D2</span>
         API: responds to a basic CopilotKit API call
+      </LegendItem>
+      <LegendItem>
+        <span className="font-semibold text-[var(--text-secondary)]">D3</span>
+        Page Load: demo page loads in a browser
       </LegendItem>
       <LegendItem>
         <span className="font-semibold text-[var(--text-secondary)]">D4</span>
