@@ -1,3 +1,4 @@
+import type { OnDestroy, OnInit } from "@angular/core";
 import {
   Component,
   ChangeDetectionStrategy,
@@ -5,24 +6,22 @@ import {
   inject,
   input,
   signal,
-  OnDestroy,
-  OnInit,
 } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { FormsModule } from "@angular/forms";
+import type {
+  HumanInTheLoopToolCall,
+  HumanInTheLoopToolRenderer,
+} from "@copilotkitnext/angular";
 import {
   connectAgentContext,
   CopilotKit,
-  HumanInTheLoopToolCall,
-  HumanInTheLoopToolRenderer,
   injectAgentStore,
   registerHumanInTheLoop,
 } from "@copilotkitnext/angular";
 import { RenderToolCalls } from "@copilotkitnext/angular";
-import {
-  WEB_INSPECTOR_TAG,
-  type WebInspectorElement,
-} from "@copilotkit/web-inspector";
+import { WEB_INSPECTOR_TAG } from "@copilotkit/web-inspector";
+import type { WebInspectorElement } from "@copilotkit/web-inspector";
 import { z } from "zod";
 
 @Component({
@@ -199,7 +198,19 @@ export class HeadlessChatComponent implements OnInit, OnDestroy {
     const runtimeUrl = this.copilotkit.core?.runtimeUrl;
     if (!runtimeUrl) return;
     const url = runtimeUrl.replace(/\/$/, "");
-    await fetch(`${url}/threads`, { method: "DELETE", credentials: "include" });
+    try {
+      const res = await fetch(`${url}/threads/clear`, {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!res.ok) {
+        console.error(
+          `Failed to clear threads: HTTP ${res.status} ${res.statusText}`,
+        );
+      }
+    } catch (err) {
+      console.error("Failed to clear threads", err);
+    }
   }
 
   async send() {
