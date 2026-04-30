@@ -7,6 +7,8 @@ packages:
   - "examples/v2/react/*"
   - "examples/v2/angular/*"
   - "examples/v2/runtime/*"
+  - "examples/integrations/langgraph-python-threads/apps/app"
+  - "examples/integrations/langgraph-python-threads/apps/bff"
   - "examples/showcases/generative-ui-playground"
   - "!examples/v1/_legacy"
   - "showcase/scripts"

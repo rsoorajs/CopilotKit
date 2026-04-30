@@ -7,6 +7,7 @@ import {
 import { ExampleLayout } from "@/components/example-layout";
 import { ExampleCanvas } from "@/components/example-canvas";
 import { ThreadsDrawer } from "@/components/threads-drawer";
+import { Inspector } from "@/components/inspector";
 import { ThemeProvider } from "@/hooks/use-theme";
 import { useExampleSuggestions, useGenerativeUIExamples } from "@/hooks";
 import { demonstrationCatalog } from "@/declarative-generative-ui/renderers";
@@ -62,6 +63,7 @@ export default function App() {
         useSingleEndpoint={false}
       >
         <HomePage />
+        <Inspector />
       </CopilotKitProvider>
     </ThemeProvider>
   );
