@@ -10,7 +10,7 @@
  */
 
 import {
-  CopilotKitProvider,
+  CopilotKit,
   CopilotChat,
   useHumanInTheLoop,
 } from "@copilotkit/react-core/v2";
@@ -29,14 +29,15 @@ const DEFAULT_SLOTS: TimeSlot[] = [
 
 export default function HitlInChat() {
   return (
-    <CopilotKitProvider runtimeUrl="/api/copilotkit" useSingleEndpoint>
+    <CopilotKit runtimeUrl="/api/copilotkit" agent="default">
       <Demo />
-    </CopilotKitProvider>
+    </CopilotKit>
   );
 }
 
 function Demo() {
   useHumanInTheLoop({
+    agentId: "default",
     name: "book_call",
     description:
       "Ask the user to pick a time slot for a call. The picker UI presents fixed candidate slots; the user's choice is returned to the agent.",
@@ -67,7 +68,7 @@ function Demo() {
         Try: &ldquo;Book a 30-minute onboarding call for Alice.&rdquo; The agent
         renders an inline time picker; pick a slot to confirm.
       </p>
-      <CopilotChat />
+      <CopilotChat agentId="default" />
     </main>
   );
 }
