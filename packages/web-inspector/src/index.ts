@@ -663,6 +663,7 @@ class CpkThreadDetails extends LitElement {
     _detailPanelWidth: { state: true },
     _eventsNotAvailable: { state: true },
     _stateNotAvailable: { state: true },
+    _panelInitializing: { state: true },
   };
 
   threadId: string | null = null;
@@ -697,6 +698,25 @@ class CpkThreadDetails extends LitElement {
   private _eventsNotAvailable = false;
   /** True when the /state endpoint returned 501 — don't fall back to live data. */
   private _stateNotAvailable = false;
+  /**
+   * Briefly true after a tab switch so the active-tab highlight + a generic
+   * "Loading…" placeholder paint before the heavy per-tab render runs. Without
+   * this, large event/conversation lists block the next paint and the user
+   * sees the click as unresponsive for seconds.
+   */
+  private _panelInitializing = false;
+  /**
+   * Tracks whether we've fetched events for the current thread yet. Events
+   * fetch lazily on first sub-tab click so a large response's JSON.parse
+   * doesn't block the main thread when the user only ever cares about the
+   * conversation.
+   */
+  private _eventsFetched = false;
+  /**
+   * Tracks whether we've fetched state for the current thread yet. Same
+   * lazy-load reasoning as `_eventsFetched`.
+   */
+  private _stateFetched = false;
   private _lastFetchedThreadId: string | null = null;
   private _lastSeenLiveMessageVersion = 0;
   private _messagesAbort: AbortController | null = null;
@@ -1255,15 +1275,23 @@ class CpkThreadDetails extends LitElement {
       this._eventsAbort = null;
       this._stateAbort?.abort();
       this._stateAbort = null;
+      // Reset cleared so the next click into events/state triggers a fresh
+      // fetch. Eagerly clear `_fetchedEvents` / `_fetchedState` so the empty
+      // state doesn't briefly show last thread's data.
+      this._eventsFetched = false;
+      this._stateFetched = false;
+      this._fetchedEvents = null;
+      this._fetchedState = null;
 
       if (this.threadId) {
+        // Conversation is the default tab and shows immediately on thread
+        // open, so fetch eagerly. Events and state are only visible once the
+        // user clicks their sub-tab; deferring those fetches prevents a long
+        // JSON.parse of a large events payload from blocking the main thread
+        // before the user has even shown intent to view them.
         void this.fetchMessages(this.threadId);
-        void this.fetchEvents(this.threadId);
-        void this.fetchState(this.threadId);
       } else {
         this._conversation = [];
-        this._fetchedEvents = null;
-        this._fetchedState = null;
       }
     } else if (
       this.threadId &&
@@ -1666,7 +1694,38 @@ class CpkThreadDetails extends LitElement {
                       this._tab === tab.id ? "cpk-td__tab--active" : ""
                     }"
                     @click=${() => {
+                      if (this._tab === tab.id) return;
                       this._tab = tab.id;
+                      // Show a generic spinner for one paint frame before the
+                      // heavy per-tab render runs, so the active-tab highlight
+                      // is visible immediately even when the panel content
+                      // (e.g. a large events list) takes seconds to render.
+                      this._panelInitializing = true;
+                      requestAnimationFrame(() => {
+                        this._panelInitializing = false;
+                      });
+                      // Lazy-trigger the events / state fetches so their
+                      // (potentially huge) JSON.parse only blocks the main
+                      // thread after the user has shown intent to view that
+                      // sub-tab. Without lazy-load, the eager fetch runs as
+                      // soon as the thread opens and a single large response
+                      // can stall the entire panel for seconds — including
+                      // making the tab buttons themselves feel unresponsive.
+                      if (
+                        tab.id === "ag-ui-events" &&
+                        !this._eventsFetched &&
+                        this.threadId
+                      ) {
+                        this._eventsFetched = true;
+                        void this.fetchEvents(this.threadId);
+                      } else if (
+                        tab.id === "agent-state" &&
+                        !this._stateFetched &&
+                        this.threadId
+                      ) {
+                        this._stateFetched = true;
+                        void this.fetchState(this.threadId);
+                      }
                     }}
                   >
                     ${tab.label}
@@ -1680,11 +1739,15 @@ class CpkThreadDetails extends LitElement {
           <!-- Scrollable content -->
           <div class="cpk-td__content">
             ${
-              this._tab === "conversation"
-                ? this.renderConversation()
-                : this._tab === "agent-state"
-                  ? this.renderState()
-                  : this.renderEvents()
+              this._panelInitializing
+                ? html`
+                    <div class="cpk-td__status">Loading…</div>
+                  `
+                : this._tab === "conversation"
+                  ? this.renderConversation()
+                  : this._tab === "agent-state"
+                    ? this.renderState()
+                    : this.renderEvents()
             }
           </div>
         </div>
