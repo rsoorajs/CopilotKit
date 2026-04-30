@@ -170,9 +170,23 @@ export interface CopilotKitCoreSubscriber {
     agentId: string;
     store: ɵThreadStore;
   }) => void | Promise<void>;
+  /**
+   * Fired when a thread store is removed from the registry, either by an
+   * explicit `unregister()` call or by a `register()` call that replaces an
+   * existing store for the same `agentId`.
+   *
+   * The previous store is delivered via `prevStore` so subscribers can tear
+   * down state that depends on the concrete instance (e.g. cancel an active
+   * subscription) without consulting the registry. By the time async
+   * subscribers resume after an `await`, a replacement `register()` may have
+   * already installed the new store under the same key, so calling
+   * `registry.get(agentId)` inside this callback is unsafe and may return
+   * the new store instead of the unregistered one.
+   */
   onThreadStoreUnregistered?: (event: {
     copilotkit: CopilotKitCore;
     agentId: string;
+    prevStore: ɵThreadStore;
   }) => void | Promise<void>;
   /**
    * Fired immediately before each agent run, including per-thread clones that

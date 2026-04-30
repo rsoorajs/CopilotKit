@@ -4,9 +4,11 @@ import type { CopilotKitCore, CopilotKitCoreSubscriber } from "../core/core";
 import type { ɵThreadStore } from "../threads";
 
 // Minimal mock of CopilotKitCore that supports subscribing and notification.
-// Mirrors the real CopilotKitCore.notifySubscribers contract: takes a handler
-// plus an errorMessage, and wraps each subscriber call in try/catch so that
-// a single subscriber throwing does not abort delivery to siblings.
+// Mirrors the real CopilotKitCore.notifySubscribers contract: dispatches in
+// parallel via Promise.all with per-subscriber try/catch, so a single
+// throwing subscriber does not abort delivery to siblings. The parallel
+// shape matters for tests that exercise async subscribers — a sequential
+// mock would mask races that production hits but tests miss.
 function createMockCore() {
   const subscribers = new Set<CopilotKitCoreSubscriber>();
 
@@ -16,13 +18,15 @@ function createMockCore() {
         fn: (s: CopilotKitCoreSubscriber) => unknown,
         errorMessage: string,
       ) => {
-        for (const subscriber of subscribers) {
-          try {
-            await fn(subscriber);
-          } catch (err) {
-            console.error(errorMessage, err);
-          }
-        }
+        await Promise.all(
+          Array.from(subscribers).map(async (subscriber) => {
+            try {
+              await fn(subscriber);
+            } catch (err) {
+              console.error(errorMessage, err);
+            }
+          }),
+        );
       },
     ),
     subscribe(subscriber: CopilotKitCoreSubscriber) {
@@ -101,8 +105,12 @@ describe("ThreadStoreRegistry", () => {
 
     expect(registry.get("agent-1")).toBe(second);
     expect(onUnregistered).toHaveBeenCalledTimes(1);
+    // Payload must carry the previous store as `prevStore`. Subscribers rely
+    // on this to tear down state for the unregistered instance without
+    // calling `registry.get(agentId)` — which by the time an async subscriber
+    // resumes would already return the new store.
     expect(onUnregistered).toHaveBeenCalledWith(
-      expect.objectContaining({ agentId: "agent-1" }),
+      expect.objectContaining({ agentId: "agent-1", prevStore: first }),
     );
     expect(onRegistered).toHaveBeenCalledTimes(2);
     expect(onRegistered).toHaveBeenLastCalledWith(
@@ -149,7 +157,7 @@ describe("ThreadStoreRegistry", () => {
     );
   });
 
-  it("unregister fires onThreadStoreUnregistered on subscribers", async () => {
+  it("unregister fires onThreadStoreUnregistered on subscribers and forwards the previous store", async () => {
     const onUnregistered = vi.fn();
     const subscriber: CopilotKitCoreSubscriber = {
       onThreadStoreUnregistered: onUnregistered,
@@ -158,13 +166,14 @@ describe("ThreadStoreRegistry", () => {
       core as unknown as { subscribe: (s: CopilotKitCoreSubscriber) => unknown }
     ).subscribe(subscriber);
 
-    registry.register("agent-1", makeStore());
+    const store = makeStore();
+    registry.register("agent-1", store);
     registry.unregister("agent-1");
 
     await Promise.resolve();
 
     expect(onUnregistered).toHaveBeenCalledWith(
-      expect.objectContaining({ agentId: "agent-1" }),
+      expect.objectContaining({ agentId: "agent-1", prevStore: store }),
     );
   });
 
@@ -232,20 +241,62 @@ describe("ThreadStoreRegistry", () => {
   });
 
   describe("getAll() snapshot isolation", () => {
-    it("mutating the returned record does not affect the registry's internal state", () => {
+    it("returns a frozen snapshot — mutation throws in strict mode and the registry is unaffected", () => {
       const storeA = makeStore("a");
       const storeB = makeStore("b");
       registry.register("agent-1", storeA);
       registry.register("agent-2", storeB);
 
-      const snapshot = registry.getAll() as Record<string, ɵThreadStore>;
-      // Mutate the returned reference — registry must be unaffected.
-      delete snapshot["agent-1"];
-      snapshot["agent-3"] = makeStore("c");
+      const snapshot = registry.getAll();
+      // The snapshot must be frozen so the `Readonly<>` claim is honest at
+      // runtime, not just in the type system. Vitest source files run under
+      // strict mode, so mutating a frozen object throws synchronously.
+      expect(Object.isFrozen(snapshot)).toBe(true);
+      expect(() => {
+        (snapshot as Record<string, ɵThreadStore>)["agent-3"] = makeStore("c");
+      }).toThrow();
+      expect(() => {
+        delete (snapshot as Record<string, ɵThreadStore>)["agent-1"];
+      }).toThrow();
 
+      // Registry remains intact regardless of the failed mutation attempts.
       expect(registry.get("agent-1")).toBe(storeA);
       expect(registry.get("agent-2")).toBe(storeB);
       expect(registry.get("agent-3")).toBeUndefined();
+    });
+
+    it("returns the same reference between mutations so identity-comparing consumers stay stable", () => {
+      registry.register("agent-1", makeStore("a"));
+      const a = registry.getAll();
+      const b = registry.getAll();
+      // useSyncExternalStore compares snapshots by identity — returning a new
+      // object on every call would force a re-render even when nothing
+      // changed. The cached snapshot keeps consumers quiet between writes.
+      expect(a).toBe(b);
+    });
+
+    it("invalidates the cached snapshot on register so a subsequent getAll() reflects the new store", () => {
+      registry.register("agent-1", makeStore("a"));
+      const before = registry.getAll();
+
+      const storeB = makeStore("b");
+      registry.register("agent-2", storeB);
+      const after = registry.getAll();
+
+      expect(after).not.toBe(before);
+      expect(after["agent-2"]).toBe(storeB);
+    });
+
+    it("invalidates the cached snapshot on unregister so a subsequent getAll() omits the removed store", () => {
+      registry.register("agent-1", makeStore("a"));
+      registry.register("agent-2", makeStore("b"));
+      const before = registry.getAll();
+
+      registry.unregister("agent-1");
+      const after = registry.getAll();
+
+      expect(after).not.toBe(before);
+      expect(after["agent-1"]).toBeUndefined();
     });
   });
 });
