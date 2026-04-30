@@ -140,7 +140,6 @@ export default function Page() {
   // live-status changes since depth is a function of probe states.
   const depthDistribution = useMemo((): DepthDistribution => {
     const dist: DepthDistribution = {
-      d6: 0,
       d5: 0,
       d4: 0,
       d3: 0,
