@@ -2,6 +2,7 @@ package com.copilotkit.showcase.springai;
 
 import com.agui.server.spring.AgUiParameters;
 import com.agui.server.spring.AgUiService;
+import com.agui.spring.ai.SpringAIAgent;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.ai.chat.memory.ChatMemory;
@@ -16,7 +17,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
-import java.util.ArrayList;
 import java.util.Set;
 
 /**
@@ -24,7 +24,7 @@ import java.util.Set;
  *
  * Reads three forwarded properties from the AG-UI request envelope
  * (`forwardedProps.tone`, `forwardedProps.expertise`,
- * `forwardedProps.responseLength`) and builds a per-request SyncAgent
+ * `forwardedProps.responseLength`) and builds a per-request SpringAIAgent
  * with a system prompt composed from those three axes. Mirrors the
  * LangGraph variant (src/agents/agent_config_agent.py).
  *
@@ -72,7 +72,7 @@ public class AgentConfigController {
         String systemPrompt = buildSystemPrompt(tone, expertise, length);
 
         AgUiParameters params = objectMapper.readValue(rawBody, AgUiParameters.class);
-        SyncAgent perRequestAgent = buildAgent(systemPrompt);
+        SpringAIAgent perRequestAgent = buildAgent(systemPrompt);
 
         SseEmitter emitter = agUiService.runAgent(perRequestAgent, params);
         return ResponseEntity.ok()
@@ -84,18 +84,21 @@ public class AgentConfigController {
         return value != null && allowed.contains(value) ? value : fallback;
     }
 
-    private SyncAgent buildAgent(String systemPrompt) {
+    private SpringAIAgent buildAgent(String systemPrompt) {
         ChatMemory memory = MessageWindowChatMemory.builder()
                 .chatMemoryRepository(new InMemoryChatMemoryRepository())
                 .maxMessages(10)
                 .build();
-        return new SyncAgent(
-                "agent-config-demo",
-                chatModel,
-                memory,
-                systemPrompt,
-                new ArrayList<>()
-        );
+        try {
+            return SpringAIAgent.builder()
+                    .agentId("agent-config-demo")
+                    .chatModel(chatModel)
+                    .chatMemory(memory)
+                    .systemMessage(systemPrompt)
+                    .build();
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to build agent-config agent", e);
+        }
     }
 
     private static String buildSystemPrompt(String tone, String expertise, String length) {
