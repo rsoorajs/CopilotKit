@@ -1,10 +1,9 @@
 name: "Showcase: Build & Push"
 
-# Decoupled from the old "Build & Deploy" workflow. This workflow ONLY builds
-# Docker images and pushes them to GHCR. Railway auto-update
-# (environmentPatchCommit) picks up the new :latest tag and deploys
-# automatically. The separate "Showcase: Verify Deploy" workflow
-# (showcase_deploy.yml) handles health verification.
+# Decoupled from the old "Build & Deploy" workflow. This workflow builds
+# Docker images, pushes them to GHCR, and triggers Railway to redeploy.
+# The separate "Showcase: Verify Deploy" workflow (showcase_deploy.yml)
+# handles health verification.
 #
 # Critical design property: NO concurrency group with cancel-in-progress.
 # Every push to main runs to completion so that rapid-fire PR merges never
@@ -355,6 +354,30 @@ jobs:
             ghcr.io/copilotkit/${{ matrix.service.image }}:${{ github.sha }}
           build-args: ${{ steps.build-args.outputs.args }}
 
-      # No Railway deploy step. Railway auto-update (environmentPatchCommit)
-      # picks up the new :latest GHCR tag and deploys automatically.
-      # The "Showcase: Verify Deploy" workflow handles health verification.
+      - name: Trigger Railway redeploy
+        if: matrix.service.railway_id != ''
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          SERVICE_ID: ${{ matrix.service.railway_id }}
+          ENV_ID: ${{ env.RAILWAY_ENV_ID }}
+        run: |
+          # Trigger Railway to pull the freshly-pushed :latest image.
+          # Not all services have environmentPatchCommit auto-update
+          # configured, so an explicit redeploy is the reliable path.
+          RESULT=$(curl -s --retry 2 --retry-all-errors --retry-delay 1 \
+            --fail-with-body \
+            -X POST "https://backboard.railway.com/graphql/v2" \
+            -H "Authorization: Bearer $RAILWAY_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "{\"query\":\"mutation { serviceInstanceRedeploy(serviceId: \\\"$SERVICE_ID\\\", environmentId: \\\"$ENV_ID\\\") }\"}")
+          ERRORS=$(echo "$RESULT" | jq -r '.errors[]?.message // empty')
+          if [ -n "$ERRORS" ]; then
+            echo "::error::Railway redeploy failed for ${{ matrix.service.dispatch_name }}: $ERRORS"
+            exit 1
+          fi
+          OK=$(echo "$RESULT" | jq -r '.data.serviceInstanceRedeploy // false')
+          if [ "$OK" != "true" ]; then
+            echo "::error::Railway redeploy did not confirm success for ${{ matrix.service.dispatch_name }}: $RESULT"
+            exit 1
+          fi
+          echo "Railway redeploy triggered for ${{ matrix.service.dispatch_name }}"
