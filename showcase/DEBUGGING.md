@@ -286,61 +286,101 @@ This filters out all log output from before your test started, showing only what
 | `OPENAI_API_KEY`    | Required for all integrations (even with aimock, some init code validates the key) | none                                                                            |
 | `ANTHROPIC_API_KEY` | Required for Claude Agent SDK demos                                                | none                                                                            |
 
-## D5 Failure Classification
+## D5 Debugging Strategies
 
-Every D5 failure falls into one of these categories. Identify which FIRST — the fix is completely different for each.
+These are investigation techniques — ways to LEARN what's wrong. Each was earned by a real debugging session.
 
-### Text-only features pass, tool features fail
-The backend streams text correctly but tool execution events aren't reaching the frontend. Check:
-- Is the agent classifying tools correctly (frontend vs backend)?
-- Are AG-UI tool events (TOOL_CALL_START/ARGS/END) being emitted?
-- Does the CopilotKit runtime's SSE event processing throw (check for ZodError in Next.js server logs)?
+### Strategy 1: Binary classification before single-feature debugging
 
-### Probe reads wrong text from DOM
-The conversation runner extracted rendered component text (chart labels, card data) instead of the assistant's text message. Error looks like: `missing tokens [pie, chart]; last assistant text: revenue by category...42%`. Fix: check `_gen-ui-shared.ts:readLastAssistantText()` — it should read `[class*="prose"]` child, not the full container.
+**When**: Multiple features fail and you don't know why.
 
-### Assistant messages appear then disappear (count 1→0)
-The CopilotKit frontend renders the first response, then the re-invocation cycle clears it. This happens when the AG-UI agent doesn't properly terminate — the runtime thinks it needs another round. Compare the agent's SSE event stream with langgraph-python's using browser DevTools Network tab.
+**Do**: Run ALL features for the integration and categorize pass/fail. Look for the axis that separates them. Don't debug any single feature until you've found the pattern.
 
-### chatMemory pollution across features
-Spring AI's `chatMemory` saves conversation history and leaks it across D5 features when running against the same container. Feature A's context appears in Feature B's request. Fix: scope memory per-request or disable it for D5 testing.
+```sh
+showcase test <slug> --d5 --verbose 2>&1 | grep "feature-complete"
+```
 
-## Framework-Specific Debugging
+Sort the results into pass/fail. Ask: what do all passing features have in common? What do all failing features share? The spring-ai breakthrough came from noticing: text-only features pass, tool features fail. That one observation eliminated 90% of the search space.
 
-### LlamaIndex
-- `AGUIChatWorkflow` only emits AG-UI events for tools in `frontend_tools`. Every frontend tool needs a `FunctionTool` stub registered there — without it, the workflow silently drops the tool call.
-- `FixedAGUIChatWorkflow` works around 3 upstream bugs in `llama-index-protocols-ag-ui` v0.2.2: missing `parentMessageId`, duplicate tool calls from MESSAGES_SNAPSHOT, tool results sent as `role="user"`.
-- Pattern: copy from `hitl_in_chat_agent.py` — it has the full fix.
+### Strategy 2: Same-endpoint differential
 
-### Spring AI
-- `StreamingToolAgent`: Phase 1 (stream, `internalToolExecutionEnabled=false`) + Phase 2 (call with tools). Text-only features work via Phase 1. Tool features need Phase 2.
-- `SubagentsController` and `SharedStateReadWriteController` are separate Java classes — fixes to StreamingToolAgent don't apply to them.
-- `JacksonConfig`: disable `FAIL_ON_INVALID_SUBTYPE` for unknown message roles ("activity", "reasoning").
-- `MessageListFilter`: strip null entries from message lists after deserialization.
+**When**: Two features use the same backend endpoint but one passes and one fails.
 
-### Built-in Agent (TanStack)
-- TanStack's multi-turn loop re-emits `TOOL_CALL_END` for frontend tools. Needs deduplication in a custom stream converter.
-- Frontend tools must be registered as TanStack `toolDefinition()` declarations.
-- `ToolCallStatus` uses lowercase strings (`"executing"`) — watch for case mismatches in TimePickerCard and similar components.
+**Do**: Find the MOST similar passing feature to your failing one. Diff their request/response flows. The difference IS the bug.
 
-### MS Agent Python
-- FastAPI `redirect_slashes=True` returns 307 for POST to `/path/`. AG-UI HttpAgent doesn't follow POST redirects. Never use trailing slashes in HttpAgent URLs.
+Example: `agentic-chat` and `tool-rendering` both hit the same Java `StreamingToolAgent`. One passes, one fails. The only difference is tool calls. That tells you the bug is in tool event emission, not streaming, not fixture matching, not routing.
 
-### AG2
-- `from __future__ import annotations` breaks pydantic `TypeAdapter` at tool registration time. Remove the import if the file doesn't use PEP 585/604 syntax.
+### Strategy 3: Bypass the frontend — curl the backend directly
 
-## Production vs Local Parity Checklist
+**When**: You can't tell if the problem is frontend rendering or backend response.
 
-When a feature passes locally but fails in production, check these in order:
+**Do**: Hit the backend API directly with the exact request the runtime would send. Compare the raw SSE stream with langgraph-python's.
 
-| # | Check | How |
-|---|-------|-----|
-| 1 | All provider base URLs set on Railway | `railway variables --service showcase-<slug> --json` — must have OPENAI_BASE_URL, ANTHROPIC_BASE_URL, GOOGLE_GEMINI_BASE_URL all pointing to aimock |
-| 2 | GHCR image is current | `gh api /orgs/CopilotKit/packages/container/showcase-<slug>/versions --jq '.[0].updated_at'` |
-| 3 | Aimock has latest fixtures | Production aimock loads via HTTPS from raw.githubusercontent.com — ~5 min CDN cache after merge |
-| 4 | Service is healthy | `curl -sf https://showcase-<slug>-production.up.railway.app/api/health` |
-| 5 | No browser pool starvation | Check harness logs for `pool-abort-release` events |
-| 6 | Correct package versions | Built-in-agent uses pkg-pr-new URL — check it hasn't expired |
+```sh
+# From inside the Docker network:
+docker exec showcase-<slug> curl -X POST http://localhost:8000/ \
+  -H "Content-Type: application/json" \
+  -d '{"messages":[{"role":"user","content":"weather in Tokyo"}]}'
+```
+
+If the raw backend response is correct but the probe fails, the bug is in the frontend/runtime layer. If the backend response is wrong, debug the agent code. This eliminates an entire half of the stack in one command.
+
+### Strategy 4: Message count N→0 means duplicate IDs
+
+**When**: The probe reports `baseline=0, current=0` but you can see the assistant responded (via backend logs or aimock fixture match).
+
+**Do**: Check for duplicate `messageId` values in the AG-UI event stream. React's `deduplicateMessages()` uses a `Map<id, message>`. If a tool result event reuses the assistant message's ID, the map overwrites the assistant message with the tool message — it vanishes from the DOM.
+
+Look at the agent's event emission code. Every event that creates a message needs a unique ID. `UUID.randomUUID()` for each event, never reuse the parent message's ID.
+
+### Strategy 5: Test the gold standard first
+
+**When**: A feature fails and you're about to blame the framework.
+
+**Do**: Run `showcase test langgraph-python --d5` in the SAME environment first. If langgraph-python also fails, the problem is infrastructure (stale aimock, broken fixtures, Docker state), not the framework. This saves hours of framework-specific debugging that turns out to be a shared issue.
+
+```sh
+showcase test langgraph-python --d5   # gold standard check
+showcase test <slug> --d5             # then your target
+```
+
+### Strategy 6: Check custom renderers for missing testids
+
+**When**: `baseline=0, current=0` but the backend is correct AND the SSE stream has correct events.
+
+**Do**: Check if the demo page uses a custom message renderer (`messageView={{ assistantMessage: CustomComponent }}`). Custom renderers that replace `CopilotChatAssistantMessage` must include `data-testid="copilot-assistant-message"` or the probe's selector cascade finds zero messages.
+
+```sh
+grep -r "messageView\|assistantMessage" showcase/integrations/<slug>/src/app/demos/
+```
+
+### Strategy 7: Trace the full event chain for tool features
+
+**When**: Tool-involving features fail but text-only features pass.
+
+**Do**: Trace each hop in order. Stop at the first broken link.
+
+1. **Aimock** → did the fixture match? `docker logs showcase-aimock | grep "Fixture matched"`
+2. **Backend** → did the agent emit correct SSE events? Curl the backend directly (Strategy 3)
+3. **Runtime** → did the Next.js server process events without error? `docker logs showcase-<slug> | grep "Error\|ZodError"`
+4. **Frontend** → did React render the message? Check for duplicate messageId (Strategy 4) or missing testid (Strategy 6)
+
+Don't skip hops. Don't start at the frontend. Work from the data source (aimock) forward.
+
+### Strategy 8: Production parity — check env vars first
+
+**When**: Feature passes locally but fails in production.
+
+**Do**: Before investigating anything else, verify ALL provider base URLs are set on Railway:
+
+```sh
+RAILWAY_PROJECT_ID=6f8c6bff-a80d-4f8f-b78d-50b32bcf4479 \
+  railway variables --service showcase-<slug> --json | \
+  python3 -c "import json,sys; d=json.load(sys.stdin); \
+  [print(f'{k}={v[:40]}') for k,v in sorted(d.items()) if 'BASE_URL' in k or 'AIMOCK' in k]"
+```
+
+Missing `ANTHROPIC_BASE_URL` or `GOOGLE_GEMINI_BASE_URL` means the service bypasses aimock and hits the real API. This produces non-deterministic results that look like flapping. Local docker-compose sets ALL providers to aimock — production must match.
 
 ## Quick Diagnostic Commands
 
