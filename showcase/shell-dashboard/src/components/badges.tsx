@@ -53,9 +53,7 @@ export function Badge({
       onFocus={handleOpen}
     >
       {isUnavailable ? (
-        <span className="text-[var(--text-muted)] line-through">
-          {name}
-        </span>
+        <span className="text-[var(--text-muted)] line-through">{name}</span>
       ) : (
         <>
           <span className="text-[var(--text-muted)]">{name}</span>{" "}
