@@ -270,14 +270,26 @@ export async function readSvgChartShape(page: Page): Promise<SvgChartShape> {
  * component (per the recorded fixture, the second-leg response is a
  * short narration of what was shown). Returns the empty string when
  * no assistant text is present.
+ *
+ * IMPORTANT: The canonical CopilotKit assistant message DOM is:
+ *
+ *   <div data-testid="copilot-assistant-message">
+ *     <div class="cpk:prose ...">   ← text content (markdown)
+ *     tool-call renders             ← rendered components (SVG charts, cards, etc.)
+ *     toolbar                       ← copy/thumbs/read-aloud buttons
+ *   </div>
+ *
+ * Reading `textContent` on the outer wrapper picks up EVERYTHING —
+ * including rendered tool-component labels (e.g. pie-chart SVG text
+ * like "Electronics42,000" or "Clothing28,000"). This function
+ * targets ONLY the prose div (first child) to extract the actual
+ * assistant text message, not rendered component output.
+ *
+ * For non-canonical selectors (role="article", data-message-role)
+ * the prose-scoping is attempted but falls back to the full element
+ * when the expected DOM structure isn't present.
  */
 export async function readLastAssistantText(page: Page): Promise<string> {
-  // Mirror the message-count probe in conversation-runner.ts: prefer
-  // the canonical CopilotKit testid, fall back to a `[role="article"]`
-  // selector that explicitly EXCLUDES user-tagged bubbles. The
-  // exclusion is load-bearing — composers that tag their user bubbles
-  // `data-message-role="user"` would otherwise have their input
-  // counted as the "last assistant message".
   const code = `
     (() => {
       const doc = globalThis.document;
@@ -296,7 +308,42 @@ export async function readLastAssistantText(page: Page): Promise<string> {
       }
       if (list.length === 0) return "";
       const last = list[list.length - 1];
-      return (last && last.textContent ? last.textContent : "").trim();
+      if (!last) return "";
+
+      // Scope to the prose/markdown child to exclude rendered tool
+      // components (charts, cards) and toolbar buttons. The prose div
+      // is always the first child of the canonical assistant-message
+      // wrapper and carries a class containing "prose".
+      var proseChild = last.querySelector && last.querySelector('[class*="prose"]');
+      if (!proseChild) {
+        // Fallback: first child div (the prose wrapper is always the
+        // first <div> child in the canonical layout).
+        var firstDiv = last.querySelector && last.querySelector(':scope > div:first-child');
+        if (firstDiv) {
+          // Only use this if the assistant message has more than one
+          // child (i.e. there's a tool-call render or toolbar sibling).
+          // If there's only one child, the whole element IS the text.
+          if (last.childElementCount > 1) {
+            proseChild = firstDiv;
+          }
+        }
+      }
+
+      var target = proseChild || last;
+      var text = (target.textContent || "").trim();
+
+      // Debug: log what we're reading so production traces show exactly
+      // which element was selected and what text was extracted.
+      if (typeof console !== "undefined" && console.log) {
+        console.log(
+          "[readLastAssistantText] selector=" +
+          (canonical.length > 0 ? ${JSON.stringify(ASSISTANT_MESSAGE_PRIMARY_SELECTOR)} : "fallback") +
+          " scoped=" + (proseChild ? "prose" : "full") +
+          " text=" + JSON.stringify(text.slice(0, 120))
+        );
+      }
+
+      return text;
     })()
   `;
   const fn = new Function(`return ${code.trim()};`) as () => string;
