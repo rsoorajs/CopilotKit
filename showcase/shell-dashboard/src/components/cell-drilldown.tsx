@@ -78,11 +78,17 @@ function BadgeRow({ badge, label }: { badge: BadgeRender; label: string }) {
             {label}
           </span>
         </div>
-        <span
-          className={`text-xs font-semibold tabular-nums ${TONE_CLASS[badge.tone]}`}
-        >
-          {badge.label}
-        </span>
+        {badge.label === "?" ? (
+          <span className="text-xs text-[var(--text-muted)] line-through">
+            n/a
+          </span>
+        ) : (
+          <span
+            className={`text-xs font-semibold tabular-nums ${TONE_CLASS[badge.tone]}`}
+          >
+            {badge.label}
+          </span>
+        )}
       </div>
       <p className="mt-0.5 text-[10px] text-[var(--text-muted)] leading-tight">
         {badge.tooltip}
