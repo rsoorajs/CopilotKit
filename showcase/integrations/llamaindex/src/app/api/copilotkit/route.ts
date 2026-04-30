@@ -40,6 +40,7 @@ const sharedAgentNames = [
   "headless_simple",
   "headless_complete",
   "readonly_state_agent_context",
+  "human_in_the_loop",
 ];
 
 // Specialized routers live at dedicated subpaths on the agent_server so the
@@ -53,7 +54,6 @@ const specializedAgents: Record<string, string> = {
   "shared-state-read-write": "/shared-state-read-write",
   "gen-ui-tool-based": "/gen-ui-tool-based",
   "beautiful-chat": "/beautiful-chat",
-  human_in_the_loop: "/hitl-in-chat",
   hitl_in_app: "/hitl-in-app",
   subagents: "/subagents",
 };

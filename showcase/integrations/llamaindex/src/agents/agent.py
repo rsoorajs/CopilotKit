@@ -71,6 +71,14 @@ def book_call(
     return f"Booking call about {topic} with {attendee}"
 
 
+def show_card(
+    title: Annotated[str, "Short heading for the card."],
+    body: Annotated[str, "Body text for the card."],
+) -> str:
+    """Display a titled card with a short body of text. Rendered on the frontend via useComponent."""
+    return f"Displayed card: {title}"
+
+
 # --- Backend tools (executed server-side, using shared implementations) ---
 
 # @region[weather-tool-backend]
@@ -187,6 +195,7 @@ _AGENT_SYSTEM_PROMPT = (
     "- Generate dynamic A2UI dashboards from conversation context (via generate_a2ui tool)\n"
     "- Generate step-by-step plans for user review (human-in-the-loop)\n"
     "- Book calls with people (via book_call frontend tool)\n"
+    "- Show titled cards with a body of text (via show_card frontend tool)\n"
     "When asked about weather, always use the get_weather tool. "
     "When asked about financial data or charts, use query_data first. "
     "When asked to book a call, use the book_call tool with topic and name."
@@ -194,15 +203,19 @@ _AGENT_SYSTEM_PROMPT = (
 
 
 async def _agent_workflow_factory():
-    return FixedAGUIChatWorkflow(
+    wf = FixedAGUIChatWorkflow(
         llm=OpenAI(model="gpt-4.1", **_openai_kwargs),
-        frontend_tools=[change_background, generate_haiku, generate_task_steps, book_call],
-        backend_tools=[get_weather, query_data, manage_sales_todos, get_sales_todos_tool, schedule_meeting, search_flights, generate_a2ui],
+        frontend_tools=[change_background, generate_haiku, generate_task_steps, book_call, show_card, get_weather],
+        backend_tools=[query_data, manage_sales_todos, get_sales_todos_tool, schedule_meeting, search_flights, generate_a2ui],
         system_prompt=_AGENT_SYSTEM_PROMPT,
         initial_state={
             "todos": [],
         },
     )
+    # Tools that use useRenderTool on the frontend — emit
+    # TOOL_CALL_RESULT so the render transitions to "complete".
+    wf.render_only_tool_names = {"get_weather"}
+    return wf
 
 
 agent_router = get_ag_ui_workflow_router(
