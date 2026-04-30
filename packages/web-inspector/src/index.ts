@@ -1273,38 +1273,61 @@ class CpkThreadDetails extends LitElement {
       // messages on this thread (via `liveMessageVersion`). Re-fetch the
       // canonical conversation from the runtime so streaming output flows
       // into the view without us reimplementing AG-UI → ConversationItem
-      // mapping in the parent.
+      // mapping in the parent. `silent: true` so the loading-state indicator
+      // doesn't flash between every streaming chunk and we keep the
+      // last-good view on transient fetch errors.
       this._lastSeenLiveMessageVersion = this.liveMessageVersion;
       this._messagesAbort?.abort();
       this._messagesAbort = null;
-      void this.fetchMessages(this.threadId);
+      void this.fetchMessages(this.threadId, true);
     }
   }
 
-  private async fetchMessages(threadId: string): Promise<void> {
+  /**
+   * Fetch the canonical conversation for `threadId` from the runtime.
+   *
+   * `silent` is true for live re-fetches triggered by `liveMessageVersion`
+   * bumps during streaming. In that mode we never toggle the loading state
+   * (which would flash "Loading messages…" between every message) and we
+   * keep the previous conversation on transient errors instead of blanking
+   * it. Initial threadId-change fetches use the default (`silent=false`)
+   * so users see an explicit loading indicator on first load.
+   */
+  private async fetchMessages(
+    threadId: string,
+    silent: boolean = false,
+  ): Promise<void> {
     if (!this.runtimeUrl) {
-      this._conversation = [];
+      if (!silent) this._conversation = [];
       return;
     }
     const controller = new AbortController();
     this._messagesAbort = controller;
-    this._loadingMessages = true;
-    this._messagesError = null;
+    if (!silent) {
+      this._loadingMessages = true;
+      this._messagesError = null;
+    }
     try {
       const res = await fetch(
         `${this.runtimeUrl}/threads/${encodeURIComponent(threadId)}/messages`,
         { headers: { ...this.headers }, signal: controller.signal },
       );
+      if (controller.signal.aborted || this.threadId !== threadId) return;
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = (await res.json()) as { messages: ApiThreadMessage[] };
+      if (controller.signal.aborted || this.threadId !== threadId) return;
       this._conversation = this.mapMessages(data.messages);
     } catch (err) {
       if (err instanceof Error && err.name === "AbortError") return;
-      this._messagesError =
-        err instanceof Error ? err.message : "Failed to load messages";
-      this._conversation = [];
+      if (!silent) {
+        this._messagesError =
+          err instanceof Error ? err.message : "Failed to load messages";
+        this._conversation = [];
+      }
+      // Silent mode: keep last-good conversation, don't surface the error.
+      // The next successful live re-fetch will recover automatically.
     } finally {
-      if (!controller.signal.aborted) {
+      if (!silent && !controller.signal.aborted) {
         this._loadingMessages = false;
       }
     }
