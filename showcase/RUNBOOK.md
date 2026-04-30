@@ -83,6 +83,42 @@ Missing any of these means that provider's integrations bypass aimock and hit re
 7. If fixture does not match: check `hasToolResult`, `userMessage` substring matching
 8. If zero aimock requests: check base URL env var for that provider
 
+## Production Debugging
+
+### Harness probe logging
+
+The harness emits structured logs at INFO level for probe lifecycle events:
+- `probe.tick-start` / `probe.tick-complete` — probe run lifecycle
+- `probe.target-start` / `probe.target-complete` — per-service results
+- `probe.e2e-deep.service-start` / `probe.e2e-deep.service-complete` — D5 per-service
+- `probe.e2e-deep.feature-complete` — per-feature pass/fail with error details
+- `probe.run-summary` — single line with all service results
+- `probe.e2e-deep.pool-abort-release` — browser pool starvation events
+
+View with: `RAILWAY_PROJECT_ID=6f8c6bff-a80d-4f8f-b78d-50b32bcf4479 railway logs --service showcase-harness --tail 200`
+
+### Debug-level probe logging
+
+For detailed conversation-runner traces (selector resolution, DOM text extraction, settle polling, per-turn lifecycle), set `LOG_LEVEL=debug` on the showcase-harness Railway service. This enables `console.debug(...)` output from the conversation runner and D5 scripts.
+
+To enable temporarily: set the env var in Railway dashboard → showcase-harness → Variables → `LOG_LEVEL=debug`. The service auto-restarts. Remember to unset after debugging — debug output is verbose.
+
+### Triggering probes manually
+
+```
+curl -sf -X POST "https://showcase-harness-production.up.railway.app/api/probes/probe:e2e-deep/trigger" \
+  -H "Authorization: Bearer $OPS_TRIGGER_TOKEN" \
+  -H "Content-Type: application/json"
+```
+
+Retrieve `OPS_TRIGGER_TOKEN`: `RAILWAY_PROJECT_ID=6f8c6bff-a80d-4f8f-b78d-50b32bcf4479 railway variables --service showcase-harness --json | python3 -c "import json,sys; print(json.load(sys.stdin)['OPS_TRIGGER_TOKEN'])"`
+
+Rate limit: 5 minutes per probe ID.
+
+### Testing package.json changes
+
+When `package.json` changes (new deps, version bumps), volume mounts don't cover `node_modules`. You MUST rebuild the Docker image: `bin/showcase rebuild <slug>`, then re-test. A passing `bin/showcase test` against a volume-mounted container does NOT validate the build.
+
 ## Anti-Patterns
 
 Earned by bugs. Do not repeat.
