@@ -1,6 +1,7 @@
 "use client";
 
-import { ReactNode, useState } from "react";
+import type { ReactNode } from "react";
+import { useState } from "react";
 import { ModeToggle } from "./mode-toggle";
 import { useFrontendTool } from "@copilotkit/react-core";
 
@@ -35,7 +36,7 @@ export function ExampleLayout({ chatContent, appContent }: ExampleLayoutProps) {
 
       {/* Chat Content */}
       <div
-        className={`max-h-full flex flex-col bg-stone-950 ${
+        className={`max-h-full flex flex-col dark:bg-stone-950 ${
           mode === "app"
             ? "w-1/3 px-6 max-lg:hidden" // Hide on mobile in app mode
             : "flex-1 max-lg:px-4"
