@@ -119,17 +119,74 @@ function verifyTriggerSig(
   return crypto.timingSafeEqual(expectedBuf, sigBuf);
 }
 
+function validateTriggerParams(
+  pr: string,
+  checkRunId: string,
+  sig: string,
+): { valid: true } | { valid: false; status: 400 | 403; message: string } {
+  if (!pr || !sig) {
+    return { valid: false, status: 400, message: "Missing parameters." };
+  }
+  if (!verifyTriggerSig(pr, checkRunId, sig)) {
+    return { valid: false, status: 403, message: "Invalid signature." };
+  }
+  return { valid: true };
+}
+
 app.get("/trigger/eval", async (c) => {
   const pr = c.req.query("pr") ?? "";
   const checkRunId = c.req.query("check_run_id") ?? "";
   const sig = c.req.query("sig") ?? "";
 
-  if (!pr || !sig) {
-    return c.html("<h2>Invalid request</h2><p>Missing parameters.</p>", 400);
+  const result = validateTriggerParams(pr, checkRunId, sig);
+  if (result.valid !== true) {
+    return c.html(
+      `<h2>${result.status === 400 ? "Invalid request" : "Unauthorized"}</h2><p>${result.message}</p>`,
+      result.status,
+    );
   }
 
-  if (!verifyTriggerSig(pr, checkRunId, sig)) {
-    return c.html("<h2>Unauthorized</h2><p>Invalid signature.</p>", 403);
+  return c.html(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Showcase Eval — PR #${pr}</title>
+      <style>
+        body { font-family: system-ui; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #0d1117; color: #e6edf3; }
+        div { text-align: center; }
+        h2 { color: #3fb950; }
+        button { background: #238636; color: #fff; border: 1px solid #2ea043; border-radius: 6px; padding: 10px 24px; font-size: 16px; cursor: pointer; font-family: system-ui; }
+        button:hover { background: #2ea043; }
+      </style>
+    </head>
+    <body>
+      <div>
+        <h2>Showcase Eval</h2>
+        <p>PR #${pr}</p>
+        <form method="POST" action="/trigger/eval" target="_blank">
+          <input type="hidden" name="pr" value="${pr}" />
+          <input type="hidden" name="check_run_id" value="${checkRunId}" />
+          <input type="hidden" name="sig" value="${sig}" />
+          <button type="submit">Run Evaluation</button>
+        </form>
+      </div>
+    </body>
+    </html>
+  `);
+});
+
+app.post("/trigger/eval", async (c) => {
+  const body = await c.req.parseBody();
+  const pr = String(body["pr"] ?? "");
+  const checkRunId = String(body["check_run_id"] ?? "");
+  const sig = String(body["sig"] ?? "");
+
+  const result = validateTriggerParams(pr, checkRunId, sig);
+  if (result.valid !== true) {
+    return c.html(
+      `<h2>${result.status === 400 ? "Invalid request" : "Unauthorized"}</h2><p>${result.message}</p>`,
+      result.status,
+    );
   }
 
   const octokit = getOctokit();
@@ -162,19 +219,54 @@ app.get("/trigger/eval", async (c) => {
     `Trigger link: dispatched eval for PR #${pr}, check_run_id=${checkRunId}`,
   );
 
-  const prUrl = `https://github.com/CopilotKit/CopilotKit/pull/${pr}`;
+  // Poll for the Actions run URL (up to ~5 seconds)
+  const fallbackUrl =
+    "https://github.com/CopilotKit/CopilotKit/actions/workflows/showcase_eval.yml";
+  let runUrl = fallbackUrl;
+  const startTime = Date.now();
+
+  for (let i = 0; i < 10; i++) {
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    try {
+      const runs = await octokit.actions.listWorkflowRuns({
+        owner: "CopilotKit",
+        repo: "CopilotKit",
+        workflow_id: "showcase_eval.yml",
+        event: "workflow_dispatch",
+        per_page: 5,
+      });
+      const recent = runs.data.workflow_runs.find((run) => {
+        const created = new Date(run.created_at).getTime();
+        return Date.now() - created < 30_000;
+      });
+      if (recent) {
+        runUrl = recent.html_url;
+        break;
+      }
+    } catch {
+      // ignore polling errors
+    }
+    if (Date.now() - startTime > 5000) break;
+  }
+
   return c.html(`
     <!DOCTYPE html>
     <html>
     <head>
-      <meta http-equiv="refresh" content="2;url=${prUrl}">
-      <style>body{font-family:system-ui;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;background:#0d1117;color:#e6edf3;}div{text-align:center;}h2{color:#3fb950;}a{color:#58a6ff;}</style>
+      <title>Showcase Eval — dispatched</title>
+      <meta http-equiv="refresh" content="0;url=${runUrl}">
+      <style>
+        body { font-family: system-ui; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #0d1117; color: #e6edf3; }
+        div { text-align: center; }
+        h2 { color: #3fb950; }
+        a { color: #58a6ff; }
+      </style>
     </head>
     <body>
       <div>
         <h2>Showcase Eval triggered</h2>
         <p>PR #${pr} — evaluation dispatched.</p>
-        <p>Redirecting to <a href="${prUrl}">the PR</a>...</p>
+        <p>Redirecting to <a href="${runUrl}">the Actions run</a>...</p>
       </div>
     </body>
     </html>
