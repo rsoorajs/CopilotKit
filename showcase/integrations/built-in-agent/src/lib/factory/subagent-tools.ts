@@ -6,15 +6,30 @@ import { openaiText } from "@tanstack/ai-openai";
 // Each role becomes its own nested chat() with a dedicated system prompt.
 // They don't share memory or tools with the supervisor — the supervisor
 // only sees the role's return value via the delegate tool below.
+//
+// Tool names match the LangGraph Python reference agent (`subagents.py`):
+//   research_agent, writing_agent, critique_agent
+// This alignment is load-bearing: the D5 fixtures are recorded against
+// the LGP agent's tool names, and aimock matches on tool name.
 const subagentRoles = [
   {
-    id: "planner",
+    id: "research_agent",
     systemPrompt:
-      "You are a trip planner. Reply concisely with the day-by-day plan.",
+      "You are a research sub-agent. Given a topic, produce a concise " +
+      "bulleted list of 3-5 key facts. No preamble, no closing.",
   },
   {
-    id: "researcher",
-    systemPrompt: "You are a researcher. Reply concisely with verified facts.",
+    id: "writing_agent",
+    systemPrompt:
+      "You are a writing sub-agent. Given a brief and optional source " +
+      "facts, produce a polished 1-paragraph draft. Be clear and " +
+      "concrete. No preamble.",
+  },
+  {
+    id: "critique_agent",
+    systemPrompt:
+      "You are an editorial critique sub-agent. Given a draft, give " +
+      "2-3 crisp, actionable critiques. No preamble.",
   },
 ] as const;
 // @endregion[subagent-setup]
@@ -25,17 +40,17 @@ const subagentRoles = [
 // the in-flight subagent call — orphan async work, billed tokens, hung
 // promises. Each parent run threads its controller through here.
 // @region[supervisor-delegation-tools]
-// Each `delegate_to_<role>` tool wraps a nested chat() call with the
+// Each `<role>_agent` tool wraps a nested chat() call with the
 // role's system prompt. The supervisor LLM "calls" these tools to
 // delegate work; each invocation runs the matching subagent and returns
 // its output for the supervisor's next step.
 export function buildSubagentTools(parentAbortController: AbortController) {
   return subagentRoles.map((role) =>
     toolDefinition({
-      name: `delegate_to_${role.id}`,
-      description: `Delegate a task to the ${role.id} subagent.`,
+      name: role.id,
+      description: `Delegate a task to the ${role.id.replace(/_/g, " ")}.`,
       inputSchema: z.object({
-        task: z.string().describe(`Task description for the ${role.id}`),
+        task: z.string().describe(`Task description for the ${role.id.replace(/_/g, " ")}`),
       }),
     }).server(async ({ task }) => {
       const text = await chat({
