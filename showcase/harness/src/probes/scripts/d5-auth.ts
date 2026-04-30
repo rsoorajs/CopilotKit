@@ -17,10 +17,8 @@
  * possibly-replaced chat surface.)
  */
 
-import {
-  registerD5Script,
-  type D5BuildContext,
-} from "../helpers/d5-registry.js";
+import { registerD5Script } from "../helpers/d5-registry.js";
+import type { D5BuildContext } from "../helpers/d5-registry.js";
 import type { ConversationTurn, Page } from "../helpers/conversation-runner.js";
 
 export const SIGN_OUT_BUTTON_SELECTOR = '[data-testid="auth-sign-out-button"]';
@@ -108,11 +106,9 @@ export function buildAuthAssertion(
         "post-signout probe",
         { timeout: 2_000 },
       );
-      await page.press(
-        '[data-testid="copilot-chat-textarea"]',
-        "Enter",
-        { timeout: 2_000 },
-      );
+      await page.press('[data-testid="copilot-chat-textarea"]', "Enter", {
+        timeout: 2_000,
+      });
     } catch {
       // Chat input may have already been replaced by the error
       // boundary — that itself satisfies the assertion. Fall through
