@@ -145,6 +145,21 @@ export interface ConversationTurn {
   /** The user message to type into the chat input. */
   input: string;
   /**
+   * Optional callback executed BEFORE the runner fills the chat input
+   * and presses Enter for this turn. Use this to click attachment
+   * buttons, set up DOM state, or perform any per-turn pre-work that
+   * must complete before the user message is sent. The callback
+   * receives the page so it can issue clicks / fills / waits.
+   *
+   * If `preFill` throws, the turn is recorded as failed at index N
+   * with the thrown error message — same failure semantics as the
+   * post-settle `assertions` callback. The runner does NOT fill or
+   * press for that turn, and the conversation stops (no subsequent
+   * turns run, matching how the runner already handles fill/press
+   * and assertion failures).
+   */
+  preFill?: (page: Page) => Promise<void>;
+  /**
    * Optional assertion callback executed AFTER the assistant response
    * settles. Any throw from this function is captured as the turn's
    * failure and stops the conversation.
@@ -272,6 +287,12 @@ export async function runConversation(
     });
 
     try {
+      if (turn.preFill) {
+        console.debug(`[conversation-runner] turn ${turnNum}/${total} — running preFill hook`);
+        await turn.preFill(page);
+        console.debug(`[conversation-runner] turn ${turnNum}/${total} — preFill hook completed`);
+      }
+
       await fillAndVerifySend(page, chatInputSelector, turn.input);
 
       console.debug(`[conversation-runner] turn ${turnNum}/${total} — waiting for assistant settle`, {

@@ -7,20 +7,13 @@
  * exposes "Try with sample image" / "Try with sample PDF" buttons that
  * inject bundled fixtures via DataTransfer + dispatch — the SAME pipeline
  * the paperclip path uses. The script clicks the appropriate button
- * before each user message, which queues the attachment, then the
- * regular fill+press flow sends both message + attachment together.
+ * before each user message via the runner's `preFill` hook, which queues
+ * the attachment, then the regular fill+press flow sends both message +
+ * attachment together.
  *
  * Aimock returns canned responses keyed off unique substrings. The
  * assertion verifies the assistant transcript references the attachment
  * (substring "image" / "document" present in the assistant's reply).
- *
- * Note: this script reaches PRE-input via a custom turn shape — the
- * standard ConversationTurn doesn't have a hook for "click X before
- * fill". We model the pre-step inside the per-turn `assertions` callback
- * AFTER the response settles in turn 1, then queue the second sample for
- * turn 2 inside turn 1's assertion. (Cleanest workaround given the
- * runner's interface; the alternative of editing the runner is out of
- * scope for this script.)
  */
 
 import {
@@ -129,44 +122,13 @@ export async function preTurnAttachPdf(page: Page): Promise<void> {
 export function buildTurns(_ctx: D5BuildContext): ConversationTurn[] {
   return [
     {
-      // Turn 1's pre-step is run inline at assertion time of a synthetic
-      // "warmup" — but the runner doesn't let us inject a pre-fill hook.
-      // Instead we fold the click into the assertion that runs AFTER the
-      // turn-0 response settles. To keep the runner's normal flow clean
-      // we run the click right at the start of the per-turn assertion;
-      // for the FIRST turn, we attach the image BEFORE fill by relying
-      // on a synthetic pre-flight in the assertion itself. The driver
-      // already fired the navigation by the time `buildTurns` runs.
-      //
-      // The clean approach: turn 1 expects the IMAGE response, and the
-      // runner-level pre-fill happens via a separate driver hook. Until
-      // that hook exists, fold the attach into the assertion of a 0-th
-      // pseudo-turn? Not possible.
-      //
-      // Pragmatic compromise: turn 1 input is the "image" message, but
-      // the assertion runs the attach + manually triggers the send via
-      // page.fill / page.press. This means the runner's automatic fill
-      // for turn 1 will happen FIRST (without an attachment) and likely
-      // 400. The assistant won't respond — runner times out turn 1.
-      //
-      // The cleanest fix is for the script to skip its first runner-fill
-      // by using `responseTimeoutMs: 1` so the runner's fill+wait fails
-      // fast, then the assertion attaches + sends. This is messy.
-      //
-      // For Wave-2 implementation we ship the simplest version: turn 1
-      // input is the IMAGE prompt; we accept the runner-fired send may
-      // race the attach, and in the F-slot verification step we will
-      // either (a) extend the runner with a `preFill` hook, or (b)
-      // adjust the demo to support a query-string attach trigger. The
-      // fixture's userMessage substring still matches even without an
-      // attached file because aimock keys on userMessage; the assertion
-      // verifying the modality keyword in the transcript is the
-      // observable signal.
       input: "describe the sample image",
+      preFill: preTurnAttachImage,
       assertions: buildModalityAssertion("image"),
     },
     {
       input: "summarize the sample document",
+      preFill: preTurnAttachPdf,
       assertions: buildModalityAssertion("document"),
     },
   ];

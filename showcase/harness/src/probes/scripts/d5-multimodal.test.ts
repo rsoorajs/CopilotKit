@@ -18,6 +18,42 @@ function makePage(transcript: string): Page {
   };
 }
 
+/**
+ * Page fake that records every selector passed to `click()` and
+ * `waitForSelector()` so tests can verify the preFill hook clicks the
+ * right sample-attachment button. The structural Page interface in
+ * `conversation-runner.ts` doesn't declare `click()`, so we extend it
+ * here — the multimodal `clickSampleButton` helper feature-detects
+ * `click` via `as unknown as { click?: ... }` and we want to satisfy
+ * that path.
+ */
+interface ClickRecordingPage extends Page {
+  click(selector: string, opts?: { timeout?: number }): Promise<void>;
+}
+
+function makeClickRecordingPage(): {
+  page: ClickRecordingPage;
+  clicks: string[];
+  waitedFor: string[];
+} {
+  const clicks: string[] = [];
+  const waitedFor: string[] = [];
+  const page: ClickRecordingPage = {
+    async waitForSelector(selector) {
+      waitedFor.push(selector);
+    },
+    async fill() {},
+    async press() {},
+    async evaluate() {
+      return "" as never;
+    },
+    async click(selector) {
+      clicks.push(selector);
+    },
+  };
+  return { page, clicks, waitedFor };
+}
+
 describe("d5-multimodal script", () => {
   it("registers under featureType 'multimodal'", () => {
     const script = getD5Script("multimodal");
@@ -36,6 +72,43 @@ describe("d5-multimodal script", () => {
     expect(turns).toHaveLength(2);
     expect(turns[0]!.input).toBe("describe the sample image");
     expect(turns[1]!.input).toBe("summarize the sample document");
+  });
+
+  it("buildTurns wires preFill on both turns", () => {
+    const ctx: D5BuildContext = {
+      integrationSlug: "langgraph-python",
+      featureType: "multimodal",
+      baseUrl: "https://x.test",
+    };
+    const turns = buildTurns(ctx);
+    expect(typeof turns[0]!.preFill).toBe("function");
+    expect(typeof turns[1]!.preFill).toBe("function");
+  });
+
+  it("turn-1 preFill clicks the sample IMAGE button", async () => {
+    const ctx: D5BuildContext = {
+      integrationSlug: "langgraph-python",
+      featureType: "multimodal",
+      baseUrl: "https://x.test",
+    };
+    const turns = buildTurns(ctx);
+    const { page, clicks, waitedFor } = makeClickRecordingPage();
+    await turns[0]!.preFill!(page);
+    expect(clicks).toEqual([SAMPLE_IMAGE_BUTTON_SELECTOR]);
+    expect(waitedFor).toContain(SAMPLE_IMAGE_BUTTON_SELECTOR);
+  });
+
+  it("turn-2 preFill clicks the sample PDF button", async () => {
+    const ctx: D5BuildContext = {
+      integrationSlug: "langgraph-python",
+      featureType: "multimodal",
+      baseUrl: "https://x.test",
+    };
+    const turns = buildTurns(ctx);
+    const { page, clicks, waitedFor } = makeClickRecordingPage();
+    await turns[1]!.preFill!(page);
+    expect(clicks).toEqual([SAMPLE_PDF_BUTTON_SELECTOR]);
+    expect(waitedFor).toContain(SAMPLE_PDF_BUTTON_SELECTOR);
   });
 
   it("exposes the sample-button selectors", () => {
