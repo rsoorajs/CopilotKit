@@ -10,6 +10,11 @@ workflow router picks up frontend-provided tools from the CopilotKit
 request.
 
 Mirrors `langgraph-python/src/agents/hitl_in_app.py`.
+
+NOTE: Uses FixedAGUIChatWorkflow from hitl_in_chat_agent to fix three
+upstream library bugs (duplicate tool-call rendering, missing
+parent_message_id, and incorrect tool-result message roles). See
+hitl_in_chat_agent.py module docstring for details.
 """
 
 from __future__ import annotations
@@ -18,6 +23,8 @@ import os
 
 from llama_index.llms.openai import OpenAI
 from llama_index.protocols.ag_ui.router import get_ag_ui_workflow_router
+
+from agents.hitl_in_chat_agent import FixedAGUIChatWorkflow
 
 _openai_kwargs = {}
 if os.environ.get("OPENAI_BASE_URL"):
@@ -54,10 +61,16 @@ SYSTEM_PROMPT = (
 )
 
 
+async def _workflow_factory():
+    return FixedAGUIChatWorkflow(
+        llm=OpenAI(model="gpt-4o-mini", **_openai_kwargs),
+        frontend_tools=[],
+        backend_tools=[],
+        system_prompt=SYSTEM_PROMPT,
+        initial_state={},
+    )
+
+
 hitl_in_app_router = get_ag_ui_workflow_router(
-    llm=OpenAI(model="gpt-4o-mini", **_openai_kwargs),
-    frontend_tools=[],
-    backend_tools=[],
-    system_prompt=SYSTEM_PROMPT,
-    initial_state={},
+    workflow_factory=_workflow_factory,
 )

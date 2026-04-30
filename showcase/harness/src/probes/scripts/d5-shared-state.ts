@@ -196,7 +196,13 @@ export function buildTurns(_ctx: D5BuildContext): ConversationTurn[] {
         // conversation runner may settle on the tool-call message before
         // the text leg arrives — use waitForNonEmptyAssistantText to
         // bridge the gap when the initial message has no visible text.
+        console.debug("[d5-shared-state] turn 1 — reading assistant text");
         const text = await waitForNonEmptyAssistantText(page);
+        console.debug("[d5-shared-state] turn 1 — assistant text", {
+          textLength: text.length,
+          textSnippet: text.slice(0, 300),
+          expectedTokens: ["color", "blue"],
+        });
         if (text.length === 0) {
           throw new Error(
             "turn 1: no assistant message text found after settle",
@@ -211,6 +217,7 @@ export function buildTurns(_ctx: D5BuildContext): ConversationTurn[] {
             `turn 1: assistant response did not mention color/blue (got: ${truncate(text, 200)})`,
           );
         }
+        console.debug("[d5-shared-state] turn 1 — assertion passed");
       },
     },
     {
@@ -219,7 +226,13 @@ export function buildTurns(_ctx: D5BuildContext): ConversationTurn[] {
         // Turn 2 is a plain text response (no tool call), but poll
         // defensively in case the DOM snapshot is briefly empty while
         // streaming starts.
+        console.debug("[d5-shared-state] turn 2 — reading assistant text");
         const text = await waitForNonEmptyAssistantText(page);
+        console.debug("[d5-shared-state] turn 2 — assistant text", {
+          textLength: text.length,
+          textSnippet: text.slice(0, 300),
+          expectedToken: "blue",
+        });
         if (text.length === 0) {
           throw new Error(
             "turn 2: no assistant message text found after settle",
@@ -230,6 +243,7 @@ export function buildTurns(_ctx: D5BuildContext): ConversationTurn[] {
             `turn 2: assistant did not recall "blue" — shared state did not persist between turns (got: ${truncate(text, 200)})`,
           );
         }
+        console.debug("[d5-shared-state] turn 2 — assertion passed");
       },
     },
   ];

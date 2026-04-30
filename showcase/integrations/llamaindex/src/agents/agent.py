@@ -6,6 +6,11 @@ AG-UI compatible FastAPI router. The router handles all four demo
 scenarios (agentic-chat, tool-rendering, hitl, gen-ui-tool-based) through
 a single endpoint since LlamaIndex's get_ag_ui_workflow_router builds
 the full AG-UI protocol surface automatically.
+
+NOTE: Uses FixedAGUIChatWorkflow from hitl_in_chat_agent to fix three
+upstream library bugs (duplicate tool-call rendering, missing
+parent_message_id, and incorrect tool-result message roles). See
+hitl_in_chat_agent.py module docstring for details.
 """
 
 import json
@@ -14,6 +19,8 @@ from typing import Annotated
 
 from llama_index.llms.openai import OpenAI
 from llama_index.protocols.ag_ui.router import get_ag_ui_workflow_router
+
+from agents.hitl_in_chat_agent import FixedAGUIChatWorkflow
 
 # Import shared tool implementations
 from tools import (
@@ -166,29 +173,38 @@ _openai_kwargs = {}
 if os.environ.get("OPENAI_BASE_URL"):
     _openai_kwargs["api_base"] = os.environ["OPENAI_BASE_URL"]
 
+_AGENT_SYSTEM_PROMPT = (
+    "You are a polished, professional demo assistant for CopilotKit. "
+    "Keep responses brief and clear -- 1 to 2 sentences max.\n\n"
+    "You can:\n"
+    "- Chat naturally with the user\n"
+    "- Change the UI background when asked (via frontend tool)\n"
+    "- Query data and render charts (via query_data tool)\n"
+    "- Get weather information (via get_weather tool)\n"
+    "- Schedule meetings with the user (via schedule_meeting tool)\n"
+    "- Manage sales pipeline todos (via manage_sales_todos / get_sales_todos tools)\n"
+    "- Search flights and display rich A2UI cards (via search_flights tool)\n"
+    "- Generate dynamic A2UI dashboards from conversation context (via generate_a2ui tool)\n"
+    "- Generate step-by-step plans for user review (human-in-the-loop)\n"
+    "- Book calls with people (via book_call frontend tool)\n"
+    "When asked about weather, always use the get_weather tool. "
+    "When asked about financial data or charts, use query_data first. "
+    "When asked to book a call, use the book_call tool with topic and name."
+)
+
+
+async def _agent_workflow_factory():
+    return FixedAGUIChatWorkflow(
+        llm=OpenAI(model="gpt-4.1", **_openai_kwargs),
+        frontend_tools=[change_background, generate_haiku, generate_task_steps, book_call],
+        backend_tools=[get_weather, query_data, manage_sales_todos, get_sales_todos_tool, schedule_meeting, search_flights, generate_a2ui],
+        system_prompt=_AGENT_SYSTEM_PROMPT,
+        initial_state={
+            "todos": [],
+        },
+    )
+
+
 agent_router = get_ag_ui_workflow_router(
-    llm=OpenAI(model="gpt-4.1", **_openai_kwargs),
-    frontend_tools=[change_background, generate_haiku, generate_task_steps, book_call],
-    backend_tools=[get_weather, query_data, manage_sales_todos, get_sales_todos_tool, schedule_meeting, search_flights, generate_a2ui],
-    system_prompt=(
-        "You are a polished, professional demo assistant for CopilotKit. "
-        "Keep responses brief and clear -- 1 to 2 sentences max.\n\n"
-        "You can:\n"
-        "- Chat naturally with the user\n"
-        "- Change the UI background when asked (via frontend tool)\n"
-        "- Query data and render charts (via query_data tool)\n"
-        "- Get weather information (via get_weather tool)\n"
-        "- Schedule meetings with the user (via schedule_meeting tool)\n"
-        "- Manage sales pipeline todos (via manage_sales_todos / get_sales_todos tools)\n"
-        "- Search flights and display rich A2UI cards (via search_flights tool)\n"
-        "- Generate dynamic A2UI dashboards from conversation context (via generate_a2ui tool)\n"
-        "- Generate step-by-step plans for user review (human-in-the-loop)\n"
-        "- Book calls with people (via book_call frontend tool)\n"
-        "When asked about weather, always use the get_weather tool. "
-        "When asked about financial data or charts, use query_data first. "
-        "When asked to book a call, use the book_call tool with topic and name."
-    ),
-    initial_state={
-        "todos": [],
-    },
+    workflow_factory=_agent_workflow_factory,
 )

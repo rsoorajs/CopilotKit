@@ -70,7 +70,11 @@ export function buildTurns(_ctx: D5BuildContext): ConversationTurn[] {
         // 1. Cascade-find the rendered component. Throws on timeout
         //    with a descriptive error so the conversation-runner
         //    surfaces it as the turn's failure_turn.
+        console.debug("[d5-gen-ui-headless] waiting for gen-UI component");
         const matchedSelector = await waitForGenUiComponent(page);
+        console.debug("[d5-gen-ui-headless] gen-UI component found", {
+          matchedSelector,
+        });
 
         // 2. Read the matched node's child count via page.evaluate.
         //    Ensures the component is structurally non-trivial. The
@@ -80,6 +84,11 @@ export function buildTurns(_ctx: D5BuildContext): ConversationTurn[] {
           page,
           matchedSelector,
         );
+        console.debug("[d5-gen-ui-headless] child count check", {
+          matchedSelector,
+          childCount,
+          minRequired: MIN_CHILDREN,
+        });
         if (childCount < MIN_CHILDREN) {
           throw new Error(
             `gen-ui-headless: matched component ${matchedSelector} has ${childCount} children (expected >= ${MIN_CHILDREN})`,
@@ -92,6 +101,11 @@ export function buildTurns(_ctx: D5BuildContext): ConversationTurn[] {
         //    integrations doesn't fail the probe. We require at
         //    least one primary token OR one secondary token.
         const text = (await readLastAssistantText(page)).toLowerCase();
+        console.debug("[d5-gen-ui-headless] follow-up text check", {
+          primaryTokens: [...FOLLOWUP_TOKENS_PRIMARY],
+          secondaryTokens: [...FOLLOWUP_TOKENS_SECONDARY],
+          assistantText: text.slice(0, 300),
+        });
         const primaryMissing = FOLLOWUP_TOKENS_PRIMARY.filter(
           (tok) => !text.includes(tok),
         );
@@ -103,6 +117,7 @@ export function buildTurns(_ctx: D5BuildContext): ConversationTurn[] {
             `gen-ui-headless: assistant follow-up missing tokens (need at least one of [${[...FOLLOWUP_TOKENS_PRIMARY, ...FOLLOWUP_TOKENS_SECONDARY].join(", ")}]); last assistant text: ${text.slice(0, 200)}`,
           );
         }
+        console.debug("[d5-gen-ui-headless] all assertions passed");
       },
     },
   ];
