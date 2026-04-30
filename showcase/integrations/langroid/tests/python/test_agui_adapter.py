@@ -389,8 +389,9 @@ def test_tool_by_name_is_frozen():
 @pytest.mark.asyncio
 async def test_backend_tool_execution_happy_path(monkeypatch):
     """A backend tool (not in FRONTEND_TOOL_NAMES) executes server-side
-    and its result must be streamed back as a TEXT_MESSAGE_{START,
-    CONTENT, END} triple after TOOL_CALL_END."""
+    and its result is emitted as a TOOL_CALL_RESULT event after
+    TOOL_CALL_END so the CopilotKit runtime transitions useRenderTool
+    status from "executing" to "complete"."""
 
     # Stub the backend tool's handler so we don't hit real impls (weather
     # API, DB, etc.) and we can pin the result string exactly.
@@ -416,23 +417,22 @@ async def test_backend_tool_execution_happy_path(monkeypatch):
     events = _parse_events(await _collect(resp))
 
     types = [e["type"] for e in events]
-    # Backend tools emit TEXT_MESSAGE_* triple after TOOL_CALL_END,
-    # all wrapped in a parent TEXT_MESSAGE_START/END.
+    # Backend tools emit a TOOL_CALL_RESULT after TOOL_CALL_END, all
+    # wrapped in a parent TEXT_MESSAGE_START/END pair.
     assert types == [
         "RUN_STARTED",
         "TEXT_MESSAGE_START",      # parent message wrapper
         "TOOL_CALL_START",
         "TOOL_CALL_ARGS",
         "TOOL_CALL_END",
-        "TEXT_MESSAGE_START",      # backend tool result
-        "TEXT_MESSAGE_CONTENT",
-        "TEXT_MESSAGE_END",
+        "TOOL_CALL_RESULT",        # backend tool result
         "TEXT_MESSAGE_END",        # parent message close
         "RUN_FINISHED",
     ], f"unexpected event sequence: {types}"
 
-    content = next(e for e in events if e["type"] == "TEXT_MESSAGE_CONTENT")
-    assert content["delta"] == '{"location": "SF", "temp_f": 68}'
+    result = next(e for e in events if e["type"] == "TOOL_CALL_RESULT")
+    assert result["content"] == '{"location": "SF", "temp_f": 68}'
+    assert result["toolCallId"] == "call-wx"
 
 
 # The sensitive substring shared by several tests — asserting that
@@ -481,9 +481,11 @@ async def test_backend_tool_exception_returns_sanitized_error(monkeypatch, caplo
         resp = await handle_run(req)
         events = _parse_events(await _collect(resp))
 
-    # A TEXT_MESSAGE triple with the sanitized error should be emitted.
-    content = next(e for e in events if e["type"] == "TEXT_MESSAGE_CONTENT")
-    payload = json.loads(content["delta"])
+    # The sanitized error rides on a TOOL_CALL_RESULT event (so the
+    # frontend tool-call card transitions out of the executing state
+    # with the error payload in hand).
+    result = next(e for e in events if e["type"] == "TOOL_CALL_RESULT")
+    payload = json.loads(result["content"])
     assert "error" in payload
     err = payload["error"]
 
