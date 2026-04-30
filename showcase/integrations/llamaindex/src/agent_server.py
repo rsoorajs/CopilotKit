@@ -33,6 +33,7 @@ from agents.open_gen_ui_agent import open_gen_ui_router
 from agents.reasoning_agent import reasoning_router
 from agents.shared_state_read_write_agent import shared_state_read_write_router
 from agents.subagents_agent import subagents_router
+from agents.interrupt_agent import interrupt_router
 from agents.tool_rendering_reasoning_chain_agent import (
     tool_rendering_reasoning_chain_router,
 )
@@ -91,6 +92,7 @@ app.include_router(
     shared_state_read_write_router, prefix="/shared-state-read-write"
 )
 app.include_router(subagents_router, prefix="/subagents")
+app.include_router(interrupt_router, prefix="/interrupt")
 
 
 def main():

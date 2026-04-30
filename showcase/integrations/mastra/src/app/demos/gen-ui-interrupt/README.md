@@ -1,13 +1,13 @@
-# gen-ui-interrupt — Not supported by mastra
+# gen-ui-interrupt — Mastra (Strategy B: Frontend Tool)
 
-**Feature:** In-Chat HITL via the low-level `useInterrupt` primitive — an
-interactive component rendered inline in the chat that gives the developer
-direct control over the agent interrupt lifecycle.
+**Feature:** In-chat time-picker that blocks the agent until the user picks a
+slot or cancels. Produces the same UX as the LangGraph `interrupt()`
+primitive, but via `useFrontendTool` with an async handler.
 
-**Why it is not supported on Mastra:** Mastra's workflow `suspend` /
-`resume` semantics are not bridged through `getLocalAgent` into the AG-UI
-protocol. `useInterrupt` listens for AG-UI `INTERRUPT` custom events, and
-the Mastra adapter never emits them, so the hook never fires.
+**How it works:** The backend defines a scheduling agent with no tools. The
+frontend registers `schedule_meeting` via `useFrontendTool`; the async handler
+returns a Promise that only resolves once the user picks a slot. The agent
+calls `schedule_meeting` as a regular tool call, which is satisfied entirely
+by the frontend.
 
-**Working reference:** see the `langgraph-python` integration —
-`src/app/demos/gen-ui-interrupt/page.tsx`.
+**LangGraph reference:** see `langgraph-python` — `src/app/demos/gen-ui-interrupt/page.tsx`.

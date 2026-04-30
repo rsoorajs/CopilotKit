@@ -5,6 +5,7 @@ import {
   headlessCompleteAgent,
   sharedStateReadWriteAgent,
   subagentsSupervisorAgent,
+  interruptAgent,
   multimodalAgent,
   mcpAppsAgent,
 } from "./agents";
@@ -18,6 +19,7 @@ export const mastra = new Mastra({
     headlessCompleteAgent,
     sharedStateReadWriteAgent,
     subagentsSupervisorAgent,
+    interruptAgent,
     multimodalAgent,
     mcpAppsAgent,
   },

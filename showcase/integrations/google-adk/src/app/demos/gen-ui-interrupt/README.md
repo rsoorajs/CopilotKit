@@ -1,18 +1,13 @@
-# gen-ui-interrupt (google-adk — not supported)
+# gen-ui-interrupt (google-adk -- Strategy B)
 
-Interrupt-based Generative UI: a backend tool pauses execution via
-LangGraph's `interrupt()` primitive, surfaces a payload to the frontend's
-`useInterrupt` hook, and resumes once the user responds in chat.
-
-## Why google-adk can't support this
-
-The `useInterrupt` hook depends on the backend emitting `on_interrupt`
-custom events. `ag-ui-adk` (the AG-UI middleware that exposes ADK
-`LlmAgent`s) has no `interrupt()` primitive and does not emit those
-events, so the frontend hook never fires and there is no pause/resume
-boundary to render against.
+Interrupt-style scheduling via **Strategy B**: the backend ADK agent defines a
+system prompt that instructs it to call `schedule_meeting`, and the frontend
+registers that tool via `useFrontendTool` with an async handler. The handler
+renders a time-picker card inline in the chat and returns a Promise that only
+resolves once the user picks a slot (or cancels) -- producing the same UX as
+the LangGraph native interrupt, just with different plumbing.
 
 ## Reference implementation
 
-See the canonical implementation in
+See the canonical LangGraph implementation in
 [`langgraph-python`](../../../../langgraph-python/src/app/demos/gen-ui-interrupt/).

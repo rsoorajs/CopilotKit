@@ -57,6 +57,11 @@ const dedicatedAgentPaths: Record<string, string> = {
   "reasoning-default-render": "/reasoning",
   "tool-rendering-reasoning-chain": "/tool-rendering-reasoning-chain",
   "hitl-in-chat": "/hitl-in-chat",
+  // Interrupt-adapted scheduling agent — both gen-ui-interrupt and
+  // interrupt-headless share the same backend; only the frontend UX differs
+  // (inline in chat vs. external popup).
+  "gen-ui-interrupt": "/interrupt-adapted",
+  "interrupt-headless": "/interrupt-adapted",
 };
 
 const agents: Record<string, AbstractAgent> = {};
