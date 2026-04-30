@@ -78,6 +78,11 @@ function isChartIntegration(slug: string): boolean {
 
 export function buildTurns(ctx: D5BuildContext): ConversationTurn[] {
   const usePieChart = isChartIntegration(ctx.integrationSlug);
+  console.debug("[d5-gen-ui-custom] buildTurns", {
+    slug: ctx.integrationSlug,
+    usePieChart,
+    userMessage: usePieChart ? PIE_CHART_USER_MESSAGE : HAIKU_USER_MESSAGE,
+  });
 
   return [
     {
@@ -86,16 +91,25 @@ export function buildTurns(ctx: D5BuildContext): ConversationTurn[] {
         // 1. Cascade-find the rendered component. Gen-UI components
         //    surface through the same selector hooks regardless of which
         //    tool fired.
+        console.debug("[d5-gen-ui-custom] waiting for gen-UI component");
         const matchedSelector = await waitForGenUiComponent(page);
+        console.debug("[d5-gen-ui-custom] gen-UI component found", {
+          matchedSelector,
+        });
 
         if (usePieChart) {
           // --- Pie chart path (chart integrations) ---
+          console.debug("[d5-gen-ui-custom] asserting pie chart shape");
           await assertPieChartShape(page, matchedSelector);
 
           // Narration check: the second-leg LLM response must
           // mention the chart. Token-level so wording drift doesn't
           // fail the probe.
           const text = (await readLastAssistantText(page)).toLowerCase();
+          console.debug("[d5-gen-ui-custom] pie chart follow-up text check", {
+            expectedTokens: [...PIE_CHART_FOLLOWUP_TOKENS],
+            assistantText: text.slice(0, 300),
+          });
           const missing = PIE_CHART_FOLLOWUP_TOKENS.filter(
             (tok) => !text.includes(tok),
           );
@@ -112,7 +126,9 @@ export function buildTurns(ctx: D5BuildContext): ConversationTurn[] {
           // `followUp: false`, so there is no second-leg narration.
           // The structural check alone (card rendered with children
           // + text) is sufficient for the custom tier.
+          console.debug("[d5-gen-ui-custom] asserting haiku card shape");
           await assertHaikuCardShape(page, matchedSelector);
+          console.debug("[d5-gen-ui-custom] haiku card assertion passed");
         }
       },
     },
