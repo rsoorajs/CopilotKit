@@ -45,7 +45,9 @@ function Chat() {
           feelsLike: parsed?.feels_like || parsed?.temperature || 0,
         };
 
-        const themeColor = loading ? "#667eea" : getThemeColor(weatherResult.conditions);
+        const themeColor = loading
+          ? "#667eea"
+          : getThemeColor(weatherResult.conditions);
 
         return (
           <WeatherCard
@@ -169,11 +171,15 @@ function WeatherCard({
                 </div>
                 <div data-testid="weather-wind">
                   <p className="text-white text-xs">Wind</p>
-                  <p className="text-white font-medium">{result.windSpeed} mph</p>
+                  <p className="text-white font-medium">
+                    {result.windSpeed} mph
+                  </p>
                 </div>
                 <div data-testid="weather-feels-like">
                   <p className="text-white text-xs">Feels Like</p>
-                  <p className="text-white font-medium">{result.feelsLike}&deg;</p>
+                  <p className="text-white font-medium">
+                    {result.feelsLike}&deg;
+                  </p>
                 </div>
               </div>
             </div>

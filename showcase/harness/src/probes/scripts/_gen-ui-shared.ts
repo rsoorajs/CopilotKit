@@ -124,7 +124,9 @@ export async function waitForGenUiComponent(
       ].join(" || ");
     })()
   `;
-  const domSnapshotFn = new Function(`return ${domSnapshotCode.trim()};`) as () => string;
+  const domSnapshotFn = new Function(
+    `return ${domSnapshotCode.trim()};`,
+  ) as () => string;
   const domSnapshot = await page.evaluate(domSnapshotFn);
   throw new Error(
     `gen-ui component did not render within ${timeoutMs}ms (${
