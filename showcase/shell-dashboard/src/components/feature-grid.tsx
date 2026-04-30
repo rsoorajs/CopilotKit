@@ -477,8 +477,8 @@ export function FeatureGrid({
   const categoryColSpan = integrations.length + 1 + (showRefDepth ? 1 : 0);
 
   return (
-    <div className="p-8">
-      <header className="mb-6">
+    <div className="px-8 pt-3 pb-8">
+      <header className="mb-3">
         <div className="flex items-center gap-3">
           <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
           <LiveIndicator status={connection} />

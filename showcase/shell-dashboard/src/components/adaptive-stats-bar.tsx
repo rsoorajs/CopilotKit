@@ -19,7 +19,6 @@ export interface DepthDistribution {
   d2: number;
   d1: number;
   d0: number;
-  d6: number;
 }
 
 export interface AdaptiveStatsBarProps {
@@ -157,14 +156,13 @@ function DepthSection({
   );
 }
 
-/** Compact depth distribution: D6..D1 counts in a single row. */
+/** Compact depth distribution: D5..D1 counts in a single row. */
 function DepthDistributionSection({
   distribution,
 }: {
   distribution: DepthDistribution;
 }) {
   const levels: { key: keyof DepthDistribution; label: string }[] = [
-    { key: "d6", label: "D6" },
     { key: "d5", label: "D5" },
     { key: "d4", label: "D4" },
     { key: "d3", label: "D3" },
