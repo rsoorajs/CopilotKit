@@ -38,7 +38,6 @@
     "access": "public"
   },
   "scripts": {
-    "prepack": "pnpm run build",
     "build": "tsdown",
     "check-types": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
