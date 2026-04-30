@@ -10,6 +10,7 @@ import type { CopilotKitCore } from "@copilotkit/core";
 import {
   CopilotKitCoreRuntimeConnectionStatus,
   ɵselectThreads,
+  ɵselectThreadsError,
   ɵcreateThreadStore,
 } from "@copilotkit/core";
 import type {
@@ -232,8 +233,6 @@ interface ConversationGenerativeUIItem {
   id: string;
   type: "generative-ui";
   activityType: string;
-  /** Pre-rendered HTML for demo/scripted mode. Not present for live runtime data. */
-  html?: string;
   createdAt: string;
 }
 
@@ -337,10 +336,18 @@ class CpkThreadList extends LitElement {
   static properties = {
     threads: { attribute: false },
     selectedThreadId: { attribute: false },
+    errorMessage: { attribute: false },
     _query: { state: true },
   };
   threads: ɵThread[] = [];
   selectedThreadId: string | null = null;
+  /**
+   * Non-null when the underlying thread store reported a load error
+   * (REST list rejection, Phoenix subscribe failure, retry exhaustion).
+   * Surfaced inline so users see a real error state instead of stale or
+   * empty data with no indication of what went wrong.
+   */
+  errorMessage: string | null = null;
   private _query = "";
 
   static styles = css`
@@ -568,7 +575,7 @@ class CpkThreadList extends LitElement {
               ? html`
                 <div class="cpk-tl__empty">
                   ${
-                    this.threads.length === 0
+                    this.errorMessage
                       ? html`
                           <svg
                             width="24"
@@ -581,13 +588,37 @@ class CpkThreadList extends LitElement {
                             stroke-linejoin="round"
                             class="cpk-tl__empty-icon"
                           >
-                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                            <circle cx="12" cy="12" r="10" />
+                            <line x1="12" y1="8" x2="12" y2="12" />
+                            <line x1="12" y1="16" x2="12.01" y2="16" />
                           </svg>
-                          No threads yet
+                          <div>
+                            Failed to load threads
+                            <div style="font-size:11px;margin-top:4px;color:#c0333a;">
+                              ${this.errorMessage}
+                            </div>
+                          </div>
                         `
-                      : html`
-                          No threads match your search.
-                        `
+                      : this.threads.length === 0
+                        ? html`
+                            <svg
+                              width="24"
+                              height="24"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              stroke-width="1.5"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              class="cpk-tl__empty-icon"
+                            >
+                              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                            </svg>
+                            No threads yet
+                          `
+                        : html`
+                            No threads match your search.
+                          `
                   }
                 </div>
               `
@@ -601,10 +632,11 @@ class CpkThreadList extends LitElement {
 
 // ─── cpk-thread-details ──────────────────────────────────────────────────────
 // Renders the selected thread's conversation, agent state, and AG-UI events.
-// Fetches per-thread history from the runtime's /threads/:id/{messages,events,state}
-// endpoints whenever threadId changes. Live overrides (from the parent inspector's
-// ongoing agent subscriptions) take priority when present, otherwise fetched data
-// is authoritative.
+// Conversation comes from the runtime's `/threads/:id/messages` endpoint
+// (always thread-accurate). Agent state and AG-UI events accept live inputs
+// (`agentStateInput`, `agentEventsInput`) from the parent inspector's ongoing
+// agent subscriptions; when those are absent we fall back to the per-thread
+// fetched data via `/threads/:id/{events,state}`.
 
 class CpkThreadDetails extends LitElement {
   static properties = {
@@ -614,7 +646,6 @@ class CpkThreadDetails extends LitElement {
     headers: { attribute: false },
     agentStateInput: { attribute: false },
     agentEventsInput: { attribute: false },
-    conversationOverride: { attribute: false },
     _tab: { state: true },
     _conversation: { state: true },
     _fetchedEvents: { state: true },
@@ -639,7 +670,6 @@ class CpkThreadDetails extends LitElement {
   headers: Record<string, string> = {};
   agentStateInput: Record<string, unknown> | null = null;
   agentEventsInput: ApiAgentEvent[] = [];
-  conversationOverride: ConversationItem[] | null = null;
 
   private _tab: ThreadDetailsTab = "conversation";
   private _conversation: ConversationItem[] = [];
@@ -661,6 +691,8 @@ class CpkThreadDetails extends LitElement {
   private _stateNotAvailable = false;
   private _lastFetchedThreadId: string | null = null;
   private _messagesAbort: AbortController | null = null;
+  private _eventsAbort: AbortController | null = null;
+  private _stateAbort: AbortController | null = null;
   private _dividerResizing = false;
   private _dividerPointerId = -1;
   private _dividerStartX = 0;
@@ -1209,27 +1241,19 @@ class CpkThreadDetails extends LitElement {
       this._expandedMessages = new Set();
       this._messagesAbort?.abort();
       this._messagesAbort = null;
-
-      const override = this.conversationOverride;
-      if (override !== null) {
-        this._conversation = override;
-      } else if (this.threadId) {
-        void this.fetchMessages(this.threadId);
-      } else {
-        this._conversation = [];
-      }
+      this._eventsAbort?.abort();
+      this._eventsAbort = null;
+      this._stateAbort?.abort();
+      this._stateAbort = null;
 
       if (this.threadId) {
+        void this.fetchMessages(this.threadId);
         void this.fetchEvents(this.threadId);
         void this.fetchState(this.threadId);
       } else {
+        this._conversation = [];
         this._fetchedEvents = null;
         this._fetchedState = null;
-      }
-    } else if (changed.has("conversationOverride")) {
-      const override = this.conversationOverride;
-      if (override !== null) {
-        this._conversation = override;
       }
     }
   }
@@ -1269,13 +1293,19 @@ class CpkThreadDetails extends LitElement {
       this._fetchedEvents = null;
       return;
     }
+    const controller = new AbortController();
+    this._eventsAbort = controller;
     this._loadingEvents = true;
     this._eventsError = null;
     try {
       const res = await fetch(
         `${this.runtimeUrl}/threads/${encodeURIComponent(threadId)}/events`,
-        { headers: { ...this.headers } },
+        { headers: { ...this.headers }, signal: controller.signal },
       );
+      // Drop results if a newer fetch superseded this one (thread switched
+      // mid-flight). Without this, switching A→B can leave thread B's view
+      // showing thread A's events when A's request resolves last.
+      if (controller.signal.aborted || this.threadId !== threadId) return;
       if (res.status === 501) {
         // Endpoint not supported on this runtime (e.g. Intelligence platform).
         // Mark unavailable so we don't misleadingly fall back to the parent's
@@ -1289,13 +1319,18 @@ class CpkThreadDetails extends LitElement {
       const data = (await res.json()) as {
         events: Array<Record<string, unknown>>;
       };
+      if (controller.signal.aborted || this.threadId !== threadId) return;
       this._fetchedEvents = this.mapApiEvents(data.events);
     } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") return;
+      if (this.threadId !== threadId) return;
       this._eventsError =
         err instanceof Error ? err.message : "Failed to load events";
       this._fetchedEvents = [];
     } finally {
-      this._loadingEvents = false;
+      if (!controller.signal.aborted && this.threadId === threadId) {
+        this._loadingEvents = false;
+      }
     }
   }
 
@@ -1305,13 +1340,16 @@ class CpkThreadDetails extends LitElement {
       this._fetchedState = null;
       return;
     }
+    const controller = new AbortController();
+    this._stateAbort = controller;
     this._loadingState = true;
     this._stateError = null;
     try {
       const res = await fetch(
         `${this.runtimeUrl}/threads/${encodeURIComponent(threadId)}/state`,
-        { headers: { ...this.headers } },
+        { headers: { ...this.headers }, signal: controller.signal },
       );
+      if (controller.signal.aborted || this.threadId !== threadId) return;
       if (res.status === 501) {
         this._stateNotAvailable = true;
         this._fetchedState = null;
@@ -1321,13 +1359,18 @@ class CpkThreadDetails extends LitElement {
       const data = (await res.json()) as {
         state: Record<string, unknown> | null;
       };
+      if (controller.signal.aborted || this.threadId !== threadId) return;
       this._fetchedState = data.state ?? null;
     } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") return;
+      if (this.threadId !== threadId) return;
       this._stateError =
         err instanceof Error ? err.message : "Failed to load state";
       this._fetchedState = null;
     } finally {
-      this._loadingState = false;
+      if (!controller.signal.aborted && this.threadId === threadId) {
+        this._loadingState = false;
+      }
     }
   }
 
@@ -1348,8 +1391,17 @@ class CpkThreadDetails extends LitElement {
             let args: Record<string, unknown> = {};
             try {
               args = JSON.parse(tc.args) as Record<string, unknown>;
-            } catch {
-              /* leave empty */
+            } catch (err) {
+              // Inspector is a debugging surface — surface malformed payloads
+              // instead of silently substituting `{}`. The sentinel lets the
+              // renderer flag "raw arguments — failed to parse" if/when it
+              // grows that branch; the console.error gives anyone with the
+              // devtools open immediate visibility into the offending blob.
+              console.error(
+                "[CopilotKit Inspector] Failed to parse tool-call arguments",
+                { toolCallId: tc.id, raw: tc.args, error: err },
+              );
+              args = { __parseError: true, __raw: tc.args };
             }
             const item: ConversationToolCall = {
               id: tc.id,
@@ -1387,8 +1439,15 @@ class CpkThreadDetails extends LitElement {
               string,
               unknown
             >;
-          } catch {
-            tc.result = {};
+          } catch (err) {
+            // See the comment on the assistant tool-call args parse above —
+            // same rationale, same sentinel shape so the renderer can treat
+            // both consistently.
+            console.error(
+              "[CopilotKit Inspector] Failed to parse tool-call result content",
+              { toolCallId: msg.toolCallId, raw: msg.content, error: err },
+            );
+            tc.result = { __parseError: true, __raw: msg.content ?? null };
           }
         }
       }
@@ -1792,15 +1851,9 @@ ${unsafeHTML(highlightedJson(item.result))}</pre
           </svg>
           Generative UI
         </div>
-        ${
-          item.html
-            ? html`<div class="cpk-td__genui-card">
-              ${unsafeHTML(item.html)}
-            </div>`
-            : html`<div class="cpk-td__genui-placeholder">
-              ${item.activityType} — rendered in chat
-            </div>`
-        }
+        <div class="cpk-td__genui-placeholder">
+          ${item.activityType} — rendered in chat
+        </div>
       </div>
     `;
   }
@@ -2068,6 +2121,11 @@ export class WebInspectorElement extends LitElement {
   private _threads: ɵThread[] = [];
   private _threadStoreSubscriptions: Map<string, () => void> = new Map();
   private _threadsByAgent: Map<string, ɵThread[]> = new Map();
+  // Error from each agent's thread store (REST list rejection, Phoenix
+  // subscribe failure, retry exhaustion). When non-empty for the active
+  // selection, the threads view renders an error state instead of stale
+  // data with no indication.
+  private _threadsErrorByAgent: Map<string, Error> = new Map();
   // Thread stores created and owned by the inspector (keyed by agentId)
   private _ownedThreadStores: Map<string, ɵThreadStore> = new Map();
   private contextMenuOpen = false;
@@ -2189,16 +2247,33 @@ export class WebInspectorElement extends LitElement {
 
   private subscribeToThreadStore(agentId: string, store: ɵThreadStore): void {
     if (this._threadStoreSubscriptions.has(agentId)) return;
-    const sub = store.select(ɵselectThreads).subscribe((threads) => {
+    const threadsSub = store.select(ɵselectThreads).subscribe((threads) => {
       this._threadsByAgent.set(agentId, threads as ɵThread[]);
       this._threads = Array.from(this._threadsByAgent.values()).flat();
       this.autoSelectLatestThread();
       this.requestUpdate();
     });
-    this._threadStoreSubscriptions.set(agentId, () => sub.unsubscribe());
+    const errorSub = store.select(ɵselectThreadsError).subscribe((error) => {
+      if (error) {
+        this._threadsErrorByAgent.set(agentId, error);
+      } else {
+        this._threadsErrorByAgent.delete(agentId);
+      }
+      this.requestUpdate();
+    });
+    this._threadStoreSubscriptions.set(agentId, () => {
+      threadsSub.unsubscribe();
+      errorSub.unsubscribe();
+    });
     // Populate immediately from current state
-    const threads = ɵselectThreads(store.getState());
-    this._threadsByAgent.set(agentId, threads);
+    const initialState = store.getState();
+    this._threadsByAgent.set(agentId, ɵselectThreads(initialState));
+    const initialError = ɵselectThreadsError(initialState);
+    if (initialError) {
+      this._threadsErrorByAgent.set(agentId, initialError);
+    } else {
+      this._threadsErrorByAgent.delete(agentId);
+    }
     this._threads = Array.from(this._threadsByAgent.values()).flat();
     this.autoSelectLatestThread();
   }
@@ -2220,17 +2295,14 @@ export class WebInspectorElement extends LitElement {
     }
     this._threadStoreSubscriptions.clear();
     this._threadsByAgent.clear();
+    this._threadsErrorByAgent.clear();
     this._threads = [];
   }
 
   private ensureOwnedThreadStore(agentId: string): void {
     if (this._ownedThreadStores.has(agentId)) return;
     // Don't overwrite a store already registered by useThreads() or another external caller
-    if (
-      typeof (this.core as any)?.getThreadStore === "function" &&
-      (this.core as any).getThreadStore(agentId)
-    )
-      return;
+    if (this.core?.getThreadStore(agentId)) return;
     const core = this.core;
     if (!core?.runtimeUrl) return;
 
@@ -2242,12 +2314,11 @@ export class WebInspectorElement extends LitElement {
       agentId,
     });
     this._ownedThreadStores.set(agentId, store);
-    // Subscribe directly so threads render even on published cores that lack
-    // registerThreadStore (which triggers onThreadStoreRegistered → subscribeToThreadStore).
+    // Subscribe directly so threads render even before the registry callback
+    // fires (some published-core code paths land on the subscriber after
+    // registerThreadStore returns).
     this.subscribeToThreadStore(agentId, store);
-    if (typeof (core as any).registerThreadStore === "function") {
-      (core as any).registerThreadStore(agentId, store);
-    }
+    core.registerThreadStore(agentId, store);
   }
 
   private refreshOwnedThreadStore(agentId: string): void {
@@ -2255,9 +2326,7 @@ export class WebInspectorElement extends LitElement {
     if (!store) return;
     // refresh() re-fetches without resetting threads to [] first, so the list
     // stays visible while new data loads and survives transient fetch failures.
-    if (typeof (store as any).refresh === "function") {
-      (store as any).refresh();
-    }
+    store.refresh();
   }
 
   private removeOwnedThreadStore(agentId: string): void {
@@ -2321,6 +2390,7 @@ export class WebInspectorElement extends LitElement {
           this._threadStoreSubscriptions.delete(agentId);
         }
         this._threadsByAgent.delete(agentId);
+        this._threadsErrorByAgent.delete(agentId);
         this._threads = Array.from(this._threadsByAgent.values()).flat();
         this.requestUpdate();
       },
@@ -2625,9 +2695,9 @@ export class WebInspectorElement extends LitElement {
             : m.role === "activity"
               ? "generative-ui"
               : "assistant",
-        // For activity messages, store the activityType as content so the
-        // renderer can display a meaningful label (crawl phase). Walk phase
-        // will render the actual output once the Angular inspector ships.
+        // For activity messages, store the activityType as a label so the
+        // renderer has something meaningful to display.
+        // TODO: render activity payload once available.
         content:
           m.role === "activity" ? (m.activityType ?? "unknown") : m.contentText,
         createdAt: "",
@@ -5607,18 +5677,23 @@ ${argsString}</pre
         ? this._threads
         : (this._threadsByAgent.get(this.selectedContext) ?? []);
 
+    // Surface a thread-store load error inline. For "all-agents" we report
+    // the first error encountered across all agents (good enough for a
+    // debugging surface — the per-agent context filter narrows down the
+    // culprit). For a specific agent we use that agent's error directly.
+    let threadsErrorMessage: string | null = null;
+    if (this.selectedContext === "all-agents") {
+      const firstError = this._threadsErrorByAgent.values().next().value;
+      threadsErrorMessage = firstError?.message ?? null;
+    } else {
+      threadsErrorMessage =
+        this._threadsErrorByAgent.get(this.selectedContext)?.message ?? null;
+    }
+
     const selectedThread =
       this.selectedThreadId != null
         ? (displayThreads.find((t) => t.id === this.selectedThreadId) ?? null)
         : null;
-
-    // Don't pass live agent messages as conversationOverride across thread
-    // boundaries. The inspector's agentMessages map is keyed by agentId (not
-    // threadId), so for any thread other than the currently-streaming one the
-    // override would be the wrong thread's content. The thread details
-    // component fetches per-thread messages from `GET /threads/:id/messages`
-    // which is always thread-accurate.
-    const conversationOverride = null;
 
     return html`
       <div style="display:flex;height:100%;overflow:hidden;">
@@ -5630,6 +5705,7 @@ ${argsString}</pre
             style="height:100%;"
             .threads=${displayThreads}
             .selectedThreadId=${this.selectedThreadId}
+            .errorMessage=${threadsErrorMessage}
             @threadSelected=${(e: CustomEvent<string>) => {
               this.selectedThreadId = e.detail;
               this.requestUpdate();
@@ -5666,7 +5742,6 @@ ${argsString}</pre
                       ? (this.agentEvents.get(selectedThread.agentId) ?? [])
                       : []
                   }
-                  .conversationOverride=${conversationOverride}
                 ></cpk-thread-details>`
               : html`
                   <div
@@ -7316,7 +7391,12 @@ ${prettyEvent}</pre
       this.announcementLoaded = true;
 
       this.requestUpdate();
-    } catch {
+    } catch (error) {
+      // Swallowing here would hide non-network failures (malformed JSON, the
+      // explicit "Malformed announcement payload" throw above, exceptions
+      // from `convertMarkdownToHtml`). At minimum, surface in the console so
+      // a stale announcement is debuggable.
+      console.warn("[CopilotKit Inspector] Failed to load announcement", error);
       this.announcementLoaded = true;
       this.requestUpdate();
     }
