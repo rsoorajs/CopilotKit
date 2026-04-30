@@ -16,15 +16,54 @@ because CopilotKit intercepts the tool call before the backend can
 process the result.
 
 Mirrors `langgraph-python/src/agents/hitl_in_chat_agent.py`.
+
+NOTE: We subclass AGUIChatWorkflow to fix three upstream library bugs:
+
+  1. ToolCallChunkWorkflowEvent is emitted without parent_message_id,
+     causing the client to create a duplicate assistant message.
+
+  2. _snapshot_messages embeds toolCalls in the MESSAGES_SNAPSHOT AND
+     emits separate TOOL_CALL_CHUNK events for the same calls, so the
+     client ends up with the tool call registered twice.
+
+  3. ag_ui_message_to_llama_index_message converts AG-UI ToolMessages to
+     ChatMessage(role="user") instead of ChatMessage(role="tool"), so the
+     OpenAI API call doesn't include a proper tool-result message and
+     aimock's hasToolResult matcher fails on the second leg.
 """
 
 from __future__ import annotations
 
+import json
 import os
+import re
+import uuid
+from typing import Any, Dict, List, Optional, Union
 
+from llama_index.core.llms import ChatMessage, ChatResponse, MessageRole, TextBlock
 from llama_index.core.tools import FunctionTool
+from llama_index.core.workflow import Context, step
+from llama_index.core.workflow.events import StopEvent
 from llama_index.llms.openai import OpenAI
+from llama_index.protocols.ag_ui.agent import (
+    AGUIChatWorkflow,
+    DEFAULT_STATE_PROMPT,
+    InputEvent,
+    LoopEvent,
+    ToolCallEvent,
+)
+from llama_index.protocols.ag_ui.events import (
+    MessagesSnapshotWorkflowEvent,
+    StateSnapshotWorkflowEvent,
+    TextMessageChunkWorkflowEvent,
+    ToolCallChunkWorkflowEvent,
+)
 from llama_index.protocols.ag_ui.router import get_ag_ui_workflow_router
+from llama_index.protocols.ag_ui.utils import (
+    ag_ui_message_to_llama_index_message,
+    llama_index_message_to_ag_ui_message,
+    timestamp,
+)
 
 _openai_kwargs = {}
 if os.environ.get("OPENAI_BASE_URL"):
@@ -54,15 +93,232 @@ _book_call_tool = FunctionTool.from_defaults(
 )
 
 
+def _fix_tool_messages(chat_history: List[ChatMessage]) -> None:
+    """Fix tool-result messages that the upstream library incorrectly
+    converts to role='user'.
+
+    The library's ag_ui_message_to_llama_index_message converts AG-UI
+    ToolMessages to ChatMessage(role='user') because llama-index-core
+    didn't originally support role='tool'.  Modern versions DO support
+    it (MessageRole.TOOL), and the OpenAI SDK needs role='tool' to send
+    a proper tool-result message.  Without this fix, the OpenAI API
+    call has no tool-result message and aimock's hasToolResult matcher
+    fails on the second leg.
+    """
+    for msg in chat_history:
+        if (
+            msg.role.value == "user"
+            and "tool_call_id" in msg.additional_kwargs
+        ):
+            msg.role = MessageRole.TOOL
+
+
+class FixedAGUIChatWorkflow(AGUIChatWorkflow):
+    """AGUIChatWorkflow that fixes duplicate tool-call rendering and
+    tool-result message formatting.
+
+    See module docstring for the three upstream bugs this addresses.
+    """
+
+    def _snapshot_messages(
+        self, ctx: Context, chat_history: List[ChatMessage]
+    ) -> None:
+        """Emit MESSAGES_SNAPSHOT without toolCalls on assistant messages.
+
+        We create clean copies of assistant messages that strip both
+        ag_ui_tool_calls metadata AND the <tool_call> XML tags that the
+        upstream _snapshot_messages would re-extract.  This ensures the
+        MESSAGES_SNAPSHOT contains no toolCalls — they arrive exclusively
+        via TOOL_CALL_CHUNK events.
+        """
+        cleaned = []
+        for msg in chat_history:
+            if msg.role == "assistant":
+                content = msg.content or ""
+                content = re.sub(
+                    r"<tool_call>[\s\S]*?</tool_call>", "", content
+                ).strip()
+
+                clone = ChatMessage(
+                    role=msg.role,
+                    content=content if content else None,
+                    additional_kwargs={
+                        k: v
+                        for k, v in msg.additional_kwargs.items()
+                        if k != "ag_ui_tool_calls"
+                    },
+                )
+                cleaned.append(clone)
+            else:
+                cleaned.append(msg)
+
+        ag_ui_messages = [
+            llama_index_message_to_ag_ui_message(m) for m in cleaned
+        ]
+
+        ctx.write_event_to_stream(
+            MessagesSnapshotWorkflowEvent(
+                timestamp=timestamp(),
+                messages=ag_ui_messages,
+            )
+        )
+
+    @step
+    async def chat(
+        self, ctx: Context, ev: InputEvent | LoopEvent
+    ) -> Optional[Union[StopEvent, ToolCallEvent]]:
+        # ------------------------------------------------------------------
+        # Duplicated from AGUIChatWorkflow.chat with three changes:
+        #   1. Assign a stable `id` to the assistant response message
+        #   2. Pass `parent_message_id` on ToolCallChunkWorkflowEvent
+        #   3. Fix tool-result messages to use role='tool' not 'user'
+        # ------------------------------------------------------------------
+        if isinstance(ev, InputEvent):
+            ag_ui_messages = ev.input_data.messages
+            chat_history = [
+                ag_ui_message_to_llama_index_message(m) for m in ag_ui_messages
+            ]
+
+            # FIX 3: convert incorrectly-roled tool messages
+            _fix_tool_messages(chat_history)
+
+            state = ev.input_data.state
+            if isinstance(state, dict):
+                state.pop("messages", None)
+            elif isinstance(state, str):
+                state = json.loads(state)
+                state.pop("messages", None)
+            else:
+                state = self.initial_state.copy()
+
+            await ctx.store.set("state", state)
+            ctx.write_event_to_stream(StateSnapshotWorkflowEvent(snapshot=state))
+
+            if state:
+                for msg in chat_history[::-1]:
+                    if msg.role.value == "user":
+                        msg.content = DEFAULT_STATE_PROMPT.format(
+                            state=str(state), user_input=msg.content
+                        )
+                        break
+
+            if self.system_prompt:
+                if chat_history[0].role.value == "system":
+                    chat_history[0].blocks.append(TextBlock(text=self.system_prompt))
+                else:
+                    chat_history.insert(
+                        0, ChatMessage(role="system", content=self.system_prompt)
+                    )
+
+            await ctx.store.set("chat_history", chat_history)
+        else:
+            chat_history = await ctx.store.get("chat_history")
+
+        tools = list(self.frontend_tools.values())
+        tools.extend(list(self.backend_tools.values()))
+
+        resp_gen = await self.llm.astream_chat_with_tools(
+            tools=tools,
+            chat_history=chat_history,
+            allow_parallel_tool_calls=True,
+        )
+
+        resp_id = str(uuid.uuid4())
+        resp = ChatResponse(message=ChatMessage(role="assistant", content=""))
+
+        async for resp in resp_gen:
+            if resp.delta:
+                ctx.write_event_to_stream(
+                    TextMessageChunkWorkflowEvent(
+                        role="assistant",
+                        delta=resp.delta,
+                        timestamp=timestamp(),
+                        message_id=resp_id,
+                    )
+                )
+
+        # FIX 1: Assign a stable ID to the assistant message so
+        # MESSAGES_SNAPSHOT and TOOL_CALL events reference the same message.
+        resp.message.additional_kwargs["id"] = resp_id
+
+        chat_history.append(resp.message)
+        self._snapshot_messages(ctx, [*chat_history])
+        await ctx.store.set("chat_history", chat_history)
+
+        tool_calls = self.llm.get_tool_calls_from_response(
+            resp, error_on_no_tool_call=False
+        )
+        if tool_calls:
+            await ctx.store.set("num_tool_calls", len(tool_calls))
+            frontend_tool_calls = [
+                tool_call
+                for tool_call in tool_calls
+                if tool_call.tool_name in self.frontend_tools
+            ]
+            backend_tool_calls = [
+                tool_call
+                for tool_call in tool_calls
+                if tool_call.tool_name in self.backend_tools
+            ]
+
+            for tool_call in backend_tool_calls:
+                ctx.send_event(
+                    ToolCallEvent(
+                        tool_call_id=tool_call.tool_id,
+                        tool_name=tool_call.tool_name,
+                        tool_kwargs=tool_call.tool_kwargs,
+                    )
+                )
+
+                ctx.write_event_to_stream(
+                    ToolCallChunkWorkflowEvent(
+                        tool_call_id=tool_call.tool_id,
+                        tool_call_name=tool_call.tool_name,
+                        delta=json.dumps(tool_call.tool_kwargs),
+                        # FIX 2: attach to the assistant message
+                        parent_message_id=resp_id,
+                    )
+                )
+
+            for tool_call in frontend_tool_calls:
+                ctx.send_event(
+                    ToolCallEvent(
+                        tool_call_id=tool_call.tool_id,
+                        tool_name=tool_call.tool_name,
+                        tool_kwargs=tool_call.tool_kwargs,
+                    )
+                )
+
+                ctx.write_event_to_stream(
+                    ToolCallChunkWorkflowEvent(
+                        tool_call_id=tool_call.tool_id,
+                        tool_call_name=tool_call.tool_name,
+                        delta=json.dumps(tool_call.tool_kwargs),
+                        # FIX 2: attach to the assistant message
+                        parent_message_id=resp_id,
+                    )
+                )
+
+            return None
+
+        return StopEvent()
+
+
+async def _workflow_factory():
+    return FixedAGUIChatWorkflow(
+        llm=OpenAI(model="gpt-4o-mini", **_openai_kwargs),
+        frontend_tools=[_book_call_tool],
+        backend_tools=[],
+        system_prompt=(
+            "You help users book an onboarding call with the sales team. "
+            "When they ask to book a call, call the frontend-provided "
+            "`book_call` tool with a short topic and the user's name. "
+            "Keep any chat reply to one short sentence."
+        ),
+        initial_state={},
+    )
+
+
 hitl_in_chat_router = get_ag_ui_workflow_router(
-    llm=OpenAI(model="gpt-4o-mini", **_openai_kwargs),
-    frontend_tools=[_book_call_tool],
-    backend_tools=[],
-    system_prompt=(
-        "You help users book an onboarding call with the sales team. "
-        "When they ask to book a call, call the frontend-provided "
-        "`book_call` tool with a short topic and the user's name. "
-        "Keep any chat reply to one short sentence."
-    ),
-    initial_state={},
+    workflow_factory=_workflow_factory,
 )
