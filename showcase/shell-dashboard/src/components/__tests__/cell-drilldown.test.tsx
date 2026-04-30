@@ -118,12 +118,16 @@ describe("CellDrilldown", () => {
     expect(healthBadge.textContent).toContain("Apr");
   });
 
-  it("shows signal payload for red badges", () => {
+  it("extracts signal fields as readable text for red badges", () => {
     const live = mapOf([
       row("e2e:lgp/agentic-chat", "e2e", "red", {
         fail_count: 2,
         first_failure_at: "2026-04-18T12:00:00Z",
-        signal: { error: "assertion failed", step: "login" },
+        signal: {
+          errorDesc: "Agent returned empty response",
+          backendUrl: "https://lgp.example.com",
+          apiRequestCount: 3,
+        },
       }),
     ]);
     const { getByTestId } = render(
@@ -136,6 +140,40 @@ describe("CellDrilldown", () => {
         onClose={() => {}}
       />,
     );
+    // Extracted fields should be visible without expanding raw signal
+    expect(
+      getByTestId("signal-field-error").textContent,
+    ).toBe("Agent returned empty response");
+    expect(
+      getByTestId("signal-field-backend-url").textContent,
+    ).toBe("https://lgp.example.com");
+    expect(
+      getByTestId("signal-field-api-requests").textContent,
+    ).toBe("3");
+  });
+
+  it("shows raw signal payload behind collapsible toggle", () => {
+    const live = mapOf([
+      row("e2e:lgp/agentic-chat", "e2e", "red", {
+        fail_count: 2,
+        first_failure_at: "2026-04-18T12:00:00Z",
+        signal: { error: "assertion failed", step: "login" },
+      }),
+    ]);
+    const { getByTestId, queryByTestId } = render(
+      <CellDrilldown
+        slug="lgp"
+        featureId="agentic-chat"
+        integrationName="LangGraph Python"
+        featureName="Agentic Chat"
+        liveStatus={live}
+        onClose={() => {}}
+      />,
+    );
+    // Raw signal should be collapsed by default
+    expect(queryByTestId("signal-payload")).toBeNull();
+    // Click the toggle to expand
+    fireEvent.click(getByTestId("signal-toggle"));
     const signalEl = getByTestId("signal-payload");
     expect(signalEl.textContent).toContain("assertion failed");
     expect(signalEl.textContent).toContain("login");
@@ -194,5 +232,49 @@ describe("CellDrilldown", () => {
     // Verify strikethrough styling is applied
     const strikethroughEl = healthBadge.querySelector(".line-through");
     expect(strikethroughEl).not.toBeNull();
+  });
+
+  it("deduplicates errorDesc and error (only shows first match)", () => {
+    const live = mapOf([
+      row("e2e:lgp/agentic-chat", "e2e", "red", {
+        fail_count: 1,
+        signal: {
+          errorDesc: "Agent timed out",
+          error: "timeout",
+        },
+      }),
+    ]);
+    const { getByTestId, queryAllByTestId } = render(
+      <CellDrilldown
+        slug="lgp"
+        featureId="agentic-chat"
+        integrationName="LangGraph Python"
+        featureName="Agentic Chat"
+        liveStatus={live}
+        onClose={() => {}}
+      />,
+    );
+    // errorDesc wins — only one "Error:" line
+    expect(
+      getByTestId("signal-field-error").textContent,
+    ).toBe("Agent timed out");
+    // Should not have a second error field
+    expect(queryAllByTestId("signal-field-error").length).toBe(1);
+  });
+
+  it("uses wider dialog (480px)", () => {
+    const { getByTestId } = render(
+      <CellDrilldown
+        slug="lgp"
+        featureId="agentic-chat"
+        integrationName="LangGraph Python"
+        featureName="Agentic Chat"
+        liveStatus={new Map()}
+        onClose={() => {}}
+      />,
+    );
+    const dialog = getByTestId("cell-drilldown");
+    expect(dialog.className).toContain("w-[480px]");
+    expect(dialog.className).not.toContain("w-72");
   });
 });
