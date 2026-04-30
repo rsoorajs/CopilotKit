@@ -129,7 +129,7 @@ function DepthLayer({
 }
 
 /**
- * Render the Health layer: E2E, D5, D6 badge chips via CellStatus.
+ * Render the Health layer: RT, CV, FP badge chips via CellStatus.
  */
 function HealthLayer({ ctx }: { ctx: CellContext }) {
   return (
