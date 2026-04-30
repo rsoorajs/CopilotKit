@@ -4,7 +4,7 @@
  *   - CP2: transitionLine discriminates `first` and `error` transitions
  *   - CP5: missing-state tooltip distinguishes opt-out vs absent
  *   - CP7: error-state docs link is clickable when href is present
- *   - CP8: CV/FP badges hidden for testing-kind features
+ *   - CP8: CV badges hidden for testing-kind features
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, fireEvent, waitFor } from "@testing-library/react";
@@ -263,36 +263,36 @@ describe("CP5: missing-state tooltip distinguishes opt-out vs absent", () => {
   });
 });
 
-describe("CP8: CV/FP badges hidden for testing-kind features", () => {
-  it("hides CV/FP LiveBadges when feature.kind === 'testing'", () => {
+describe("CP8: CV badges hidden for testing-kind features", () => {
+  it("hides CV LiveBadge when feature.kind === 'testing'", () => {
     const ctx = makeCtx({
       feature: makeFeature({ kind: "testing" }),
     });
     const { container } = render(<CellStatus ctx={ctx} />);
     const text = container.textContent ?? "";
+    expect(text).toContain("API");
     expect(text).toContain("RT");
     expect(text).not.toContain("CV");
-    expect(text).not.toContain("FP");
   });
 
-  it("renders CV/FP LiveBadges for primary features", () => {
+  it("renders API/CV LiveBadges for primary features", () => {
     const ctx = makeCtx({
       feature: makeFeature({ kind: "primary" }),
     });
     const { container } = render(<CellStatus ctx={ctx} />);
     const text = container.textContent ?? "";
+    expect(text).toContain("API");
     expect(text).toContain("RT");
     expect(text).toContain("CV");
-    expect(text).toContain("FP");
   });
 
-  it("renders CV/FP by default when feature.kind is undefined", () => {
+  it("renders CV by default when feature.kind is undefined", () => {
     const ctx = makeCtx({
       feature: makeFeature(),
     });
     const { container } = render(<CellStatus ctx={ctx} />);
     const text = container.textContent ?? "";
+    expect(text).toContain("API");
     expect(text).toContain("CV");
-    expect(text).toContain("FP");
   });
 });
