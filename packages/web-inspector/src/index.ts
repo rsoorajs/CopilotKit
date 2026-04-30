@@ -646,6 +646,7 @@ class CpkThreadDetails extends LitElement {
     headers: { attribute: false },
     agentStateInput: { attribute: false },
     agentEventsInput: { attribute: false },
+    liveMessageVersion: { attribute: false },
     _tab: { state: true },
     _conversation: { state: true },
     _fetchedEvents: { state: true },
@@ -670,6 +671,13 @@ class CpkThreadDetails extends LitElement {
   headers: Record<string, string> = {};
   agentStateInput: Record<string, unknown> | null = null;
   agentEventsInput: ApiAgentEvent[] = [];
+  /**
+   * Monotonic per-thread counter the parent inspector ticks every time the
+   * agent currently running on this thread emits a message change. When this
+   * prop changes for the same `threadId`, we re-fetch `/threads/:id/messages`
+   * so the conversation view reflects live streaming output.
+   */
+  liveMessageVersion = 0;
 
   private _tab: ThreadDetailsTab = "conversation";
   private _conversation: ConversationItem[] = [];
@@ -690,6 +698,7 @@ class CpkThreadDetails extends LitElement {
   /** True when the /state endpoint returned 501 — don't fall back to live data. */
   private _stateNotAvailable = false;
   private _lastFetchedThreadId: string | null = null;
+  private _lastSeenLiveMessageVersion = 0;
   private _messagesAbort: AbortController | null = null;
   private _eventsAbort: AbortController | null = null;
   private _stateAbort: AbortController | null = null;
@@ -1236,6 +1245,7 @@ class CpkThreadDetails extends LitElement {
   updated(_changed: Map<string, unknown>): void {
     if (this.threadId !== this._lastFetchedThreadId) {
       this._lastFetchedThreadId = this.threadId;
+      this._lastSeenLiveMessageVersion = this.liveMessageVersion;
       this._tab = "conversation";
       this._expandedTools = new Set();
       this._expandedMessages = new Set();
@@ -1255,6 +1265,19 @@ class CpkThreadDetails extends LitElement {
         this._fetchedEvents = null;
         this._fetchedState = null;
       }
+    } else if (
+      this.threadId &&
+      this.liveMessageVersion !== this._lastSeenLiveMessageVersion
+    ) {
+      // Same thread, but the parent inspector signalled new agent-emitted
+      // messages on this thread (via `liveMessageVersion`). Re-fetch the
+      // canonical conversation from the runtime so streaming output flows
+      // into the view without us reimplementing AG-UI → ConversationItem
+      // mapping in the parent.
+      this._lastSeenLiveMessageVersion = this.liveMessageVersion;
+      this._messagesAbort?.abort();
+      this._messagesAbort = null;
+      void this.fetchMessages(this.threadId);
     }
   }
 
@@ -2095,6 +2118,17 @@ export class WebInspectorElement extends LitElement {
   private agentSubscriptions: Map<string, () => void> = new Map();
   private agentEvents: Map<string, InspectorEvent[]> = new Map();
   private agentMessages: Map<string, InspectorMessage[]> = new Map();
+  // Tracks which thread each agent is currently running on. Populated from the
+  // agent instance handed to `onAgentRunStarted` so that, when that agent
+  // subsequently emits message changes, we can bump the per-thread live
+  // version (below) only for the thread the messages actually belong to.
+  private agentRunThreadId: Map<string, string> = new Map();
+  // Per-thread monotonic version that ticks every time an agent currently
+  // running on that thread emits a message change. `cpk-thread-details`
+  // watches this prop and re-fetches `/threads/:id/messages` when it changes,
+  // which is how live updates flow into the conversation view without
+  // duplicating the runtime's message-shape conversion in the inspector.
+  private liveMessageVersion: Map<string, number> = new Map();
   private agentStates: Map<string, SanitizedValue> = new Map();
   private flattenedEvents: InspectorEvent[] = [];
   private eventCounter = 0;
@@ -2401,6 +2435,10 @@ export class WebInspectorElement extends LitElement {
         // the same agentId is safe: the previous instance emits no more events
         // once a new run starts on a fresh clone.
         this.subscribeToAgent(agent);
+        const runThreadId = (agent as { threadId?: string }).threadId;
+        if (agent.agentId && runThreadId) {
+          this.agentRunThreadId.set(agent.agentId, runThreadId);
+        }
         this.requestUpdate();
       },
     } satisfies CopilotKitCoreSubscriber;
@@ -2747,6 +2785,19 @@ export class WebInspectorElement extends LitElement {
         this.agentMessages.set(agent.agentId, messages);
       } else {
         this.agentMessages.delete(agent.agentId);
+      }
+
+      // Bump the live-message version for whichever thread this agent is
+      // currently running on. cpk-thread-details watches this for the
+      // selected thread and re-fetches `/threads/:id/messages` when it ticks,
+      // so the conversation view stays in sync with the streaming agent
+      // without the parent re-implementing AG-UI → ConversationItem mapping.
+      const runThreadId = this.agentRunThreadId.get(agent.agentId);
+      if (runThreadId) {
+        this.liveMessageVersion.set(
+          runThreadId,
+          (this.liveMessageVersion.get(runThreadId) ?? 0) + 1,
+        );
       }
 
       this.requestUpdate();
@@ -5732,6 +5783,12 @@ ${argsString}</pre
                   .thread=${selectedThread}
                   .runtimeUrl=${this._core?.runtimeUrl ?? ""}
                   .headers=${this._core?.headers ?? {}}
+                  .liveMessageVersion=${
+                    this.selectedThreadId
+                      ? (this.liveMessageVersion.get(this.selectedThreadId) ??
+                        0)
+                      : 0
+                  }
                   .agentStateInput=${
                     selectedThread
                       ? this.getLatestStateForAgent(selectedThread.agentId)
