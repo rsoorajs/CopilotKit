@@ -180,8 +180,7 @@ export async function runSlug(
 
         const exitedWithError = !!err;
         const parsed =
-          tryParsePlaywrightJson(fileJson) ??
-          tryParsePlaywrightJson(stdout);
+          tryParsePlaywrightJson(fileJson) ?? tryParsePlaywrightJson(stdout);
 
         if (parsed) {
           resolve({
