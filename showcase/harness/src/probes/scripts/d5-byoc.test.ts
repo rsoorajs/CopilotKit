@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { getD5Script, type D5BuildContext } from "../helpers/d5-registry.js";
+import { getD5Script } from "../helpers/d5-registry.js";
+import type { D5BuildContext } from "../helpers/d5-registry.js";
 import {
   buildTurns,
   preNavigateRoute,
@@ -29,7 +30,9 @@ describe("d5-byoc script", () => {
 
   it("preNavigateRoute prefers hashbrown when both demos are declared", () => {
     expect(
-      preNavigateRoute("byoc", { demos: ["byoc-hashbrown", "byoc-json-render"] }),
+      preNavigateRoute("byoc", {
+        demos: ["byoc-hashbrown", "byoc-json-render"],
+      }),
     ).toBe("/demos/byoc-hashbrown");
   });
 
