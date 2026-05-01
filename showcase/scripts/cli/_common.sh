@@ -242,7 +242,7 @@ with open('$tmp_compose', 'w') as f:
   # Override shell variables so all downstream code uses the temp files.
   # Originals are NEVER mutated.
   COMPOSE_FILE="$tmp_compose"
-  COMPOSE_CMD="docker compose -f $COMPOSE_FILE"
+  COMPOSE_CMD="docker compose -f $COMPOSE_FILE --project-name $name"
   PORTS_FILE="$tmp_ports"
 
   # Export for the TS harness CLI (config.ts / lifecycle.ts honor this)
