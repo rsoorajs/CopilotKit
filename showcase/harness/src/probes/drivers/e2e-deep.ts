@@ -1100,10 +1100,12 @@ async function runFeature(opts: {
     // Without this, the SSR'd textarea is visible but Enter has no
     // handler, so the first turn's keypress is a no-op and the probe
     // times out waiting for an assistant response that never comes.
+    const hydrationStart = Date.now();
     console.debug("[e2e-deep] runFeature — waiting for React hydration", {
       url,
       timeout: 15_000,
     });
+    let hydrated = false;
     try {
       await page.waitForFunction(
         () => {
@@ -1125,6 +1127,7 @@ async function runFeature(opts: {
         },
         { timeout: 15_000 },
       );
+      hydrated = true;
       console.debug("[e2e-deep] runFeature — React hydration detected", {
         url,
       });
@@ -1138,6 +1141,12 @@ async function runFeature(opts: {
         },
       );
     }
+    console.info("[e2e-deep] runFeature — hydration-timing", {
+      slug: buildCtx.integrationSlug,
+      featureType: buildCtx.featureType,
+      hydrated,
+      hydrationMs: Date.now() - hydrationStart,
+    });
 
     const turns = script.buildTurns(buildCtx);
     console.debug("[e2e-deep] runFeature — built conversation turns", {
@@ -1157,10 +1166,12 @@ async function runFeature(opts: {
         error: conversation.error,
       });
       const diagnostics = await captureDiagnostics(page);
-      console.debug("[e2e-deep] runFeature — failure diagnostics captured", {
+      console.warn("[e2e-deep] runFeature — FLAP DIAGNOSTICS", JSON.stringify({
+        slug: buildCtx.integrationSlug,
         featureType: buildCtx.featureType,
-        diagnosticKeys: diagnostics ? Object.keys(diagnostics) : [],
-      });
+        error: conversation.error?.slice(0, 200),
+        diagnostics,
+      }));
       return {
         ok: false,
         errorClass: "conversation-error",
