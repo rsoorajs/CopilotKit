@@ -42,7 +42,7 @@ const DEFAULT_STARTER: Omit<Starter, "slug"> = {
 const STARTERS: Starter[] = [
   { ...DEFAULT_STARTER, slug: "langgraph-python", hasAppMode: true },
   { ...DEFAULT_STARTER, slug: "mastra" },
-  { ...DEFAULT_STARTER, slug: "langgraph-js" },
+  { ...DEFAULT_STARTER, slug: "langgraph-js", hasAppMode: true },
   { ...DEFAULT_STARTER, slug: "crewai-crews" },
   { ...DEFAULT_STARTER, slug: "pydantic-ai" },
   { ...DEFAULT_STARTER, slug: "adk" },
