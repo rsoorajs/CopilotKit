@@ -661,7 +661,8 @@
     },
     {
       "match": {
-        "userMessage": "Please book an intro call with the sales team to discuss pricing."
+        "userMessage": "Please book an intro call with the sales team to discuss pricing.",
+        "toolName": "book_call"
       },
       "response": {
         "toolCalls": [
@@ -683,7 +684,8 @@
     },
     {
       "match": {
-        "userMessage": "Schedule a 1:1 with Alice next week to review Q2 goals."
+        "userMessage": "Schedule a 1:1 with Alice next week to review Q2 goals.",
+        "toolName": "book_call"
       },
       "response": {
         "toolCalls": [
