@@ -230,12 +230,16 @@ public class StreamingToolAgent extends LocalAgent {
         AtomicReference<Throwable> streamError = new AtomicReference<>();
         CountDownLatch latch = new CountDownLatch(1);
 
-        // Build request WITHOUT tool callbacks and with internal tool
-        // execution disabled — we just want to stream text and detect
-        // whether tools are needed without Spring AI's model layer
-        // attempting to execute them through the global ToolCallingManager.
+        // Build request WITH tool definitions but with internal tool
+        // execution disabled — the LLM (or aimock) needs to see the tool
+        // schemas to decide whether to emit tool_calls, but we don't want
+        // Spring AI's model layer to auto-execute them through the global
+        // ToolCallingManager. Execution happens in Phase 2 if needed.
         ChatClient.ChatClientRequestSpec request = buildBaseRequest(
                 input, userContent, true);
+        if (!toolCallbacks.isEmpty()) {
+            request = request.toolCallbacks(toolCallbacks);
+        }
 
         request.stream()
                 .chatResponse()

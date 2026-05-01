@@ -24,7 +24,7 @@ export {
 
 // @region[weather-tool-backend]
 export const weatherTool = createTool({
-  id: "get-weather",
+  id: "get_weather",
   description: "Get current weather for a location",
   inputSchema: z.object({
     location: z.string().describe("City name"),
