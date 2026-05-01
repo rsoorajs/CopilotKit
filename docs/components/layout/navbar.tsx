@@ -208,14 +208,14 @@ const Navbar = ({ pageTree }: NavbarProps) => {
             alt="Slanted end border"
             width={29}
             height={72}
-            className="hidden -ml-px dark:inline-block shrink-0 w-[24px] h-[60px] xl:w-[29px] xl:h-[72px] object-cover"
+            className="hidden -ml-px dark:inline-block shrink-0 h-full w-auto object-cover"
           />
           <Image
             src="/images/navbar/slanted-end-border-light.svg"
             alt="Slanted end border"
             width={29}
             height={72}
-            className="-ml-px dark:hidden shrink-0 w-[24px] h-[60px] xl:w-[29px] xl:h-[72px] object-cover"
+            className="-ml-px dark:hidden shrink-0 h-full w-auto object-cover"
           />
         </div>
 
@@ -225,14 +225,14 @@ const Navbar = ({ pageTree }: NavbarProps) => {
             alt="Slanted start border"
             width={29}
             height={72}
-            className="hidden -mr-px dark:inline-block shrink-0 w-[24px] h-[60px] xl:w-[29px] xl:h-[72px] object-cover"
+            className="hidden -mr-px dark:inline-block shrink-0 h-full w-auto object-cover"
           />
           <Image
             src="/images/navbar/slanted-start-border-light.svg"
             alt="Slanted start border"
             width={29}
             height={72}
-            className="-mr-px dark:hidden shrink-0 w-[24px] h-[60px] xl:w-[29px] xl:h-[72px] object-cover"
+            className="-mr-px dark:hidden shrink-0 h-full w-auto object-cover"
           />
 
           <div
