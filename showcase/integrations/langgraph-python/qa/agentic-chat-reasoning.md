@@ -4,7 +4,7 @@
 
 - Demo is deployed and accessible at `/demos/agentic-chat-reasoning` on the dashboard host
 - Agent backend is healthy (`/api/copilotkit` GET returns `langgraph_status: "reachable"`); `OPENAI_API_KEY` is set; `LANGGRAPH_DEPLOYMENT_URL` points at a deployment exposing the `reasoning_agent` graph (registered under agent name `agentic-chat-reasoning`)
-- The demo overrides the `reasoningMessage` slot with a custom `ReasoningBlock` component (amber-tinted banner); it relies on `deepagents.create_deep_agent` + `gpt-4o-mini` and a system prompt that asks the model to "think step-by-step about the approach, then give a concise answer"
+- The demo overrides the `reasoningMessage` slot with a custom `ReasoningBlock` component (amber-tinted banner); it relies on `deepagents.create_deep_agent` with a reasoning-capable OpenAI model (`gpt-5-mini` by default, override via `OPENAI_REASONING_MODEL`) routed through the Responses API with `reasoning={"effort": "medium", "summary": "detailed"}` so the model's chain of thought streams as AG-UI `REASONING_MESSAGE_*` events. A "Show reasoning" suggestion pill above the input fires `show your reasoning step by step`, which the aimock fixture in `showcase/aimock/d5-all.json` matches with reasoning summary deltas for deterministic local/CI runs.
 
 ## Test Steps
 
