@@ -657,7 +657,11 @@ class CpkThreadList extends LitElement {
 // agent subscriptions; when those are absent we fall back to the per-thread
 // fetched data via `/threads/:id/{events,state}`.
 
-class CpkThreadDetails extends LitElement {
+// Exported (with the underscore-prefixed name signalling internal/test-only)
+// so unit tests can pin down the per-panel template-cache invariants without
+// reaching through `customElements`. Production consumers continue to use the
+// `cpk-thread-details` custom element registered below.
+export class ɵCpkThreadDetails extends LitElement {
   static properties = {
     threadId: { attribute: false },
     thread: { attribute: false },
@@ -746,6 +750,8 @@ class CpkThreadDetails extends LitElement {
    */
   private _conversationTplCache: {
     items: ConversationItem[];
+    expandedTools: Set<string>;
+    expandedMessages: Set<string>;
     tpl: ReturnType<typeof html>;
   } | null = null;
   private _stateTplCache: {
@@ -911,6 +917,23 @@ class CpkThreadDetails extends LitElement {
 
     /* Pin direct children so expanded tool bodies don't get flex-shrunk. */
     .cpk-td__content > * {
+      flex-shrink: 0;
+    }
+
+    /*
+     * Each tab's content is wrapped in this panel so the keep-mounted
+     * inactive panels can be hidden via display:none without disturbing
+     * the gap between visible siblings. The flex column + gap gives each
+     * conversation item / event row breathing room (the cpk-td__content
+     * rule above no longer reaches them now that they are nested inside
+     * the per-panel wrapper).
+     */
+    .cpk-td__panel {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .cpk-td__panel > * {
       flex-shrink: 0;
     }
 
@@ -1753,7 +1776,7 @@ class CpkThreadDetails extends LitElement {
           <!-- Tab bar -->
           <div class="cpk-td__tabs-header">
             <div class="cpk-td__tab-group" role="tablist">
-              ${CpkThreadDetails.TAB_LIST.map(
+              ${ɵCpkThreadDetails.TAB_LIST.map(
                 (tab) => html`
                   <button
                     role="tab"
@@ -1829,6 +1852,7 @@ class CpkThreadDetails extends LitElement {
             ${
               this._activatedTabs.has("conversation")
                 ? html`<div
+                    class="cpk-td__panel"
                     style=${
                       this._tab === "conversation" && !this._panelInitializing
                         ? ""
@@ -1842,6 +1866,7 @@ class CpkThreadDetails extends LitElement {
             ${
               this._activatedTabs.has("agent-state")
                 ? html`<div
+                    class="cpk-td__panel"
                     style=${
                       this._tab === "agent-state" && !this._panelInitializing
                         ? ""
@@ -1855,6 +1880,7 @@ class CpkThreadDetails extends LitElement {
             ${
               this._activatedTabs.has("ag-ui-events")
                 ? html`<div
+                    class="cpk-td__panel"
                     style=${
                       this._tab === "ag-ui-events" && !this._panelInitializing
                         ? ""
@@ -1929,17 +1955,32 @@ class CpkThreadDetails extends LitElement {
         </div>
       `;
     }
-    // Reuse the cached TemplateResult when the underlying message list
-    // hasn't changed. This is the hot path for tab switches: re-running
-    // the iteration over `_conversation` and creating fresh TemplateResults
-    // for every item is many ms of pure JS work, even though the data is
-    // identical to the previous render.
-    if (this._conversationTplCache?.items === this._conversation) {
-      return this._conversationTplCache.tpl;
+    // Reuse the cached TemplateResult when the underlying message list AND
+    // the per-item expand state are identical to the previous render. This
+    // is the hot path for tab switches: re-running the iteration over
+    // `_conversation` and creating fresh TemplateResults for every item is
+    // many ms of pure JS work, even though the data is identical. Expand
+    // state is part of the key because clicking a tool-call header or the
+    // "Show more" button on a long message replaces `_expandedTools` /
+    // `_expandedMessages` without touching `_conversation` — without those
+    // keys the cache returns the pre-toggle template and the disclosure
+    // appears broken.
+    const cache = this._conversationTplCache;
+    if (
+      cache?.items === this._conversation &&
+      cache.expandedTools === this._expandedTools &&
+      cache.expandedMessages === this._expandedMessages
+    ) {
+      return cache.tpl;
     }
     const items = this.renderItems;
     const tpl = html`${items.map((item) => this.renderRenderItem(item))}`;
-    this._conversationTplCache = { items: this._conversation, tpl };
+    this._conversationTplCache = {
+      items: this._conversation,
+      expandedTools: this._expandedTools,
+      expandedMessages: this._expandedMessages,
+      tpl,
+    };
     return tpl;
   }
 
@@ -1971,7 +2012,7 @@ class CpkThreadDetails extends LitElement {
 
   private renderBubble(item: ConversationUser | ConversationAssistant) {
     const isUser = item.type === "user";
-    const threshold = CpkThreadDetails.COLLAPSE_THRESHOLD;
+    const threshold = ɵCpkThreadDetails.COLLAPSE_THRESHOLD;
     const expanded = this._expandedMessages.has(item.id);
     const tooLong = item.content.length > threshold;
     const shown =
@@ -2320,7 +2361,7 @@ if (!customElements.get("cpk-thread-list")) {
   customElements.define("cpk-thread-list", CpkThreadList);
 }
 if (!customElements.get("cpk-thread-details")) {
-  customElements.define("cpk-thread-details", CpkThreadDetails);
+  customElements.define("cpk-thread-details", ɵCpkThreadDetails);
 }
 
 export class WebInspectorElement extends LitElement {

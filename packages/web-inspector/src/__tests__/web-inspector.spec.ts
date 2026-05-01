@@ -1,4 +1,4 @@
-import { WebInspectorElement } from "../index";
+import { WebInspectorElement, ɵCpkThreadDetails } from "../index";
 import {
   CopilotKitCore,
   CopilotKitCoreRuntimeConnectionStatus,
@@ -290,5 +290,180 @@ describe("WebInspectorElement", () => {
     controller.simulateSetState({ counter: 5 });
     await inspector.updateComplete;
     expect(internals.agentStates.get("counter")).toEqual({ counter: 5 });
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// CpkThreadDetails — per-panel TemplateResult cache invariants
+// ─────────────────────────────────────────────────────────────────────────
+//
+// The conversation / agent-state / events panels each cache the rendered
+// TemplateResult by reference of the underlying data so tab switches don't
+// re-iterate over hundreds of items. These tests pin down the cache-key
+// contract: when the data reassigns, the cache MUST drop, and when the
+// thread changes, ALL three caches MUST reset. A future edit that mutates
+// the data in place (instead of reassigning) or forgets to null one of the
+// caches in `updated()` would silently render stale content under a new
+// thread, which is undetectable by manual QA on a single thread.
+
+type ThreadDetailsInternals = {
+  threadId: string | null;
+  liveMessageVersion: number;
+  _conversation: Array<Record<string, unknown>>;
+  _fetchedState: Record<string, unknown> | null;
+  _fetchedEvents: Array<unknown> | null;
+  _expandedTools: Set<string>;
+  _expandedMessages: Set<string>;
+  _stateNotAvailable: boolean;
+  _eventsNotAvailable: boolean;
+  _loadingMessages: boolean;
+  _loadingState: boolean;
+  _loadingEvents: boolean;
+  _conversationTplCache: { tpl: unknown } | null;
+  _stateTplCache: { tpl: unknown } | null;
+  _eventsTplCache: { tpl: unknown } | null;
+  renderConversation: () => unknown;
+  renderState: () => unknown;
+  renderEvents: () => unknown;
+};
+
+function createThreadDetails(): {
+  el: ɵCpkThreadDetails;
+  internals: ThreadDetailsInternals;
+} {
+  const el = new ɵCpkThreadDetails();
+  document.body.appendChild(el);
+  // Same cast pattern as `getInternals` above — there's no public surface
+  // for the cache slots, so the test reaches through a typed view.
+  const internals = el as unknown as ThreadDetailsInternals;
+  return { el, internals };
+}
+
+describe("ɵCpkThreadDetails caching", () => {
+  beforeEach(() => {
+    document.body.innerHTML = "";
+  });
+
+  /**
+   * Drive the threadId-change `updated()` block once so its reset path
+   * runs on entry, then seed the data the test cares about AFTER. If we
+   * seed before the first updateComplete, `updated()` immediately nulls
+   * `_fetchedState` / `_fetchedEvents` / `_conversation` (and
+   * `fetchMessages` re-clears `_conversation` when no `runtimeUrl` is
+   * configured, as in this jsdom test), so the assertions below would
+   * be running against an empty element.
+   */
+  async function settleThread(
+    el: ɵCpkThreadDetails,
+    internals: ThreadDetailsInternals,
+    threadId: string,
+  ): Promise<void> {
+    internals.threadId = threadId;
+    await el.updateComplete;
+  }
+
+  it("threadId change drops all three template caches", async () => {
+    const { el, internals } = createThreadDetails();
+    await settleThread(el, internals, "t1");
+
+    // Hand-build the cache slots so we don't have to drive every render
+    // path through the DOM. The presence of any slot is what the
+    // assertion below checks for; what they hold is irrelevant.
+    internals._conversationTplCache = { tpl: "cached-conv" };
+    internals._stateTplCache = { tpl: "cached-state" };
+    internals._eventsTplCache = { tpl: "cached-events" };
+
+    // Switch to thread t2 — the threadId branch in `updated()` should
+    // null all three caches.
+    internals.threadId = "t2";
+    await el.updateComplete;
+
+    expect(internals._conversationTplCache).toBeNull();
+    expect(internals._stateTplCache).toBeNull();
+    expect(internals._eventsTplCache).toBeNull();
+  });
+
+  it("conversation cache invalidates when _conversation is reassigned", async () => {
+    const { el, internals } = createThreadDetails();
+    await settleThread(el, internals, "t1");
+
+    internals._conversation = [
+      { id: "m1", type: "user", content: "hi", createdAt: "" },
+    ];
+
+    const tplA = internals.renderConversation();
+    expect(internals._conversationTplCache).not.toBeNull();
+    expect(internals._conversationTplCache?.tpl).toBe(tplA);
+
+    // Cache hit: same array reference, same expand sets — same TemplateResult.
+    expect(internals.renderConversation()).toBe(tplA);
+
+    // New array reference (the streaming refetch path always reassigns
+    // via `this._conversation = this.mapMessages(...)` rather than
+    // mutating in place — that contract is what this test pins).
+    internals._conversation = [
+      { id: "m1", type: "user", content: "hi", createdAt: "" },
+      { id: "m2", type: "assistant", content: "hello", createdAt: "" },
+    ];
+
+    const tplB = internals.renderConversation();
+    expect(tplB).not.toBe(tplA);
+    expect(internals._conversationTplCache?.tpl).toBe(tplB);
+  });
+
+  it("conversation cache invalidates when expand state changes", async () => {
+    // Regression guard: an earlier version keyed the cache only on
+    // `_conversation`, so toggling a tool-call expand or a "Show more"
+    // on a long message returned the pre-toggle template. The cache key
+    // now includes both expand sets.
+    const { el, internals } = createThreadDetails();
+    await settleThread(el, internals, "t1");
+
+    internals._conversation = [
+      {
+        id: "tc1",
+        type: "tool_call",
+        toolName: "doThing",
+        toolCallId: "tc1",
+        arguments: { x: 1 },
+        result: null,
+        createdAt: "",
+      },
+    ];
+
+    const collapsed = internals.renderConversation();
+    expect(internals.renderConversation()).toBe(collapsed);
+
+    // Simulating `toggleToolExpand("tc1")` — production code always
+    // builds a fresh Set, so reference equality flips.
+    internals._expandedTools = new Set(["tc1"]);
+
+    const expanded = internals.renderConversation();
+    expect(expanded).not.toBe(collapsed);
+
+    // Same for the long-message "Show more" path.
+    internals._expandedMessages = new Set(["m1"]);
+
+    expect(internals.renderConversation()).not.toBe(expanded);
+  });
+
+  it("state and events caches invalidate when their fetched data is reassigned", async () => {
+    const { el, internals } = createThreadDetails();
+    await settleThread(el, internals, "t1");
+
+    internals._fetchedState = { foo: "bar" };
+    internals._fetchedEvents = [{ type: "RUN_STARTED" }];
+
+    const stateA = internals.renderState();
+    const eventsA = internals.renderEvents();
+    expect(internals.renderState()).toBe(stateA);
+    expect(internals.renderEvents()).toBe(eventsA);
+
+    // Reassign both — fresh references after a refetch.
+    internals._fetchedState = { foo: "baz" };
+    internals._fetchedEvents = [{ type: "RUN_FINISHED" }];
+
+    expect(internals.renderState()).not.toBe(stateA);
+    expect(internals.renderEvents()).not.toBe(eventsA);
   });
 });
