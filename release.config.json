@@ -19,11 +19,6 @@
       "versionSource": "@copilotkit/react-core",
       "sharedVersion": true
     },
-    "cli": {
-      "packages": ["copilotkit"],
-      "versionSource": "copilotkit",
-      "sharedVersion": false
-    },
     "angular": {
       "packages": ["@copilotkitnext/angular"],
       "versionSource": "@copilotkitnext/angular",
