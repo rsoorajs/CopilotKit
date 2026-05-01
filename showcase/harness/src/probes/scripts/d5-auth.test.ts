@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { getD5Script, type D5BuildContext } from "../helpers/d5-registry.js";
+import { getD5Script } from "../helpers/d5-registry.js";
+import type { D5BuildContext } from "../helpers/d5-registry.js";
 import type { Page } from "../helpers/conversation-runner.js";
 import {
   buildTurns,
@@ -14,11 +15,14 @@ interface FakeOpts {
   errorAfterClick?: boolean;
 }
 
-function makePage(
-  opts: FakeOpts,
-): Page & { click: (s: string) => Promise<void> } {
+function makePage(opts: FakeOpts): {
+  page: Page;
+  /** Inject as the `click` option to `buildAuthAssertion` so the fake
+   *  page's `clicked` flag flips when the assertion tries to sign out. */
+  fakeClick: (p: Page, sel: string) => Promise<void>;
+} {
   let clicked = false;
-  return {
+  const page: Page = {
     async waitForSelector() {
       if (!opts.signOutButtonVisible) {
         throw new Error("waitForSelector timeout (test fake)");
@@ -27,13 +31,15 @@ function makePage(
     async fill() {},
     async press() {},
     async evaluate() {
-      // After click, simulate the error surface appearing.
+      // probeErrorSurfaceVisible polls this — returns true when the
+      // error surface should be visible (after click + opts say yes).
       return (clicked && (opts.errorAfterClick ?? true)) as never;
     },
-    async click() {
-      clicked = true;
-    },
   };
+  const fakeClick = async (_p: Page, _sel: string): Promise<void> => {
+    clicked = true;
+  };
+  return { page, fakeClick };
 }
 
 describe("d5-auth script", () => {
@@ -64,27 +70,34 @@ describe("d5-auth script", () => {
   });
 
   it("assertion fails when sign-out button is not visible", async () => {
-    const assertion = buildAuthAssertion({ signOutTimeoutMs: 50 });
-    await expect(
-      assertion(makePage({ signOutButtonVisible: false })),
-    ).rejects.toThrow(/sign-out button.*not visible/);
+    const { page, fakeClick } = makePage({ signOutButtonVisible: false });
+    const assertion = buildAuthAssertion({
+      signOutTimeoutMs: 50,
+      click: fakeClick,
+    });
+    await expect(assertion(page)).rejects.toThrow(
+      /sign-out button.*not visible/,
+    );
   });
 
   it("assertion fails when error surfaces never appear after sign-out", async () => {
-    const assertion = buildAuthAssertion({ signOutTimeoutMs: 50 });
-    await expect(
-      assertion(
-        makePage({ signOutButtonVisible: true, errorAfterClick: false }),
-      ),
-    ).rejects.toThrow(/neither.*appeared/);
+    const { page, fakeClick } = makePage({
+      signOutButtonVisible: true,
+      errorAfterClick: false,
+    });
+    const assertion = buildAuthAssertion({
+      signOutTimeoutMs: 50,
+      click: fakeClick,
+    });
+    await expect(assertion(page)).rejects.toThrow(/neither.*appeared/);
   });
 
   it("assertion succeeds when error banner appears after sign-out", async () => {
-    const assertion = buildAuthAssertion();
-    await expect(
-      assertion(
-        makePage({ signOutButtonVisible: true, errorAfterClick: true }),
-      ),
-    ).resolves.toBeUndefined();
+    const { page, fakeClick } = makePage({
+      signOutButtonVisible: true,
+      errorAfterClick: true,
+    });
+    const assertion = buildAuthAssertion({ click: fakeClick });
+    await expect(assertion(page)).resolves.toBeUndefined();
   });
 });

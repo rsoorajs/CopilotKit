@@ -53,25 +53,29 @@ export interface AuthAssertionOpts {
   click?: (page: Page, selector: string) => Promise<void>;
 }
 
-/** Default click implementation: assumes the underlying Page has a
- *  `click()` method (real Playwright Page satisfies this). Uses
- *  `force: true` to bypass actionability checks — the dev `<cpk-web-inspector>`
- *  overlay intercepts pointer events on the auth demo, making a normal
- *  click time out even though the button is visible and enabled. */
+/** Default click implementation: uses `page.evaluate()` to call
+ *  `element.click()` directly via JavaScript. Playwright's `force: true`
+ *  dispatches pointer events that `<cpk-web-inspector>` intercepts before
+ *  React's synthetic event system picks them up — the onClick handler
+ *  never fires. The JS-level `.click()` bypasses the overlay entirely
+ *  because it triggers the DOM click event without pointer dispatch.
+ *
+ *  Note: the Page interface's `evaluate` only accepts zero-arg functions,
+ *  so we embed the selector in the function body via closure over a
+ *  `new Function` constructor to avoid serialization issues. */
 const defaultClick = async (page: Page, selector: string): Promise<void> => {
-  // Real playwright.Page has click(); structurally we cast through.
-  const clickable = page as unknown as {
-    click: (
-      sel: string,
-      opts?: { timeout?: number; force?: boolean },
-    ) => Promise<void>;
-  };
-  if (typeof clickable.click !== "function") {
-    throw new Error(
-      "auth: page does not support click() — cannot simulate sign-out",
-    );
-  }
-  await clickable.click(selector, { timeout: 5_000, force: true });
+  // The Page interface only exposes evaluate<R>(fn: () => R), so we
+  // construct the click logic as a self-contained zero-arg function
+  // with the selector baked into the source.
+  const code = `
+    (() => {
+      const el = document.querySelector(${JSON.stringify(selector)});
+      if (!el) throw new Error("auth: element " + ${JSON.stringify(selector)} + " not found in DOM");
+      el.click();
+    })()
+  `;
+  const fn = new Function(`return ${code.trim()};`) as () => void;
+  await page.evaluate(fn);
 };
 
 export function buildAuthAssertion(
