@@ -274,7 +274,12 @@ function determineCellStatus(
  */
 function generateCatalog(
   featureRegistry: {
-    features: Array<{ id: string; name: string; category: string; kind?: string }>;
+    features: Array<{
+      id: string;
+      name: string;
+      category: string;
+      kind?: string;
+    }>;
     categories: Array<{ id: string; name: string }>;
   },
   integrations: Record<string, unknown>[],
@@ -359,19 +364,8 @@ function generateCatalog(
     unsupportedFeaturesPerIntegration.set(slug, unsupportedFeatures);
   }
 
-  // Step 2: Auto-detect reference integration (most wired features, ties broken alphabetically)
-  let referenceSlug = "";
-  let referenceCount = -1;
-  for (const [slug, wiredSet] of wiredFeaturesPerIntegration) {
-    const count = wiredSet.size;
-    if (
-      count > referenceCount ||
-      (count === referenceCount && slug < referenceSlug)
-    ) {
-      referenceSlug = slug;
-      referenceCount = count;
-    }
-  }
+  // Step 2: Reference integration — always langgraph-python.
+  const referenceSlug = "langgraph-python";
 
   const referenceWiredFeatures =
     wiredFeaturesPerIntegration.get(referenceSlug)!;
