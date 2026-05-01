@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "fumadocs-core/link";
 import { usePathname } from "next/navigation";
+import { usePostHog } from "posthog-js/react";
 import { DocsLayoutProps } from "fumadocs-ui/layouts/docs";
 // Components
 import { Logo } from "@/app/logo";
@@ -79,6 +80,12 @@ const Navbar = ({ pageTree }: NavbarProps) => {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [lastDocsPath, setLastDocsPath] = useState<string | null>(null);
   const pathname = usePathname();
+  const posthog = usePostHog();
+
+  const handleTalkToEngineersClick = () => {
+    posthog?.capture("talk_to_us_clicked", { location: "docs_nav" });
+    window.location.href = "https://copilotkit.ai/contact-us";
+  };
 
   // Read sessionStorage on client only to avoid hydration mismatch (tab-specific)
   useEffect(() => {
@@ -239,6 +246,15 @@ const Navbar = ({ pageTree }: NavbarProps) => {
             className="flex gap-1 items-center pr-2 w-max h-full rounded-r-2xl border border-l-0 backdrop-blur-lg md:pr-4 shrink-0 border-border"
             style={{ backgroundColor: "var(--sidebar)" }}
           >
+            <button
+              type="button"
+              onClick={handleTalkToEngineersClick}
+              className="hidden [@media(width>=1400px)]:flex items-center h-9 px-4 mr-2 text-sm font-medium rounded-full border border-border bg-transparent text-muted-foreground hover:text-[#7076D5] hover:border-[#7076D5] hover:bg-[#7076D5]/10 transition-colors duration-200 cursor-pointer whitespace-nowrap"
+              aria-label="Talk to our engineers"
+            >
+              Talk to Our Engineers
+            </button>
+
             {RIGHT_LINKS.map((link) => {
               // Only show Free Developer Access at narrow widths (between 768px and 1028px)
               const isIconOnlyLink = link.label === "Free Developer Access";
