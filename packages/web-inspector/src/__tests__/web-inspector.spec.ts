@@ -319,9 +319,7 @@ type ThreadDetailsInternals = {
   _loadingMessages: boolean;
   _loadingState: boolean;
   _loadingEvents: boolean;
-  _conversationTplCache: { tpl: unknown } | null;
-  _stateTplCache: { tpl: unknown } | null;
-  _eventsTplCache: { tpl: unknown } | null;
+  _panelTplCache: Map<string, { key: readonly unknown[]; tpl: unknown }>;
   renderConversation: () => unknown;
   renderState: () => unknown;
   renderEvents: () => unknown;
@@ -366,21 +364,19 @@ describe("ɵCpkThreadDetails caching", () => {
     const { el, internals } = createThreadDetails();
     await settleThread(el, internals, "t1");
 
-    // Hand-build the cache slots so we don't have to drive every render
-    // path through the DOM. The presence of any slot is what the
-    // assertion below checks for; what they hold is irrelevant.
-    internals._conversationTplCache = { tpl: "cached-conv" };
-    internals._stateTplCache = { tpl: "cached-state" };
-    internals._eventsTplCache = { tpl: "cached-events" };
+    // Hand-build cache entries for all three panels so we don't have to
+    // drive every render path through the DOM. The presence of any entry
+    // is what the assertion below checks for; what they hold is irrelevant.
+    internals._panelTplCache.set("conversation", { key: [], tpl: "c" });
+    internals._panelTplCache.set("agent-state", { key: [], tpl: "s" });
+    internals._panelTplCache.set("ag-ui-events", { key: [], tpl: "e" });
 
     // Switch to thread t2 — the threadId branch in `updated()` should
-    // null all three caches.
+    // empty the cache map.
     internals.threadId = "t2";
     await el.updateComplete;
 
-    expect(internals._conversationTplCache).toBeNull();
-    expect(internals._stateTplCache).toBeNull();
-    expect(internals._eventsTplCache).toBeNull();
+    expect(internals._panelTplCache.size).toBe(0);
   });
 
   it("conversation cache invalidates when _conversation is reassigned", async () => {
@@ -392,8 +388,7 @@ describe("ɵCpkThreadDetails caching", () => {
     ];
 
     const tplA = internals.renderConversation();
-    expect(internals._conversationTplCache).not.toBeNull();
-    expect(internals._conversationTplCache?.tpl).toBe(tplA);
+    expect(internals._panelTplCache.get("conversation")?.tpl).toBe(tplA);
 
     // Cache hit: same array reference, same expand sets — same TemplateResult.
     expect(internals.renderConversation()).toBe(tplA);
@@ -408,7 +403,7 @@ describe("ɵCpkThreadDetails caching", () => {
 
     const tplB = internals.renderConversation();
     expect(tplB).not.toBe(tplA);
-    expect(internals._conversationTplCache?.tpl).toBe(tplB);
+    expect(internals._panelTplCache.get("conversation")?.tpl).toBe(tplB);
   });
 
   it("conversation cache invalidates when expand state changes", async () => {

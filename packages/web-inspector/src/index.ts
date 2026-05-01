@@ -1,4 +1,11 @@
-import { LitElement, css, html, nothing, unsafeCSS } from "lit";
+import {
+  LitElement,
+  css,
+  html,
+  nothing,
+  unsafeCSS,
+  type TemplateResult,
+} from "lit";
 import { marked } from "marked";
 import { styleMap } from "lit/directives/style-map.js";
 import tailwindStyles from "./styles/generated.css";
@@ -270,9 +277,9 @@ function escapeHtml(s: string): string {
 }
 
 // Memoize highlight output by payload reference. Tab switches cause Lit to
-// re-render the active panel from scratch, and `highlightedJson` is by far
-// the most expensive thing in the events / state panels (JSON.stringify +
-// regex pass over potentially MB of agent state). Caching by object reference
+// re-render the active panel from scratch, and the JSON.stringify + regex
+// pass below is by far the most expensive thing in the events / state
+// panels (potentially MB of agent state). Caching by object reference
 // turns subsequent renders of an unchanged event list into near-zero JS work.
 const highlightedJsonCache = new WeakMap<object, string>();
 
@@ -281,14 +288,6 @@ function highlightedJson(obj: unknown): string {
     const cached = highlightedJsonCache.get(obj);
     if (cached !== undefined) return cached;
   }
-  const result = highlightedJsonImpl(obj);
-  if (typeof obj === "object" && obj !== null) {
-    highlightedJsonCache.set(obj, result);
-  }
-  return result;
-}
-
-function highlightedJsonImpl(obj: unknown): string {
   const colors = {
     key: "#5558B2",
     str: "#189370",
@@ -318,7 +317,11 @@ function highlightedJsonImpl(obj: unknown): string {
     lastIndex = match.index + m.length;
   }
   parts.push(escapeHtml(json.slice(lastIndex)));
-  return parts.join("");
+  const result = parts.join("");
+  if (typeof obj === "object" && obj !== null) {
+    highlightedJsonCache.set(obj, result);
+  }
+  return result;
 }
 
 function eventColors(type: string): { bg: string; fg: string } {
@@ -743,25 +746,17 @@ export class ɵCpkThreadDetails extends LitElement {
   /**
    * Memoized per-panel templates keyed by the inputs they render from.
    * When the underlying data hasn't changed (same `_conversation` /
-   * `_fetchedState` / events array reference), we return the previously
-   * built TemplateResult. Lit then sees "same template, same values" and
-   * skips the diff entirely, so re-rendering on tab switch is near-zero
-   * work even when the panel content is large.
+   * `_fetchedState` / events array reference, plus expand-state for the
+   * conversation panel), we return the previously built TemplateResult.
+   * Lit then sees "same template, same values" and skips the diff entirely,
+   * so re-rendering on tab switch is near-zero work even when the panel
+   * content is large. The key is an opaque tuple compared element-wise by
+   * reference; if any element flips, the cache misses and rebuilds.
    */
-  private _conversationTplCache: {
-    items: ConversationItem[];
-    expandedTools: Set<string>;
-    expandedMessages: Set<string>;
-    tpl: ReturnType<typeof html>;
-  } | null = null;
-  private _stateTplCache: {
-    state: Record<string, unknown> | null;
-    tpl: ReturnType<typeof html>;
-  } | null = null;
-  private _eventsTplCache: {
-    events: ApiAgentEvent[];
-    tpl: ReturnType<typeof html>;
-  } | null = null;
+  private _panelTplCache: Map<
+    ThreadDetailsTab,
+    { key: readonly unknown[]; tpl: TemplateResult }
+  > = new Map();
   /**
    * Tracks whether we've fetched events for the current thread yet. Events
    * fetch lazily on first sub-tab click so a large response's JSON.parse
@@ -785,7 +780,7 @@ export class ɵCpkThreadDetails extends LitElement {
   private _dividerStartWidth = 0;
 
   static readonly COLLAPSE_THRESHOLD = 800;
-  private static readonly TAB_LIST: Array<{
+  private static readonly TAB_LIST: ReadonlyArray<{
     id: ThreadDetailsTab;
     label: string;
   }> = [
@@ -793,6 +788,50 @@ export class ɵCpkThreadDetails extends LitElement {
     { id: "agent-state", label: "Agent State" },
     { id: "ag-ui-events", label: "AG-UI Events" },
   ];
+
+  private renderTabContent(id: ThreadDetailsTab): TemplateResult {
+    if (id === "conversation") return this.renderConversation();
+    if (id === "agent-state") return this.renderState();
+    return this.renderEvents();
+  }
+
+  private activateTab(id: ThreadDetailsTab): void {
+    if (this._tab === id) return;
+    const isFirstActivation = !this._activatedTabs.has(id);
+    this._tab = id;
+    if (isFirstActivation) {
+      // First time opening this tab: paint a "Loading…" overlay for one
+      // frame so the tab highlight + spinner appear before the heavy
+      // per-tab render runs (events list, state JSON). The rAF batches
+      // mounting the panel into `_activatedTabs` and clearing the spinner
+      // into a single subsequent paint. Subsequent activations are pure
+      // CSS toggles via display:none on the already-mounted panel — no
+      // re-render required.
+      this._panelInitializing = true;
+      requestAnimationFrame(() => {
+        this._activatedTabs = new Set([...this._activatedTabs, id]);
+        this._panelInitializing = false;
+      });
+    }
+    this.maybeFetchTabData(id);
+  }
+
+  private maybeFetchTabData(id: ThreadDetailsTab): void {
+    // Lazy-trigger the events / state fetches so their (potentially huge)
+    // JSON.parse only blocks the main thread after the user has shown
+    // intent to view that sub-tab. Without lazy-load, the eager fetch runs
+    // as soon as the thread opens and a single large response can stall
+    // the entire panel for seconds — including making the tab buttons
+    // themselves feel unresponsive.
+    if (!this.threadId) return;
+    if (id === "ag-ui-events" && !this._eventsFetched) {
+      this._eventsFetched = true;
+      void this.fetchEvents(this.threadId);
+    } else if (id === "agent-state" && !this._stateFetched) {
+      this._stateFetched = true;
+      void this.fetchState(this.threadId);
+    }
+  }
 
   static styles = css`
     @import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600&family=Spline+Sans+Mono:wght@400;500&display=swap");
@@ -1354,9 +1393,7 @@ export class ɵCpkThreadDetails extends LitElement {
       this._lastSeenLiveMessageVersion = this.liveMessageVersion;
       this._tab = "conversation";
       this._activatedTabs = new Set(["conversation"]);
-      this._conversationTplCache = null;
-      this._stateTplCache = null;
-      this._eventsTplCache = null;
+      this._panelTplCache = new Map();
       this._expandedTools = new Set();
       this._expandedMessages = new Set();
       this._messagesAbort?.abort();
@@ -1783,54 +1820,7 @@ export class ɵCpkThreadDetails extends LitElement {
                     class="cpk-td__tab ${
                       this._tab === tab.id ? "cpk-td__tab--active" : ""
                     }"
-                    @click=${() => {
-                      if (this._tab === tab.id) return;
-                      const isFirstActivation = !this._activatedTabs.has(
-                        tab.id,
-                      );
-                      this._tab = tab.id;
-                      if (isFirstActivation) {
-                        // First time opening this tab: paint a "Loading…"
-                        // overlay for one frame so the tab highlight appears
-                        // before the heavy per-tab render runs (events list,
-                        // state JSON). The next rAF mounts the panel and the
-                        // one after clears the spinner. Subsequent activations
-                        // are pure CSS toggles via display:none on the
-                        // already-mounted panel — no re-render required.
-                        this._panelInitializing = true;
-                        requestAnimationFrame(() => {
-                          this._activatedTabs = new Set([
-                            ...this._activatedTabs,
-                            tab.id,
-                          ]);
-                          requestAnimationFrame(() => {
-                            this._panelInitializing = false;
-                          });
-                        });
-                      }
-                      // Lazy-trigger the events / state fetches so their
-                      // (potentially huge) JSON.parse only blocks the main
-                      // thread after the user has shown intent to view that
-                      // sub-tab. Without lazy-load, the eager fetch runs as
-                      // soon as the thread opens and a single large response
-                      // can stall the entire panel for seconds — including
-                      // making the tab buttons themselves feel unresponsive.
-                      if (
-                        tab.id === "ag-ui-events" &&
-                        !this._eventsFetched &&
-                        this.threadId
-                      ) {
-                        this._eventsFetched = true;
-                        void this.fetchEvents(this.threadId);
-                      } else if (
-                        tab.id === "agent-state" &&
-                        !this._stateFetched &&
-                        this.threadId
-                      ) {
-                        this._stateFetched = true;
-                        void this.fetchState(this.threadId);
-                      }
-                    }}
+                    @click=${() => this.activateTab(tab.id)}
                   >
                     ${tab.label}
                   </button>
@@ -1850,46 +1840,20 @@ export class ɵCpkThreadDetails extends LitElement {
                 : nothing
             }
             ${
-              this._activatedTabs.has("conversation")
-                ? html`<div
-                    class="cpk-td__panel"
-                    style=${
-                      this._tab === "conversation" && !this._panelInitializing
-                        ? ""
-                        : "display:none"
-                    }
-                  >
-                    ${this.renderConversation()}
-                  </div>`
-                : nothing
-            }
-            ${
-              this._activatedTabs.has("agent-state")
-                ? html`<div
-                    class="cpk-td__panel"
-                    style=${
-                      this._tab === "agent-state" && !this._panelInitializing
-                        ? ""
-                        : "display:none"
-                    }
-                  >
-                    ${this.renderState()}
-                  </div>`
-                : nothing
-            }
-            ${
-              this._activatedTabs.has("ag-ui-events")
-                ? html`<div
-                    class="cpk-td__panel"
-                    style=${
-                      this._tab === "ag-ui-events" && !this._panelInitializing
-                        ? ""
-                        : "display:none"
-                    }
-                  >
-                    ${this.renderEvents()}
-                  </div>`
-                : nothing
+              ɵCpkThreadDetails.TAB_LIST.map((tab) =>
+                this._activatedTabs.has(tab.id)
+                  ? html`<div
+                      class="cpk-td__panel"
+                      style=${
+                        this._tab === tab.id && !this._panelInitializing
+                          ? ""
+                          : "display:none"
+                      }
+                    >
+                      ${this.renderTabContent(tab.id)}
+                    </div>`
+                  : nothing,
+              )
             }
           </div>
         </div>
@@ -1955,32 +1919,45 @@ export class ɵCpkThreadDetails extends LitElement {
         </div>
       `;
     }
-    // Reuse the cached TemplateResult when the underlying message list AND
-    // the per-item expand state are identical to the previous render. This
-    // is the hot path for tab switches: re-running the iteration over
-    // `_conversation` and creating fresh TemplateResults for every item is
-    // many ms of pure JS work, even though the data is identical. Expand
-    // state is part of the key because clicking a tool-call header or the
-    // "Show more" button on a long message replaces `_expandedTools` /
-    // `_expandedMessages` without touching `_conversation` — without those
-    // keys the cache returns the pre-toggle template and the disclosure
-    // appears broken.
-    const cache = this._conversationTplCache;
+    // Expand state is part of the cache key because clicking a tool-call
+    // header or the "Show more" button on a long message replaces
+    // `_expandedTools` / `_expandedMessages` without touching
+    // `_conversation` — without those keys the cache returns the
+    // pre-toggle template and the disclosure appears broken.
+    return this.cachedPanelTpl(
+      "conversation",
+      [this._conversation, this._expandedTools, this._expandedMessages],
+      () => {
+        const items = this.renderItems;
+        return html`${items.map((item) => this.renderRenderItem(item))}`;
+      },
+    );
+  }
+
+  /**
+   * Memoize the rendered TemplateResult for `slot` keyed by tuple
+   * element-wise reference equality. The hot path for tab switches: when
+   * the underlying data hasn't changed, return the previously built
+   * TemplateResult so Lit's diff short-circuits. Each panel's `key` is
+   * the tuple of inputs the template reads — pass everything the template
+   * depends on, or the cache will return stale output when those inputs
+   * change without the listed key flipping.
+   */
+  private cachedPanelTpl(
+    slot: ThreadDetailsTab,
+    key: readonly unknown[],
+    build: () => TemplateResult,
+  ): TemplateResult {
+    const cached = this._panelTplCache.get(slot);
     if (
-      cache?.items === this._conversation &&
-      cache.expandedTools === this._expandedTools &&
-      cache.expandedMessages === this._expandedMessages
+      cached &&
+      cached.key.length === key.length &&
+      cached.key.every((v, i) => v === key[i])
     ) {
-      return cache.tpl;
+      return cached.tpl;
     }
-    const items = this.renderItems;
-    const tpl = html`${items.map((item) => this.renderRenderItem(item))}`;
-    this._conversationTplCache = {
-      items: this._conversation,
-      expandedTools: this._expandedTools,
-      expandedMessages: this._expandedMessages,
-      tpl,
-    };
+    const tpl = build();
+    this._panelTplCache.set(slot, { key, tpl });
     return tpl;
   }
 
@@ -2195,14 +2172,11 @@ ${unsafeHTML(highlightedJson(item.result))}</pre
       `;
     }
     const stateValue = this.activeState;
-    if (this._stateTplCache?.state === stateValue) {
-      return this._stateTplCache.tpl;
-    }
-    const tpl = html`<pre class="cpk-td__json-block">
+    return this.cachedPanelTpl("agent-state", [stateValue], () => {
+      return html`<pre class="cpk-td__json-block">
 ${unsafeHTML(highlightedJson(stateValue))}</pre
-    >`;
-    this._stateTplCache = { state: stateValue, tpl };
-    return tpl;
+      >`;
+    });
   }
 
   private renderEvents() {
@@ -2238,29 +2212,26 @@ ${unsafeHTML(highlightedJson(stateValue))}</pre
         </div>
       `;
     }
-    if (this._eventsTplCache?.events === events) {
-      return this._eventsTplCache.tpl;
-    }
-    const tpl = html`${events.map((event) => {
-      const { bg, fg } = eventColors(event.type);
-      return html`
-        <div class="cpk-td__event">
-          <div class="cpk-td__event-header" style="background:${bg}">
-            <span class="cpk-td__event-type" style="color:${fg}"
-              >${event.type}</span
-            >
-            <span class="cpk-td__event-time"
-              >${formatTimestamp(event.timestamp)}</span
+    return this.cachedPanelTpl("ag-ui-events", [events], () => {
+      return html`${events.map((event) => {
+        const { bg, fg } = eventColors(event.type);
+        return html`
+          <div class="cpk-td__event">
+            <div class="cpk-td__event-header" style="background:${bg}">
+              <span class="cpk-td__event-type" style="color:${fg}"
+                >${event.type}</span
+              >
+              <span class="cpk-td__event-time"
+                >${formatTimestamp(event.timestamp)}</span
+              >
+            </div>
+            <pre class="cpk-td__event-payload">
+${unsafeHTML(highlightedJson(event.payload))}</pre
             >
           </div>
-          <pre class="cpk-td__event-payload">
-${unsafeHTML(highlightedJson(event.payload))}</pre
-          >
-        </div>
-      `;
-    })}`;
-    this._eventsTplCache = { events, tpl };
-    return tpl;
+        `;
+      })}`;
+    });
   }
 
   private renderPanelToggle() {
