@@ -19,8 +19,8 @@
 // — equivalent UX, different mechanism.
 
 import React, { useRef, useState } from "react";
-import { CopilotKit } from "@copilotkit/react-core";
 import {
+  CopilotKitProvider,
   CopilotChat,
   useConfigureSuggestions,
   useFrontendTool,
@@ -47,9 +47,9 @@ const DEFAULT_SLOTS: TimeSlot[] = [
 
 export default function InterruptHeadlessDemo() {
   return (
-    <CopilotKit runtimeUrl="/api/copilotkit" agent="interrupt-headless">
+    <CopilotKitProvider runtimeUrl="/api/copilotkit" useSingleEndpoint>
       <Layout />
-    </CopilotKit>
+    </CopilotKitProvider>
   );
 }
 
@@ -129,7 +129,7 @@ function Layout() {
     <div className="grid h-screen grid-cols-[1fr_420px] bg-[#FAFAFC]">
       <AppSurface pending={pending} resolve={resolve} />
       <div className="border-l border-[#DBDBE5] bg-white">
-        <CopilotChat agentId="interrupt-headless" className="h-full" />
+        <CopilotChat className="h-full" />
       </div>
     </div>
   );
