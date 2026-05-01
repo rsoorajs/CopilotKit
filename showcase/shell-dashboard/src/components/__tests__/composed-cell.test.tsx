@@ -363,10 +363,22 @@ describe("ComposedCell", () => {
       expect(queryByTestId("health-layer")).not.toBeInTheDocument();
     });
 
-    it("renders empty when docs overlay is not active", () => {
+    it("renders docs layer when any content overlay is active (not just docs)", () => {
+      const ctx = docsOnlyCtx();
+      const { getByTestId } = render(
+        <ComposedCell ctx={ctx} overlays={overlaySet("links", "health")} />,
+      );
+
+      // Docs-only features always show their docs row when any content
+      // overlay is active — docs are their only content.
+      expect(getByTestId("docs-layer")).toBeInTheDocument();
+      expect(getByTestId("composed-cell")).toBeInTheDocument();
+    });
+
+    it("renders empty when only parity overlay is active", () => {
       const ctx = docsOnlyCtx();
       const { getByTestId, queryByTestId } = render(
-        <ComposedCell ctx={ctx} overlays={overlaySet("links", "health")} />,
+        <ComposedCell ctx={ctx} overlays={overlaySet("parity")} />,
       );
 
       expect(getByTestId("composed-cell-empty")).toBeInTheDocument();

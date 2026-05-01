@@ -174,8 +174,13 @@ function ComposedCellInner({ ctx, overlays, catalogCell }: ComposedCellProps) {
 
   // docs-only features show only the docs row — no links, depth, or health.
   // They exist in the registry purely for docs-coverage tracking.
+  // The docs row is their ONLY content, so display it whenever any
+  // content-producing overlay is active (not just the "docs" toggle).
+  // Without this, docs-only rows render as empty cells under the
+  // default overlay set (links + health) which has no docs toggle.
   if (isDocsOnly) {
-    if (!hasDocs) {
+    const anyContentOverlay = hasLinks || hasDepth || hasHealth || hasDocs;
+    if (!anyContentOverlay) {
       return <div data-testid="composed-cell-empty" />;
     }
     return (

@@ -142,7 +142,7 @@ function repackForwardedPropsIntoConfigurable<
 }
 
 const agentConfigAgent = new AgentConfigLangGraphAgent({
-  deploymentUrl: LANGGRAPH_URL,
+  deploymentUrl: `${LANGGRAPH_URL}/`,
   graphId: "agent_config_agent",
   langsmithApiKey: process.env.LANGSMITH_API_KEY || "",
 });

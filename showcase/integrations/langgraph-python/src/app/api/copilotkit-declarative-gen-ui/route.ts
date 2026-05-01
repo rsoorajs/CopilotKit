@@ -1,12 +1,13 @@
 // Dedicated runtime for the Declarative Generative UI (A2UI — Dynamic Schema)
-// cell. Splitting into its own endpoint (mirroring beautiful-chat) lets us set
-// `a2ui.injectA2UITool: false` — the backend agent owns the `generate_a2ui`
-// tool itself, so double-binding from the runtime would duplicate the tool
-// slot and confuse the LLM.
+// cell. Mirrors the working claude-sdk-typescript reference pattern: the
+// backend is the neutral default graph (sample_agent), and the runtime
+// auto-injects the `render_a2ui` tool (injectA2UITool defaults to true).
+// The A2UI middleware serialises the registered client catalog into
+// `copilotkit.context` and detects `a2ui_operations` in the tool result,
+// streaming rendered surfaces to the frontend.
 //
 // Reference:
-// - src/app/api/copilotkit-beautiful-chat/route.ts (topology this mirrors)
-// - examples/integrations/langgraph-python/src/app/api/copilotkit/[[...slug]]/route.ts
+// - showcase/integrations/claude-sdk-typescript/src/app/api/copilotkit-declarative-gen-ui/route.ts
 
 import { NextRequest, NextResponse } from "next/server";
 import {
@@ -19,25 +20,18 @@ import { LangGraphAgent } from "@copilotkit/runtime/langgraph";
 const LANGGRAPH_URL =
   process.env.LANGGRAPH_DEPLOYMENT_URL || "http://localhost:8123";
 
-const declarativeGenUiAgent = new LangGraphAgent({
-  deploymentUrl: LANGGRAPH_URL,
-  graphId: "a2ui_dynamic",
-  langsmithApiKey: process.env.LANGSMITH_API_KEY || "",
-});
-
 const runtime = new CopilotRuntime({
   // @ts-ignore -- see main route.ts
-  agents: { "declarative-gen-ui": declarativeGenUiAgent },
-  a2ui: {
-    // The backend graph owns the `generate_a2ui` tool explicitly (see
-    // src/agents/a2ui_dynamic.py), so the runtime MUST NOT auto-inject its
-    // own A2UI tool on top. The A2UI middleware still runs — it serialises
-    // the registered client catalog into the agent's `copilotkit.context` so
-    // the secondary LLM inside `generate_a2ui` knows which components to emit
-    // — and it still detects the `a2ui_operations` container in the tool
-    // result and streams rendered surfaces to the frontend.
-    injectA2UITool: false,
+  agents: {
+    "declarative-gen-ui": new LangGraphAgent({
+      deploymentUrl: LANGGRAPH_URL,
+      graphId: "sample_agent",
+      langsmithApiKey: process.env.LANGSMITH_API_KEY || "",
+    }),
   },
+  // `injectA2UITool` defaults to true — the runtime injects the A2UI tool
+  // and the default graph receives it via CopilotKit middleware, matching
+  // the working claude-sdk-typescript reference pattern.
 });
 
 export const POST = async (req: NextRequest) => {
