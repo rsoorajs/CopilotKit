@@ -370,7 +370,7 @@ function generateCatalog(
   const referenceWiredFeatures =
     wiredFeaturesPerIntegration.get(referenceSlug)!;
   console.log(
-    `\nCatalog: reference integration = ${referenceSlug} (${referenceCount} wired features)`,
+    `\nCatalog: reference integration = ${referenceSlug} (${referenceWiredFeatures.size} wired features)`,
   );
 
   // Step 3: Compute parity tiers for each integration
