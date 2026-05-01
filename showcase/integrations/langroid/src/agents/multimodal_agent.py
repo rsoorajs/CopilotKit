@@ -116,13 +116,22 @@ def _normalize_part(part: Any) -> dict[str, Any] | None:
     - ``{"type": "binary", "mimeType": "...", "data": "<b64>"}`` (legacy)
     - ``{"type": "image_url", "image_url": {"url": "data:..."}}`` (already OpenAI shape)
     - bare strings (treated as text).
+    - Pydantic model instances (e.g. ``TextInputContent``, ``ImageInputContent``,
+      ``DocumentInputContent`` from ``ag_ui.core``) — converted to dicts via
+      ``model_dump()`` so the rest of the function can use ``.get()``.
     """
     if isinstance(part, str):
         if not part:
             return None
         return {"type": "text", "text": part}
+    # Pydantic model instances (from ag_ui.core deserialization) are not
+    # dicts but expose model_dump(). Convert once so the rest of the
+    # function can use dict-style .get() access uniformly.
     if not isinstance(part, dict):
-        return None
+        if hasattr(part, "model_dump"):
+            part = part.model_dump(by_alias=True)
+        else:
+            return None
     ptype = part.get("type")
 
     if ptype == "text":

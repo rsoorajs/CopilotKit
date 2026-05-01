@@ -13,8 +13,8 @@
 // the user decides.
 
 import React, { useRef } from "react";
-import { CopilotKit } from "@copilotkit/react-core";
 import {
+  CopilotKitProvider,
   CopilotChat,
   useConfigureSuggestions,
   useFrontendTool,
@@ -35,13 +35,13 @@ type PickerResult =
 
 export default function GenUiInterruptDemo() {
   return (
-    <CopilotKit runtimeUrl="/api/copilotkit" agent="gen-ui-interrupt">
+    <CopilotKitProvider runtimeUrl="/api/copilotkit" useSingleEndpoint>
       <div className="flex justify-center items-center h-screen w-full">
         <div className="h-full w-full max-w-4xl">
           <Chat />
         </div>
       </div>
-    </CopilotKit>
+    </CopilotKitProvider>
   );
 }
 
@@ -117,6 +117,6 @@ function Chat() {
   // @endregion[frontend-promise-handler]
 
   return (
-    <CopilotChat agentId="gen-ui-interrupt" className="h-full rounded-2xl" />
+    <CopilotChat className="h-full rounded-2xl" />
   );
 }
