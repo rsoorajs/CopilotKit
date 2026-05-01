@@ -5,75 +5,31 @@ test.describe("Sub-Agents", () => {
     await page.goto("/demos/subagents");
   });
 
-  test("page loads with travel planner and sidebar", async ({ page }) => {
-    // The TravelPlanner shows "Current Itinerary" section
-    await expect(page.getByText("Current Itinerary")).toBeVisible({
+  test("page loads with delegation log and chat sidebar", async ({ page }) => {
+    // The DelegationLog panel should be visible
+    await expect(page.locator('[data-testid="delegation-log"]')).toBeVisible({
       timeout: 10000,
     });
 
-    // Sidebar should show "Travel Planning Assistant"
-    await expect(page.getByText("Travel Planning Assistant")).toBeVisible({
+    // Delegation log header
+    await expect(page.getByText("Sub-agent delegations")).toBeVisible({
       timeout: 10000,
     });
   });
 
-  test("agent indicators are visible with supervisor active by default", async ({
+  test("delegation log starts empty with placeholder text", async ({
     page,
   }) => {
-    // All four agent indicators should be visible
     await expect(
-      page.locator('[data-testid="supervisor-indicator"]'),
-    ).toBeVisible();
-    await expect(
-      page.locator('[data-testid="flights-indicator"]'),
-    ).toBeVisible();
-    await expect(
-      page.locator('[data-testid="hotels-indicator"]'),
-    ).toBeVisible();
-    await expect(
-      page.locator('[data-testid="experiences-indicator"]'),
-    ).toBeVisible();
+      page.getByText("Ask the supervisor to complete a task"),
+    ).toBeVisible({ timeout: 10000 });
 
-    // Supervisor should be the active agent (has blue/active styling)
-    const supervisorIndicator = page.locator(
-      '[data-testid="supervisor-indicator"]',
-    );
-    await expect(supervisorIndicator).toHaveClass(/bg-blue-100/);
+    // Delegation count shows 0
+    const count = page.locator('[data-testid="delegation-count"]');
+    await expect(count).toHaveText("0 calls", { timeout: 10000 });
   });
 
-  test("itinerary starts empty with placeholder text", async ({ page }) => {
-    await expect(page.getByText("No items yet -- start planning!")).toBeVisible(
-      { timeout: 10000 },
-    );
-  });
-
-  test("travel sections show empty state initially", async ({ page }) => {
-    await expect(page.getByText("No flights found yet")).toBeVisible({
-      timeout: 10000,
-    });
-    await expect(page.getByText("No hotels found yet")).toBeVisible({
-      timeout: 10000,
-    });
-    await expect(page.getByText("No experiences planned yet")).toBeVisible({
-      timeout: 10000,
-    });
-  });
-
-  test("section headings for travel categories are visible", async ({
-    page,
-  }) => {
-    await expect(page.getByText("Flight Options")).toBeVisible({
-      timeout: 10000,
-    });
-    await expect(page.getByText("Hotel Options")).toBeVisible({
-      timeout: 10000,
-    });
-    await expect(page.getByText("Experiences")).toBeVisible({
-      timeout: 10000,
-    });
-  });
-
-  test("sidebar has chat input for travel planning", async ({ page }) => {
+  test("chat sidebar has input textarea", async ({ page }) => {
     await expect(
       page.locator('textarea, [placeholder*="message"]').first(),
     ).toBeVisible({ timeout: 10000 });
@@ -81,7 +37,7 @@ test.describe("Sub-Agents", () => {
 
   test("can send message and get assistant response", async ({ page }) => {
     const input = page.locator('textarea, [placeholder*="message"]').first();
-    await input.fill("I want to plan a trip to Tokyo");
+    await input.fill("Research the benefits of remote work");
     await input.press("Enter");
 
     await expect(page.locator('[data-role="assistant"]').first()).toBeVisible({
@@ -89,22 +45,20 @@ test.describe("Sub-Agents", () => {
     });
   });
 
-  test("travel planning request populates flight or hotel options", async ({
+  test("supervisor delegates to sub-agents and log updates", async ({
     page,
   }) => {
     const input = page.locator('textarea, [placeholder*="message"]').first();
     await input.fill(
-      "Plan a 5-day trip to Paris with flights and hotel recommendations",
+      "Research the benefits of exercise and write a one-paragraph summary",
     );
     await input.press("Enter");
 
-    // Wait for agent to process -- should populate at least one section
-    // or show an interrupt for selection
-    const flightOption = page.locator(".bg-gray-50.rounded-lg").first();
-    const interruptCard = page.locator(".bg-blue-50.rounded-lg").first();
+    // Wait for at least one delegation entry to appear in the log
+    const delegationEntry = page.locator('[data-testid="delegation-entry"]');
     const assistantMsg = page.locator('[data-role="assistant"]').first();
 
-    await expect(flightOption.or(interruptCard).or(assistantMsg)).toBeVisible({
+    await expect(delegationEntry.first().or(assistantMsg)).toBeVisible({
       timeout: 60000,
     });
   });

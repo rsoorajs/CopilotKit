@@ -13,11 +13,11 @@
 
 import React from "react";
 import {
+  CopilotKit,
   CopilotChat,
   CopilotChatAssistantMessage,
   useConfigureSuggestions,
 } from "@copilotkit/react-core/v2";
-import { CopilotKit } from "@copilotkit/react-core";
 import {
   HashBrownDashboard,
   useHashBrownMessageRenderer,

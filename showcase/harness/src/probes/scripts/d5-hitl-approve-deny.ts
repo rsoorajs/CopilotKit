@@ -86,9 +86,12 @@ const script: D5Script = {
           baselineCount,
         });
         await approveOrDeny(hitlPage, "approve");
-        console.debug("[d5-hitl-approve-deny] waiting for follow-up assistant message", {
-          baselineCount,
-        });
+        console.debug(
+          "[d5-hitl-approve-deny] waiting for follow-up assistant message",
+          {
+            baselineCount,
+          },
+        );
         const followup = await waitForNextAssistantMessage(
           hitlPage,
           baselineCount,

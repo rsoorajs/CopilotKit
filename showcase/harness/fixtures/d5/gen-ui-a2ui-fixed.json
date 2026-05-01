@@ -1,0 +1,11 @@
+{
+  "_comment": "D5 fixture for /demos/a2ui-fixed-schema. Substring 'render the a2ui schema' is unique.",
+  "fixtures": [
+    {
+      "match": { "userMessage": "render the a2ui schema" },
+      "response": {
+        "content": "The A2UI fixed-schema component was rendered. The schema-driven UI received the agent's payload and produced the corresponding UI element from the locked schema definition."
+      }
+    }
+  ]
+}

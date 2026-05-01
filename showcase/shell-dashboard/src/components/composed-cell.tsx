@@ -129,7 +129,7 @@ function DepthLayer({
 }
 
 /**
- * Render the Health layer: E2E, D5, D6 badge chips via CellStatus.
+ * Render the Health layer: RT, CV, FP badge chips via CellStatus.
  */
 function HealthLayer({ ctx }: { ctx: CellContext }) {
   return (
@@ -166,10 +166,33 @@ function DocsLayer({ ctx }: { ctx: CellContext }) {
  */
 function ComposedCellInner({ ctx, overlays, catalogCell }: ComposedCellProps) {
   const isTesting = ctx.feature.kind === "testing";
+  const isDocsOnly = ctx.feature.kind === "docs-only";
   const hasLinks = overlays.has("links");
   const hasDepth = overlays.has("depth");
   const hasHealth = overlays.has("health");
   const hasDocs = overlays.has("docs");
+
+  // docs-only features show only the docs row — no links, depth, or health.
+  // They exist in the registry purely for docs-coverage tracking.
+  // The docs row is their ONLY content, so display it whenever any
+  // content-producing overlay is active (not just the "docs" toggle).
+  // Without this, docs-only rows render as empty cells under the
+  // default overlay set (links + health) which has no docs toggle.
+  if (isDocsOnly) {
+    const anyContentOverlay = hasLinks || hasDepth || hasHealth || hasDocs;
+    if (!anyContentOverlay) {
+      return <div data-testid="composed-cell-empty" />;
+    }
+    return (
+      <div
+        data-testid="composed-cell"
+        className="flex flex-col items-center gap-0.5 text-[11px] opacity-60"
+      >
+        {hasLinks && <LinksLayer ctx={ctx} />}
+        <DocsLayer ctx={ctx} />
+      </div>
+    );
+  }
 
   // Check if any layer will produce content
   const hasContent = hasLinks || hasDepth || hasHealth || hasDocs;

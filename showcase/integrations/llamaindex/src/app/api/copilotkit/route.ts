@@ -56,6 +56,11 @@ const specializedAgents: Record<string, string> = {
   "beautiful-chat": "/beautiful-chat",
   hitl_in_app: "/hitl-in-app",
   subagents: "/subagents",
+  // Interrupt-adapted scheduling demos — both gen-ui-interrupt and
+  // interrupt-headless share the same backend agent; only the frontend
+  // UX differs (inline picker in chat vs. external popup).
+  "gen-ui-interrupt": "/interrupt",
+  "interrupt-headless": "/interrupt",
 };
 
 const agents: Record<string, AbstractAgent> = {};

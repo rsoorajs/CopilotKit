@@ -252,6 +252,8 @@ function CategorySection({
       {isOpen &&
         cat.features.map((feature, idx) => {
           const testing = feature.kind === "testing";
+          const docsOnly = feature.kind === "docs-only";
+          const muted = testing || docsOnly;
           const stripe = idx % 2 === 1;
           const refCell = showRefDepth
             ? refCellsByFeature.get(feature.id)
@@ -282,7 +284,7 @@ function CategorySection({
               >
                 <div
                   className={
-                    testing
+                    muted
                       ? "font-normal text-[var(--text-muted)] italic"
                       : "font-medium text-[var(--text)]"
                   }
@@ -294,13 +296,20 @@ function CategorySection({
                       testing
                     </span>
                   )}
+                  {docsOnly && (
+                    <span className="ml-2 text-[9px] uppercase tracking-wider text-[var(--text-muted)]">
+                      docs-only
+                    </span>
+                  )}
                 </div>
               </td>
               {showRefDepth &&
-                (refCell && refDepth ? (
+                (refCell && refDepth && !docsOnly ? (
                   <RefDepthCell
                     depth={refDepth.achieved}
-                    status={refCell.status}
+                    status={
+                      refDepth.unsupported ? "unsupported" : refCell.status
+                    }
                     regression={refDepth.isRegression}
                   />
                 ) : (
@@ -468,8 +477,8 @@ export function FeatureGrid({
   const categoryColSpan = integrations.length + 1 + (showRefDepth ? 1 : 0);
 
   return (
-    <div className="p-8">
-      <header className="mb-6">
+    <div className="px-8 pt-3 pb-8">
+      <header className="mb-3">
         <div className="flex items-center gap-3">
           <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
           <LiveIndicator status={connection} />
@@ -525,7 +534,7 @@ export function FeatureGrid({
                 const tallyTitle = tally.unknown
                   ? "dashboard offline — live signal unavailable (§5.3)"
                   : total
-                    ? `${tally.green} green · ${tally.amber} amber · ${tally.red} red of ${total} countable signals (E2E per feature; Health counted once per integration)`
+                    ? `${tally.green} green · ${tally.amber} amber · ${tally.red} red of ${total} countable signals (D4 per feature; Health counted once per integration)`
                     : "no countable signals for this column";
                 return (
                   <th

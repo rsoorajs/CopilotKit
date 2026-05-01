@@ -60,10 +60,10 @@ features:
   - open-gen-ui-advanced
   - mcp-apps
   - beautiful-chat
-not_supported_features:
   - gen-ui-interrupt
   - interrupt-headless
 a2ui_pattern: llm-driven
+interrupt_pattern: promise-based
 agent_config_pattern: shared-state
 auth_pattern: runtime-onrequest
 demos:
@@ -499,4 +499,27 @@ demos:
     highlight:
       - src/agents/agent.py
       - src/app/demos/beautiful-chat/page.tsx
+      - src/app/api/copilotkit/route.ts
+  - id: gen-ui-interrupt
+    name: In-Chat HITL (useInterrupt — low-level primitive)
+    description: Interactive component rendered inline in the chat via the lower-level `useInterrupt` primitive — direct control over the interrupt lifecycle
+    tags:
+      - generative-ui
+    route: /demos/gen-ui-interrupt
+    animated_preview_url:
+    highlight:
+      - src/agents/agent.py
+      - src/app/demos/gen-ui-interrupt/page.tsx
+      - src/app/demos/gen-ui-interrupt/time-picker-card.tsx
+      - src/app/api/copilotkit/route.ts
+  - id: interrupt-headless
+    name: Headless Interrupt (testing)
+    description: Resolve interrupts from a plain button grid — no chat, no useInterrupt render prop
+    tags:
+      - interactivity
+    route: /demos/interrupt-headless
+    animated_preview_url:
+    highlight:
+      - src/agents/agent.py
+      - src/app/demos/interrupt-headless/page.tsx
       - src/app/api/copilotkit/route.ts

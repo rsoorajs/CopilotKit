@@ -232,7 +232,8 @@ export async function DocsPageView({
                         <WhenFrameworkHas
                           {...(props as {
                             flag: "a2ui_pattern" | "interrupt_pattern";
-                            equals: string;
+                            equals?: string;
+                            absent?: boolean;
                             framework?: string;
                             children?: React.ReactNode;
                           })}

@@ -277,6 +277,8 @@ demos:
       - src/agents/agent.py
       - src/app/demos/chat-slots/page.tsx
       - src/app/demos/chat-slots/custom-welcome-screen.tsx
+      - src/app/demos/chat-slots/custom-assistant-message.tsx
+      - src/app/demos/chat-slots/custom-disclaimer.tsx
       - src/app/api/copilotkit/route.ts
   - id: headless-simple
     name: Headless Chat (Simple)

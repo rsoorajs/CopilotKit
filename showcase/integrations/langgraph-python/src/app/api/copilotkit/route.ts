@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 import {
   CopilotRuntime,
   ExperimentalEmptyAdapter,
@@ -15,11 +16,20 @@ console.log(
   `[copilotkit/route] LANGSMITH_API_KEY: ${process.env.LANGSMITH_API_KEY ? "set" : "not set"}`,
 );
 
-function createAgent(graphId: string = "sample_agent") {
+function createAgent(
+  graphId: string = "sample_agent",
+  options: { recursionLimit?: number } = {},
+) {
+  // LangGraph's `recursion_limit` defaults to 25 (langchain_core), and
+  // `with_config` in Python doesn't propagate when the graph is invoked via
+  // the langgraph server's runs API — the wrapper isn't visible to the
+  // assistant config. Bake the limit into `assistantConfig` here so it
+  // travels with every run we kick off through this route.
   return new LangGraphAgent({
     deploymentUrl: LANGGRAPH_URL,
     graphId,
     langsmithApiKey: process.env.LANGSMITH_API_KEY || "",
+    assistantConfig: { recursion_limit: options.recursionLimit ?? 100 },
   });
 }
 

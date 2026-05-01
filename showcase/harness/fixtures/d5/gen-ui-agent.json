@@ -1,0 +1,11 @@
+{
+  "_comment": "D5 fixture for /demos/gen-ui-agent. Substring 'have the agent emit a ui' is unique.",
+  "fixtures": [
+    {
+      "match": { "userMessage": "have the agent emit a ui" },
+      "response": {
+        "content": "The agent emitted a UI block as part of its turn. The agent acts as the UI generator: its response payload describes the component and the renderer materialized it inline with the assistant message."
+      }
+    }
+  ]
+}

@@ -48,6 +48,11 @@ const voiceDemoAgent = new LangGraphAgent({
  * OPENAI_API_KEY is not configured. When the key is present we delegate to
  * the real OpenAI-backed service; any upstream Whisper error keeps its
  * natural categorization.
+ *
+ * Note: The `new OpenAI({ apiKey })` call below intentionally omits
+ * `baseURL` so the SDK falls through to `process.env.OPENAI_BASE_URL`.
+ * In D5 tests this env var points at aimock, giving deterministic
+ * transcription responses without hitting real Whisper.
  */
 // @region[transcription-service-guard]
 class GuardedOpenAITranscriptionService extends TranscriptionService {

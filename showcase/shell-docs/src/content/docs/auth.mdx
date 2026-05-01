@@ -25,6 +25,8 @@ If you don't need any of those, skip auth entirely. The agent runs anonymously a
 Pass your token via the `headers` prop on `<CopilotKit>`. CopilotKit forwards every request with that header attached.
 
 ```tsx title="frontend/src/app/page.tsx"
+import { CopilotKit } from "@copilotkit/react-core/v2";
+
 <CopilotKit
   runtimeUrl="/api/copilotkit"
   headers={{
@@ -82,6 +84,8 @@ export const GET = (req: NextRequest) => handler(req);
 Pass your token via the `properties` prop. CopilotKit forwards it to LangGraph as a Bearer token automatically.
 
 ```tsx title="frontend/src/app/page.tsx"
+import { CopilotKit } from "@copilotkit/react-core/v2";
+
 <CopilotKit
   runtimeUrl="/api/copilotkit"
   properties={{
@@ -185,6 +189,8 @@ async def my_agent_node(state: AgentState, config: RunnableConfig):
 Pass your token via the `properties` prop. CopilotKit forwards it to AG2's `/chat` endpoint as a request header.
 
 ```tsx title="frontend/src/app/page.tsx"
+import { CopilotKit } from "@copilotkit/react-core/v2";
+
 <CopilotKit
   runtimeUrl="/api/copilotkit"
   properties={{
@@ -210,7 +216,7 @@ from autogen.ag_ui import AGUIStream, RunAgentInput
 agent = ConversableAgent(
     name="assistant",
     system_message="You are a helpful assistant.",
-    llm_config=LLMConfig({"model": "gpt-5.2-mini"}),
+    llm_config=LLMConfig({"model": "gpt-5.4-mini"}),
 )
 
 stream = AGUIStream(agent)
@@ -268,6 +274,8 @@ def get_account_data(
 Microsoft Agent Framework's AG-UI host expects authentication on a request header rather than the runtime properties channel. Pass the token via `<CopilotKit headers={...}>`:
 
 ```tsx title="frontend/src/app/page.tsx"
+import { CopilotKit } from "@copilotkit/react-core/v2";
+
 <CopilotKit
   runtimeUrl="/api/copilotkit"
   headers={{

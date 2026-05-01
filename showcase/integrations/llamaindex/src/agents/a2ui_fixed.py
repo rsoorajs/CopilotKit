@@ -8,8 +8,6 @@ model at runtime via a `display_flight` tool. The tool result is an
 detects and forwards to the frontend renderer.
 """
 
-from __future__ import annotations
-
 import json
 import os
 from pathlib import Path

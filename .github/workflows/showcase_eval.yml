@@ -23,9 +23,24 @@ name: "showcase / eval"
 on:
   issue_comment:
     types: [created]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "PR number to evaluate"
+        required: true
+        type: string
+      check_run_id:
+        description: "Check Run ID to update with results"
+        required: false
+        type: string
+      level:
+        description: "Eval depth level"
+        required: false
+        default: "d5"
+        type: string
 
 concurrency:
-  group: showcase-eval-${{ github.event.issue.number }}
+  group: showcase-eval-${{ github.event.inputs.pr_number || github.event.issue.number || github.run_id }}
   cancel-in-progress: true
 
 permissions:
@@ -197,13 +212,54 @@ jobs:
               ].join('\n'),
             });
 
+  dispatch-gate:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      pr_sha: ${{ steps.resolve.outputs.sha }}
+      pr_number: ${{ github.event.inputs.pr_number }}
+      level: ${{ github.event.inputs.level || 'd5' }}
+      scope_flag: "--scope affected"
+      scope_display: "affected"
+      check_run_id: ${{ github.event.inputs.check_run_id }}
+    steps:
+      - name: Resolve PR HEAD SHA
+        id: resolve
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: Number(process.env.PR_NUMBER),
+            });
+            if (pr.data.state !== 'open') {
+              core.setFailed(`PR #${process.env.PR_NUMBER} is not open`);
+              return;
+            }
+            core.setOutput('sha', pr.data.head.sha);
+        env:
+          PR_NUMBER: ${{ github.event.inputs.pr_number }}
+
   eval:
-    needs: gate
+    needs: [gate, dispatch-gate]
+    if: always() && (needs.gate.result == 'success' || needs.dispatch-gate.result == 'success')
     runs-on: depot-ubuntu-24.04-16
     timeout-minutes: 45
 
     permissions:
       contents: read
+
+    env:
+      PR_SHA: ${{ needs.gate.outputs.pr_sha || needs.dispatch-gate.outputs.pr_sha }}
+      PR_NUMBER: ${{ needs.gate.outputs.pr_number || needs.dispatch-gate.outputs.pr_number }}
+      EVAL_LEVEL: ${{ needs.gate.outputs.level || needs.dispatch-gate.outputs.level || 'd5' }}
+      EVAL_SCOPE_FLAG: ${{ needs.gate.outputs.scope_flag || needs.dispatch-gate.outputs.scope_flag }}
+      CHECK_RUN_ID: ${{ needs.dispatch-gate.outputs.check_run_id || '' }}
 
     outputs:
       result_json: ${{ steps.run-eval.outputs.result_json }}
@@ -214,7 +270,7 @@ jobs:
       - name: Checkout PR HEAD
         uses: actions/checkout@v4
         with:
-          ref: ${{ needs.gate.outputs.pr_sha }}
+          ref: ${{ env.PR_SHA }}
           fetch-depth: 0
           persist-credentials: false
 
@@ -234,16 +290,13 @@ jobs:
 
       - name: Run showcase eval
         id: run-eval
-        env:
-          EVAL_LEVEL: ${{ needs.gate.outputs.level }}
-          EVAL_SCOPE_FLAG: ${{ needs.gate.outputs.scope_flag }}
         run: |
           set -o pipefail
 
           # Build the command. EVAL_SCOPE_FLAG may contain spaces (e.g. "--slug mastra,agno")
           # so we intentionally leave it unquoted for word splitting.
           # shellcheck disable=SC2086
-          CMD="showcase/bin/showcase eval --${EVAL_LEVEL} ${EVAL_SCOPE_FLAG} --parallel 8 --json --baseline compare --timeout 60000"
+          CMD="showcase/bin/showcase eval --${EVAL_LEVEL} ${EVAL_SCOPE_FLAG} --parallel 8 --json --baseline compare --timeout 60000 --ci"
           echo "::group::Running: $CMD"
 
           EXIT_CODE=0
@@ -296,14 +349,15 @@ jobs:
           if-no-files-found: ignore
 
   post-result:
-    needs: [gate, eval]
-    if: always() && needs.gate.result == 'success'
+    needs: [gate, dispatch-gate, eval]
+    if: always() && (needs.gate.result == 'success' || needs.dispatch-gate.result == 'success')
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
     permissions:
       pull-requests: write
       issues: write
+      checks: write
 
     steps:
       - name: Post eval results to PR
@@ -313,9 +367,9 @@ jobs:
           RESULT_JSON: ${{ needs.eval.outputs.result_json }}
           STDERR_EXCERPT: ${{ needs.eval.outputs.stderr_excerpt }}
           EXIT_CODE: ${{ needs.eval.outputs.exit_code }}
-          LEVEL: ${{ needs.gate.outputs.level }}
-          SCOPE_DISPLAY: ${{ needs.gate.outputs.scope_display }}
-          PR_NUMBER: ${{ needs.gate.outputs.pr_number }}
+          LEVEL: ${{ needs.gate.outputs.level || needs.dispatch-gate.outputs.level || 'd5' }}
+          SCOPE_DISPLAY: ${{ needs.gate.outputs.scope_display || needs.dispatch-gate.outputs.scope_display || 'affected' }}
+          PR_NUMBER: ${{ needs.gate.outputs.pr_number || needs.dispatch-gate.outputs.pr_number }}
         with:
           script: |
             const evalStatus = process.env.EVAL_STATUS;
@@ -492,3 +546,75 @@ jobs:
               issue_number: prNumber,
               body,
             });
+
+      - name: Generate devops-bot token
+        id: bot-token
+        if: needs.dispatch-gate.outputs.check_run_id != ''
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: 1108748
+          private-key: ${{ secrets.DEVOPS_BOT_PRIVATE_KEY }}
+
+      - name: Update Check Run with results
+        if: needs.dispatch-gate.outputs.check_run_id != ''
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ steps.bot-token.outputs.token }}
+          script: |
+            const checkRunId = Number(process.env.CHECK_RUN_ID);
+            const resultJson = process.env.RESULT_JSON || '{}';
+            const evalStatus = '${{ needs.eval.result }}';
+
+            let conclusion = 'failure';
+            let title = 'Showcase Eval — error';
+            let summary = 'The evaluation encountered an error.';
+
+            try {
+              const results = JSON.parse(resultJson);
+              const s = results.summary || {};
+
+              if (evalStatus === 'success' && s.fail === 0) {
+                conclusion = 'success';
+                title = `${s.pass}/${s.total} passed (${(s.duration_ms / 1000).toFixed(1)}s)`;
+              } else if (s.total === 0) {
+                conclusion = 'neutral';
+                title = 'No showcase integrations affected';
+              } else {
+                conclusion = 'failure';
+                title = `${s.fail} failed, ${s.pass} passed`;
+              }
+
+              const lines = ['## Eval Results\n'];
+              lines.push('| Integration | Status |');
+              lines.push('|-------------|--------|');
+              if (results.results) {
+                for (const [slug, tests] of Object.entries(results.results)) {
+                  const statuses = Object.values(tests);
+                  const pass = statuses.filter(t => t.status === 'pass').length;
+                  const total = statuses.length;
+                  const icon = pass === total ? '✅' : '❌';
+                  lines.push(`| ${slug} | ${icon} ${pass}/${total} |`);
+                }
+              }
+              lines.push(`\n**Total:** ${s.pass} passed, ${s.fail} failed, ${s.skip} skipped (${(s.duration_ms / 1000).toFixed(1)}s)`);
+              summary = lines.join('\n');
+            } catch (e) {
+              summary = `Parse error: ${e.message}`;
+            }
+
+            await github.rest.checks.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              check_run_id: checkRunId,
+              status: 'completed',
+              conclusion,
+              output: { title, summary },
+              actions: [{
+                label: 'Re-run Eval',
+                description: 'Run D5 evaluation',
+                identifier: 'run-eval',
+              }],
+            });
+        env:
+          CHECK_RUN_ID: ${{ needs.dispatch-gate.outputs.check_run_id }}
+          RESULT_JSON: ${{ needs.eval.outputs.result_json }}

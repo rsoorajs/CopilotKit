@@ -9,9 +9,6 @@ import com.copilotkit.showcase.springai.tools.GetSalesTodosTool;
 import com.copilotkit.showcase.springai.tools.ManageSalesTodosTool;
 import com.copilotkit.showcase.springai.tools.SearchFlightsTool;
 import com.copilotkit.showcase.springai.tools.GenerateA2uiTool;
-import org.springframework.ai.chat.memory.ChatMemory;
-import org.springframework.ai.chat.memory.InMemoryChatMemoryRepository;
-import org.springframework.ai.chat.memory.MessageWindowChatMemory;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.tool.function.FunctionToolCallback;
 import org.springframework.context.annotation.Bean;
@@ -22,14 +19,6 @@ import java.util.List;
 @Configuration
 public class AgentConfig {
 
-    @Bean
-    public ChatMemory chatMemory() {
-        return MessageWindowChatMemory.builder()
-                .chatMemoryRepository(new InMemoryChatMemoryRepository())
-                .maxMessages(10)
-                .build();
-    }
-
     /**
      * Main agentic chat agent. Uses {@link StreamingToolAgent} which streams
      * text via {@code .stream()} for real-time delivery and falls back to
@@ -39,7 +28,7 @@ public class AgentConfig {
      * auto-execute tools).
      */
     @Bean
-    public StreamingToolAgent agent(ChatModel chatModel, ChatMemory chatMemory) {
+    public StreamingToolAgent agent(ChatModel chatModel) {
         // Shared mutable todos list between get/manage tools
         var salesTodosTool = new GetSalesTodosTool();
         List<SalesTodo> sharedTodos = salesTodosTool.getTodos();
@@ -48,7 +37,6 @@ public class AgentConfig {
         return StreamingToolAgent.builder()
                 .agentId("agentic_chat")
                 .chatModel(chatModel)
-                .chatMemory(chatMemory)
                 .systemMessage("""
                     You are a helpful assistant for the CopilotKit showcase.
                     You can check the weather using the get_weather tool.

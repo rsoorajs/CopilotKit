@@ -16,7 +16,9 @@ import { AdaptiveStatsBar } from "@/components/adaptive-stats-bar";
 import { AdaptiveLegend } from "@/components/adaptive-legend";
 import type { ParityTier } from "@/components/parity-badge";
 import { getDocsStatus } from "@/lib/docs-status";
+import { deriveDepth } from "@/components/depth-utils";
 import type { CatalogCell } from "@/components/depth-utils";
+import type { DepthDistribution } from "@/components/adaptive-stats-bar";
 import catalog from "@/data/catalog.json";
 import type { CatalogData } from "@/data/catalog-types";
 
@@ -134,6 +136,27 @@ export default function Page() {
     return { ok, missing, notFound, error };
   }, []);
 
+  // Compute depth distribution across all wired cells — re-derives whenever
+  // live-status changes since depth is a function of probe states.
+  const depthDistribution = useMemo((): DepthDistribution => {
+    const dist: DepthDistribution = {
+      d5: 0,
+      d4: 0,
+      d3: 0,
+      d2: 0,
+      d1: 0,
+      d0: 0,
+    };
+    for (const cell of catalogData.cells) {
+      if (cell.status !== "wired" || cell.feature === null) continue;
+      const result = deriveDepth(cell, liveStatus);
+      if (result.unsupported) continue;
+      const key = `d${result.achieved}` as keyof DepthDistribution;
+      dist[key]++;
+    }
+    return dist;
+  }, [liveStatus]);
+
   // renderCell callback wrapping ComposedCell
   const renderCell = useCallback(
     (ctx: CellContext) => {
@@ -197,6 +220,7 @@ export default function Page() {
                 healthStats={healthStats}
                 parityStats={parityStats}
                 docsStats={docsStats}
+                depthDistribution={depthDistribution}
               />
             </div>
             <FeatureGrid

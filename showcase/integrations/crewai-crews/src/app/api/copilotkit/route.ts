@@ -13,8 +13,8 @@ const AGENT_URL = process.env.AGENT_URL || "http://localhost:8000";
 console.log("[copilotkit/route] Initializing CopilotKit runtime");
 console.log(`[copilotkit/route] AGENT_URL: ${AGENT_URL}`);
 
-function createAgent() {
-  return new HttpAgent({ url: `${AGENT_URL}/` });
+function createAgent(path = "/") {
+  return new HttpAgent({ url: `${AGENT_URL}${path}` });
 }
 
 // CrewAI hosts a single shared `LatestAiDevelopment` crew. We register
@@ -64,6 +64,11 @@ const agents: Record<string, AbstractAgent> = {};
 for (const name of agentNames) {
   agents[name] = createAgent();
 }
+// Interrupt-adapted demos route to the dedicated scheduling crew backend.
+// Both gen-ui-interrupt and interrupt-headless share the same crew; only the
+// frontend UX differs (inline in chat vs. external popup).
+agents["gen-ui-interrupt"] = createAgent("/interrupt-adapted");
+agents["interrupt-headless"] = createAgent("/interrupt-adapted");
 agents["default"] = createAgent();
 
 console.log(

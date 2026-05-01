@@ -89,6 +89,16 @@ export interface RailwayServiceInfo {
    * that don't care about demos can simply ignore the field.
    */
   demos: readonly string[];
+  /**
+   * ISO-8601 timestamp of the latest deployment's creation, sourced from
+   * Railway's `latestDeployment.createdAt`. Downstream drivers (e2e-deep)
+   * use this to skip services that deployed very recently (deploy-churn
+   * grace window) so a rolling deploy doesn't produce false-red probe
+   * ticks.
+   *
+   * Empty string when no deployment exists or the field is absent.
+   */
+  deployedAt: string;
 }
 
 /**
@@ -257,6 +267,10 @@ const ProjectServicesSchema = z.object({
                         // extract `imageDigest` in the service-building
                         // loop below.
                         meta: z.record(z.unknown()).nullable().optional(),
+                        // ISO-8601 timestamp of when the deployment was
+                        // created. Used by downstream drivers (e2e-deep)
+                        // to implement deploy-churn grace windows.
+                        createdAt: z.string().optional(),
                       })
                       .nullable()
                       .optional(),
@@ -465,7 +479,7 @@ export const railwayServicesSource: DiscoverySource<RailwayServiceInfo> = {
                   environmentId
                   source { image }
                   domains { serviceDomains { domain } }
-                  latestDeployment { meta }
+                  latestDeployment { meta createdAt }
                 } }
               }
             } }
@@ -539,6 +553,8 @@ export const railwayServicesSource: DiscoverySource<RailwayServiceInfo> = {
       const imageRef = instance?.node.source?.image ?? "";
       const rawDigest = instance?.node.latestDeployment?.meta?.["imageDigest"];
       const deployedDigest = typeof rawDigest === "string" ? rawDigest : "";
+      const rawDeployedAt = instance?.node.latestDeployment?.createdAt;
+      const deployedAt = typeof rawDeployedAt === "string" ? rawDeployedAt : "";
       const domain =
         instance?.node.domains?.serviceDomains?.[0]?.domain ?? null;
       const publicUrl = domain ? `https://${domain}` : "";
@@ -585,6 +601,7 @@ export const railwayServicesSource: DiscoverySource<RailwayServiceInfo> = {
         shape: classifyShape(svc.name, { logger: ctx.logger }),
         deployedDigest,
         demos: demosMap.get(deriveSlugFromServiceName(svc.name)) ?? [],
+        deployedAt,
       };
     }
 

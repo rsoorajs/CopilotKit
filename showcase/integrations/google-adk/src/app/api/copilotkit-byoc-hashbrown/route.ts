@@ -20,18 +20,19 @@ const runtime = new CopilotRuntime({
   agents: { "byoc-hashbrown-demo": byocHashbrownAgent },
 });
 
+const { handleRequest } = copilotRuntimeNextJSAppRouterEndpoint({
+  endpoint: "/api/copilotkit-byoc-hashbrown",
+  serviceAdapter: new ExperimentalEmptyAdapter(),
+  runtime,
+});
+
 export const POST = async (req: NextRequest) => {
   try {
-    const { handleRequest } = copilotRuntimeNextJSAppRouterEndpoint({
-      endpoint: "/api/copilotkit-byoc-hashbrown",
-      serviceAdapter: new ExperimentalEmptyAdapter(),
-      runtime,
-    });
     return await handleRequest(req);
   } catch (error: unknown) {
-    console.error("[copilotkit-byoc-hashbrown]", error);
+    const e = error as { message?: string; stack?: string };
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: e.message, stack: e.stack },
       { status: 500 },
     );
   }

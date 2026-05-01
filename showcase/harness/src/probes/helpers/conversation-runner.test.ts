@@ -3,6 +3,7 @@ import {
   runConversation,
   fillAndVerifySend,
   readUserMessageCount,
+  waitForContentAndSend,
 } from "./conversation-runner.js";
 import type { ConversationTurn, Page } from "./conversation-runner.js";
 
@@ -40,6 +41,10 @@ interface PageScript {
   // body references user-message selectors and returns from this queue
   // instead of the main `evaluateValues` queue.
   userMessageValues?: number[];
+  // Scripted return values for `page.inputValue(...)`. Each invocation
+  // pulls the next value from the queue; last value repeats forever.
+  // Used by skipFill tests to simulate async textarea population.
+  inputValues?: string[];
 }
 
 /**
@@ -65,6 +70,7 @@ function wrapEvaluateForUserMessages(
 function makePage(script: PageScript = {}): Page {
   const queue = [...(script.evaluateValues ?? [])];
   const userQueue = [...(script.userMessageValues ?? [])];
+  const inputQueue = [...(script.inputValues ?? [])];
   // Auto-succeed counter: first user-message read = 0 (baseline),
   // subsequent reads = 1 (growth detected → verify loop succeeds).
   let autoUserCalls = 0;
@@ -108,6 +114,17 @@ function makePage(script: PageScript = {}): Page {
       if (queue.length === 1) return queue[0]! as never;
       return queue.shift()! as never;
     },
+    // inputValue is only provided when the script includes inputValues,
+    // mirroring the optional nature of the Page interface member.
+    ...(script.inputValues
+      ? {
+          async inputValue(_selector: string): Promise<string> {
+            if (inputQueue.length === 0) return "";
+            if (inputQueue.length === 1) return inputQueue[0]!;
+            return inputQueue.shift()!;
+          },
+        }
+      : {}),
   };
 }
 
@@ -611,6 +628,108 @@ describe("runConversation", () => {
     expect(queriedSelectors).not.toContain('[role="article"]');
   });
 
+  it("preFill runs BEFORE fill on each turn", async () => {
+    // Record the order of operations across multiple page methods to
+    // prove preFill executes before the runner-level fill+press.
+    const order: string[] = [];
+    let evalCalls = 0;
+    const page: Page = {
+      async waitForSelector() {},
+      async fill(_selector, value) {
+        order.push(`fill:${value}`);
+      },
+      async press(_selector, _key) {
+        order.push("press");
+      },
+      evaluate: wrapEvaluateForUserMessages(async () => {
+        evalCalls++;
+        // Baseline=0; subsequent reads=1 → growth + stable → settled.
+        return (evalCalls === 1 ? 0 : 1) as never;
+      }),
+    };
+
+    const turns: ConversationTurn[] = [
+      {
+        input: "hello",
+        preFill: async () => {
+          order.push("preFill");
+        },
+      },
+    ];
+
+    const result = await runConversation(page, turns, {
+      assistantSettleMs: 30,
+    });
+
+    expect(result.turns_completed).toBe(1);
+    // preFill MUST appear before the corresponding fill+press for that turn.
+    const preFillIdx = order.indexOf("preFill");
+    const fillIdx = order.indexOf("fill:hello");
+    const pressIdx = order.indexOf("press");
+    expect(preFillIdx).toBeGreaterThanOrEqual(0);
+    expect(fillIdx).toBeGreaterThan(preFillIdx);
+    expect(pressIdx).toBeGreaterThan(fillIdx);
+  });
+
+  it("preFill throwing causes the turn to fail with the thrown error", async () => {
+    const recorded = { fills: [] as string[], presses: [] as string[] };
+    const page = makePage({ recorded });
+
+    let turn2Ran = false;
+    const turns: ConversationTurn[] = [
+      {
+        input: "first",
+        preFill: async () => {
+          throw new Error("attach button missing");
+        },
+      },
+      {
+        input: "second",
+        preFill: async () => {
+          turn2Ran = true;
+        },
+      },
+    ];
+
+    const result = await runConversation(page, turns, {
+      assistantSettleMs: 30,
+    });
+
+    expect(result.turns_completed).toBe(0);
+    expect(result.total_turns).toBe(2);
+    expect(result.failure_turn).toBe(1);
+    expect(result.error).toContain("attach button missing");
+    // The runner did NOT fill/press for the failed turn — preFill threw
+    // before the fill cascade ran.
+    expect(recorded.fills).toEqual([]);
+    expect(recorded.presses).toEqual([]);
+    // Subsequent turns must NOT run after a preFill failure (mirrors
+    // the assertion-failure semantics).
+    expect(turn2Ran).toBe(false);
+    // Failed turn's duration is not recorded.
+    expect(result.turn_durations_ms).toEqual([]);
+  });
+
+  it("turn without preFill works exactly as before (regression guard)", async () => {
+    const recorded = { fills: [] as string[], presses: [] as string[] };
+    const page = makePage({
+      // Simple settle: 0 → 1 stable.
+      evaluateValues: [0, 0, 1, 1, 1, 1, 1, 1, 1, 1],
+      recorded,
+    });
+
+    const turns: ConversationTurn[] = [{ input: "hello" }];
+    const result = await runConversation(page, turns, {
+      assistantSettleMs: 30,
+    });
+
+    expect(result.turns_completed).toBe(1);
+    expect(result.failure_turn).toBeUndefined();
+    expect(result.error).toBeUndefined();
+    expect(recorded.fills).toEqual(["hello"]);
+    expect(recorded.presses).toEqual(["Enter"]);
+  });
+
   it("stringifies non-Error throws (e.g. a thrown string) into result.error", async () => {
     // Some libraries throw non-Error values. The runner's errorMessage
     // helper falls back to String(err) so callers always see a usable
@@ -762,5 +881,185 @@ describe("readUserMessageCount", () => {
       },
     };
     expect(await readUserMessageCount(page)).toBe(0);
+  });
+});
+
+describe("skipFill turns", () => {
+  it("skips fill() and presses Enter after textarea is populated", async () => {
+    const recorded = { fills: [] as string[], presses: [] as string[] };
+    const page = makePage({
+      // Textarea starts empty, then gets populated (e.g. by preFill
+      // triggering voice transcription).
+      inputValues: ["", "", "transcribed text"],
+      // Assistant settle: 0 → 1 stable.
+      evaluateValues: [0, 0, 1, 1, 1, 1, 1, 1, 1, 1],
+      recorded,
+    });
+
+    const turns: ConversationTurn[] = [
+      {
+        input: "(voice transcription)",
+        skipFill: true,
+        preFill: async () => {
+          // In real usage this would click a button that triggers
+          // async transcription. The scripted inputValues simulate
+          // the textarea being populated after a brief delay.
+        },
+      },
+    ];
+
+    const result = await runConversation(page, turns, {
+      assistantSettleMs: 50,
+    });
+
+    expect(result.turns_completed).toBe(1);
+    expect(result.failure_turn).toBeUndefined();
+    expect(result.error).toBeUndefined();
+    // fill() must NOT have been called — the whole point of skipFill.
+    expect(recorded.fills).toEqual([]);
+    // Enter was pressed once to submit the transcribed text.
+    expect(recorded.presses).toEqual(["Enter"]);
+  });
+
+  it("skipFill turn followed by a normal turn works correctly", async () => {
+    const recorded = { fills: [] as string[], presses: [] as string[] };
+    const page = makePage({
+      // Textarea pre-populated for turn 1 (skipFill).
+      inputValues: ["hello from voice"],
+      // Turn 1 settle: 0 → 1, Turn 2 settle: 1 → 2.
+      evaluateValues: [
+        0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2,
+      ],
+      recorded,
+    });
+
+    const turns: ConversationTurn[] = [
+      { input: "", skipFill: true },
+      { input: "follow up question" },
+    ];
+
+    const result = await runConversation(page, turns, {
+      assistantSettleMs: 50,
+    });
+
+    expect(result.turns_completed).toBe(2);
+    expect(result.failure_turn).toBeUndefined();
+    // Turn 1 skipFill → no fill. Turn 2 normal → fill called.
+    expect(recorded.fills).toEqual(["follow up question"]);
+    // Turn 1 Enter (from waitForContentAndSend) + Turn 2 Enter
+    // (from fillAndVerifySend).
+    expect(recorded.presses).toEqual(["Enter", "Enter"]);
+  });
+
+  it("skipFill turn times out when textarea stays empty", async () => {
+    const recorded = { fills: [] as string[], presses: [] as string[] };
+    const page = makePage({
+      // Textarea never gets populated.
+      inputValues: [""],
+      evaluateValues: [0],
+      recorded,
+    });
+
+    const turns: ConversationTurn[] = [
+      { input: "", skipFill: true, responseTimeoutMs: 200 },
+    ];
+
+    const result = await runConversation(page, turns, {
+      assistantSettleMs: 50,
+    });
+
+    expect(result.turns_completed).toBe(0);
+    expect(result.failure_turn).toBe(1);
+    expect(result.error).toContain("textarea was not populated");
+    // Neither fill nor Enter should have been called.
+    expect(recorded.fills).toEqual([]);
+    expect(recorded.presses).toEqual([]);
+  });
+
+  it("skipFill=false (explicit) behaves like a normal turn", async () => {
+    const recorded = { fills: [] as string[], presses: [] as string[] };
+    const page = makePage({
+      evaluateValues: [0, 0, 1, 1, 1, 1, 1, 1, 1, 1],
+      recorded,
+    });
+
+    const turns: ConversationTurn[] = [
+      { input: "normal message", skipFill: false },
+    ];
+
+    const result = await runConversation(page, turns, {
+      assistantSettleMs: 50,
+    });
+
+    expect(result.turns_completed).toBe(1);
+    expect(recorded.fills).toEqual(["normal message"]);
+    expect(recorded.presses).toEqual(["Enter"]);
+  });
+});
+
+describe("waitForContentAndSend", () => {
+  it("presses Enter immediately when textarea already has content", async () => {
+    const recorded = { fills: [] as string[], presses: [] as string[] };
+    const page = makePage({
+      inputValues: ["already filled"],
+      recorded,
+    });
+
+    await waitForContentAndSend(page, "textarea", 1000);
+
+    expect(recorded.presses).toEqual(["Enter"]);
+    expect(recorded.fills).toEqual([]);
+  });
+
+  it("polls until textarea has content then presses Enter", async () => {
+    const recorded = { fills: [] as string[], presses: [] as string[] };
+    const page = makePage({
+      inputValues: ["", "", "", "populated after delay"],
+      recorded,
+    });
+
+    await waitForContentAndSend(page, "textarea", 5000);
+
+    expect(recorded.presses).toEqual(["Enter"]);
+    expect(recorded.fills).toEqual([]);
+  });
+
+  it("throws when textarea stays empty past timeout", async () => {
+    const page = makePage({
+      inputValues: [""],
+    });
+
+    await expect(waitForContentAndSend(page, "textarea", 200)).rejects.toThrow(
+      "textarea was not populated",
+    );
+  });
+
+  it("throws when page.inputValue is not implemented", async () => {
+    // Page without inputValue method — simulates a test fake that
+    // doesn't support the optional method.
+    const page: Page = {
+      async waitForSelector() {},
+      async fill() {},
+      async press() {},
+      async evaluate() {
+        return 0 as never;
+      },
+    };
+
+    await expect(waitForContentAndSend(page, "textarea", 1000)).rejects.toThrow(
+      "page.inputValue is required",
+    );
+  });
+
+  it("ignores whitespace-only textarea content", async () => {
+    const recorded = { fills: [] as string[], presses: [] as string[] };
+    const page = makePage({
+      inputValues: ["   ", "  \n  ", "actual content"],
+      recorded,
+    });
+
+    await waitForContentAndSend(page, "textarea", 5000);
+
+    expect(recorded.presses).toEqual(["Enter"]);
   });
 });

@@ -42,6 +42,8 @@ const starterAgentNames = [
   // Headless Chat (Simple) — reuses the default `starterAgent` graph; the
   // demo's surface and frontend tool wiring live in the page component.
   "headless-simple",
+  // Hitl demo (original) — reuses starter agent.
+  "hitl",
 ];
 
 const agents: Record<string, LangGraphAgent> = {};
@@ -68,6 +70,13 @@ const demoAgents: Record<string, string> = {
   "readonly-state-agent-context": "readonly_state_agent_context",
   "shared-state-read-write": "shared_state_read_write",
   subagents: "subagents",
+  // Reasoning demos — use dedicated reasoning agent graph.
+  "agentic-chat-reasoning": "agentic-chat-reasoning",
+  "reasoning-default-render": "reasoning-default-render",
+  // Tool rendering variants — each has its own graph in langgraph.json.
+  "tool-rendering-default-catchall": "tool-rendering-default-catchall",
+  "tool-rendering-custom-catchall": "tool-rendering-custom-catchall",
+  "tool-rendering-reasoning-chain": "tool-rendering-reasoning-chain",
 };
 for (const [agentName, graphId] of Object.entries(demoAgents)) {
   agents[agentName] = createAgent(graphId);

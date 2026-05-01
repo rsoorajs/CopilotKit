@@ -34,6 +34,7 @@ from agents.shared_state_read_write import (
     shared_state_read_write_app,
 )
 from agents.subagents import subagents_app
+from agents.interrupt_agent import interrupt_app
 from agents.tool_rendering_reasoning_chain import (
     tool_rendering_reasoning_chain_app,
 )
@@ -76,8 +77,11 @@ app.mount("/declarative-gen-ui", a2ui_dynamic_app)
 app.mount("/a2ui-fixed-schema", a2ui_fixed_app)
 app.mount("/beautiful-chat", beautiful_chat_app)
 app.mount("/mcp-apps", mcp_apps_app)
-app.mount("/open-gen-ui", open_gen_ui_app)
+# IMPORTANT: mount /open-gen-ui-advanced BEFORE /open-gen-ui — Starlette
+# resolves mounts via prefix matching in registration order, so the shorter
+# prefix "/open-gen-ui" would shadow "/open-gen-ui-advanced" if it came first.
 app.mount("/open-gen-ui-advanced", open_gen_ui_advanced_app)
+app.mount("/open-gen-ui", open_gen_ui_app)
 app.mount(
     "/tool-rendering-reasoning-chain",
     tool_rendering_reasoning_chain_app,
@@ -86,6 +90,11 @@ app.mount("/agent-config", agent_config_app)
 app.mount("/multimodal", multimodal_app)
 app.mount("/byoc-hashbrown", byoc_hashbrown_app)
 app.mount("/byoc-json-render", byoc_json_render_app)
+
+# Interrupt-adapted scheduling agent. Shared by gen-ui-interrupt and
+# interrupt-headless demos — backend has tools=[], the frontend provides
+# `schedule_meeting` via `useFrontendTool` with an async Promise handler.
+app.mount("/interrupt-adapted", interrupt_app)
 
 
 # Mount the default AG2 AG-UI endpoint at the root.

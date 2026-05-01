@@ -59,15 +59,9 @@ features:
   - tool-rendering-reasoning-chain
   - declarative-gen-ui
   - a2ui-fixed-schema
-not_supported_features:
-  # Built-in-agent uses TanStack AI's chat-completions factory; it has
-  # no graph-interrupt primitive, so the LangGraph-flavoured interrupt
-  # demos can't be supported. See:
-  #   - src/app/demos/gen-ui-interrupt/README.md
-  #   - src/app/demos/interrupt-headless/README.md
-  #   - src/app/demos/hitl/README.md (disambiguation; hitl-in-chat IS supported)
   - gen-ui-interrupt
   - interrupt-headless
+not_supported_features:
   - hitl
 agent_config_pattern: runtime-properties
 
@@ -401,6 +395,27 @@ demos:
       - src/app/demos/a2ui-fixed-schema/a2ui/renderers.tsx
       - src/lib/factory/a2ui-fixed-schema-factory.ts
       - src/app/api/copilotkit-a2ui-fixed-schema/route.ts
+  - id: gen-ui-interrupt
+    name: Gen UI Interrupt (Frontend Tool)
+    description: In-chat time-picker via useFrontendTool with an async handler that blocks until the user picks a slot — Strategy B adaptation of the LangGraph interrupt primitive
+    tags:
+      - interactivity
+    route: /demos/gen-ui-interrupt
+    highlight:
+      - src/app/demos/gen-ui-interrupt/page.tsx
+      - src/app/demos/gen-ui-interrupt/time-picker-card.tsx
+      - src/lib/factory/tanstack-factory.ts
+      - src/app/api/copilotkit/route.ts
+  - id: interrupt-headless
+    name: Headless Interrupt (Frontend Tool)
+    description: Time-picker popup rendered outside the chat in the app surface — headless variant of the Strategy B interrupt adaptation
+    tags:
+      - interactivity
+    route: /demos/interrupt-headless
+    highlight:
+      - src/app/demos/interrupt-headless/page.tsx
+      - src/lib/factory/tanstack-factory.ts
+      - src/app/api/copilotkit/route.ts
 # NOTE: starter omitted intentionally for v1 of this column. The
 # `showcase/scripts/generate-starters.ts` generator expects every package
 # to have a separate `src/agent/` backend; built-in-agent runs in-process

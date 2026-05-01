@@ -59,6 +59,7 @@ from agents.tool_rendering_reasoning_chain_agent import (
 )
 from agents.mcp_apps_agent import agent as mcp_apps_agent
 from agents.hitl_in_chat_agent import agent as hitl_in_chat_agent
+from agents.interrupt_agent import agent as interrupt_agent
 
 load_dotenv()
 
@@ -149,6 +150,11 @@ app.mount("/mcp_apps", mcp_apps_agent.to_ag_ui())
 # The agent has no backend tools; the AG-UI bridge surfaces the
 # frontend-registered tool to the model on each run.
 app.mount("/hitl_in_chat", hitl_in_chat_agent.to_ag_ui())
+
+# ── Interrupt-adapted — scheduling demos (gen-ui-interrupt, interrupt-headless)
+# The `schedule_meeting` tool is defined on the frontend via `useFrontendTool`;
+# the backend agent has no tools and delegates entirely to the client.
+app.mount("/interrupt", interrupt_agent.to_ag_ui())
 
 # ── Main sales agent — mounted at root (catch-all) ───────────────────
 # Mounted LAST so the sub-path mounts above win for their specific paths.

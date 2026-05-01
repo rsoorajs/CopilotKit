@@ -38,48 +38,55 @@ function LinksLegend() {
 
 function DepthLegend() {
   return (
-    <>
-      <LegendItem>
-        <span className="font-semibold text-[var(--text-secondary)]">
-          D0-D4
-        </span>
-        integration wiring depth (D0 = listed, D4 = full tool rendering)
-      </LegendItem>
-      <LegendItem>
-        <span className="text-[var(--danger)] font-medium">▼</span>
-        depth regression from previous run
-      </LegendItem>
-    </>
+    <LegendItem>
+      <span className="font-semibold text-[var(--text-secondary)]">
+        L1-L4 Strip
+      </span>
+      per-integration health levels shown in column header
+    </LegendItem>
   );
 }
 
 function HealthLegend() {
   return (
     <>
+      {/* Depth explanations in ascending order */}
       <LegendItem>
-        <span className="font-semibold text-[var(--text-secondary)]">
-          L1-L4 Strip
-        </span>
-        per-integration health levels shown in column header
+        <span className="font-semibold text-[var(--text-secondary)]">D2</span>
+        API: responds to a basic CopilotKit API call
       </LegendItem>
       <LegendItem>
-        <span className="text-[var(--ok)]">E2E ✓</span>/
+        <span className="font-semibold text-[var(--text-secondary)]">D3</span>
+        Page Load: demo page loads in a browser
+      </LegendItem>
+      <LegendItem>
+        <span className="font-semibold text-[var(--text-secondary)]">D4</span>
+        Round Trip (RT): single message, full-stack response verification
+      </LegendItem>
+      <LegendItem>
+        <span className="font-semibold text-[var(--text-secondary)]">D5</span>
+        Conversation (CV): multi-turn scripted dialogue with tool calls and
+        content assertions
+      </LegendItem>
+      {/* Regression indicator */}
+      <LegendItem>
+        <span className="text-[var(--danger)] font-medium">▼</span>
+        depth regression from previous run
+      </LegendItem>
+      {/* D4/D5 color chips */}
+      <LegendItem>
+        <span className="text-[var(--ok)]">D4 ✓</span>/
         <span className="text-[var(--amber)]">~</span>/
         <span className="text-[var(--danger)]">✗</span>
-        end-to-end smoke (green &lt;6h / amber stale / red fail)
+        round-trip check (green &lt;6h / amber stale / red fail)
       </LegendItem>
       <LegendItem>
         <span className="text-[var(--ok)]">D5</span>/
         <span className="text-[var(--amber)]">D5</span>/
         <span className="text-[var(--danger)]">D5</span>
-        depth-5 tool rendering (green pass / amber stale / red fail)
+        conversation check (green pass / amber stale / red fail)
       </LegendItem>
-      <LegendItem>
-        <span className="text-[var(--ok)]">D6</span>/
-        <span className="text-[var(--amber)]">D6</span>/
-        <span className="text-[var(--danger)]">D6</span>
-        depth-6 multi-agent (green pass / amber stale / red fail)
-      </LegendItem>
+      {/* Status symbols */}
       <LegendItem>
         <span className="text-[var(--text-muted)]">?</span>
         probe has not yet ticked since deploy

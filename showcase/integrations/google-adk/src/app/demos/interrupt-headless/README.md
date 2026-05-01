@@ -1,18 +1,13 @@
-# interrupt-headless (google-adk — not supported)
+# interrupt-headless (google-adk -- Strategy B)
 
-Headless interrupt: a backend `interrupt()` pauses execution and the
-frontend renders the resume UI in an external app surface (outside chat)
-via `useHeadlessInterrupt` subscribing to the agent's `on_interrupt`
-custom-event stream.
-
-## Why google-adk can't support this
-
-`useHeadlessInterrupt` (like `useInterrupt`) requires backend
-`on_interrupt` custom events to fire. `ag-ui-adk` does not expose an
-`interrupt()` primitive on Google ADK `LlmAgent`s and does not emit those
-events, so there is no signal for the headless surface to subscribe to.
+Headless interrupt via **Strategy B**: the backend ADK agent defines a system
+prompt that instructs it to call `schedule_meeting`, and the frontend registers
+that tool via `useFrontendTool` with an async handler. The handler shows a
+time-picker popup in the app surface (outside the chat) and returns a Promise
+that only resolves once the user picks a slot (or cancels) -- producing the
+same headless UX as the LangGraph reference, just with different plumbing.
 
 ## Reference implementation
 
-See the canonical implementation in
+See the canonical LangGraph implementation in
 [`langgraph-python`](../../../../langgraph-python/src/app/demos/interrupt-headless/).

@@ -3,6 +3,7 @@
   "dockerfile_lines": [],
   "dependencies": ["."],
   "graphs": {
+    "sample_agent": "./graph.ts:graph",
     "starterAgent": "./graph.ts:graph",
     "beautiful_chat": "./beautiful-chat.ts:graph",
     "headless_complete": "./headless-complete.ts:graph",

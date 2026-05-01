@@ -34,18 +34,19 @@ const runtime = new CopilotRuntime({
 // @endregion[advanced-runtime-config]
 // @endregion[minimal-runtime-flag]
 
+const { handleRequest } = copilotRuntimeNextJSAppRouterEndpoint({
+  endpoint: "/api/copilotkit-ogui",
+  serviceAdapter: new ExperimentalEmptyAdapter(),
+  runtime,
+});
+
 export const POST = async (req: NextRequest) => {
   try {
-    const { handleRequest } = copilotRuntimeNextJSAppRouterEndpoint({
-      endpoint: "/api/copilotkit-ogui",
-      serviceAdapter: new ExperimentalEmptyAdapter(),
-      runtime,
-    });
     return await handleRequest(req);
   } catch (error: unknown) {
-    console.error("[copilotkit-ogui]", error);
+    const e = error as { message?: string; stack?: string };
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: e.message, stack: e.stack },
       { status: 500 },
     );
   }

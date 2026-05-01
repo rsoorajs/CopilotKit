@@ -4,7 +4,8 @@
  *   - CP2: transitionLine discriminates `first` and `error` transitions
  *   - CP5: missing-state tooltip distinguishes opt-out vs absent
  *   - CP7: error-state docs link is clickable when href is present
- *   - CP8: D5/D6 chips hidden for testing-kind features
+ *   - CP8: CV badges hidden for testing-kind features
+ *   - docs-only kind hides ALL badges (API, RT, CV)
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, fireEvent, waitFor } from "@testing-library/react";
@@ -94,7 +95,7 @@ function redE2eRow(): StatusRow {
 }
 
 /**
- * Find the inner Badge span for a given badge name (E2E / D5 / D6) inside
+ * Find the inner Badge span for a given badge name (D4 / D5 / D6) inside
  * a CellStatus render. The Badge renders `<span title>...<span>name</span>
  * <span>label</span></span>`, so we locate the parent span whose first
  * child text matches `name`.
@@ -127,16 +128,16 @@ describe("CP1: tooltipOpen resets on mouseleave/blur", () => {
       liveStatus: new Map([[redE2eRow().key, redE2eRow()]]) as LiveStatusMap,
     });
     const { container } = render(<CellStatus ctx={ctx} />);
-    const e2eBadge = findBadgeByName(container, "E2E");
-    fireEvent.mouseEnter(e2eBadge);
+    const rtBadge = findBadgeByName(container, "RT");
+    fireEvent.mouseEnter(rtBadge);
     // Allow microtask to flush.
     await Promise.resolve();
     expect(mockState.fetchCount).toBeGreaterThanOrEqual(1);
 
     // CP1 wrapper: `onMouseLeave` on the outer span resets `tooltipOpen`.
     // We verify the handler is wired by triggering it on the wrapper
-    // (parent of e2eBadge in the DOM tree) without exception.
-    const wrapper = e2eBadge.parentElement!;
+    // (parent of rtBadge in the DOM tree) without exception.
+    const wrapper = rtBadge.parentElement!;
     fireEvent.mouseLeave(wrapper);
     expect(container).toBeTruthy();
   });
@@ -158,11 +159,11 @@ describe("CP2: transitionLine discriminates first/error", () => {
       liveStatus: new Map([[redE2eRow().key, redE2eRow()]]) as LiveStatusMap,
     });
     const { container } = render(<CellStatus ctx={ctx} />);
-    const e2eBadge = findBadgeByName(container, "E2E");
-    fireEvent.mouseEnter(e2eBadge);
+    const rtBadge = findBadgeByName(container, "RT");
+    fireEvent.mouseEnter(rtBadge);
     // Wait for the lazy fetch + state update.
     await new Promise((r) => setTimeout(r, 10));
-    const updated = findBadgeByName(container, "E2E");
+    const updated = findBadgeByName(container, "RT");
     expect(updated.getAttribute("title")).toContain("(initial: green)");
   });
 
@@ -181,14 +182,14 @@ describe("CP2: transitionLine discriminates first/error", () => {
       liveStatus: new Map([[redE2eRow().key, redE2eRow()]]) as LiveStatusMap,
     });
     const { container } = render(<CellStatus ctx={ctx} />);
-    const e2eBadge = findBadgeByName(container, "E2E");
-    fireEvent.mouseEnter(e2eBadge);
+    const rtBadge = findBadgeByName(container, "RT");
+    fireEvent.mouseEnter(rtBadge);
     await waitFor(() => {
-      const el = findBadgeByName(container, "E2E");
+      const el = findBadgeByName(container, "RT");
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       expect(el.getAttribute("title")!).toMatch(/since 2025-02-02/);
     });
-    const updated = findBadgeByName(container, "E2E");
+    const updated = findBadgeByName(container, "RT");
     expect(updated.getAttribute("title")).toContain("(error → red)");
   });
 
@@ -207,14 +208,14 @@ describe("CP2: transitionLine discriminates first/error", () => {
       liveStatus: new Map([[redE2eRow().key, redE2eRow()]]) as LiveStatusMap,
     });
     const { container } = render(<CellStatus ctx={ctx} />);
-    const e2eBadge = findBadgeByName(container, "E2E");
-    fireEvent.mouseEnter(e2eBadge);
+    const rtBadge = findBadgeByName(container, "RT");
+    fireEvent.mouseEnter(rtBadge);
     await waitFor(() => {
-      const el = findBadgeByName(container, "E2E");
+      const el = findBadgeByName(container, "RT");
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       expect(el.getAttribute("title")!).toMatch(/since 2025-02-02/);
     });
-    const updated = findBadgeByName(container, "E2E");
+    const updated = findBadgeByName(container, "RT");
     expect(updated.getAttribute("title")).toContain("(green → red)");
   });
 });
@@ -263,36 +264,49 @@ describe("CP5: missing-state tooltip distinguishes opt-out vs absent", () => {
   });
 });
 
-describe("CP8: D5/D6 chips hidden for testing-kind features", () => {
-  it("hides D5/D6 LiveBadges when feature.kind === 'testing'", () => {
+describe("CP8: CV badges hidden for testing-kind features", () => {
+  it("hides CV LiveBadge when feature.kind === 'testing'", () => {
     const ctx = makeCtx({
       feature: makeFeature({ kind: "testing" }),
     });
     const { container } = render(<CellStatus ctx={ctx} />);
     const text = container.textContent ?? "";
-    expect(text).toContain("E2E");
-    expect(text).not.toContain("D5");
-    expect(text).not.toContain("D6");
+    expect(text).toContain("API");
+    expect(text).toContain("RT");
+    expect(text).not.toContain("CV");
   });
 
-  it("renders D5/D6 LiveBadges for primary features", () => {
+  it("renders API/CV LiveBadges for primary features", () => {
     const ctx = makeCtx({
       feature: makeFeature({ kind: "primary" }),
     });
     const { container } = render(<CellStatus ctx={ctx} />);
     const text = container.textContent ?? "";
-    expect(text).toContain("E2E");
-    expect(text).toContain("D5");
-    expect(text).toContain("D6");
+    expect(text).toContain("API");
+    expect(text).toContain("RT");
+    expect(text).toContain("CV");
   });
 
-  it("renders D5/D6 by default when feature.kind is undefined", () => {
+  it("renders CV by default when feature.kind is undefined", () => {
     const ctx = makeCtx({
       feature: makeFeature(),
     });
     const { container } = render(<CellStatus ctx={ctx} />);
     const text = container.textContent ?? "";
-    expect(text).toContain("D5");
-    expect(text).toContain("D6");
+    expect(text).toContain("API");
+    expect(text).toContain("CV");
+  });
+});
+
+describe("docs-only kind hides ALL badges", () => {
+  it("returns null (renders nothing) when feature.kind === 'docs-only'", () => {
+    const ctx = makeCtx({
+      feature: makeFeature({ kind: "docs-only" }),
+    });
+    const { container } = render(<CellStatus ctx={ctx} />);
+    const text = container.textContent ?? "";
+    expect(text).not.toContain("API");
+    expect(text).not.toContain("RT");
+    expect(text).not.toContain("CV");
   });
 });

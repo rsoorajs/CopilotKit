@@ -51,6 +51,13 @@ const agents: Record<string, AbstractAgent> = {};
 for (const name of agentNames) {
   agents[name] = createAgent();
 }
+
+// Interrupt-adapted demos — frontend-tool shim for LangGraph `interrupt()`.
+// Both gen-ui-interrupt and interrupt-headless share the same scheduling agent;
+// only the frontend UX differs (inline time-picker vs. external popup).
+for (const name of interruptAgentNames) {
+  agents[name] = createInterruptAgent();
+}
 // In-App HITL -- async frontend-tool + app-level modal (outside chat).
 // Dedicated hitl-in-app agent mounted at /hitl-in-app on the FastAPI
 // backend; agent has tools=[] and relies on the frontend-provided

@@ -40,6 +40,18 @@ user answers, agent resumes — different mechanism underneath.
 
 </WhenFrameworkHas>
 
+<WhenFrameworkHas flag="interrupt_pattern" absent>
+
+> **Not available on this framework.** `useInterrupt` is only meaningful
+> when the underlying runtime exposes either a native `interrupt(...)`
+> primitive (LangGraph) or a Promise-resolving frontend tool path
+> (Microsoft Agent Framework). For all other integrations, use
+> [`useHumanInTheLoop`](../human-in-the-loop) instead — it's the
+> standard hook for tool-call-based pause/resume flows and works on
+> every framework that supports tool calls.
+
+</WhenFrameworkHas>
+
 <InlineDemo demo="gen-ui-interrupt" />
 
 ## When should I use this?

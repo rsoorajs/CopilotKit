@@ -60,6 +60,7 @@ describe("Catalog Generator", () => {
 
     // metadata must have exactly the CatalogMetadata keys
     expect(Object.keys(catalog.metadata).sort()).toEqual([
+      "docs_only",
       "generated_at",
       "reference",
       "stub",
@@ -94,7 +95,7 @@ describe("Catalog Generator", () => {
     }
   });
 
-  it("cross-join produces 737 cells (720 integrated + 17 starters)", () => {
+  it("cross-join produces 720 cells (40 features x 18 integrations); metadata.total_cells excludes docs-only", () => {
     runGenerator();
     const catalog = readCatalog();
 
@@ -111,7 +112,9 @@ describe("Catalog Generator", () => {
     expect(integrated.length).toBe(720); // 40 features x 18 integrations
     expect(starters.length).toBe(0);
     expect(catalog.cells.length).toBe(720);
-    expect(catalog.metadata.total_cells).toBe(720);
+    // total_cells excludes docs-only features (currently 1 feature x 18 integrations = 18)
+    expect(catalog.metadata.total_cells).toBe(702);
+    expect(catalog.metadata.docs_only).toBe(18);
   });
 
   it("LGP has 40 cells: 37 wired + 1 stub + 2 unshipped", () => {
@@ -189,22 +192,32 @@ describe("Catalog Generator", () => {
     }
   });
 
-  it("metadata counts are correct", () => {
+  it("metadata counts are correct (docs-only excluded from breakdown)", () => {
     runGenerator();
     const catalog = readCatalog();
 
     expect(catalog.metadata).toBeDefined();
-    expect(catalog.metadata.total_cells).toBe(720);
+    // total_cells excludes docs-only features
+    expect(catalog.metadata.total_cells).toBe(702);
 
-    // 18 integrations x 40 features = 720 total cells (starters removed).
+    // Headline counts exclude docs-only cells; must sum to total_cells.
     expect(
       catalog.metadata.wired +
         catalog.metadata.stub +
         catalog.metadata.unshipped +
         catalog.metadata.unsupported,
-    ).toBe(720);
+    ).toBe(catalog.metadata.total_cells);
+    // docs_only + headline counts = total cells in the array
+    expect(
+      catalog.metadata.wired +
+        catalog.metadata.stub +
+        catalog.metadata.unshipped +
+        catalog.metadata.unsupported +
+        catalog.metadata.docs_only,
+    ).toBe(catalog.cells.length);
     expect(catalog.metadata.wired).toBeGreaterThanOrEqual(490);
     expect(catalog.metadata.unsupported).toBeGreaterThanOrEqual(0);
+    expect(catalog.metadata.docs_only).toBe(18);
   });
 
   it("max_depth: D4 for wired/stub cells, D0 for unshipped/unsupported", () => {

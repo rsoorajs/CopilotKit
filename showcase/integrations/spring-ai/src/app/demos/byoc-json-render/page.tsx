@@ -1,41 +1,65 @@
 "use client";
 
-import React from "react";
+/**
+ * BYOC json-render demo.
+ *
+ * Scenario: user asks for a sales-dashboard-style UI; the Spring AI agent
+ * emits a JSON spec shaped like `{ root, elements }`, and `@json-render/react`
+ * renders it against a Zod-validated catalog of three components
+ * (MetricCard, BarChart, PieChart).
+ *
+ * Structurally mirrors Wave 4a's hashbrown demo so the two dashboard rows
+ * are directly comparable — the only substantive difference is the message
+ * renderer (this file swaps in `JsonRenderAssistantMessage`).
+ */
 
-export default function ByocJsonRenderUnsupported() {
+import React from "react";
+import {
+  CopilotKit,
+  CopilotChat,
+  CopilotChatAssistantMessage,
+  useConfigureSuggestions,
+} from "@copilotkit/react-core/v2";
+import { JsonRenderAssistantMessage } from "./json-render-renderer";
+import { BYOC_JSON_RENDER_SUGGESTIONS } from "./suggestions";
+
+const AGENT_ID = "byoc_json_render";
+
+export default function ByocJsonRenderDemo() {
   return (
-    <div
-      style={{
-        height: "100vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "24px",
-        textAlign: "center",
-      }}
-    >
-      <div style={{ maxWidth: 560 }}>
-        <h1 style={{ fontSize: 24, fontWeight: 600, marginBottom: 12 }}>
-          BYOC JSON Render — Not Supported by Spring AI
-        </h1>
-        <p style={{ color: "#555", lineHeight: 1.55, marginBottom: 16 }}>
-          Spring AI&apos;s <code>BeanOutputConverter</code> only resolves on the
-          final response, so there is no per-token JSON streaming to drive
-          incremental rendering. The <code>@json-render</code> dependencies are
-          also not installed in this integration.
-        </p>
-        <p style={{ color: "#555", lineHeight: 1.55 }}>
-          See{" "}
-          <a
-            href="https://github.com/CopilotKit/CopilotKit/tree/main/showcase/integrations/spring-ai/src/app/demos/byoc-json-render/README.md"
-            style={{ color: "#2563eb", textDecoration: "underline" }}
-          >
-            this demo&apos;s README
-          </a>{" "}
-          for details, and the LangGraph Python integration for a working
-          implementation.
-        </p>
+    <CopilotKit runtimeUrl="/api/copilotkit-byoc-json-render" agent={AGENT_ID}>
+      <div className="flex justify-center items-center h-screen w-full">
+        <div className="h-full w-full max-w-4xl">
+          <Chat />
+        </div>
       </div>
-    </div>
+    </CopilotKit>
+  );
+}
+
+function Chat() {
+  useConfigureSuggestions({
+    suggestions: BYOC_JSON_RENDER_SUGGESTIONS.map((s) => ({
+      title: s.label,
+      message: s.prompt,
+    })),
+    available: "always",
+  });
+
+  // `messageView.assistantMessage` replaces CopilotChat's default assistant
+  // bubble. The cast mirrors the pattern used in `demos/chat-slots/page.tsx`
+  // — the slot's prop shape is identical to `CopilotChatAssistantMessage`'s,
+  // but TypeScript can't prove that through the WithSlots indirection.
+  const messageView = {
+    assistantMessage:
+      JsonRenderAssistantMessage as unknown as typeof CopilotChatAssistantMessage,
+  };
+
+  return (
+    <CopilotChat
+      agentId={AGENT_ID}
+      className="h-full rounded-2xl"
+      messageView={messageView}
+    />
   );
 }
