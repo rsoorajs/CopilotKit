@@ -1,7 +1,13 @@
-"""Tool Rendering (Reasoning Chain) — minimal deep agent with tools."""
+"""Tool Rendering (Reasoning Chain) — minimal deep agent with tools.
+
+Routes through a reasoning-capable OpenAI model via the Responses API
+so the chain of thought streams as AG-UI REASONING_MESSAGE_* events
+alongside the tool calls. See `reasoning_agent.py` for the rationale.
+"""
 
 from __future__ import annotations
 
+import os
 from random import choice, randint
 
 from deepagents import create_deep_agent
@@ -56,9 +62,13 @@ SYSTEM_PROMPT = (
     "reason step-by-step and call 2+ tools in succession when relevant."
 )
 
+REASONING_MODEL = os.environ.get("OPENAI_REASONING_MODEL", "gpt-5-mini")
+
 graph = create_deep_agent(
     model=init_chat_model(
-        "openai:gpt-4o-mini", temperature=0, use_responses_api=False
+        f"openai:{REASONING_MODEL}",
+        use_responses_api=True,
+        reasoning={"effort": "low", "summary": "auto"},
     ),
     tools=[get_weather, search_flights, get_stock_price, roll_dice],
     system_prompt=SYSTEM_PROMPT,

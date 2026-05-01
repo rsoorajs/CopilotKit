@@ -3,6 +3,7 @@ import {
   createE2eDeepDriver,
   createPooledE2eDeepLauncher,
   D5_SCRIPT_FILE_MATCHER,
+  DEPLOY_CHURN_GRACE_MS,
   e2eDeepDriver,
   FEATURE_CONCURRENCY,
   Semaphore,
@@ -148,9 +149,10 @@ function mkWriter(): {
 function mkCtx(
   writer?: ProbeResultWriter,
   env: Record<string, string | undefined> = {},
+  nowFn?: () => Date,
 ): ProbeContext {
   return {
-    now: () => new Date("2026-04-25T00:00:00Z"),
+    now: nowFn ?? (() => new Date("2026-04-25T00:00:00Z")),
     logger,
     env,
     writer,
@@ -533,7 +535,7 @@ describe("e2e-deep driver", () => {
     //   - `tool-rendering-default-catchall` → `tool-rendering`
     //   - `shared-state-read-write` → BOTH `shared-state-read` AND
     //     `shared-state-write` (one-to-many)
-    //   - `voice` is unmapped and silently dropped.
+    //   - `voice` → `voice` (mapped, but no script → skipped).
     // Only the shared-state script is registered, so
     // `tool-rendering` lands in `skipped[]` — the test exercises
     // both the mapping AND the closed-set filter without paying
@@ -562,26 +564,26 @@ describe("e2e-deep driver", () => {
       demos: [
         "tool-rendering-default-catchall", // → tool-rendering (skipped, no script)
         "shared-state-read-write", // → shared-state-read + shared-state-write (run)
-        "voice", // unmapped → dropped
+        "voice", // → voice (skipped, no script)
       ],
       shape: "package",
     });
 
     expect(result.state).toBe("green");
     const sig = result.signal as E2eDeepAggregateSignal;
-    // 3 mapped D5 types: tool-rendering (skipped) + shared-state-read
-    // + shared-state-write (both run). `voice` was dropped before
-    // counting.
-    expect(sig.total).toBe(3);
+    // 4 mapped D5 types: tool-rendering (skipped) + shared-state-read
+    // + shared-state-write (both run) + voice (skipped, no script).
+    expect(sig.total).toBe(4);
     expect(sig.passed).toBe(2);
     expect(sig.failed).toEqual([]);
-    expect(sig.skipped).toEqual(["tool-rendering"]);
+    expect(sig.skipped).toEqual(["tool-rendering", "voice"]);
 
     const sideKeys = writes.map((w) => w.key).sort();
     expect(sideKeys).toEqual([
       "d5:langgraph-python/shared-state-read",
       "d5:langgraph-python/shared-state-write",
       "d5:langgraph-python/tool-rendering",
+      "d5:langgraph-python/voice",
     ]);
   });
 
@@ -1331,5 +1333,321 @@ describe("createPooledE2eDeepLauncher abort release", () => {
     await browser.close();
     expect(pool._releaseLog).toHaveLength(1);
     expect(pool.stats().available).toBe(1);
+  });
+});
+
+// ---------------------------------------------------------------------
+// Deploy-churn grace window — verifies that the driver skips all
+// features for a service that deployed within DEPLOY_CHURN_GRACE_MS,
+// emitting green side rows with a skip note and an aggregate green.
+// ---------------------------------------------------------------------
+describe("e2e-deep deploy-churn grace window", () => {
+  beforeEach(() => {
+    __clearD5RegistryForTesting();
+  });
+
+  it("DEPLOY_CHURN_GRACE_MS is 120_000 (2 minutes)", () => {
+    expect(DEPLOY_CHURN_GRACE_MS).toBe(120_000);
+  });
+
+  it("skips all features when deployedAt is within the grace window", async () => {
+    registerD5Script(
+      makeScript({
+        featureTypes: ["agentic-chat"],
+        fixtureFile: "agentic-chat.json",
+        buildTurns: () => [{ input: "hello" }],
+      }),
+    );
+    registerD5Script(
+      makeScript({
+        featureTypes: ["tool-rendering"],
+        fixtureFile: "tool-rendering.json",
+        buildTurns: () => [{ input: "weather" }],
+      }),
+    );
+
+    let launched = false;
+    const driver = createE2eDeepDriver({
+      launcher: async () => {
+        launched = true;
+        const { browser } = makeBrowser([{}, {}]);
+        return browser;
+      },
+      scriptLoader: async () => {
+        /* no-op */
+      },
+    });
+    const { writer, writes } = mkWriter();
+
+    // Service deployed 30 seconds ago — well within the 120s grace.
+    const now = new Date("2026-04-25T00:02:00Z");
+    const deployedAt = new Date("2026-04-25T00:01:30Z").toISOString();
+
+    const result = await driver.run(
+      mkCtx(writer, {}, () => now),
+      {
+        key: "e2e-deep:showcase-langgraph-python",
+        publicUrl: "https://showcase-langgraph-python.example.com",
+        name: "showcase-langgraph-python",
+        features: ["agentic-chat", "tool-rendering"],
+        shape: "package",
+        deployedAt,
+      },
+    );
+
+    // No browser launched — the skip fires before chromium.
+    expect(launched).toBe(false);
+
+    expect(result.state).toBe("green");
+    const sig = result.signal as E2eDeepAggregateSignal;
+    expect(sig.total).toBe(2);
+    expect(sig.passed).toBe(0);
+    expect(sig.failed).toEqual([]);
+    expect(sig.skipped).toEqual(["agentic-chat", "tool-rendering"]);
+    expect(sig.note).toMatch(/deploy-churn skip/);
+    expect(sig.note).toMatch(/30s ago/);
+
+    // Both features emitted as green side rows with skip note.
+    expect(writes).toHaveLength(2);
+    for (const w of writes) {
+      expect(w.state).toBe("green");
+      const fSig = w.signal as E2eDeepFeatureSignal;
+      expect(fSig.note).toMatch(/skipped: deploy in progress/);
+      expect(fSig.note).toMatch(/30s ago/);
+    }
+  });
+
+  it("proceeds normally when deployedAt is older than the grace window", async () => {
+    registerD5Script(
+      makeScript({
+        featureTypes: ["agentic-chat"],
+        fixtureFile: "agentic-chat.json",
+        buildTurns: () => [{ input: "hello" }],
+      }),
+    );
+
+    const { browser } = makeBrowser([{}]);
+    const driver = createE2eDeepDriver({
+      launcher: async () => browser,
+      scriptLoader: async () => {
+        /* no-op */
+      },
+    });
+    const { writer, writes } = mkWriter();
+
+    // Service deployed 5 minutes ago — outside the 120s grace.
+    const now = new Date("2026-04-25T00:05:00Z");
+    const deployedAt = new Date("2026-04-25T00:00:00Z").toISOString();
+
+    const result = await driver.run(
+      mkCtx(writer, {}, () => now),
+      {
+        key: "e2e-deep:showcase-langgraph-python",
+        publicUrl: "https://showcase-langgraph-python.example.com",
+        name: "showcase-langgraph-python",
+        features: ["agentic-chat"],
+        shape: "package",
+        deployedAt,
+      },
+    );
+
+    // Normal execution — the feature ran.
+    expect(result.state).toBe("green");
+    const sig = result.signal as E2eDeepAggregateSignal;
+    expect(sig.passed).toBe(1);
+    expect(sig.note).toBeUndefined();
+
+    expect(writes).toHaveLength(1);
+    expect(writes[0]!.state).toBe("green");
+    const fSig = writes[0]!.signal as E2eDeepFeatureSignal;
+    expect(fSig.note).toBeUndefined();
+  });
+
+  it("proceeds normally when deployedAt is absent (backwards compat)", async () => {
+    registerD5Script(
+      makeScript({
+        featureTypes: ["agentic-chat"],
+        fixtureFile: "agentic-chat.json",
+        buildTurns: () => [{ input: "hello" }],
+      }),
+    );
+
+    const { browser } = makeBrowser([{}]);
+    const driver = createE2eDeepDriver({
+      launcher: async () => browser,
+      scriptLoader: async () => {
+        /* no-op */
+      },
+    });
+    const { writer, writes } = mkWriter();
+
+    const result = await driver.run(mkCtx(writer), {
+      key: "e2e-deep:showcase-langgraph-python",
+      publicUrl: "https://showcase-langgraph-python.example.com",
+      name: "showcase-langgraph-python",
+      features: ["agentic-chat"],
+      shape: "package",
+      // No deployedAt field — legacy input shape.
+    });
+
+    // Normal execution.
+    expect(result.state).toBe("green");
+    const sig = result.signal as E2eDeepAggregateSignal;
+    expect(sig.passed).toBe(1);
+  });
+
+  it("proceeds normally when deployedAt is an empty string", async () => {
+    registerD5Script(
+      makeScript({
+        featureTypes: ["agentic-chat"],
+        fixtureFile: "agentic-chat.json",
+        buildTurns: () => [{ input: "hello" }],
+      }),
+    );
+
+    const { browser } = makeBrowser([{}]);
+    const driver = createE2eDeepDriver({
+      launcher: async () => browser,
+      scriptLoader: async () => {
+        /* no-op */
+      },
+    });
+    const { writer } = mkWriter();
+
+    const result = await driver.run(mkCtx(writer), {
+      key: "e2e-deep:showcase-langgraph-python",
+      publicUrl: "https://showcase-langgraph-python.example.com",
+      name: "showcase-langgraph-python",
+      features: ["agentic-chat"],
+      shape: "package",
+      deployedAt: "",
+    });
+
+    expect(result.state).toBe("green");
+    const sig = result.signal as E2eDeepAggregateSignal;
+    expect(sig.passed).toBe(1);
+  });
+
+  it("proceeds normally when deployedAt is an unparseable string", async () => {
+    registerD5Script(
+      makeScript({
+        featureTypes: ["agentic-chat"],
+        fixtureFile: "agentic-chat.json",
+        buildTurns: () => [{ input: "hello" }],
+      }),
+    );
+
+    const { browser } = makeBrowser([{}]);
+    const driver = createE2eDeepDriver({
+      launcher: async () => browser,
+      scriptLoader: async () => {
+        /* no-op */
+      },
+    });
+    const { writer } = mkWriter();
+
+    const result = await driver.run(mkCtx(writer), {
+      key: "e2e-deep:showcase-langgraph-python",
+      publicUrl: "https://showcase-langgraph-python.example.com",
+      name: "showcase-langgraph-python",
+      features: ["agentic-chat"],
+      shape: "package",
+      deployedAt: "not-a-date",
+    });
+
+    // Unparseable date → no skip, normal execution.
+    expect(result.state).toBe("green");
+    const sig = result.signal as E2eDeepAggregateSignal;
+    expect(sig.passed).toBe(1);
+  });
+
+  it("skips at exactly 0s age (just deployed)", async () => {
+    registerD5Script(
+      makeScript({
+        featureTypes: ["agentic-chat"],
+        fixtureFile: "agentic-chat.json",
+      }),
+    );
+
+    let launched = false;
+    const driver = createE2eDeepDriver({
+      launcher: async () => {
+        launched = true;
+        const { browser } = makeBrowser([{}]);
+        return browser;
+      },
+      scriptLoader: async () => {
+        /* no-op */
+      },
+    });
+    const { writer, writes } = mkWriter();
+
+    const now = new Date("2026-04-25T00:00:00Z");
+
+    const result = await driver.run(
+      mkCtx(writer, {}, () => now),
+      {
+        key: "e2e-deep:showcase-mastra",
+        publicUrl: "https://showcase-mastra.example.com",
+        name: "showcase-mastra",
+        features: ["agentic-chat"],
+        shape: "package",
+        deployedAt: now.toISOString(), // ageMs === 0
+      },
+    );
+
+    expect(launched).toBe(false);
+    expect(result.state).toBe("green");
+    const sig = result.signal as E2eDeepAggregateSignal;
+    expect(sig.note).toMatch(/deploy-churn skip/);
+    expect(sig.note).toMatch(/0s ago/);
+
+    expect(writes).toHaveLength(1);
+    expect((writes[0]!.signal as E2eDeepFeatureSignal).note).toMatch(
+      /skipped: deploy in progress/,
+    );
+  });
+
+  it("does NOT skip when age equals exactly DEPLOY_CHURN_GRACE_MS (boundary)", async () => {
+    registerD5Script(
+      makeScript({
+        featureTypes: ["agentic-chat"],
+        fixtureFile: "agentic-chat.json",
+        buildTurns: () => [{ input: "hello" }],
+      }),
+    );
+
+    const { browser } = makeBrowser([{}]);
+    const driver = createE2eDeepDriver({
+      launcher: async () => browser,
+      scriptLoader: async () => {
+        /* no-op */
+      },
+    });
+    const { writer } = mkWriter();
+
+    // deployedAt exactly 120_000ms (2 min) ago — boundary, should NOT skip.
+    const now = new Date("2026-04-25T00:02:00Z");
+    const deployedAt = new Date(
+      now.getTime() - DEPLOY_CHURN_GRACE_MS,
+    ).toISOString();
+
+    const result = await driver.run(
+      mkCtx(writer, {}, () => now),
+      {
+        key: "e2e-deep:showcase-langgraph-python",
+        publicUrl: "https://showcase-langgraph-python.example.com",
+        name: "showcase-langgraph-python",
+        features: ["agentic-chat"],
+        shape: "package",
+        deployedAt,
+      },
+    );
+
+    // Should proceed normally (ageMs === DEPLOY_CHURN_GRACE_MS, not <).
+    expect(result.state).toBe("green");
+    const sig = result.signal as E2eDeepAggregateSignal;
+    expect(sig.passed).toBe(1);
+    expect(sig.note).toBeUndefined();
   });
 });

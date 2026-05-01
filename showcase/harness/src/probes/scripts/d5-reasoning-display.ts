@@ -9,10 +9,21 @@
  * — the alternate route is informational only at the catalog level
  * (see open question Q5 in `.claude/specs/lgp-d5-coverage.md`).
  *
- * Assertion: the assistant transcript must contain reasoning-flavored
- * keywords ("reasoning" / "step" / "thinking") to prove the
- * reasoning-block rendered, even if the canonical reasoning-block
- * selector is integration-specific.
+ * Assertion (either signal passes):
+ *   - A reasoning-role message rendered via a known testid
+ *     (`data-testid="reasoning-block"`, `reasoning-content`,
+ *     `reasoning-default`) or `[data-message-role="reasoning"]`.
+ *     Strong signal that AG-UI REASONING_MESSAGE_* events reached
+ *     the frontend.
+ *   - OR the assistant transcript contains a reasoning-flavored
+ *     keyword. Looser signal that picks up integrations whose AG-UI
+ *     bridge surfaces reasoning inline as assistant text rather than
+ *     as a role-reasoning message (llamaindex, crewai-crews, several
+ *     cells that use CopilotKit's default reasoning slot which does
+ *     not expose a stable testid). The intentionally loose fallback
+ *     preserves green status for cells that have always rendered
+ *     reasoning inline; the strong selector check is the future-proof
+ *     path as more integrations adopt role-reasoning messages.
  */
 
 import {
@@ -55,6 +66,30 @@ async function readAssistantTranscript(page: Page): Promise<string> {
   })) as string;
 }
 
+async function hasReasoningMessage(page: Page): Promise<boolean> {
+  return (await page.evaluate(() => {
+    const win = globalThis as unknown as {
+      document: {
+        querySelector(sel: string): unknown;
+      };
+    };
+    // Match the testids that integration ReasoningBlock components
+    // actually emit (reasoning-block, reasoning-content, reasoning-default
+    // are all used in showcase/integrations/*) plus the AG-UI role marker
+    // used by the v2 frontend. CopilotKit's default
+    // CopilotChatReasoningMessage does not currently expose a stable
+    // testid, so cells using the default slot rely on the keyword check
+    // in `buildReasoningAssertion` instead.
+    const sels = [
+      '[data-testid="reasoning-block"]',
+      '[data-testid="reasoning-content"]',
+      '[data-testid="reasoning-default"]',
+      '[data-message-role="reasoning"]',
+    ];
+    return sels.some((s) => win.document.querySelector(s) !== null);
+  })) as boolean;
+}
+
 export const REASONING_KEYWORDS = ["reasoning", "step", "thinking"] as const;
 
 export function buildReasoningAssertion(opts?: {
@@ -65,12 +100,13 @@ export function buildReasoningAssertion(opts?: {
     const deadline = Date.now() + timeout;
     let last = "";
     while (Date.now() < deadline) {
+      if (await hasReasoningMessage(page)) return;
       last = await readAssistantTranscript(page);
       if (REASONING_KEYWORDS.some((kw) => last.includes(kw))) return;
       await new Promise<void>((r) => setTimeout(r, 200));
     }
     throw new Error(
-      `reasoning-display: transcript missing reasoning keyword (any of ${REASONING_KEYWORDS.join(", ")}) — got "${last.slice(0, 200)}"`,
+      `reasoning-display: neither a reasoning-role message nor a reasoning keyword (${REASONING_KEYWORDS.join(", ")}) appeared within ${timeout}ms — last transcript "${last.slice(0, 200)}"`,
     );
   };
 }

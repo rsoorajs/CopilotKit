@@ -101,10 +101,12 @@ cmd_test() {
 
   need_slug "$slug"
 
-  # Apply isolation if requested (must happen before any compose commands)
+  # Apply isolation if requested (must happen before any compose commands).
+  # Register the trap BEFORE apply_isolation so cleanup runs even if the
+  # function itself crashes partway through.
   if $use_isolate; then
-    apply_isolation "${isolate_name:-}"
     trap restore_isolation EXIT
+    apply_isolation "${isolate_name:-}"
   fi
 
   # Build the filter description for the info line

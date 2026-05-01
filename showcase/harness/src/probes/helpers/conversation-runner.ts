@@ -107,7 +107,7 @@ const SEND_VERIFY_TIMEOUT_MS = 2_000;
 
 const DEFAULT_RESPONSE_TIMEOUT_MS = 30_000;
 const DEFAULT_SETTLE_MS = 1500;
-const SELECTOR_PROBE_TIMEOUT_MS = 2_000;
+const SELECTOR_PROBE_TIMEOUT_MS = 5_000;
 const POLL_INTERVAL_MS = 100;
 
 /**
@@ -139,11 +139,37 @@ export interface Page {
    * which would defeat the polling cadence.
    */
   evaluate<R>(fn: () => R): Promise<R>;
+  /**
+   * Read the current value of an input/textarea element. Used by the
+   * `skipFill` path to poll for non-empty content before pressing Enter
+   * (e.g. voice transcription populating the textarea asynchronously).
+   *
+   * Optional — only required when `skipFill` turns are used. The real
+   * Playwright Page has this method natively. Tests inject a scripted
+   * implementation.
+   */
+  inputValue?(selector: string): Promise<string>;
 }
 
 export interface ConversationTurn {
   /** The user message to type into the chat input. */
   input: string;
+  /**
+   * When true, the runner skips `page.fill()` for this turn's input.
+   * Instead it waits for the textarea to contain non-empty text (e.g.
+   * populated by a `preFill` callback such as a voice-transcription
+   * sample button click) and then presses Enter to submit whatever is
+   * already in the field.
+   *
+   * This is essential for voice/audio flows where `preFill` triggers
+   * an async transcription that populates the textarea — calling
+   * `page.fill()` would overwrite the transcribed text.
+   *
+   * When `skipFill` is true, the `input` field value is ignored for
+   * fill purposes (it can be set to an empty string or a descriptive
+   * label for logging).
+   */
+  skipFill?: boolean;
   /**
    * Optional callback executed BEFORE the runner fills the chat input
    * and presses Enter for this turn. Use this to click attachment
@@ -305,7 +331,14 @@ export async function runConversation(
         );
       }
 
-      await fillAndVerifySend(page, chatInputSelector, turn.input);
+      if (turn.skipFill) {
+        console.debug(
+          `[conversation-runner] turn ${turnNum}/${total} — skipFill=true, waiting for textarea content then pressing Enter`,
+        );
+        await waitForContentAndSend(page, chatInputSelector, turnTimeoutMs);
+      } else {
+        await fillAndVerifySend(page, chatInputSelector, turn.input);
+      }
 
       console.debug(
         `[conversation-runner] turn ${turnNum}/${total} — waiting for assistant settle`,
@@ -356,10 +389,26 @@ export async function runConversation(
       // failed turn is still recoverable from `observedAt` deltas if
       // operators need it.
       void startedAt;
-      console.debug(`[conversation-runner] turn ${turnNum}/${total} — FAILED`, {
+      let failureDiagnostics: Record<string, unknown> = {};
+      try {
+        failureDiagnostics = await page.evaluate(() => {
+          const win = globalThis as unknown as {
+            document: {
+              body: { innerText: string } | null;
+              querySelector(s: string): unknown;
+            };
+          };
+          const bodyText = win.document.body?.innerText?.slice(0, 500) ?? "(no body)";
+          const hasTextarea = !!win.document.querySelector('textarea');
+          const hasErrorBoundary = bodyText.includes("Application error") || bodyText.includes("Internal Server Error");
+          return { bodyText, hasTextarea, hasErrorBoundary };
+        });
+      } catch { /* diagnostics are best-effort */ }
+      console.warn(`[conversation-runner] turn ${turnNum}/${total} — FAILED`, {
         error: errorMessage(err),
         turnsCompleted: idx,
         elapsedMs: Date.now() - startedAt,
+        ...failureDiagnostics,
       });
       return {
         turns_completed: idx,
@@ -495,6 +544,58 @@ export async function fillAndVerifySend(
   // will produce a clear failure message.
   console.debug(
     "[conversation-runner] fillAndVerifySend — all attempts exhausted, proceeding anyway",
+  );
+}
+
+/**
+ * Wait for the chat input textarea to contain non-empty text (populated
+ * externally, e.g. by a voice transcription triggered in `preFill`), then
+ * press Enter to submit it. Does NOT call `page.fill()` — the whole
+ * point is to preserve whatever was already typed/transcribed into the
+ * field.
+ *
+ * Polls `page.inputValue(selector)` at `POLL_INTERVAL_MS` until the
+ * value is non-empty or the `timeoutMs` budget is exhausted. Throws on
+ * timeout so the turn's catch block can record the failure.
+ *
+ * Requires `page.inputValue` to be implemented. The real Playwright Page
+ * provides it natively; test fakes must supply a scripted version.
+ */
+export async function waitForContentAndSend(
+  page: Page,
+  chatInputSelector: string,
+  timeoutMs: number,
+): Promise<void> {
+  if (!page.inputValue) {
+    throw new Error(
+      "page.inputValue is required for skipFill turns but is not implemented",
+    );
+  }
+
+  const deadline = Date.now() + timeoutMs;
+  console.debug("[conversation-runner] waitForContentAndSend — start", {
+    selector: chatInputSelector,
+    timeoutMs,
+  });
+
+  while (Date.now() < deadline) {
+    const value = await page.inputValue(chatInputSelector);
+    if (value.trim().length > 0) {
+      console.debug(
+        "[conversation-runner] waitForContentAndSend — textarea has content, pressing Enter",
+        {
+          valueLength: value.length,
+          valuePreview: value.slice(0, 100),
+        },
+      );
+      await page.press(chatInputSelector, "Enter");
+      return;
+    }
+    await sleep(POLL_INTERVAL_MS);
+  }
+
+  throw new Error(
+    `timeout: textarea was not populated within ${timeoutMs}ms (skipFill turn)`,
   );
 }
 

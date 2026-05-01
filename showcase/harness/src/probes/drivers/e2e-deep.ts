@@ -4,18 +4,17 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { z } from "zod";
 import { truncateUtf8 } from "../../render/filters.js";
 import { showcaseShapeSchema } from "../discovery/railway-services.js";
-import {
-  D5_REGISTRY,
-  type D5BuildContext,
-  type D5FeatureType,
-  type D5Script,
-  isD5FeatureType,
+import { D5_REGISTRY, isD5FeatureType } from "../helpers/d5-registry.js";
+import type {
+  D5BuildContext,
+  D5FeatureType,
+  D5Script,
 } from "../helpers/d5-registry.js";
 import { demosToFeatureTypes } from "../helpers/d5-feature-mapping.js";
-import {
-  runConversation,
-  type ConversationResult,
-  type Page,
+import { runConversation } from "../helpers/conversation-runner.js";
+import type {
+  ConversationResult,
+  Page,
 } from "../helpers/conversation-runner.js";
 import type { ProbeDriver } from "../types.js";
 import type { ProbeContext, ProbeResult } from "../../types/index.js";
@@ -54,6 +53,15 @@ import type { BrowserPool } from "../helpers/browser-pool.js";
  * — no real browser, no filesystem scan, deterministic registry state.
  */
 
+/**
+ * Grace period (ms) after a Railway deployment's `createdAt` during
+ * which the driver skips all features for the service. Eliminates
+ * deploy-churn false-reds without sacrificing probe efficiency — a
+ * rolling deploy that finishes in <2 min never triggers a browser
+ * launch, and the service is probed normally on the next tick.
+ */
+export const DEPLOY_CHURN_GRACE_MS = 120_000;
+
 const inputSchema = z
   .object({
     key: z.string().min(1),
@@ -83,6 +91,18 @@ const inputSchema = z
      */
     demos: z.array(z.string()).optional(),
     shape: showcaseShapeSchema.optional(),
+    /**
+     * ISO-8601 timestamp of the service's latest Railway deployment,
+     * populated by the `railway-services` discovery source from
+     * `latestDeployment.createdAt`. When the deployment is younger
+     * than `DEPLOY_CHURN_GRACE_MS` the driver skips all features
+     * with a green note instead of launching a browser — deploy
+     * churn is not a failure.
+     *
+     * Empty string or absent → no grace check (backwards compat
+     * with static YAML targets and older discovery records).
+     */
+    deployedAt: z.string().optional(),
   })
   .passthrough()
   .refine((v) => !!(v.backendUrl ?? v.publicUrl), {
@@ -337,6 +357,7 @@ const defaultLauncher: E2eDeepBrowserLauncher =
               fill: (s, v, o) => page.fill(s, v, o),
               press: (s, k, o) => page.press(s, k, o),
               evaluate: <R>(fn: () => R) => page.evaluate(fn),
+              inputValue: (s) => page.inputValue(s),
               goto: (url, opts) =>
                 page.goto(url, opts as Parameters<typeof page.goto>[1]),
               close: () => page.close(),
@@ -451,6 +472,7 @@ export function createPooledE2eDeepLauncher(
               fill: (s, v, o) => page.fill(s, v, o),
               press: (s, k, o) => page.press(s, k, o),
               evaluate: <R>(fn: () => R) => page.evaluate(fn),
+              inputValue: (s) => page.inputValue(s),
               goto: (url, opts) =>
                 page.goto(url, opts as Parameters<typeof page.goto>[1]),
               close: () => page.close(),
@@ -620,6 +642,60 @@ export function createE2eDeepDriver(
           },
           observedAt,
         };
+      }
+
+      // Deploy-churn grace window: if the service deployed within the
+      // last DEPLOY_CHURN_GRACE_MS, skip ALL features with a green note.
+      // Deploy churn is not a failure — the service is still warming up
+      // and probing it would produce false reds. The skip fires BEFORE
+      // the script loader and browser launch so we don't pay any of
+      // those costs for a service in the grace window.
+      if (input.deployedAt && input.deployedAt.length > 0) {
+        const deployedAtMs = Date.parse(input.deployedAt);
+        if (Number.isFinite(deployedAtMs)) {
+          const ageMs = ctx.now().getTime() - deployedAtMs;
+          if (ageMs >= 0 && ageMs < DEPLOY_CHURN_GRACE_MS) {
+            const ageSec = Math.round(ageMs / 1000);
+            const graceSec = Math.round(DEPLOY_CHURN_GRACE_MS / 1000);
+            const skipNote = `skipped: deploy in progress (${ageSec}s ago)`;
+            ctx.logger.info("probe.e2e-deep.deploy-churn-skip", {
+              slug,
+              deployedAt: input.deployedAt,
+              ageMs,
+              graceMs: DEPLOY_CHURN_GRACE_MS,
+            });
+
+            for (const ft of requestedFeatures) {
+              await sideEmit(ctx, {
+                key: `d5:${slug}/${ft}`,
+                state: "green",
+                signal: {
+                  slug,
+                  featureType: ft,
+                  backendUrl,
+                  note: skipNote,
+                },
+                observedAt: ctx.now().toISOString(),
+              });
+            }
+
+            return {
+              key: input.key,
+              state: "green",
+              signal: {
+                shape: "package",
+                slug,
+                backendUrl,
+                total: requestedFeatures.length,
+                passed: 0,
+                failed: [],
+                skipped: requestedFeatures.map(String),
+                note: `deploy-churn skip: deployed ${ageSec}s ago (grace: ${graceSec}s)`,
+              },
+              observedAt,
+            };
+          }
+        }
       }
 
       // Populate the registry. Idempotent in tests via the injected
@@ -1099,10 +1175,12 @@ async function runFeature(opts: {
     // Without this, the SSR'd textarea is visible but Enter has no
     // handler, so the first turn's keypress is a no-op and the probe
     // times out waiting for an assistant response that never comes.
+    const hydrationStart = Date.now();
     console.debug("[e2e-deep] runFeature — waiting for React hydration", {
       url,
       timeout: 15_000,
     });
+    let hydrated = false;
     try {
       await page.waitForFunction(
         () => {
@@ -1124,6 +1202,7 @@ async function runFeature(opts: {
         },
         { timeout: 15_000 },
       );
+      hydrated = true;
       console.debug("[e2e-deep] runFeature — React hydration detected", {
         url,
       });
@@ -1137,6 +1216,12 @@ async function runFeature(opts: {
         },
       );
     }
+    console.info("[e2e-deep] runFeature — hydration-timing", {
+      slug: buildCtx.integrationSlug,
+      featureType: buildCtx.featureType,
+      hydrated,
+      hydrationMs: Date.now() - hydrationStart,
+    });
 
     const turns = script.buildTurns(buildCtx);
     console.debug("[e2e-deep] runFeature — built conversation turns", {
@@ -1156,10 +1241,15 @@ async function runFeature(opts: {
         error: conversation.error,
       });
       const diagnostics = await captureDiagnostics(page);
-      console.debug("[e2e-deep] runFeature — failure diagnostics captured", {
-        featureType: buildCtx.featureType,
-        diagnosticKeys: diagnostics ? Object.keys(diagnostics) : [],
-      });
+      console.warn(
+        "[e2e-deep] runFeature — FLAP DIAGNOSTICS",
+        JSON.stringify({
+          slug: buildCtx.integrationSlug,
+          featureType: buildCtx.featureType,
+          error: conversation.error?.slice(0, 200),
+          diagnostics,
+        }),
+      );
       return {
         ok: false,
         errorClass: "conversation-error",
