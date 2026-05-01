@@ -188,6 +188,7 @@ function ComposedCellInner({ ctx, overlays, catalogCell }: ComposedCellProps) {
         data-testid="composed-cell"
         className="flex flex-col items-center gap-0.5 text-[11px] opacity-60"
       >
+        {hasLinks && <LinksLayer ctx={ctx} />}
         <DocsLayer ctx={ctx} />
       </div>
     );
