@@ -17,6 +17,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
 from agents.agent import agent_router
+from agents.voice_agent import voice_router
 from agents.a2ui_dynamic import a2ui_dynamic_router
 from agents.a2ui_fixed import a2ui_fixed_router
 from agents.agent_config_agent import agent_config_router
@@ -63,9 +64,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(agent_router)
-
 # Dedicated routers for demos that need distinct system prompts / tool sets.
+# Mount specific-path routers BEFORE the catch-all agent_router at '/'.
 # Each is mounted at its own subpath so the Next.js runtime can route specific
 # agent IDs to the right backend via HttpAgent URL configuration.
 app.include_router(reasoning_router, prefix="/reasoning")
@@ -93,6 +93,10 @@ app.include_router(
 )
 app.include_router(subagents_router, prefix="/subagents")
 app.include_router(interrupt_router, prefix="/interrupt")
+app.include_router(voice_router, prefix="/voice")
+
+# Shared agent for the rest of the demos (must be last: `/` is a catch-all).
+app.include_router(agent_router)
 
 
 def main():
