@@ -179,3 +179,39 @@ export function createProbeRunWriter(pb: PbClient): ProbeRunWriter {
     },
   };
 }
+
+/**
+ * Mark any `running` rows older than `maxAgeMs` as `failed`. Called once
+ * at orchestrator boot to clean up zombie runs left by a previous process
+ * that died before calling `finish()` (e.g. Railway redeploy, OOM kill).
+ *
+ * Without this, zombie rows stay `running` forever — the harness API
+ * lists them as in-flight, and the dashboard shows stale partial results.
+ */
+export async function sweepStaleRuns(
+  pb: PbClient,
+  maxAgeMs: number = 15 * 60 * 1000,
+): Promise<number> {
+  const cutoff = new Date(Date.now() - maxAgeMs).toISOString();
+  const filter = `state = "running" && started_at < "${cutoff}"`;
+  const stale = await pb.list<ProbeRunRow>(PROBE_RUNS_COLLECTION, {
+    filter,
+    perPage: 50,
+    skipTotal: true,
+  });
+  let swept = 0;
+  for (const row of stale.items) {
+    try {
+      await pb.update<ProbeRunRow>(PROBE_RUNS_COLLECTION, row.id, {
+        state: "failed",
+        finished_at: new Date().toISOString(),
+        duration_ms: null,
+        summary: { total: 0, passed: 0, failed: 0 },
+      });
+      swept++;
+    } catch {
+      // best-effort — log but don't block boot
+    }
+  }
+  return swept;
+}
