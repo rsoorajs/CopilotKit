@@ -57,7 +57,7 @@ export interface Violation {
 
 export function validate(
   fixtures: Fixture[],
-  demos: DemoSurface[]
+  demos: DemoSurface[],
 ): Violation[] {
   const violations: Violation[] = [];
 
@@ -71,7 +71,7 @@ export function validate(
 
     for (const demo of demos) {
       const matchedSuggestion = demo.suggestions.find((s) =>
-        s.toLowerCase().includes(needle)
+        s.toLowerCase().includes(needle),
       );
       if (!matchedSuggestion) continue;
 
@@ -209,7 +209,7 @@ function parseBackendTools(agentFilePath: string): string[] {
 const routeCache = new Map<string, Record<string, string>>();
 function loadAgentRoutes(
   packagesDir: string,
-  slug: string
+  slug: string,
 ): Record<string, string> {
   const cached = routeCache.get(slug);
   if (cached) return cached;
@@ -231,12 +231,12 @@ function loadAgentRoutes(
     const src = fs.readFileSync(routePath, "utf-8");
 
     for (const m of src.matchAll(
-      /agents\[\s*["']([^"']+)["']\s*\]\s*=\s*createAgent\(\s*["']([^"']+)["']/g
+      /agents\[\s*["']([^"']+)["']\s*\]\s*=\s*createAgent\(\s*["']([^"']+)["']/g,
     )) {
       out[m[1]] = m[2];
     }
     for (const m of src.matchAll(
-      /agents\[\s*["']([^"']+)["']\s*\]\s*=\s*createAgent\(\s*\)/g
+      /agents\[\s*["']([^"']+)["']\s*\]\s*=\s*createAgent\(\s*\)/g,
     )) {
       if (!(m[1] in out)) out[m[1]] = "sample_agent";
     }
@@ -250,7 +250,7 @@ function loadAgentRoutes(
       if (agentFromUrl && !(agentFromUrl in out)) out[agentFromUrl] = m[1];
     }
     const listMatch = src.match(
-      /const\s+neutralAssistantCells\s*=\s*\[([\s\S]*?)\]/
+      /const\s+neutralAssistantCells\s*=\s*\[([\s\S]*?)\]/,
     );
     if (listMatch) {
       for (const nameMatch of listMatch[1].matchAll(/["']([^"']+)["']/g)) {
@@ -352,7 +352,7 @@ export function collectDemoSurfaces(showcaseRoot: string): DemoSurface[] {
           slug,
           "src",
           "agents",
-          agentId.replace(/-/g, "_") + ".py"
+          agentId.replace(/-/g, "_") + ".py",
         ),
         path.join(packagesDir, slug, "src", "agents", agentId + ".py"),
         path.join(
@@ -360,7 +360,7 @@ export function collectDemoSurfaces(showcaseRoot: string): DemoSurface[] {
           slug,
           "src",
           "agents",
-          agentId.replace(/-/g, "_") + "_agent.py"
+          agentId.replace(/-/g, "_") + "_agent.py",
         ),
       ].filter((p): p is string => Boolean(p));
 
@@ -397,17 +397,17 @@ function cli(): void {
 
   if (violations.length === 0) {
     console.log(
-      `✓ validate-fixture-tool-surface: ${fixtures.length} fixtures × ${demos.length} demos — no drift`
+      `✓ validate-fixture-tool-surface: ${fixtures.length} fixtures × ${demos.length} demos — no drift`,
     );
     return;
   }
 
   console.error(
-    `✗ validate-fixture-tool-surface: ${violations.length} drift violation(s)\n`
+    `✗ validate-fixture-tool-surface: ${violations.length} drift violation(s)\n`,
   );
   for (const v of violations) {
     console.error(
-      `  - fixture match "${v.fixtureMatch}" → tool "${v.fixtureTool}" is NOT in ${v.demo.slug}/${v.demo.demoId}'s tool surface`
+      `  - fixture match "${v.fixtureMatch}" → tool "${v.fixtureTool}" is NOT in ${v.demo.slug}/${v.demo.demoId}'s tool surface`,
     );
     console.error(`    triggering suggestion: "${v.matchedSuggestion}"`);
   }

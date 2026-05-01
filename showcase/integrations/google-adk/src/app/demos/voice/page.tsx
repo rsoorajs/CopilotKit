@@ -21,17 +21,17 @@ export default function VoiceDemoPage() {
   const handleTranscribed = useCallback((text: string) => {
     if (typeof document === "undefined") return;
     const textarea = document.querySelector<HTMLTextAreaElement>(
-      '[data-testid="copilot-chat-textarea"]'
+      '[data-testid="copilot-chat-textarea"]',
     );
     if (!textarea) {
       console.warn(
-        "[voice-demo] could not find copilot-chat-textarea to populate"
+        "[voice-demo] could not find copilot-chat-textarea to populate",
       );
       return;
     }
     const nativeSetter = Object.getOwnPropertyDescriptor(
       window.HTMLTextAreaElement.prototype,
-      "value"
+      "value",
     )?.set;
     if (nativeSetter) {
       nativeSetter.call(textarea, text);
