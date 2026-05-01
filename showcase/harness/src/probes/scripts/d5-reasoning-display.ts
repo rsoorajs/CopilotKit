@@ -9,10 +9,16 @@
  * — the alternate route is informational only at the catalog level
  * (see open question Q5 in `.claude/specs/lgp-d5-coverage.md`).
  *
- * Assertion: the assistant transcript must contain reasoning-flavored
- * keywords ("reasoning" / "step" / "thinking") to prove the
- * reasoning-block rendered, even if the canonical reasoning-block
- * selector is integration-specific.
+ * Assertion (two-stage):
+ *   1. A reasoning-role message must render. The integration is
+ *      free to use the custom `data-testid="reasoning-block"` banner
+ *      OR CopilotKit's default reasoning card — either selector wins.
+ *      This is the strong signal that AG-UI REASONING_MESSAGE_* events
+ *      reached the frontend; without it, "reasoning" appearing in plain
+ *      text would falsely pass.
+ *   2. AND the assistant transcript contains a reasoning-flavored
+ *      keyword as a soft sanity check, in case an integration emits
+ *      reasoning role messages without populating their content.
  */
 
 import {
@@ -55,6 +61,26 @@ async function readAssistantTranscript(page: Page): Promise<string> {
   })) as string;
 }
 
+async function hasReasoningMessage(page: Page): Promise<boolean> {
+  return (await page.evaluate(() => {
+    const win = globalThis as unknown as {
+      document: {
+        querySelector(sel: string): unknown;
+      };
+    };
+    // Custom amber banner used by the agentic-chat-reasoning cell, OR the
+    // default CopilotChatReasoningMessage card used by the
+    // reasoning-default-render cell. Either selector proves a reasoning
+    // role message reached the DOM.
+    const sels = [
+      '[data-testid="reasoning-block"]',
+      '[data-message-role="reasoning"]',
+      '[data-testid="copilot-reasoning-message"]',
+    ];
+    return sels.some((s) => win.document.querySelector(s) !== null);
+  })) as boolean;
+}
+
 export const REASONING_KEYWORDS = ["reasoning", "step", "thinking"] as const;
 
 export function buildReasoningAssertion(opts?: {
@@ -64,10 +90,19 @@ export function buildReasoningAssertion(opts?: {
   return async (page: Page): Promise<void> => {
     const deadline = Date.now() + timeout;
     let last = "";
+    let sawReasoningMessage = false;
     while (Date.now() < deadline) {
+      sawReasoningMessage =
+        sawReasoningMessage || (await hasReasoningMessage(page));
       last = await readAssistantTranscript(page);
-      if (REASONING_KEYWORDS.some((kw) => last.includes(kw))) return;
+      const sawKeyword = REASONING_KEYWORDS.some((kw) => last.includes(kw));
+      if (sawReasoningMessage && sawKeyword) return;
       await new Promise<void>((r) => setTimeout(r, 200));
+    }
+    if (!sawReasoningMessage) {
+      throw new Error(
+        `reasoning-display: no reasoning-role message rendered — expected [data-testid="reasoning-block"] or [data-message-role="reasoning"] within ${timeout}ms`,
+      );
     }
     throw new Error(
       `reasoning-display: transcript missing reasoning keyword (any of ${REASONING_KEYWORDS.join(", ")}) — got "${last.slice(0, 200)}"`,
