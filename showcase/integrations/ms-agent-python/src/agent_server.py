@@ -20,6 +20,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
 from agents.agent import create_agent
+from agents.voice_agent import create_voice_agent
 from agents.a2ui_dynamic import create_agent as create_a2ui_dynamic_agent
 from agents.a2ui_fixed import create_agent as create_a2ui_fixed_agent
 from agents.agent_config_agent import create_agent_config_agent
@@ -64,6 +65,7 @@ def _build_chat_client(model_override: str | None = None) -> BaseChatClient:
 
 chat_client = _build_chat_client()
 my_agent = create_agent(chat_client)
+voice_agent = create_voice_agent(chat_client)
 agent_config_agent = create_agent_config_agent(chat_client)
 reasoning_agent = create_reasoning_agent(chat_client)
 tool_rendering_reasoning_chain_agent = create_tool_rendering_reasoning_chain_agent(
@@ -145,6 +147,7 @@ add_agent_framework_fastapi_endpoint(
     app=app, agent=shared_state_read_write_agent, path="/shared-state-read-write"
 )
 add_agent_framework_fastapi_endpoint(app=app, agent=subagents_agent, path="/subagents")
+add_agent_framework_fastapi_endpoint(app=app, agent=voice_agent, path="/voice")
 
 # Shared agent for the rest of the demos (must be last: `/` is a catch-all).
 add_agent_framework_fastapi_endpoint(app=app, agent=my_agent, path="/")

@@ -159,6 +159,10 @@ def test_agent_server_module_installs_patch():
         def add_middleware(self, *a, **k):
             return None
 
+        # agent_server.py mounts the voice sub-app via ``app.mount(...)``
+        def mount(self, *a, **k):
+            return None
+
     fake_ag_ui_strands = types.ModuleType("ag_ui_strands")
     fake_ag_ui_strands.create_strands_app = lambda *a, **k: _FakeFastAPI()  # type: ignore[attr-defined]
     fake_ag_ui_strands.StrandsAgent = _AcceptsAnything  # type: ignore[attr-defined]
