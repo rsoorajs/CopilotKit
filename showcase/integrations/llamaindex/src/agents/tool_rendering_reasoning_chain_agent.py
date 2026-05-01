@@ -9,8 +9,6 @@ with rich cards, with every other tool falling back to a branded catch-all.
 Mirrors `langgraph-python/src/agents/tool_rendering_reasoning_chain_agent.py`.
 """
 
-from __future__ import annotations
-
 import json
 import os
 from random import choice, randint
