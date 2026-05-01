@@ -755,9 +755,7 @@ describe("thread handlers", () => {
       };
       const runtime = createIntelligenceRuntime({ intelligence });
 
-      const errorSpy = vi
-        .spyOn(console, "error")
-        .mockImplementation(() => {});
+      const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
       try {
         const response = await handleGetThreadEvents({
           runtime,
@@ -899,9 +897,7 @@ describe("thread handlers", () => {
       };
       const runtime = createIntelligenceRuntime({ intelligence });
 
-      const errorSpy = vi
-        .spyOn(console, "error")
-        .mockImplementation(() => {});
+      const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
       try {
         const response = await handleGetThreadState({
           runtime,

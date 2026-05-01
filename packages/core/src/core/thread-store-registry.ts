@@ -25,10 +25,7 @@ export class ThreadStoreRegistry {
       delete this._stores[agentId];
       this._snapshot = null;
       this.notifyUnregistered(agentId, prevStore).catch((err) => {
-        console.error(
-          "ThreadStoreRegistry notifyUnregistered failed:",
-          err,
-        );
+        console.error("ThreadStoreRegistry notifyUnregistered failed:", err);
       });
     }
     this._stores[agentId] = store;
