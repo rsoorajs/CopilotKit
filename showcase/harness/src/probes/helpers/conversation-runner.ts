@@ -389,10 +389,26 @@ export async function runConversation(
       // failed turn is still recoverable from `observedAt` deltas if
       // operators need it.
       void startedAt;
-      console.debug(`[conversation-runner] turn ${turnNum}/${total} — FAILED`, {
+      let failureDiagnostics: Record<string, unknown> = {};
+      try {
+        failureDiagnostics = await page.evaluate(() => {
+          const win = globalThis as unknown as {
+            document: {
+              body: { innerText: string } | null;
+              querySelector(s: string): unknown;
+            };
+          };
+          const bodyText = win.document.body?.innerText?.slice(0, 500) ?? "(no body)";
+          const hasTextarea = !!win.document.querySelector('textarea');
+          const hasErrorBoundary = bodyText.includes("Application error") || bodyText.includes("Internal Server Error");
+          return { bodyText, hasTextarea, hasErrorBoundary };
+        });
+      } catch { /* diagnostics are best-effort */ }
+      console.warn(`[conversation-runner] turn ${turnNum}/${total} — FAILED`, {
         error: errorMessage(err),
         turnsCompleted: idx,
         elapsedMs: Date.now() - startedAt,
+        ...failureDiagnostics,
       });
       return {
         turns_completed: idx,
