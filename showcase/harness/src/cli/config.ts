@@ -20,7 +20,11 @@ export interface LocalConfig {
 }
 
 export function loadConfig(): LocalConfig {
-  const portsFile = path.join(SHOWCASE_DIR, "shared/local-ports.json");
+  // Honor LOCAL_PORTS_FILE env var (set by isolation overlay) so the harness
+  // reads offset ports from a temp file instead of the checked-in original.
+  const portsFile =
+    process.env.LOCAL_PORTS_FILE ||
+    path.join(SHOWCASE_DIR, "shared/local-ports.json");
   const localPorts = JSON.parse(fs.readFileSync(portsFile, "utf-8")) as Record<
     string,
     number

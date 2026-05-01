@@ -18,7 +18,11 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const SHOWCASE_DIR = path.resolve(__dirname, "../../..");
 const COMPOSE_FILE = path.join(SHOWCASE_DIR, "docker-compose.local.yml");
 const INTEGRATIONS_DIR = path.join(SHOWCASE_DIR, "integrations");
-const PORTS_FILE = path.join(SHOWCASE_DIR, "shared/local-ports.json");
+// Honor LOCAL_PORTS_FILE env var (set by isolation overlay) so the harness
+// reads offset ports from a temp file instead of the checked-in original.
+const PORTS_FILE =
+  process.env.LOCAL_PORTS_FILE ||
+  path.join(SHOWCASE_DIR, "shared/local-ports.json");
 
 /** Well-known infra service ports that aren't in local-ports.json. */
 const INFRA_PORTS: Record<string, number> = {
