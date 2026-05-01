@@ -27,7 +27,7 @@
  *     e.g. `shared-state-read-write` covers both read and write).
  *
  * Demo IDs not in this map are silently dropped — D5 covers a closed
- * set and registry features outside it (e.g. `auth`, `voice`,
+ * set and registry features outside it (e.g. `auth`,
  * `multimodal`, `byoc-*`) have no D5 conversation script.
  */
 
@@ -160,6 +160,9 @@ const REGISTRY_TO_D5: Readonly<Record<string, readonly D5FeatureType[]>> = {
   // component; only the schema/component differs).
   "byoc-hashbrown": ["byoc"],
   "byoc-json-render": ["byoc"],
+
+  // Voice family — voice input/output.
+  voice: ["voice"],
 };
 
 /**
