@@ -53,6 +53,15 @@ import type { BrowserPool } from "../helpers/browser-pool.js";
  * — no real browser, no filesystem scan, deterministic registry state.
  */
 
+/**
+ * Grace period (ms) after a Railway deployment's `createdAt` during
+ * which the driver skips all features for the service. Eliminates
+ * deploy-churn false-reds without sacrificing probe efficiency — a
+ * rolling deploy that finishes in <2 min never triggers a browser
+ * launch, and the service is probed normally on the next tick.
+ */
+export const DEPLOY_CHURN_GRACE_MS = 120_000;
+
 const inputSchema = z
   .object({
     key: z.string().min(1),
@@ -82,6 +91,18 @@ const inputSchema = z
      */
     demos: z.array(z.string()).optional(),
     shape: showcaseShapeSchema.optional(),
+    /**
+     * ISO-8601 timestamp of the service's latest Railway deployment,
+     * populated by the `railway-services` discovery source from
+     * `latestDeployment.createdAt`. When the deployment is younger
+     * than `DEPLOY_CHURN_GRACE_MS` the driver skips all features
+     * with a green note instead of launching a browser — deploy
+     * churn is not a failure.
+     *
+     * Empty string or absent → no grace check (backwards compat
+     * with static YAML targets and older discovery records).
+     */
+    deployedAt: z.string().optional(),
   })
   .passthrough()
   .refine((v) => !!(v.backendUrl ?? v.publicUrl), {
@@ -621,6 +642,60 @@ export function createE2eDeepDriver(
           },
           observedAt,
         };
+      }
+
+      // Deploy-churn grace window: if the service deployed within the
+      // last DEPLOY_CHURN_GRACE_MS, skip ALL features with a green note.
+      // Deploy churn is not a failure — the service is still warming up
+      // and probing it would produce false reds. The skip fires BEFORE
+      // the script loader and browser launch so we don't pay any of
+      // those costs for a service in the grace window.
+      if (input.deployedAt && input.deployedAt.length > 0) {
+        const deployedAtMs = Date.parse(input.deployedAt);
+        if (Number.isFinite(deployedAtMs)) {
+          const ageMs = ctx.now().getTime() - deployedAtMs;
+          if (ageMs >= 0 && ageMs < DEPLOY_CHURN_GRACE_MS) {
+            const ageSec = Math.round(ageMs / 1000);
+            const graceSec = Math.round(DEPLOY_CHURN_GRACE_MS / 1000);
+            const skipNote = `skipped: deploy in progress (${ageSec}s ago)`;
+            ctx.logger.info("probe.e2e-deep.deploy-churn-skip", {
+              slug,
+              deployedAt: input.deployedAt,
+              ageMs,
+              graceMs: DEPLOY_CHURN_GRACE_MS,
+            });
+
+            for (const ft of requestedFeatures) {
+              await sideEmit(ctx, {
+                key: `d5:${slug}/${ft}`,
+                state: "green",
+                signal: {
+                  slug,
+                  featureType: ft,
+                  backendUrl,
+                  note: skipNote,
+                },
+                observedAt: ctx.now().toISOString(),
+              });
+            }
+
+            return {
+              key: input.key,
+              state: "green",
+              signal: {
+                shape: "package",
+                slug,
+                backendUrl,
+                total: requestedFeatures.length,
+                passed: 0,
+                failed: [],
+                skipped: requestedFeatures.map(String),
+                note: `deploy-churn skip: deployed ${ageSec}s ago (grace: ${graceSec}s)`,
+              },
+              observedAt,
+            };
+          }
+        }
       }
 
       // Populate the registry. Idempotent in tests via the injected
