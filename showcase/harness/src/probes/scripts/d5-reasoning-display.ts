@@ -92,7 +92,8 @@ export function buildReasoningAssertion(opts?: {
     let last = "";
     let sawReasoningMessage = false;
     while (Date.now() < deadline) {
-      sawReasoningMessage = sawReasoningMessage || (await hasReasoningMessage(page));
+      sawReasoningMessage =
+        sawReasoningMessage || (await hasReasoningMessage(page));
       last = await readAssistantTranscript(page);
       const sawKeyword = REASONING_KEYWORDS.some((kw) => last.includes(kw));
       if (sawReasoningMessage && sawKeyword) return;

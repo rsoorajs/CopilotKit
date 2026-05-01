@@ -63,9 +63,9 @@ test.describe("Agentic Chat (Reasoning)", () => {
       .locator('[data-testid="reasoning-block"]')
       .first();
     await expect(reasoningBlock).toBeVisible({ timeout: 60_000 });
-    await expect(reasoningBlock.getByText("Reasoning", { exact: true })).toBeVisible(
-      { timeout: 10_000 },
-    );
+    await expect(
+      reasoningBlock.getByText("Reasoning", { exact: true }),
+    ).toBeVisible({ timeout: 10_000 });
   });
 
   test("reasoning-block label flips from Thinking to Agent reasoning", async ({
