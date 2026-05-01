@@ -33,9 +33,9 @@ const DIMENSIONS: Array<{
   key: keyof Omit<CellState, "rollup">;
   label: string;
 }> = [
-  { key: "d2", label: "API (Agent)" },
   { key: "d5", label: "CV (Conversation)" },
   { key: "e2e", label: "RT (Round Trip)" },
+  { key: "d2", label: "API (Agent)" },
   { key: "health", label: "Health" },
   { key: "smoke", label: "Smoke" },
 ];
@@ -130,9 +130,7 @@ function CollapsibleSignal({ text }: { text: string }) {
 function BadgeRow({ badge, label }: { badge: BadgeRender; label: string }) {
   const isFailure = badge.tone === "red" || badge.tone === "amber";
   const signalText = badge.row ? formatSignal(badge.row.signal) : null;
-  const signalFields = badge.row
-    ? extractSignalFields(badge.row.signal)
-    : [];
+  const signalFields = badge.row ? extractSignalFields(badge.row.signal) : [];
 
   return (
     <div
