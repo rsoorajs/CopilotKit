@@ -15,7 +15,6 @@
     "...generative-ui",
     "---App Control---",
     "frontend-tools",
-    "threads",
     "---Agent Spec---",
     "agent-runtimes",
     "langgraph",

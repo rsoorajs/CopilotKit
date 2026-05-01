@@ -10,7 +10,6 @@
     "useAgent",
     "useAgentContext",
     "useCapabilities",
-    "useThreads",
     "---Frontend Tools---",
     "useFrontendTool",
     "useHumanInTheLoop",
