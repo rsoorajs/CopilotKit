@@ -140,6 +140,15 @@ const config = {
 
     return {
       beforeFiles: [
+        // PostHog reverse proxy — routes analytics through our domain to bypass ad blockers
+        {
+          source: '/ingest/static/:path*',
+          destination: 'https://eu-assets.i.posthog.com/static/:path*',
+        },
+        {
+          source: '/ingest/:path*',
+          destination: 'https://eu.i.posthog.com/:path*',
+        },
         // Map /guides/* to /built-in-agent/guides/* (legacy path)
         {
           source: '/guides/:path*',
