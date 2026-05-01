@@ -65,6 +65,9 @@ const agentNames = [
   "auth",
   // mcp apps (also wired via separate runtime route copilotkit-mcp-apps)
   "mcp_apps",
+  // interrupt-adapted demos (Strategy B: useFrontendTool + async Promise)
+  "gen_ui_interrupt",
+  "interrupt_headless",
 ];
 
 const agents: Record<string, AbstractAgent> = {};

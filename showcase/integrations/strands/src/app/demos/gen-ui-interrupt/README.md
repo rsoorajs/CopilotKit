@@ -1,25 +1,17 @@
-# gen-ui-interrupt (not supported on AWS Strands)
+# gen-ui-interrupt (Strands — Strategy B)
 
-This feature is listed under `not_supported_features` in
-`showcase/integrations/strands/manifest.yaml`.
+Interactive time-picker card rendered inline in the chat via `useFrontendTool`
+with an async handler. The handler returns a Promise that only resolves once
+the user picks a slot (or cancels), blocking the agent's tool call until the
+user decides.
 
-## Why It Is Not Supported
-
-`gen-ui-interrupt` is built on `useLangGraphInterrupt`, which hooks
-directly into the LangGraph interrupt lifecycle. AWS Strands does not
-expose an equivalent first-class interrupt primitive — there is no
-runtime-level resolve/respond signal we can adapt to without writing new
-Strands-side integration work.
-
-See `showcase/integrations/strands/PARITY_NOTES.md` for full context.
-
-## Ergonomic Replacement
-
-Strands users should reach for the `hitl-in-chat` demo
-(`src/app/demos/hitl-in-chat/`), which uses `useHumanInTheLoop` on top of
-a regular frontend tool — Strands supports that natively.
+This is the Strands adaptation of the LangGraph `useInterrupt` demo. Since
+Strands does not have a native interrupt primitive, we use the "Strategy B"
+pattern: the backend's shared agent has a `schedule_meeting` tool, and the
+frontend overrides it with `useFrontendTool` to implement the blocking
+picker UX.
 
 ## Files
 
-- `page.tsx` — stub page that surfaces the unsupported message and links
-  to the `hitl-in-chat` replacement.
+- `page.tsx` — demo page with `useFrontendTool` async handler
+- `time-picker-card.tsx` — time slot picker component

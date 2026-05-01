@@ -51,11 +51,18 @@ const agents: Record<string, AbstractAgent> = {};
 for (const name of agentNames) {
   agents[name] = createAgent();
 }
+
+// Interrupt-adapted demos — frontend-tool shim for LangGraph `interrupt()`.
+// Both gen-ui-interrupt and interrupt-headless share the same scheduling agent;
+// only the frontend UX differs (inline time-picker vs. external popup).
+for (const name of interruptAgentNames) {
+  agents[name] = createInterruptAgent();
+}
 // In-App HITL -- async frontend-tool + app-level modal (outside chat).
-// Points at the dedicated hitl-in-app agent mounted at /hitl-in-app on the
-// FastAPI backend; the agent has tools=[] and a system prompt tailored to
-// the frontend-provided `request_user_approval` tool.
-agents["hitl-in-app"] = new HttpAgent({ url: `${AGENT_URL}/hitl-in-app/` });
+// Dedicated hitl-in-app agent mounted at /hitl-in-app on the FastAPI
+// backend; agent has tools=[] and relies on the frontend-provided
+// `request_user_approval` tool injected by CopilotKit at request time.
+agents["hitl-in-app"] = createAgent("/hitl-in-app");
 
 // In-Chat HITL -- frontend-defined `book_call` tool rendered inline in the
 // chat via `useHumanInTheLoop`. Backend agent has tools=[] and routes to

@@ -5,10 +5,10 @@
 // hashbrown-shaped structured output via `@hashbrownai/react`'s `useUiKit`
 // + `useJsonParser`.
 //
-// In Mastra, the same shared weatherAgent backs this demo — the dashboard
-// shape is enforced entirely on the frontend by the catalog the renderer
-// consumes. For full parity (system prompt tuned to emit the dashboard
-// envelope), a dedicated Mastra agent could be wired here later.
+// Uses the dedicated `byocHashbrownAgent` whose system prompt forces the
+// model to emit the hashbrown JSON envelope `{ "ui": [...] }`. The default
+// weatherAgent produces plain text that `useJsonParser` parses as `null`,
+// leaving the dashboard empty — which is why D5 probes time out.
 
 import { NextRequest, NextResponse } from "next/server";
 import {
@@ -21,13 +21,13 @@ import { mastra } from "@/mastra";
 
 const byocHashbrownAgent = getLocalAgent({
   mastra,
-  agentId: "weatherAgent",
+  agentId: "byocHashbrownAgent",
   resourceId: "mastra-byoc-hashbrown",
 });
 
 if (!byocHashbrownAgent) {
   throw new Error(
-    "getLocalAgent returned null for weatherAgent — required for /demos/byoc-hashbrown",
+    "getLocalAgent returned null for byocHashbrownAgent — required for /demos/byoc-hashbrown",
   );
 }
 

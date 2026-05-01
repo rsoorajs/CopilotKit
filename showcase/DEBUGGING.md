@@ -20,25 +20,25 @@ The unified CLI is at `bin/showcase`. It wraps Docker Compose and adds debugging
 
 ### Core Commands
 
-| Command | Description |
-|---------|-------------|
-| `showcase up [slug...]` | Start containers (rebuilds if source changed). No args = infra only (aimock, pocketbase, dashboard) |
-| `showcase down [slug...]` | Stop containers. No args = stop everything |
-| `showcase build [slug...]` | Build Docker images without starting containers |
-| `showcase ps` | Show running containers and their status |
-| `showcase ports` | Print slug-to-host-port mapping (from `shared/local-ports.json`) |
-| `showcase logs <slug>` | Follow container logs (supports `--grep`, `--since`, `-n`, `--no-follow`) |
+| Command                    | Description                                                                                         |
+| -------------------------- | --------------------------------------------------------------------------------------------------- |
+| `showcase up [slug...]`    | Start containers (rebuilds if source changed). No args = infra only (aimock, pocketbase, dashboard) |
+| `showcase down [slug...]`  | Stop containers. No args = stop everything                                                          |
+| `showcase build [slug...]` | Build Docker images without starting containers                                                     |
+| `showcase ps`              | Show running containers and their status                                                            |
+| `showcase ports`           | Print slug-to-host-port mapping (from `shared/local-ports.json`)                                    |
+| `showcase logs <slug>`     | Follow container logs (supports `--grep`, `--since`, `-n`, `--no-follow`)                           |
 
 ### Debugging Commands
 
-| Command | Description |
-|---------|-------------|
-| `showcase aimock-rebuild` | Rebuild local aimock from a source checkout and redeploy the container |
-| `showcase recreate <slug>` | Force-recreate a service (picks up a newly built image) |
-| `showcase test <slug>` | Run probe tests against a running service |
-| `showcase fixtures validate` | Check fixture JSON files for structural errors, duplicates, and common mistakes |
-| `showcase doctor` | Diagnose common local stack issues (Docker engine, Depot interception, stale images, port conflicts) |
-| `showcase diff-logs <slug>` | Show log output for a specific time window, filtering out noise from before your change |
+| Command                      | Description                                                                                          |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `showcase aimock-rebuild`    | Rebuild local aimock from a source checkout and redeploy the container                               |
+| `showcase recreate <slug>`   | Force-recreate a service (picks up a newly built image)                                              |
+| `showcase test <slug>`       | Run probe tests against a running service                                                            |
+| `showcase fixtures validate` | Check fixture JSON files for structural errors, duplicates, and common mistakes                      |
+| `showcase doctor`            | Diagnose common local stack issues (Docker engine, Depot interception, stale images, port conflicts) |
+| `showcase diff-logs <slug>`  | Show log output for a specific time window, filtering out noise from before your change              |
 
 ## The Debugging Loop
 
@@ -278,13 +278,109 @@ This filters out all log output from before your test started, showing only what
 
 ## Environment Variables
 
-| Variable | Purpose | Default |
-|----------|---------|---------|
-| `AIMOCK_SRC` | Path to local aimock checkout for `aimock-rebuild` | `../../aimock` relative to `showcase/` (sibling of repo root), then `../aimock` |
-| `SHOWCASE_LOCAL` | Use localhost ports instead of Railway URLs in the shell app | unset |
-| `DEPOT_DISABLE` | Bypass Depot CLI for local Docker builds | unset (set to `1` to disable) |
-| `OPENAI_API_KEY` | Required for all integrations (even with aimock, some init code validates the key) | none |
-| `ANTHROPIC_API_KEY` | Required for Claude Agent SDK demos | none |
+| Variable            | Purpose                                                                            | Default                                                                         |
+| ------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| `AIMOCK_SRC`        | Path to local aimock checkout for `aimock-rebuild`                                 | `../../aimock` relative to `showcase/` (sibling of repo root), then `../aimock` |
+| `SHOWCASE_LOCAL`    | Use localhost ports instead of Railway URLs in the shell app                       | unset                                                                           |
+| `DEPOT_DISABLE`     | Bypass Depot CLI for local Docker builds                                           | unset (set to `1` to disable)                                                   |
+| `OPENAI_API_KEY`    | Required for all integrations (even with aimock, some init code validates the key) | none                                                                            |
+| `ANTHROPIC_API_KEY` | Required for Claude Agent SDK demos                                                | none                                                                            |
+
+## D5 Debugging Strategies
+
+These are investigation techniques — ways to LEARN what's wrong. Each was earned by a real debugging session.
+
+### Strategy 1: Binary classification before single-feature debugging
+
+**When**: Multiple features fail and you don't know why.
+
+**Do**: Run ALL features for the integration and categorize pass/fail. Look for the axis that separates them. Don't debug any single feature until you've found the pattern.
+
+```sh
+showcase test <slug> --d5 --verbose 2>&1 | grep "feature-complete"
+```
+
+Sort the results into pass/fail. Ask: what do all passing features have in common? What do all failing features share? The spring-ai breakthrough came from noticing: text-only features pass, tool features fail. That one observation eliminated 90% of the search space.
+
+### Strategy 2: Same-endpoint differential
+
+**When**: Two features use the same backend endpoint but one passes and one fails.
+
+**Do**: Find the MOST similar passing feature to your failing one. Diff their request/response flows. The difference IS the bug.
+
+Example: `agentic-chat` and `tool-rendering` both hit the same Java `StreamingToolAgent`. One passes, one fails. The only difference is tool calls. That tells you the bug is in tool event emission, not streaming, not fixture matching, not routing.
+
+### Strategy 3: Bypass the frontend — curl the backend directly
+
+**When**: You can't tell if the problem is frontend rendering or backend response.
+
+**Do**: Hit the backend API directly with the exact request the runtime would send. Compare the raw SSE stream with langgraph-python's.
+
+```sh
+# From inside the Docker network:
+docker exec showcase-<slug> curl -X POST http://localhost:8000/ \
+  -H "Content-Type: application/json" \
+  -d '{"messages":[{"role":"user","content":"weather in Tokyo"}]}'
+```
+
+If the raw backend response is correct but the probe fails, the bug is in the frontend/runtime layer. If the backend response is wrong, debug the agent code. This eliminates an entire half of the stack in one command.
+
+### Strategy 4: Message count N→0 means duplicate IDs
+
+**When**: The probe reports `baseline=0, current=0` but you can see the assistant responded (via backend logs or aimock fixture match).
+
+**Do**: Check for duplicate `messageId` values in the AG-UI event stream. React's `deduplicateMessages()` uses a `Map<id, message>`. If a tool result event reuses the assistant message's ID, the map overwrites the assistant message with the tool message — it vanishes from the DOM.
+
+Look at the agent's event emission code. Every event that creates a message needs a unique ID. `UUID.randomUUID()` for each event, never reuse the parent message's ID.
+
+### Strategy 5: Test the gold standard first
+
+**When**: A feature fails and you're about to blame the framework.
+
+**Do**: Run `showcase test langgraph-python --d5` in the SAME environment first. If langgraph-python also fails, the problem is infrastructure (stale aimock, broken fixtures, Docker state), not the framework. This saves hours of framework-specific debugging that turns out to be a shared issue.
+
+```sh
+showcase test langgraph-python --d5   # gold standard check
+showcase test <slug> --d5             # then your target
+```
+
+### Strategy 6: Check custom renderers for missing testids
+
+**When**: `baseline=0, current=0` but the backend is correct AND the SSE stream has correct events.
+
+**Do**: Check if the demo page uses a custom message renderer (`messageView={{ assistantMessage: CustomComponent }}`). Custom renderers that replace `CopilotChatAssistantMessage` must include `data-testid="copilot-assistant-message"` or the probe's selector cascade finds zero messages.
+
+```sh
+grep -r "messageView\|assistantMessage" showcase/integrations/<slug>/src/app/demos/
+```
+
+### Strategy 7: Trace the full event chain for tool features
+
+**When**: Tool-involving features fail but text-only features pass.
+
+**Do**: Trace each hop in order. Stop at the first broken link.
+
+1. **Aimock** → did the fixture match? `docker logs showcase-aimock | grep "Fixture matched"`
+2. **Backend** → did the agent emit correct SSE events? Curl the backend directly (Strategy 3)
+3. **Runtime** → did the Next.js server process events without error? `docker logs showcase-<slug> | grep "Error\|ZodError"`
+4. **Frontend** → did React render the message? Check for duplicate messageId (Strategy 4) or missing testid (Strategy 6)
+
+Don't skip hops. Don't start at the frontend. Work from the data source (aimock) forward.
+
+### Strategy 8: Production parity — check env vars first
+
+**When**: Feature passes locally but fails in production.
+
+**Do**: Before investigating anything else, verify ALL provider base URLs are set on Railway:
+
+```sh
+RAILWAY_PROJECT_ID=6f8c6bff-a80d-4f8f-b78d-50b32bcf4479 \
+  railway variables --service showcase-<slug> --json | \
+  python3 -c "import json,sys; d=json.load(sys.stdin); \
+  [print(f'{k}={v[:40]}') for k,v in sorted(d.items()) if 'BASE_URL' in k or 'AIMOCK' in k]"
+```
+
+Missing `ANTHROPIC_BASE_URL` or `GOOGLE_GEMINI_BASE_URL` means the service bypasses aimock and hits the real API. This produces non-deterministic results that look like flapping. Local docker-compose sets ALL providers to aimock — production must match.
 
 ## Quick Diagnostic Commands
 

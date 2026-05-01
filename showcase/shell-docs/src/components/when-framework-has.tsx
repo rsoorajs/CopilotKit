@@ -44,9 +44,19 @@ interface WhenFrameworkHasProps {
   /**
    * Required value to match. Children render only when
    * `integration[flag] === equals`. Strict equality — null/undefined
-   * never matches.
+   * never matches. Mutually exclusive with `absent`.
    */
-  equals: string;
+  equals?: string;
+  /**
+   * Inverse mode: render children only when the flag is null/missing on
+   * the active framework's manifest. Lets MDX pages declare a single
+   * "fallback" branch for frameworks that don't implement a feature, so
+   * gated pages don't collapse to an empty middle.
+   *
+   * Mutually exclusive with `equals`. Exactly one of `equals` / `absent`
+   * must be provided.
+   */
+  absent?: boolean;
   /**
    * Integration slug (e.g. `langgraph-python`, `mastra`). Defaults to
    * `defaultFramework` injected by the page renderer.
@@ -63,6 +73,7 @@ interface WhenFrameworkHasProps {
 export function WhenFrameworkHas({
   flag,
   equals,
+  absent,
   framework,
   defaultFramework,
   children,
@@ -78,7 +89,18 @@ export function WhenFrameworkHas({
   // because TypeScript can't statically prove `flag` indexes a typed
   // field, but `SupportedFlag` keeps the lookup safe in practice.
   const value = (integration as unknown as Record<string, unknown>)[flag];
+
+  // `absent` mode: render the fallback when the flag is null/missing.
+  // Used by pages that gate per-framework variants and need a "doesn't
+  // apply here" branch so non-matching frameworks see useful prose
+  // instead of a collapsed page.
+  if (absent) {
+    if (value == null) return <>{children}</>;
+    return null;
+  }
+
   if (value == null) return null;
+  if (equals === undefined) return null;
   if (value !== equals) return null;
 
   return <>{children}</>;

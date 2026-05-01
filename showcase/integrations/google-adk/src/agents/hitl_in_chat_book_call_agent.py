@@ -13,6 +13,7 @@ tool list at request time.
 from __future__ import annotations
 
 from google.adk.agents import LlmAgent
+from ag_ui_adk import AGUIToolset
 
 from agents.shared_chat import get_model
 
@@ -27,5 +28,5 @@ hitl_in_chat_book_call_agent = LlmAgent(
     name="HitlInChatBookCallAgent",
     model=get_model(),
     instruction=_INSTRUCTION,
-    tools=[],
+    tools=[AGUIToolset()],
 )

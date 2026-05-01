@@ -41,6 +41,13 @@ export interface DepthResult {
   achieved: AchievedDepth;
   /** Whether achieved depth is below the historical high-water mark (max_depth). */
   isRegression: boolean;
+  /**
+   * True when the cell's catalog status is "unsupported". Unsupported cells
+   * never advance on the depth ladder — their `achieved` is always 0 and
+   * `isRegression` is always false. Consumers should render the unsupported
+   * indicator (e.g. the no-entry chip) instead of a numeric depth.
+   */
+  unsupported: boolean;
 }
 
 function isGreen(live: LiveStatusMap, key: string): boolean {
@@ -69,25 +76,22 @@ function isD5Green(
  *
  * The walk is contiguous: if D1 is not green, achieved = D0 regardless
  * of D2/D3/D4/D5/D6 status (short-circuit).
- *
- * D5-as-bypass-for-D3/D4: per the harness model, the `e2e-deep` driver only
- * emits a `d5:<slug>/<featureType>` row after D3 (`e2e:<slug>/<featureId>`)
- * and D4 (`chat:<slug>` or `tools:<slug>`) probes have passed. So a green D5
- * row is sufficient evidence that D3 and D4 implicitly passed at some point,
- * even if the D3 (e2e) row is currently missing or red. After D2 passes we
- * therefore short-circuit to `achieved = 5` whenever D5 is green, then fall
- * through to the D6 check. We do NOT bypass D1 or D2 — those are independent
- * health/agent probes that are not implied by D5.
  */
 export function deriveDepth(
   cell: CatalogCell,
   live: LiveStatusMap,
 ): DepthResult {
-  // Unshipped and unsupported cells never advance past D0 — neither has any
-  // probes attached, so there is no possibility of regression. (Unsupported
-  // is a hard architectural floor; unshipped is "just unbuilt".)
-  if (cell.status === "unshipped" || cell.status === "unsupported") {
-    return { achieved: 0, isRegression: false };
+  // Unsupported cells never enter the depth ladder at all — they're
+  // architectural exclusions, not "cells at D0". Flag them explicitly
+  // so consumers render the unsupported indicator instead of D0.
+  if (cell.status === "unsupported") {
+    return { achieved: 0, isRegression: false, unsupported: true };
+  }
+
+  // Unshipped cells never advance past D0 — no probes attached, no
+  // possibility of regression.
+  if (cell.status === "unshipped") {
+    return { achieved: 0, isRegression: false, unsupported: false };
   }
 
   // D0: cell exists (wired or stub) — always true if we reach here.
@@ -95,51 +99,72 @@ export function deriveDepth(
 
   // D1: health:<slug> green
   if (!isGreen(live, keyFor("health", cell.integration))) {
-    return { achieved, isRegression: achieved < cell.max_depth };
+    return {
+      achieved,
+      isRegression: achieved < cell.max_depth,
+      unsupported: false,
+    };
   }
   achieved = 1;
 
   // D2: agent:<slug> green
   if (!isGreen(live, keyFor("agent", cell.integration))) {
-    return { achieved, isRegression: achieved < cell.max_depth };
+    return {
+      achieved,
+      isRegression: achieved < cell.max_depth,
+      unsupported: false,
+    };
   }
   achieved = 2;
 
-  // Cells without a feature have no per-cell D3/D5/D6 rows — stay at D2.
+  // D3: e2e:<slug>/<featureId> green (per-cell)
+  // Guard: skip D3+ if feature is null (no per-cell e2e to evaluate).
   if (cell.feature === null) {
-    return { achieved, isRegression: achieved < cell.max_depth };
+    return {
+      achieved,
+      isRegression: achieved < cell.max_depth,
+      unsupported: false,
+    };
   }
-
-  // D5-bypass: if the deep-probe row is green, D3 and D4 must have passed
-  // at the time the d5 row was emitted. Skip the contiguous D3/D4 walk and
-  // jump straight to D5, then proceed to the D6 check below.
-  if (isD5Green(live, cell.integration, cell.feature)) {
-    achieved = 5;
-  } else {
-    // D3: e2e:<slug>/<featureId> green (per-cell)
-    if (!isGreen(live, keyFor("e2e", cell.integration, cell.feature))) {
-      return { achieved, isRegression: achieved < cell.max_depth };
-    }
-    achieved = 3;
-
-    // D4: chat:<slug> OR tools:<slug> green (integration-scoped)
-    const chatGreen = isGreen(live, keyFor("chat", cell.integration));
-    const toolsGreen = isGreen(live, keyFor("tools", cell.integration));
-    if (!(chatGreen || toolsGreen)) {
-      return { achieved, isRegression: achieved < cell.max_depth };
-    }
-    achieved = 4;
-
-    // D5: d5:<slug>/<d5FeatureType> green (per-cell, via CATALOG_TO_D5_KEY).
-    // Reaching this branch means the D5-bypass above was false, so D5 is
-    // not green — stop at D4.
-    return { achieved, isRegression: achieved < cell.max_depth };
+  if (!isGreen(live, keyFor("e2e", cell.integration, cell.feature))) {
+    return {
+      achieved,
+      isRegression: achieved < cell.max_depth,
+      unsupported: false,
+    };
   }
+  achieved = 3;
+
+  // D4: chat:<slug> OR tools:<slug> green (integration-scoped)
+  const chatGreen = isGreen(live, keyFor("chat", cell.integration));
+  const toolsGreen = isGreen(live, keyFor("tools", cell.integration));
+  if (!(chatGreen || toolsGreen)) {
+    return {
+      achieved,
+      isRegression: achieved < cell.max_depth,
+      unsupported: false,
+    };
+  }
+  achieved = 4;
+
+  // D5: d5:<slug>/<d5FeatureType> green (per-cell, mapped via CATALOG_TO_D5_KEY)
+  if (!isD5Green(live, cell.integration, cell.feature)) {
+    return {
+      achieved,
+      isRegression: achieved < cell.max_depth,
+      unsupported: false,
+    };
+  }
+  achieved = 5;
 
   // D6: d6:<slug>/<featureId> green (per-cell)
   if (isGreen(live, keyFor("d6", cell.integration, cell.feature))) {
     achieved = 6;
   }
 
-  return { achieved, isRegression: achieved < cell.max_depth };
+  return {
+    achieved,
+    isRegression: achieved < cell.max_depth,
+    unsupported: false,
+  };
 }

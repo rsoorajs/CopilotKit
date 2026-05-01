@@ -42,8 +42,8 @@ from agents.shared_state_streaming_agent import (
     SHARED_STATE_STREAMING_PREDICT_STATE,
 )
 from agents.subagents_agent import subagents_root_agent
-from agents.hitl_in_chat_agent import hitl_in_chat_agent
 from agents.hitl_in_chat_book_call_agent import hitl_in_chat_book_call_agent
+from agents.hitl_in_chat_agent import hitl_in_chat_agent
 from agents.hitl_in_app_agent import hitl_in_app_agent
 from agents.mcp_apps_agent import mcp_apps_agent
 from agents.multimodal_agent import multimodal_agent
@@ -60,6 +60,7 @@ from agents.readonly_state_agent_context_agent import (
 )
 from agents.beautiful_chat_agent import beautiful_chat_agent
 from agents.shared_state_read_agent import shared_state_read_agent
+from agents.interrupt_agent import interrupt_agent
 
 
 @dataclass
@@ -169,4 +170,7 @@ AGENT_REGISTRY: dict[str, AgentSpec] = {
     "beautiful_chat": AgentSpec(beautiful_chat_agent),
     # ----- Auth (uses simple chat — auth gate is in route.ts) -----
     "auth": AgentSpec(_simple_chat),
+    # ----- Interrupt-adapted demos (Strategy B: useFrontendTool) -----
+    "gen_ui_interrupt": AgentSpec(interrupt_agent),
+    "interrupt_headless": AgentSpec(interrupt_agent),
 }

@@ -77,11 +77,17 @@ const script: D5Script = {
           );
         }
         const baselineCount = await readAssistantCount(hitlPage);
+        console.debug("[d5-hitl-steps] waiting for steps card", {
+          baselineCount,
+        });
         await selectorCascade(
           hitlPage,
           STEPS_CARD_SELECTORS,
           "steps card",
           HITL_CARD_TIMEOUT_MS,
+        );
+        console.debug(
+          "[d5-hitl-steps] steps card found — waiting for confirm button",
         );
         const confirmSelector = await selectorCascade(
           hitlPage,
@@ -89,11 +95,24 @@ const script: D5Script = {
           "confirm button",
           HITL_CARD_TIMEOUT_MS,
         );
+        console.debug("[d5-hitl-steps] clicking confirm button", {
+          confirmSelector,
+        });
         await hitlPage.click(confirmSelector);
+        console.debug(
+          "[d5-hitl-steps] waiting for follow-up assistant message",
+          {
+            baselineCount,
+          },
+        );
         const followup = await waitForNextAssistantMessage(
           hitlPage,
           baselineCount,
         );
+        console.debug("[d5-hitl-steps] checking follow-up tokens", {
+          expectedTokens: [...REFERENCE_TOKENS],
+          followupSnippet: followup.slice(0, 300),
+        });
         for (const token of REFERENCE_TOKENS) {
           if (!followup.toLowerCase().includes(token.toLowerCase())) {
             throw new Error(
@@ -101,6 +120,7 @@ const script: D5Script = {
             );
           }
         }
+        console.debug("[d5-hitl-steps] all token assertions passed");
       },
     },
   ],

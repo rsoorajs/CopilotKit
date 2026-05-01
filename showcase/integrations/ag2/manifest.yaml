@@ -16,9 +16,7 @@ generative_ui:
   - constrained-explicit
   - a2ui-fixed-schema
   - a2ui-dynamic-schema
-not_supported_features:
-  - gen-ui-interrupt
-  - interrupt-headless
+not_supported_features: []
 interaction_modalities:
   - sidebar
   - embedded
@@ -55,6 +53,8 @@ features:
   - frontend-tools-async
   - shared-state-read-write
   - subagents
+  - gen-ui-interrupt
+  - interrupt-headless
   - auth
   - agent-config
   - voice
@@ -62,6 +62,10 @@ features:
   - byoc-hashbrown
   - byoc-json-render
   - beautiful-chat
+agent_config_pattern: shared-state
+
+a2ui_pattern: schema-loading
+auth_pattern: ag2-context-variables
 demos:
   - id: cli-start
     name: CLI Start Command
@@ -263,7 +267,7 @@ demos:
       - src/app/demos/headless-complete/page.tsx
       - src/app/demos/headless-complete/message-list.tsx
       - src/app/demos/headless-complete/use-rendered-messages.tsx
-      - src/app/api/copilotkit/route.ts
+      - src/app/api/copilotkit-mcp-apps/route.ts
   - id: readonly-state-agent-context
     name: Readonly State (Agent Context)
     description: Frontend provides read-only context to the agent via useAgentContext
@@ -333,6 +337,29 @@ demos:
       - src/agents/subagents.py
       - src/app/demos/subagents/page.tsx
       - src/app/demos/subagents/delegation-log.tsx
+      - src/app/api/copilotkit/route.ts
+  - id: gen-ui-interrupt
+    name: Gen UI Interrupt (Frontend Tool + async Promise)
+    description: In-chat time-picker card via useFrontendTool with an async handler that blocks until the user picks a slot — AG2 adaptation of the LangGraph interrupt() primitive
+    tags:
+      - interactivity
+    route: /demos/gen-ui-interrupt
+    animated_preview_url:
+    highlight:
+      - src/agents/interrupt_agent.py
+      - src/app/demos/gen-ui-interrupt/page.tsx
+      - src/app/demos/gen-ui-interrupt/time-picker-card.tsx
+      - src/app/api/copilotkit/route.ts
+  - id: interrupt-headless
+    name: Headless Interrupt (Frontend Tool + async Promise)
+    description: Time-picker popup rendered outside the chat in the app surface via useFrontendTool with an async handler — AG2 adaptation of the LangGraph headless interrupt pattern
+    tags:
+      - interactivity
+    route: /demos/interrupt-headless
+    animated_preview_url:
+    highlight:
+      - src/agents/interrupt_agent.py
+      - src/app/demos/interrupt-headless/page.tsx
       - src/app/api/copilotkit/route.ts
   - id: declarative-gen-ui
     name: Declarative Generative UI (A2UI Dynamic Schema)

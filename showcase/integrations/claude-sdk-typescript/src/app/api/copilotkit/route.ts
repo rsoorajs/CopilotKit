@@ -65,6 +65,11 @@ const agentNames = [
   "voice-demo",
   "agent-config-demo",
   "auth-demo",
+  // Interrupt-adapted scheduling demos — both use useFrontendTool with an
+  // async handler to simulate LangGraph interrupt(); the backend is the same
+  // pass-through agent.
+  "gen-ui-interrupt",
+  "interrupt-headless",
   // showcase-fill-186 ports — pass-through agents driven by frontend tooling
   "tool-rendering-default-catchall",
   "tool-rendering-custom-catchall",

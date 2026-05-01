@@ -129,29 +129,9 @@
       "og_docs_url": "https://docs.copilotkit.ai/langgraph/multi-agent-flows",
       "shell_docs_path": "/multi-agent-flows"
     },
-    "voice": {
-      "og_docs_url": null,
-      "shell_docs_path": null
-    },
-    "multimodal": {
-      "og_docs_url": null,
-      "shell_docs_path": null
-    },
     "auth": {
       "og_docs_url": "https://docs.copilotkit.ai/langgraph/auth",
       "shell_docs_path": "/auth"
-    },
-    "agent-config": {
-      "og_docs_url": null,
-      "shell_docs_path": null
-    },
-    "byoc-hashbrown": {
-      "og_docs_url": null,
-      "shell_docs_path": null
-    },
-    "byoc-json-render": {
-      "og_docs_url": null,
-      "shell_docs_path": null
     }
   }
 }

@@ -115,35 +115,35 @@ The showcase harness includes a CLI that runs the same probe drivers (liveness, 
 
 ### Commands
 
-| Command              | Description                                                                     |
-| -------------------- | ------------------------------------------------------------------------------- |
-| `test <slug>`        | Run probes against a running service                                            |
-| `up [slugs...]`      | Start infra (aimock, pocketbase, dashboard) + named packages. No args = infra only |
-| `down [slugs...]`    | Stop services. No args = stop everything                                        |
-| `build [slugs...]`   | Build Docker images                                                             |
-| `ps`                 | Show running services                                                           |
-| `ports`              | Print slug to host port mapping                                                 |
-| `logs <slug>`        | Follow container logs (supports `--grep`, `--since`, `-n`, `--no-follow`)       |
+| Command            | Description                                                                        |
+| ------------------ | ---------------------------------------------------------------------------------- |
+| `test <slug>`      | Run probes against a running service                                               |
+| `up [slugs...]`    | Start infra (aimock, pocketbase, dashboard) + named packages. No args = infra only |
+| `down [slugs...]`  | Stop services. No args = stop everything                                           |
+| `build [slugs...]` | Build Docker images                                                                |
+| `ps`               | Show running services                                                              |
+| `ports`            | Print slug to host port mapping                                                    |
+| `logs <slug>`      | Follow container logs (supports `--grep`, `--since`, `-n`, `--no-follow`)          |
 
 **Debugging commands** (see [DEBUGGING.md](DEBUGGING.md) for full details):
 
-| Command                  | Description                                              |
-| ------------------------ | -------------------------------------------------------- |
-| `aimock-rebuild`         | Rebuild aimock from local source                         |
-| `recreate <slug>`       | Force-recreate a service (picks up new image)            |
-| `fixtures validate`      | Validate fixture JSON files for common errors            |
-| `doctor`                 | Check local environment and stack health                 |
-| `diff-logs <slug>`       | Show log delta for a time window                         |
+| Command             | Description                                   |
+| ------------------- | --------------------------------------------- |
+| `aimock-rebuild`    | Rebuild aimock from local source              |
+| `recreate <slug>`   | Force-recreate a service (picks up new image) |
+| `fixtures validate` | Validate fixture JSON files for common errors |
+| `doctor`            | Check local environment and stack health      |
+| `diff-logs <slug>`  | Show log delta for a time window              |
 
 ### Test options
 
-| Option           | Description                                                          |
-| ---------------- | -------------------------------------------------------------------- |
-| `--d5`           | Run D5 (subagents/tool-rendering/agentic-chat) probes only           |
-| `--d6`           | Run D6 probes only                                                   |
-| `--verbose`      | Verbose test output                                                  |
-| `--cycle`        | On failure, auto-dump aimock logs from the test window                |
-| `--timeout <ms>` | Test timeout in milliseconds (default: 30000)                        |
+| Option           | Description                                                |
+| ---------------- | ---------------------------------------------------------- |
+| `--d5`           | Run D5 (subagents/tool-rendering/agentic-chat) probes only |
+| `--d6`           | Run D6 probes only                                         |
+| `--verbose`      | Verbose test output                                        |
+| `--cycle`        | On failure, auto-dump aimock logs from the test window     |
+| `--timeout <ms>` | Test timeout in milliseconds (default: 30000)              |
 
 `--d5` and `--d6` are mutually exclusive. When neither is given, all tests run.
 
@@ -235,6 +235,7 @@ Column ordering lives in `shell-dashboard/src/lib/sort-order.ts` — internal to
 For the full debugging playbook — including aimock rebuild cycles, fixture validation, probe testing, container diagnostics, and common gotchas — see [DEBUGGING.md](DEBUGGING.md).
 
 Quick start:
+
 ```sh
 showcase/bin/showcase doctor              # check your stack
 showcase/bin/showcase test mastra --d5    # run D5 probes

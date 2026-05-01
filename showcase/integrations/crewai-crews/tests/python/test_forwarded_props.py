@@ -220,9 +220,11 @@ def _stub_agent_server_deps():
         "byoc_hashbrown_agent",
         "byoc_json_render_agent",
         "declarative_gen_ui",
+        "interrupt_crew",
         "mcp_apps_agent",
         "shared_state_read_write",
         "subagents",
+        "tool_rendering",
     ):
         sys.modules[f"agents.{name}"] = types.ModuleType(f"agents.{name}")
     setattr(sys.modules["agents.crew"], "LatestAiDevelopment", lambda: object())
@@ -231,6 +233,7 @@ def _stub_agent_server_deps():
     setattr(sys.modules["agents.byoc_hashbrown_agent"], "ByocHashbrown", lambda: object())
     setattr(sys.modules["agents.byoc_json_render_agent"], "ByocJsonRender", lambda: object())
     setattr(sys.modules["agents.declarative_gen_ui"], "DeclarativeGenUI", lambda: object())
+    setattr(sys.modules["agents.interrupt_crew"], "InterruptScheduling", lambda: object())
     setattr(sys.modules["agents.mcp_apps_agent"], "MCPApps", lambda: object())
     # Sentinel `Flow` instances for the raw-Flow endpoints (set_notes,
     # subagents). Real flows are CrewAI `Flow` subclasses; the stub only
@@ -239,6 +242,7 @@ def _stub_agent_server_deps():
     # endpoint mounter ignores the flow entirely.
     setattr(sys.modules["agents.shared_state_read_write"], "shared_state_read_write_flow", object())
     setattr(sys.modules["agents.subagents"], "subagents_flow", object())
+    setattr(sys.modules["agents.tool_rendering"], "tool_rendering_flow", object())
 
     # Drop any stale agent_server import — we want the next `import agent_server`
     # to re-run module-init against OUR stubs.

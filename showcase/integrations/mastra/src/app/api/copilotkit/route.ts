@@ -72,6 +72,8 @@ export const demoAgentNames = [
   "a2ui-fixed-schema",
   "headless-complete",
   "tool-rendering-reasoning-chain",
+  "gen-ui-interrupt",
+  "interrupt-headless",
 ] as const;
 
 // Per-demo override map: any demo alias listed here resolves to a dedicated
@@ -82,6 +84,8 @@ const demoAgentIdOverrides: Partial<Record<DemoAgentName, string>> = {
   "headless-complete": "headlessCompleteAgent",
   "shared-state-read-write": "sharedStateReadWriteAgent",
   subagents: "subagentsSupervisorAgent",
+  "gen-ui-interrupt": "interruptAgent",
+  "interrupt-headless": "interruptAgent",
 };
 
 export type DemoAgentName = (typeof demoAgentNames)[number];
@@ -100,8 +104,10 @@ export type LocalMastraAgentName =
   | "headlessCompleteAgent"
   | "sharedStateReadWriteAgent"
   | "subagentsSupervisorAgent"
+  | "interruptAgent"
   | "multimodalAgent"
-  | "mcpAppsAgent";
+  | "mcpAppsAgent"
+  | "byocHashbrownAgent";
 
 export type BuiltAgents = Record<
   DemoAgentName | LocalMastraAgentName,
@@ -154,6 +160,11 @@ export function buildAgents(
       "subagentsSupervisorAgent missing from Mastra config — required for subagents demo alias",
     );
   }
+  if (!baseLocalAgents.interruptAgent) {
+    throw new Error(
+      "interruptAgent missing from Mastra config — required for gen-ui-interrupt/interrupt-headless demos",
+    );
+  }
   if (!baseLocalAgents.multimodalAgent) {
     throw new Error(
       "multimodalAgent missing from Mastra config — required for /demos/multimodal",
@@ -162,6 +173,11 @@ export function buildAgents(
   if (!baseLocalAgents.mcpAppsAgent) {
     throw new Error(
       "mcpAppsAgent missing from Mastra config — required for /demos/mcp-apps",
+    );
+  }
+  if (!baseLocalAgents.byocHashbrownAgent) {
+    throw new Error(
+      "byocHashbrownAgent missing from Mastra config — required for /demos/byoc-hashbrown",
     );
   }
   const headlessCompleteAgentInstance = getLocalAgent({
@@ -190,6 +206,14 @@ export function buildAgents(
   if (!subagentsSupervisorAgentInstance) {
     throw new Error("getLocalAgent returned null for subagentsSupervisorAgent");
   }
+  const interruptAgentInstance = getLocalAgent({
+    mastra: mastraInstance,
+    agentId: "interruptAgent",
+    resourceId: "mastra-interruptAgent",
+  });
+  if (!interruptAgentInstance) {
+    throw new Error("getLocalAgent returned null for interruptAgent");
+  }
   const multimodalAgentInstance = getLocalAgent({
     mastra: mastraInstance,
     agentId: "multimodalAgent",
@@ -206,13 +230,23 @@ export function buildAgents(
   if (!mcpAppsAgentInstance) {
     throw new Error("getLocalAgent returned null for mcpAppsAgent");
   }
+  const byocHashbrownAgentInstance = getLocalAgent({
+    mastra: mastraInstance,
+    agentId: "byocHashbrownAgent",
+    resourceId: "mastra-byocHashbrownAgent",
+  });
+  if (!byocHashbrownAgentInstance) {
+    throw new Error("getLocalAgent returned null for byocHashbrownAgent");
+  }
   const localAgents = {
     weatherAgent: baseLocalAgents.weatherAgent,
     headlessCompleteAgent: headlessCompleteAgentInstance,
     sharedStateReadWriteAgent: sharedStateRWAgentInstance,
     subagentsSupervisorAgent: subagentsSupervisorAgentInstance,
+    interruptAgent: interruptAgentInstance,
     multimodalAgent: multimodalAgentInstance,
     mcpAppsAgent: mcpAppsAgentInstance,
+    byocHashbrownAgent: byocHashbrownAgentInstance,
   };
 
   // Guard against silent shadowing: if Mastra ever registers a local agent
@@ -256,8 +290,10 @@ export function buildAgents(
     "subagentsSupervisorAgent",
     "mastra-subagentsSupervisorAgent",
   );
+  resourceIdByAgent.set("interruptAgent", "mastra-interruptAgent");
   resourceIdByAgent.set("multimodalAgent", "mastra-multimodalAgent");
   resourceIdByAgent.set("mcpAppsAgent", "mastra-mcpAppsAgent");
+  resourceIdByAgent.set("byocHashbrownAgent", "mastra-byocHashbrownAgent");
 
   const demoAliases: Record<
     string,

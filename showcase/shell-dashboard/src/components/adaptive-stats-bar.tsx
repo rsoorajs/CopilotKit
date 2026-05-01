@@ -11,6 +11,16 @@ import type { CatalogData } from "../data/catalog-types";
 
 type Overlay = "links" | "depth" | "health" | "parity" | "docs";
 
+/** Depth distribution: count of cells at each depth level. */
+export interface DepthDistribution {
+  d5: number;
+  d4: number;
+  d3: number;
+  d2: number;
+  d1: number;
+  d0: number;
+}
+
 export interface AdaptiveStatsBarProps {
   overlays: Set<Overlay>;
   catalog: CatalogData;
@@ -20,6 +30,8 @@ export interface AdaptiveStatsBarProps {
   parityStats?: Record<ParityTier, number>;
   /** Docs stats (computed externally) */
   docsStats?: { ok: number; missing: number; notFound: number; error: number };
+  /** Depth distribution across wired cells (computed externally) */
+  depthDistribution?: DepthDistribution;
 }
 
 /* ------------------------------------------------------------------ */
@@ -101,7 +113,13 @@ function BaseSection({ totalCells }: { totalCells: number }) {
   );
 }
 
-function DepthSection({ catalog }: { catalog: CatalogData }) {
+function DepthSection({
+  catalog,
+  depthDistribution,
+}: {
+  catalog: CatalogData;
+  depthDistribution?: DepthDistribution;
+}) {
   const { wired, stub, unshipped } = catalog.metadata;
   // Older catalog.json snapshots may predate the unsupported field; default
   // to 0 so the dashboard renders cleanly against legacy data.
@@ -128,6 +146,45 @@ function DepthSection({ catalog }: { catalog: CatalogData }) {
           unsupported={unsupported}
         />
       </div>
+      {depthDistribution && (
+        <>
+          <Divider />
+          <DepthDistributionSection distribution={depthDistribution} />
+        </>
+      )}
+    </div>
+  );
+}
+
+/** Compact depth distribution: D5..D1 counts in a single row. */
+function DepthDistributionSection({
+  distribution,
+}: {
+  distribution: DepthDistribution;
+}) {
+  const levels: { key: keyof DepthDistribution; label: string }[] = [
+    { key: "d5", label: "D5" },
+    { key: "d4", label: "D4" },
+    { key: "d3", label: "D3" },
+    { key: "d2", label: "D2" },
+    { key: "d1", label: "D1" },
+  ];
+
+  return (
+    <div
+      data-testid="depth-distribution"
+      className="flex items-center gap-2"
+    >
+      {levels.map(({ key, label }) => (
+        <span key={key} className="flex items-center gap-0.5">
+          <span className="text-[10px] font-semibold text-[var(--accent)] tabular-nums">
+            {label}:
+          </span>
+          <span className="text-[10px] font-bold tabular-nums text-[var(--text-secondary)]">
+            {distribution[key]}
+          </span>
+        </span>
+      ))}
     </div>
   );
 }
@@ -227,6 +284,7 @@ export function AdaptiveStatsBar({
   healthStats,
   parityStats,
   docsStats,
+  depthDistribution,
 }: AdaptiveStatsBarProps) {
   const sections: React.ReactNode[] = [];
 
@@ -236,7 +294,13 @@ export function AdaptiveStatsBar({
   );
 
   if (overlays.has("depth")) {
-    sections.push(<DepthSection key="depth" catalog={catalog} />);
+    sections.push(
+      <DepthSection
+        key="depth"
+        catalog={catalog}
+        depthDistribution={depthDistribution}
+      />,
+    );
   }
 
   if (overlays.has("health") && healthStats) {

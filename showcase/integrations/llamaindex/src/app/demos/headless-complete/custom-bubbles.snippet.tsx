@@ -31,8 +31,6 @@ export function UserBubble({ children }: { children: React.ReactNode }) {
 
 ("use client");
 
-import React from "react";
-
 /**
  * Left-aligned assistant bubble — pure chrome.
  *

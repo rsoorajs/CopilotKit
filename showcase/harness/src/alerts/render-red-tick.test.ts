@@ -165,5 +165,4 @@ describe("red-tick YAML rendering — Items 2 & 3", () => {
       expect(rendered).toContain("/runs/run-abc|Run");
     });
   });
-
 });

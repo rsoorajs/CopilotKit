@@ -2,11 +2,14 @@
 
 import React from "react";
 import {
+  CopilotKit,
   CopilotChat,
+  CopilotChatAssistantMessage,
   useConfigureSuggestions,
 } from "@copilotkit/react-core/v2";
-import { CopilotKit } from "@copilotkit/react-core";
 import { CustomWelcomeScreen } from "./custom-welcome-screen";
+import { CustomAssistantMessage } from "./custom-assistant-message";
+import { CustomDisclaimer } from "./custom-disclaimer";
 
 // Outer layer — provider + layout chrome.
 export default function ChatSlotsDemo() {
@@ -21,7 +24,7 @@ export default function ChatSlotsDemo() {
   );
 }
 
-// The actual view — just the chat, with a custom welcome screen slot.
+// The actual view — just the chat, with two slot overrides.
 function Chat() {
   useConfigureSuggestions({
     suggestions: [
@@ -31,16 +34,29 @@ function Chat() {
     available: "always",
   });
 
-  // The welcomeScreen slot is wired in as a prop on <CopilotChat>.
+  // Each slot is wired in as a prop on <CopilotChat>. Extracting the
+  // overrides up here keeps the JSX readable and gives the docs something
+  // to point at with `@region` markers for the slot system guide.
   // @region[register-welcome-slot]
   const welcomeScreen = CustomWelcomeScreen;
   // @endregion[register-welcome-slot]
+  // @region[register-disclaimer-slot]
+  const input = { disclaimer: CustomDisclaimer };
+  // @endregion[register-disclaimer-slot]
+  // @region[register-assistant-message-slot]
+  const messageView = {
+    assistantMessage:
+      CustomAssistantMessage as unknown as typeof CopilotChatAssistantMessage,
+  };
+  // @endregion[register-assistant-message-slot]
 
   return (
     <CopilotChat
       agentId="chat-slots"
       className="h-full rounded-2xl"
       welcomeScreen={welcomeScreen}
+      input={input}
+      messageView={messageView}
     />
   );
 }

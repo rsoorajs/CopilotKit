@@ -12,6 +12,7 @@ import org.springframework.ai.model.tool.ToolExecutionResult;
 import org.springframework.ai.tool.definition.ToolDefinition;
 import org.springframework.ai.tool.execution.DefaultToolExecutionExceptionProcessor;
 import org.springframework.ai.tool.resolution.StaticToolCallbackResolver;
+import org.springframework.ai.tool.resolution.ToolCallbackResolver;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
@@ -68,16 +69,20 @@ public class BoundedToolCallingManagerConfig {
     private static final Logger log = LoggerFactory.getLogger(BoundedToolCallingManagerConfig.class);
 
     /**
-     * Default cap: one tool iteration is plenty for the CopilotKit showcase
-     * demos (weather, single chart, meeting scheduling) and ensures a
-     * deterministic aimock fixture can't pull the agent into an infinite
-     * tool-call loop.
+     * Default cap: five tool iterations covers all CopilotKit showcase D5
+     * fixtures including subagents (research → writing → critique = 3 tool
+     * iterations, plus headroom). The previous default of 1 caused
+     * {@code returnDirect=true} after the very first tool execution,
+     * preventing the model from being re-invoked to produce a follow-up
+     * text response — this broke every D5 feature that expected text
+     * after a tool call.
      *
-     * <p>Interpretation: {@code N=1} allows exactly one tool round per turn;
-     * Spring-AI executes the tool, we flip {@code returnDirect=true}, and the
-     * outer loop terminates. Override via {@code copilotkit.tool.max-iterations}.
+     * <p>Interpretation: {@code N=5} allows up to five tool rounds per
+     * turn; after the Nth execution Spring-AI flips
+     * {@code returnDirect=true} and the outer loop terminates. Override
+     * via {@code copilotkit.tool.max-iterations}.
      */
-    static final int DEFAULT_TOOL_ITERATION_CAP_INCLUSIVE = 1;
+    static final int DEFAULT_TOOL_ITERATION_CAP_INCLUSIVE = 5;
 
     private final int toolIterationCapInclusive;
 
@@ -103,14 +108,96 @@ public class BoundedToolCallingManagerConfig {
         ObservationRegistry observationRegistry =
                 observationRegistryProvider.getIfUnique(() -> ObservationRegistry.NOOP);
 
+        // Use a lenient resolver that returns a placeholder callback for
+        // unknown tools instead of throwing IllegalStateException. In the
+        // CopilotKit architecture, the model sees both backend tools
+        // (registered here or via ChatClient.toolCallbacks()) and frontend
+        // tools (injected by the CopilotKit runtime). Frontend tools are
+        // handled client-side; the Java agent should not crash when the
+        // model tries to call one. The placeholder callback returns an
+        // informational message that the tool is externally managed, which
+        // allows Spring AI's tool execution loop to continue normally.
+        ToolCallbackResolver lenientResolver = new LenientToolCallbackResolver(
+                new StaticToolCallbackResolver(toolCallbacks));
+
         ToolCallingManager delegate = ToolCallingManager.builder()
                 .observationRegistry(observationRegistry)
-                .toolCallbackResolver(new StaticToolCallbackResolver(toolCallbacks))
+                .toolCallbackResolver(lenientResolver)
                 .toolExecutionExceptionProcessor(
                         DefaultToolExecutionExceptionProcessor.builder().build())
                 .build();
 
         return new BoundedToolCallingManager(delegate, toolIterationCapInclusive);
+    }
+
+    /**
+     * Wraps a delegate {@link ToolCallbackResolver} and catches resolution
+     * failures for unknown tools (typically frontend tools injected by the
+     * CopilotKit runtime). Instead of propagating the
+     * {@code IllegalStateException}, returns a no-op {@link ToolCallback}
+     * that yields an informational message. This allows Spring AI's tool
+     * execution loop to continue without crashing.
+     */
+    static final class LenientToolCallbackResolver implements ToolCallbackResolver {
+
+        private final ToolCallbackResolver delegate;
+
+        LenientToolCallbackResolver(ToolCallbackResolver delegate) {
+            this.delegate = delegate;
+        }
+
+        @Override
+        public ToolCallback resolve(String toolName) {
+            ToolCallback resolved;
+            try {
+                resolved = delegate.resolve(toolName);
+            } catch (Exception e) {
+                // Some resolvers throw (e.g. future Spring AI versions);
+                // treat the same as null.
+                resolved = null;
+            }
+            if (resolved != null) {
+                return resolved;
+            }
+            log.debug("[LenientResolver] Tool '{}' not registered locally; "
+                    + "returning placeholder (likely a frontend tool "
+                    + "handled by the CopilotKit runtime)", toolName);
+            return new FrontendToolPlaceholder(toolName);
+        }
+    }
+
+    /**
+     * Placeholder callback for tools not registered on the Java backend.
+     * Returns a message indicating the tool is handled externally, allowing
+     * Spring AI's tool execution loop to continue instead of crashing.
+     */
+    static final class FrontendToolPlaceholder implements ToolCallback {
+
+        private final String toolName;
+
+        FrontendToolPlaceholder(String toolName) {
+            this.toolName = toolName;
+        }
+
+        @Override
+        public ToolDefinition getToolDefinition() {
+            return ToolDefinition.builder()
+                    .name(toolName)
+                    .description("Frontend tool handled by CopilotKit runtime")
+                    .inputSchema("{}")
+                    .build();
+        }
+
+        @Override
+        public String call(String toolInput) {
+            return "Tool '" + toolName + "' is handled by the frontend runtime.";
+        }
+
+        @Override
+        public String call(String toolInput,
+                           org.springframework.ai.chat.model.ToolContext toolContext) {
+            return call(toolInput);
+        }
     }
 
     /**

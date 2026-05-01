@@ -57,9 +57,13 @@ features:
   - mcp-apps
   - beautiful-chat
   - a2ui-fixed-schema
-not_supported_features:
   - gen-ui-interrupt
   - interrupt-headless
+agent_config_pattern: shared-state
+interrupt_pattern: promise-based
+
+a2ui_pattern: schema-loading
+auth_pattern: runtime-onrequest
 demos:
   - id: cli-start
     name: CLI Start Command
@@ -497,16 +501,25 @@ demos:
       - src/app/demos/a2ui-fixed-schema/a2ui/renderers.tsx
       - src/app/api/copilotkit-a2ui-fixed-schema/route.ts
   - id: gen-ui-interrupt
-    name: Gen UI Interrupt
-    description: Not supported by Langroid — Langroid does not expose a primitive equivalent to LangGraph's interrupt() that lets the agent pause and resume mid-run.
+    name: In-Chat HITL (useInterrupt — low-level primitive)
+    description: Interactive component rendered inline in the chat via the lower-level `useInterrupt` primitive — direct control over the interrupt lifecycle
     tags:
       - generative-ui
     route: /demos/gen-ui-interrupt
     animated_preview_url:
+    highlight:
+      - src/agents/agent.py
+      - src/app/demos/gen-ui-interrupt/page.tsx
+      - src/app/demos/gen-ui-interrupt/time-picker-card.tsx
+      - src/app/api/copilotkit/route.ts
   - id: interrupt-headless
-    name: Interrupt (Headless)
-    description: Not supported by Langroid — same reason as gen-ui-interrupt; the headless variant requires the same interrupt primitive.
+    name: Headless Interrupt (testing)
+    description: Resolve interrupts from a plain button grid — no chat, no useInterrupt render prop
     tags:
-      - generative-ui
+      - interactivity
     route: /demos/interrupt-headless
     animated_preview_url:
+    highlight:
+      - src/agents/agent.py
+      - src/app/demos/interrupt-headless/page.tsx
+      - src/app/api/copilotkit/route.ts

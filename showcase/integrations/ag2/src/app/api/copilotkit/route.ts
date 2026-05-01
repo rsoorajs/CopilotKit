@@ -61,12 +61,20 @@ const dedicatedAgents: Record<string, string> = {
   "agent-config-demo": "/agent-config/",
 };
 
+// Interrupt-adapted demos: gen-ui-interrupt and interrupt-headless share the
+// same AG2 scheduling agent at /interrupt-adapted. The agent has tools=[];
+// `schedule_meeting` is provided by the frontend via `useFrontendTool`.
+const interruptAgentNames = ["gen-ui-interrupt", "interrupt-headless"];
+
 const agents: Record<string, AbstractAgent> = {};
 for (const name of sharedAgentNames) {
   agents[name] = createAgent();
 }
 for (const [name, path] of Object.entries(dedicatedAgents)) {
   agents[name] = createAgent(path);
+}
+for (const name of interruptAgentNames) {
+  agents[name] = createAgent("/interrupt-adapted/");
 }
 agents["default"] = createAgent();
 

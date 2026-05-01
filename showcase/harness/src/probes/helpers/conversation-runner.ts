@@ -145,6 +145,21 @@ export interface ConversationTurn {
   /** The user message to type into the chat input. */
   input: string;
   /**
+   * Optional callback executed BEFORE the runner fills the chat input
+   * and presses Enter for this turn. Use this to click attachment
+   * buttons, set up DOM state, or perform any per-turn pre-work that
+   * must complete before the user message is sent. The callback
+   * receives the page so it can issue clicks / fills / waits.
+   *
+   * If `preFill` throws, the turn is recorded as failed at index N
+   * with the thrown error message — same failure semantics as the
+   * post-settle `assertions` callback. The runner does NOT fill or
+   * press for that turn, and the conversation stops (no subsequent
+   * turns run, matching how the runner already handles fill/press
+   * and assertion failures).
+   */
+  preFill?: (page: Page) => Promise<void>;
+  /**
    * Optional assertion callback executed AFTER the assistant response
    * settles. Any throw from this function is captured as the turn's
    * failure and stops the conversation.
@@ -207,8 +222,17 @@ export async function runConversation(
   const settleMs = opts.assistantSettleMs ?? DEFAULT_SETTLE_MS;
   const durations: number[] = [];
 
+  console.debug("[conversation-runner] starting conversation", {
+    totalTurns: total,
+    settleMs,
+    chatInputSelector: opts.chatInputSelector ?? "(cascade)",
+  });
+
   // Empty turns array: return zeroes immediately, no page interaction.
   if (total === 0) {
+    console.debug(
+      "[conversation-runner] empty turns array — returning immediately",
+    );
     return {
       turns_completed: 0,
       total_turns: 0,
@@ -226,7 +250,13 @@ export async function runConversation(
       page,
       opts.chatInputSelector,
     );
+    console.debug("[conversation-runner] resolved chat input selector", {
+      selector: chatInputSelector,
+    });
   } catch (err) {
+    console.debug("[conversation-runner] chat input selector cascade FAILED", {
+      error: errorMessage(err),
+    });
     return {
       turns_completed: 0,
       total_turns: total,
@@ -242,6 +272,12 @@ export async function runConversation(
   // count, and we need to wait for growth from that baseline rather
   // than from 0.
   let baselineCount = await readMessageCount(page);
+  console.debug(
+    "[conversation-runner] initial baseline assistant message count",
+    {
+      baselineCount,
+    },
+  );
 
   for (let idx = 0; idx < total; idx++) {
     const turn = turns[idx]!;
@@ -249,8 +285,37 @@ export async function runConversation(
     const turnTimeoutMs = turn.responseTimeoutMs ?? DEFAULT_RESPONSE_TIMEOUT_MS;
     const startedAt = Date.now();
 
+    console.debug(
+      `[conversation-runner] turn ${turnNum}/${total} — sending message`,
+      {
+        input: turn.input,
+        timeoutMs: turnTimeoutMs,
+        baselineCount,
+      },
+    );
+
     try {
+      if (turn.preFill) {
+        console.debug(
+          `[conversation-runner] turn ${turnNum}/${total} — running preFill hook`,
+        );
+        await turn.preFill(page);
+        console.debug(
+          `[conversation-runner] turn ${turnNum}/${total} — preFill hook completed`,
+        );
+      }
+
       await fillAndVerifySend(page, chatInputSelector, turn.input);
+
+      console.debug(
+        `[conversation-runner] turn ${turnNum}/${total} — waiting for assistant settle`,
+        {
+          selector: chatInputSelector,
+          baselineCount,
+          settleMs,
+          timeoutMs: turnTimeoutMs,
+        },
+      );
 
       // Wait for the assistant-message count to grow past the baseline
       // and then stay stable for `settleMs`. If the deadline passes
@@ -262,8 +327,23 @@ export async function runConversation(
         timeoutMs: turnTimeoutMs,
       });
 
+      console.debug(
+        `[conversation-runner] turn ${turnNum}/${total} — assistant settled`,
+        {
+          newCount,
+          previousBaseline: baselineCount,
+          hasAssertions: !!turn.assertions,
+        },
+      );
+
       if (turn.assertions) {
+        console.debug(
+          `[conversation-runner] turn ${turnNum}/${total} — running assertions`,
+        );
         await turn.assertions(page);
+        console.debug(
+          `[conversation-runner] turn ${turnNum}/${total} — assertions passed`,
+        );
       }
 
       durations.push(Date.now() - startedAt);
@@ -276,6 +356,11 @@ export async function runConversation(
       // failed turn is still recoverable from `observedAt` deltas if
       // operators need it.
       void startedAt;
+      console.debug(`[conversation-runner] turn ${turnNum}/${total} — FAILED`, {
+        error: errorMessage(err),
+        turnsCompleted: idx,
+        elapsedMs: Date.now() - startedAt,
+      });
       return {
         turns_completed: idx,
         total_turns: total,
@@ -285,6 +370,11 @@ export async function runConversation(
       };
     }
   }
+
+  console.debug("[conversation-runner] conversation completed successfully", {
+    turnsCompleted: total,
+    totalDurationMs: durations.reduce((a, b) => a + b, 0),
+  });
 
   return {
     turns_completed: total,
@@ -352,14 +442,24 @@ export async function fillAndVerifySend(
   },
 ): Promise<void> {
   const maxAttempts = overrides?.maxAttempts ?? SEND_VERIFY_MAX_ATTEMPTS;
-  const initialDelay = overrides?.initialDelayMs ?? SEND_VERIFY_INITIAL_DELAY_MS;
+  const initialDelay =
+    overrides?.initialDelayMs ?? SEND_VERIFY_INITIAL_DELAY_MS;
   const timeout = overrides?.timeoutMs ?? SEND_VERIFY_TIMEOUT_MS;
 
   const baseline = await readUserMessageCount(page);
+  console.debug("[conversation-runner] fillAndVerifySend — start", {
+    input: input.slice(0, 100),
+    selector: chatInputSelector,
+    userMessageBaseline: baseline,
+    maxAttempts,
+  });
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     await page.fill(chatInputSelector, input);
     await page.press(chatInputSelector, "Enter");
+    console.debug(
+      `[conversation-runner] fillAndVerifySend — attempt ${attempt}/${maxAttempts} fill+Enter done`,
+    );
 
     // Wait briefly for React to process the event and render the
     // user message bubble.
@@ -373,17 +473,29 @@ export async function fillAndVerifySend(
       const current = await readUserMessageCount(page);
       if (current > baseline) {
         // User message appeared — send succeeded.
+        console.debug(
+          `[conversation-runner] fillAndVerifySend — user message appeared on attempt ${attempt}`,
+          {
+            userMessageCount: current,
+            baseline,
+          },
+        );
         return;
       }
       await sleep(POLL_INTERVAL_MS);
     }
 
     // If this wasn't the last attempt, we'll retry the fill+press.
-    // No log needed — the retry is silent.
+    console.debug(
+      `[conversation-runner] fillAndVerifySend — attempt ${attempt} timed out (no user message growth from baseline=${baseline})`,
+    );
   }
 
   // All attempts exhausted. Proceed anyway — the downstream timeout
   // will produce a clear failure message.
+  console.debug(
+    "[conversation-runner] fillAndVerifySend — all attempts exhausted, proceeding anyway",
+  );
 }
 
 /**
@@ -398,6 +510,10 @@ async function resolveChatInputSelector(
   override: string | undefined,
 ): Promise<string> {
   const candidates = override ? [override] : CHAT_INPUT_SELECTORS;
+  console.debug("[conversation-runner] resolving chat input selector", {
+    candidateCount: candidates.length,
+    override: override ?? "(none — using cascade)",
+  });
   let lastError: unknown;
   for (const selector of candidates) {
     try {
@@ -405,8 +521,15 @@ async function resolveChatInputSelector(
         state: "visible",
         timeout: SELECTOR_PROBE_TIMEOUT_MS,
       });
+      console.debug("[conversation-runner] chat input selector resolved", {
+        selector,
+      });
       return selector;
     } catch (err) {
+      console.debug("[conversation-runner] chat input selector miss", {
+        selector,
+        error: err instanceof Error ? err.message : String(err),
+      });
       lastError = err;
     }
   }
@@ -492,12 +615,33 @@ async function waitForAssistantSettled(opts: {
   const deadline = Date.now() + timeoutMs;
   let lastCount = await readMessageCount(page);
   let lastChangeAt = Date.now();
+  let pollCount = 0;
+  let lastLoggedCount = lastCount;
+
+  console.debug("[conversation-runner] waitForAssistantSettled — start", {
+    baselineCount,
+    initialCount: lastCount,
+    settleMs,
+    timeoutMs,
+  });
 
   while (Date.now() < deadline) {
     await sleep(POLL_INTERVAL_MS);
     const current = await readMessageCount(page);
+    pollCount++;
     if (current !== lastCount) {
+      console.debug(
+        "[conversation-runner] waitForAssistantSettled — message count changed",
+        {
+          previous: lastCount,
+          current,
+          baselineCount,
+          pollCount,
+          elapsedMs: Date.now() - (deadline - timeoutMs),
+        },
+      );
       lastCount = current;
+      lastLoggedCount = current;
       lastChangeAt = Date.now();
       continue;
     }
@@ -505,9 +649,35 @@ async function waitForAssistantSettled(opts: {
     // quiet window has elapsed. "Stable at baseline" means no response
     // arrived yet — keep polling.
     if (current > baselineCount && Date.now() - lastChangeAt >= settleMs) {
+      console.debug("[conversation-runner] waitForAssistantSettled — settled", {
+        count: current,
+        baselineCount,
+        quietWindowMs: Date.now() - lastChangeAt,
+        totalPollCount: pollCount,
+        totalElapsedMs: Date.now() - (deadline - timeoutMs),
+      });
       return current;
     }
+    // Log a periodic status when still waiting at baseline (every ~5s)
+    if (current === lastLoggedCount && pollCount % 50 === 0) {
+      console.debug(
+        "[conversation-runner] waitForAssistantSettled — still polling",
+        {
+          current,
+          baselineCount,
+          pollCount,
+          elapsedMs: Date.now() - (deadline - timeoutMs),
+          remainingMs: deadline - Date.now(),
+        },
+      );
+    }
   }
+  console.debug("[conversation-runner] waitForAssistantSettled — TIMEOUT", {
+    baselineCount,
+    lastCount,
+    timeoutMs,
+    totalPollCount: pollCount,
+  });
   throw new Error(
     `timeout: assistant did not respond within ${timeoutMs}ms (baseline=${baselineCount}, current=${lastCount})`,
   );

@@ -61,6 +61,8 @@ features:
   - agent-config
 a2ui_pattern: schema-loading
 interrupt_pattern: promise-based
+agent_config_pattern: shared-state
+auth_pattern: microsoft-agent-framework
 demos:
   - id: cli-start
     name: CLI Start Command
@@ -275,6 +277,8 @@ demos:
       - src/agents/agent.py
       - src/app/demos/chat-slots/page.tsx
       - src/app/demos/chat-slots/custom-welcome-screen.tsx
+      - src/app/demos/chat-slots/custom-assistant-message.tsx
+      - src/app/demos/chat-slots/custom-disclaimer.tsx
       - src/app/api/copilotkit/route.ts
   - id: headless-simple
     name: Headless Chat (Simple)

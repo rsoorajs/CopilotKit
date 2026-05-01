@@ -2,6 +2,7 @@ package com.copilotkit.showcase.springai;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.web.client.RestClientCustomizer;
 import org.springframework.boot.web.reactive.function.client.WebClientCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -116,6 +117,27 @@ public class WebClientConfig {
         }
         String normalized = raw.trim().toLowerCase(java.util.Locale.ROOT);
         return normalized.equals("1") || normalized.equals("true");
+    }
+
+    /**
+     * Forces {@code Connection: close} on every request made through Spring
+     * Boot's auto-configured {@link org.springframework.web.client.RestClient}.
+     * This covers Spring AI's synchronous {@code .call()} path
+     * ({@code OpenAiChatModel.internalCall → OpenAiApi.chatCompletionEntity →
+     * RestClient}), which does NOT use the reactive {@code WebClient} customized
+     * by {@link #http11WebClientCustomizer()} below.
+     *
+     * <p>The primary defense against connection-reuse failures is
+     * {@code spring.http.client.factory=simple} in {@code application.properties},
+     * which switches the underlying transport from JDK HttpClient (pools TCP
+     * sockets) to {@code HttpURLConnection} (new connection per request). This
+     * header is a secondary defense: even under {@code HttpURLConnection}, sending
+     * {@code Connection: close} tells the server to tear down the socket
+     * immediately, preventing any edge-case reuse by the JVM's keep-alive cache.
+     */
+    @Bean
+    public RestClientCustomizer connectionCloseRestClientCustomizer() {
+        return builder -> builder.defaultHeader("Connection", "close");
     }
 
     @Bean

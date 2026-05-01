@@ -25,6 +25,16 @@ export interface DeployResultEvent {
    * only need to guard one shape.
    */
   gateReason?: string;
+  /**
+   * Identifiers of the upstream build run that produced the images this
+   * deploy verified. Co-sent by the deploy workflow after PR #4471 split
+   * build and deploy into separate workflows so Slack alerts and
+   * dashboard tooltips can link "deploy red" back to "the build that
+   * produced these images". Both fields are optional because pre-split
+   * payloads (and manually-triggered redeploys) don't carry them.
+   */
+  buildRunId?: string;
+  buildRunUrl?: string;
 }
 
 /**

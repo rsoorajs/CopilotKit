@@ -175,7 +175,11 @@ export function StatusRunsList({ runs }: StatusRunsListProps) {
                     {hasServices && (
                       <span
                         className="inline-block mr-1.5 text-[10px] text-[var(--text-muted)] transition-transform"
-                        style={{ transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)" }}
+                        style={{
+                          transform: isExpanded
+                            ? "rotate(90deg)"
+                            : "rotate(0deg)",
+                        }}
                       >
                         ▶
                       </span>
@@ -208,7 +212,10 @@ export function StatusRunsList({ runs }: StatusRunsListProps) {
                   </td>
                 </tr>
                 {isExpanded && hasServices && (
-                  <tr key={`${r.id}-detail`} className="border-b border-[var(--border)]">
+                  <tr
+                    key={`${r.id}-detail`}
+                    className="border-b border-[var(--border)]"
+                  >
                     <td colSpan={5} className="py-2 px-4">
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-1.5 text-[11px]">
                         {services.map((svc) => (

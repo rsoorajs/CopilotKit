@@ -61,7 +61,7 @@ COPY --chown=app:app src/agents/ ./agents/
 
 # Shared Python tools (symlinked locally, copied into build context by CI)
 COPY --chown=app:app tools/ /app/tools/
-ENV PYTHONPATH=/app
+ENV PYTHONPATH=/app/src:/app
 
 # Entrypoint
 COPY --chown=app:app entrypoint.sh ./

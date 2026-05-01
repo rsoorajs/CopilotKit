@@ -7,7 +7,7 @@
  * a single composable component that stacks only the active layers.
  */
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { memo, useState, useEffect, useRef, useCallback } from "react";
 import type { CellContext } from "@/components/feature-grid";
 import { CellStatus, DocsRow, urlsFor } from "@/components/cell-pieces";
 import { CellDrilldown } from "@/components/cell-drilldown";
@@ -15,6 +15,7 @@ import { CommandCell } from "@/components/command-cell";
 import { DepthChip } from "@/components/depth-chip";
 import { deriveDepth } from "@/components/depth-utils";
 import type { CatalogCell } from "@/components/depth-utils";
+import { keyFor } from "@/lib/live-status";
 
 /** Overlay types — defined locally; canonical types live in a sibling module. */
 export type Overlay = "links" | "depth" | "health" | "parity" | "docs";
@@ -128,7 +129,7 @@ function DepthLayer({
 }
 
 /**
- * Render the Health layer: E2E, D5, D6 badge chips via CellStatus.
+ * Render the Health layer: RT, CV, FP badge chips via CellStatus.
  */
 function HealthLayer({ ctx }: { ctx: CellContext }) {
   return (
@@ -163,16 +164,35 @@ function DocsLayer({ ctx }: { ctx: CellContext }) {
  * "parity" overlay adds no per-cell content — if only parity is active,
  * the cell renders empty.
  */
-export function ComposedCell({
-  ctx,
-  overlays,
-  catalogCell,
-}: ComposedCellProps) {
+function ComposedCellInner({ ctx, overlays, catalogCell }: ComposedCellProps) {
   const isTesting = ctx.feature.kind === "testing";
+  const isDocsOnly = ctx.feature.kind === "docs-only";
   const hasLinks = overlays.has("links");
   const hasDepth = overlays.has("depth");
   const hasHealth = overlays.has("health");
   const hasDocs = overlays.has("docs");
+
+  // docs-only features show only the docs row — no links, depth, or health.
+  // They exist in the registry purely for docs-coverage tracking.
+  // The docs row is their ONLY content, so display it whenever any
+  // content-producing overlay is active (not just the "docs" toggle).
+  // Without this, docs-only rows render as empty cells under the
+  // default overlay set (links + health) which has no docs toggle.
+  if (isDocsOnly) {
+    const anyContentOverlay = hasLinks || hasDepth || hasHealth || hasDocs;
+    if (!anyContentOverlay) {
+      return <div data-testid="composed-cell-empty" />;
+    }
+    return (
+      <div
+        data-testid="composed-cell"
+        className="flex flex-col items-center gap-0.5 text-[11px] opacity-60"
+      >
+        {hasLinks && <LinksLayer ctx={ctx} />}
+        <DocsLayer ctx={ctx} />
+      </div>
+    );
+  }
 
   // Check if any layer will produce content
   const hasContent = hasLinks || hasDepth || hasHealth || hasDocs;
@@ -193,3 +213,60 @@ export function ComposedCell({
     </div>
   );
 }
+
+/**
+ * Custom equality check for ComposedCell. Skipping a cell render when its
+ * underlying inputs are unchanged is the difference between a single PB SSE
+ * delta re-rendering 1 cell vs. all ~720 cells in the matrix.
+ *
+ * `ctx.liveStatus` is a fresh Map on every parent render (mergeRowsToMap is
+ * called in the page component on each `rows` array change), so a naive
+ * shallow-equal would always invalidate. Instead, we compare the specific
+ * row references this cell actually reads from the map. The upstream
+ * `upsertByKey` reducer preserves row identity for unchanged keys, so the
+ * per-key lookups are reference-stable across deltas that don't touch this
+ * cell's slug/featureId.
+ */
+function arePropsEqual(
+  prev: ComposedCellProps,
+  next: ComposedCellProps,
+): boolean {
+  if (prev.overlays !== next.overlays) return false;
+  if (prev.catalogCell !== next.catalogCell) return false;
+
+  const p = prev.ctx;
+  const n = next.ctx;
+  if (
+    p.connection !== n.connection ||
+    p.hostedUrl !== n.hostedUrl ||
+    p.shellUrl !== n.shellUrl ||
+    p.integration !== n.integration ||
+    p.feature !== n.feature ||
+    p.demo !== n.demo
+  ) {
+    return false;
+  }
+
+  if (p.liveStatus === n.liveStatus) return true;
+
+  // Map identity changed — verify only the rows this cell reads. Mirrors
+  // the lookups in resolveCell + LevelStrip-adjacent helpers; D5 is
+  // resolved through CATALOG_TO_D5_KEY, so we walk the same indirection
+  // here to avoid false-negative skips. Keep this list in sync with
+  // resolveCell + resolveD5Row in lib/live-status.ts.
+  const slug = p.integration.slug;
+  const featureId = p.feature.id;
+  const directKeys = [
+    keyFor("health", slug),
+    keyFor("e2e", slug, featureId),
+    keyFor("smoke", slug),
+    keyFor("d5", slug, featureId),
+    keyFor("d6", slug, featureId),
+  ];
+  for (const k of directKeys) {
+    if (prev.ctx.liveStatus.get(k) !== next.ctx.liveStatus.get(k)) return false;
+  }
+  return true;
+}
+
+export const ComposedCell = memo(ComposedCellInner, arePropsEqual);

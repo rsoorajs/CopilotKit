@@ -51,10 +51,7 @@ import {
  * a coherent reply" — not "are these exact phrases present." Per-word
  * fidelity is a D3 concern.
  */
-const EXPECTED_REPLY_FRAGMENTS = [
-  "remote work",
-  "talent pool",
-] as const;
+const EXPECTED_REPLY_FRAGMENTS = ["remote work", "talent pool"] as const;
 
 /**
  * Single user prompt that triggers the chain. Verbatim match against the
@@ -162,11 +159,18 @@ export async function assertChainedReply(
 ): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   let lastMissing: string[] = [...EXPECTED_REPLY_FRAGMENTS];
+  let pollCount = 0;
+
+  console.debug("[d5-mcp-subagents] polling for chained reply fragments", {
+    expectedFragments: [...EXPECTED_REPLY_FRAGMENTS],
+    timeoutMs,
+  });
 
   while (Date.now() < deadline) {
     // Try assistant-message elements first; fall back to full page text.
     let text = await readAssistantTranscript(page);
-    if (text.trim().length === 0) {
+    const usedFallback = text.trim().length === 0;
+    if (usedFallback) {
       text = await readFullPageText(page);
     }
 
@@ -174,14 +178,31 @@ export async function assertChainedReply(
     lastMissing = EXPECTED_REPLY_FRAGMENTS.filter(
       (fragment) => !lower.includes(fragment.toLowerCase()),
     );
+    pollCount++;
+
+    if (pollCount === 1 || pollCount % 10 === 0) {
+      console.debug("[d5-mcp-subagents] chained reply poll", {
+        pollCount,
+        usedFallback,
+        textLength: text.length,
+        textSnippet: text.slice(0, 300),
+        missingFragments: lastMissing,
+        elapsedMs: Date.now() - (deadline - timeoutMs),
+      });
+    }
 
     if (lastMissing.length === 0) {
+      console.debug("[d5-mcp-subagents] all fragments found", { pollCount });
       return; // All fragments found.
     }
 
     await sleep(CHAIN_POLL_INTERVAL_MS);
   }
 
+  console.debug("[d5-mcp-subagents] chained reply TIMEOUT", {
+    pollCount,
+    missingFragments: lastMissing,
+  });
   throw new Error(
     `mcp-subagents: chained reply missing fragments after ${timeoutMs}ms: ${lastMissing.join(", ")}`,
   );

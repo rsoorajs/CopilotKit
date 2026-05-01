@@ -17,6 +17,7 @@ const RUNTIME_URL = "/api/copilotkit-voice";
 const SAMPLE_AUDIO_PATH = "/demo-audio/sample.wav";
 const SAMPLE_LABEL = "What is the weather in Tokyo?";
 
+// @region[voice-page]
 export default function VoiceDemoPage() {
   const handleTranscribed = useCallback((text: string) => {
     if (typeof document === "undefined") return;
@@ -65,3 +66,4 @@ export default function VoiceDemoPage() {
     </CopilotKitProvider>
   );
 }
+// @endregion[voice-page]

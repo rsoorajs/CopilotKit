@@ -61,7 +61,7 @@
       "name": "CLI Start Command",
       "category": "dev-ex",
       "description": "One-liner to scaffold a new CopilotKit app via the official CLI",
-      "kind": "primary",
+      "kind": "docs-only",
       "og_docs_url": "https://docs.copilotkit.ai/quickstart",
       "shell_docs_path": "/quickstart"
     },
@@ -333,19 +333,22 @@
       "id": "auth",
       "name": "Authentication",
       "category": "platform",
-      "description": "Framework-native authentication"
+      "description": "Framework-native authentication",
+      "shell_docs_path": "/auth"
     },
     {
       "id": "agent-config",
       "name": "Agent Config Object",
       "category": "platform",
-      "description": "Forwarded props / config objects"
+      "description": "Forwarded props / config objects",
+      "shell_docs_path": "/agent-config"
     },
     {
       "id": "voice",
       "name": "Voice",
       "category": "platform",
-      "description": "Real-time voice interaction"
+      "description": "Real-time voice interaction",
+      "shell_docs_path": "/voice"
     },
     {
       "id": "multimodal",
@@ -365,9 +368,7 @@
       "id": "byoc-json-render",
       "name": "BYOC json-render",
       "category": "byoc",
-      "description": "Hashbrown-style generative UI built on json-render",
-      "og_docs_url": "https://docs.copilotkit.ai/generative-ui/your-components/display-only",
-      "shell_docs_path": "/generative-ui/your-components/display-only"
+      "description": "Streaming structured-output generative UI via @json-render/react"
     }
   ]
 }

@@ -1,5 +1,12 @@
-# Headless Interrupt -- Not Supported (CrewAI Crews)
+# Headless Interrupt -- Strategy B (CrewAI Crews)
 
-CrewAI Crews has no equivalent to LangGraph's `interrupt()` primitive: the `ChatWithCrewFlow` execution model in `ag-ui-crewai` runs each crew turn to completion and emits AG-UI `RUN_FINISHED` directly, with no surface for pausing mid-execution to await a resume payload. The headless flavor (resolve interrupts from a plain button grid -- no chat, no `useInterrupt` render prop) shares the same dependency on upstream pause/resume support that does not exist in CrewAI today.
+CrewAI Crews has no equivalent to LangGraph's `interrupt()` primitive, so this
+demo adapts the headless interrupt UX via **Strategy B**: the backend crew
+defines a scheduling agent whose system prompt instructs it to call
+`schedule_meeting`, and the frontend registers that tool via `useFrontendTool`
+with an async handler. The handler shows a time-picker popup in the app surface
+(outside the chat) and returns a Promise that only resolves once the user picks
+a slot (or cancels) -- producing the same headless UX as the LangGraph
+reference, just with different plumbing.
 
-For a working example see `showcase/integrations/langgraph-python/src/app/demos/interrupt-headless`.
+Reference: `showcase/integrations/langgraph-python/src/app/demos/interrupt-headless`

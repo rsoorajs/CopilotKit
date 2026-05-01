@@ -64,6 +64,8 @@ features:
   - agent-config
 a2ui_pattern: schema-inline
 interrupt_pattern: promise-based
+agent_config_pattern: shared-state
+auth_pattern: microsoft-agent-framework
 demos:
   - id: cli-start
     name: CLI Start Command

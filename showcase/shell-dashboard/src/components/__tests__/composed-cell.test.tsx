@@ -66,7 +66,11 @@ vi.mock("@/components/depth-utils", async () => {
   >("@/components/depth-utils");
   return {
     ...actual,
-    deriveDepth: vi.fn(() => ({ achieved: 2, isRegression: false })),
+    deriveDepth: vi.fn(() => ({
+      achieved: 2,
+      isRegression: false,
+      unsupported: false,
+    })),
   };
 });
 
@@ -325,5 +329,70 @@ describe("ComposedCell", () => {
 
     const composedCell = getByTestId("composed-cell");
     expect(composedCell.className).not.toContain("opacity-60");
+  });
+
+  describe("docs-only kind", () => {
+    function docsOnlyCtx(overrides?: Partial<CellContext>): CellContext {
+      return makeCtx({
+        feature: {
+          id: "cli-start",
+          name: "CLI Start",
+          category: "dev-ex",
+          description: "CLI scaffold command",
+          kind: "docs-only",
+        },
+        ...overrides,
+      });
+    }
+
+    it("renders only docs layer even when all overlays active", () => {
+      const ctx = docsOnlyCtx();
+      const { getByTestId, queryByText, queryByTestId } = render(
+        <ComposedCell
+          ctx={ctx}
+          overlays={overlaySet("links", "depth", "health", "docs")}
+          catalogCell={makeCatalogCell()}
+        />,
+      );
+
+      // Only docs layer present
+      expect(getByTestId("docs-layer")).toBeInTheDocument();
+      // No other layers
+      expect(queryByText("Demo")).not.toBeInTheDocument();
+      expect(queryByTestId("depth-layer")).not.toBeInTheDocument();
+      expect(queryByTestId("health-layer")).not.toBeInTheDocument();
+    });
+
+    it("renders docs layer when any content overlay is active (not just docs)", () => {
+      const ctx = docsOnlyCtx();
+      const { getByTestId } = render(
+        <ComposedCell ctx={ctx} overlays={overlaySet("links", "health")} />,
+      );
+
+      // Docs-only features always show their docs row when any content
+      // overlay is active — docs are their only content.
+      expect(getByTestId("docs-layer")).toBeInTheDocument();
+      expect(getByTestId("composed-cell")).toBeInTheDocument();
+    });
+
+    it("renders empty when only parity overlay is active", () => {
+      const ctx = docsOnlyCtx();
+      const { getByTestId, queryByTestId } = render(
+        <ComposedCell ctx={ctx} overlays={overlaySet("parity")} />,
+      );
+
+      expect(getByTestId("composed-cell-empty")).toBeInTheDocument();
+      expect(queryByTestId("composed-cell")).not.toBeInTheDocument();
+    });
+
+    it("applies opacity-60 for docs-only features", () => {
+      const ctx = docsOnlyCtx();
+      const { getByTestId } = render(
+        <ComposedCell ctx={ctx} overlays={overlaySet("docs")} />,
+      );
+
+      const composedCell = getByTestId("composed-cell");
+      expect(composedCell.className).toContain("opacity-60");
+    });
   });
 });

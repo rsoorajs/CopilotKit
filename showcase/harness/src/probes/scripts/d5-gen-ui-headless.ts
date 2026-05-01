@@ -70,7 +70,11 @@ export function buildTurns(_ctx: D5BuildContext): ConversationTurn[] {
         // 1. Cascade-find the rendered component. Throws on timeout
         //    with a descriptive error so the conversation-runner
         //    surfaces it as the turn's failure_turn.
+        console.debug("[d5-gen-ui-headless] waiting for gen-UI component");
         const matchedSelector = await waitForGenUiComponent(page);
+        console.debug("[d5-gen-ui-headless] gen-UI component found", {
+          matchedSelector,
+        });
 
         // 2. Read the matched node's child count via page.evaluate.
         //    Ensures the component is structurally non-trivial. The
@@ -80,6 +84,11 @@ export function buildTurns(_ctx: D5BuildContext): ConversationTurn[] {
           page,
           matchedSelector,
         );
+        console.debug("[d5-gen-ui-headless] child count check", {
+          matchedSelector,
+          childCount,
+          minRequired: MIN_CHILDREN,
+        });
         if (childCount < MIN_CHILDREN) {
           throw new Error(
             `gen-ui-headless: matched component ${matchedSelector} has ${childCount} children (expected >= ${MIN_CHILDREN})`,
@@ -92,6 +101,11 @@ export function buildTurns(_ctx: D5BuildContext): ConversationTurn[] {
         //    integrations doesn't fail the probe. We require at
         //    least one primary token OR one secondary token.
         const text = (await readLastAssistantText(page)).toLowerCase();
+        console.debug("[d5-gen-ui-headless] follow-up text check", {
+          primaryTokens: [...FOLLOWUP_TOKENS_PRIMARY],
+          secondaryTokens: [...FOLLOWUP_TOKENS_SECONDARY],
+          assistantText: text.slice(0, 300),
+        });
         const primaryMissing = FOLLOWUP_TOKENS_PRIMARY.filter(
           (tok) => !text.includes(tok),
         );
@@ -103,6 +117,7 @@ export function buildTurns(_ctx: D5BuildContext): ConversationTurn[] {
             `gen-ui-headless: assistant follow-up missing tokens (need at least one of [${[...FOLLOWUP_TOKENS_PRIMARY, ...FOLLOWUP_TOKENS_SECONDARY].join(", ")}]); last assistant text: ${text.slice(0, 200)}`,
           );
         }
+        console.debug("[d5-gen-ui-headless] all assertions passed");
       },
     },
   ];
@@ -128,10 +143,21 @@ async function readChildCountForSelector(
   // because the structural Page.evaluate signature is `() => R` — no
   // arg-pass — and we still need the resolved selector to land in the
   // browser context.
+  // Use querySelectorAll and find the LAST matching node with children.
+  // The first assistant message may be an empty wrapper; the rendered
+  // gen-UI component appears in a later message. Fall back to the last
+  // node's childElementCount if none have children.
   const fn = new Function(`
-    const win = globalThis;
-    const node = win.document.querySelector(${encoded});
-    return node ? node.childElementCount : 0;
+    var win = globalThis;
+    var nodes = win.document.querySelectorAll(${encoded});
+    if (nodes.length === 0) return 0;
+    var best = 0;
+    for (var i = 0; i < nodes.length; i++) {
+      if (nodes[i].childElementCount > best) {
+        best = nodes[i].childElementCount;
+      }
+    }
+    return best;
   `) as () => number;
   return await page.evaluate(fn);
 }
