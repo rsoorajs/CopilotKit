@@ -22,6 +22,8 @@ import type { D5BuildContext } from "../helpers/d5-registry.js";
 import type { ConversationTurn, Page } from "../helpers/conversation-runner.js";
 
 export const SIGN_OUT_BUTTON_SELECTOR = '[data-testid="auth-sign-out-button"]';
+export const AUTH_BANNER_UNAUTHENTICATED_SELECTOR =
+  '[data-testid="auth-banner"][data-authenticated="false"]';
 export const ERROR_BANNER_SELECTOR = '[data-testid="auth-demo-error"]';
 export const ERROR_BOUNDARY_SELECTOR =
   '[data-testid="auth-demo-chat-boundary"]';
@@ -98,6 +100,24 @@ export function buildAuthAssertion(
       );
     }
     await click(page, SIGN_OUT_BUTTON_SELECTOR);
+
+    // Step 1b — wait for React to re-render the banner to unauthenticated
+    // state. Without this, `setHeaders()` hasn't flushed yet (useEffect
+    // runs async after paint) and the next request goes out with VALID
+    // auth headers, never 401s, and the probe times out.
+    try {
+      await page.waitForSelector(AUTH_BANNER_UNAUTHENTICATED_SELECTOR, {
+        state: "visible",
+        timeout: 3_000,
+      });
+    } catch {
+      throw new Error(
+        `auth: banner did not flip to unauthenticated within 3 s after clicking sign-out — React state may not have updated`,
+      );
+    }
+    // Allow React's useEffect to flush setHeaders() — effects run async
+    // after paint, so the banner DOM update alone isn't sufficient.
+    await new Promise<void>((r) => setTimeout(r, 500));
 
     // Step 2 — trigger a chat send while signed-out. The auth demo does
     // not auto-refetch /info on header change, so the 401 surface only
