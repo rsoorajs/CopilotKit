@@ -1,11 +1,10 @@
 {
-  "_comment": "D5 fixture for /demos/agentic-chat-reasoning AND /demos/reasoning-default-render (one fixture, two routes). Substring 'show your reasoning step by step' is unique. The `reasoning` field tells aimock to emit response.reasoning_summary_* SSE events alongside the text content, which CopilotKit's bridge translates to AG-UI REASONING_MESSAGE_* events that the frontend's reasoningMessage slot renders.",
+  "_comment": "D5 fixture for /demos/agentic-chat-reasoning AND /demos/reasoning-default-render (one fixture, two routes). Substring 'show your reasoning step by step' is unique.",
   "fixtures": [
     {
       "match": { "userMessage": "show your reasoning step by step" },
       "response": {
-        "reasoning": "Step 1: identify what the user is asking. Step 2: outline the approach in plain language. Step 3: produce the concise final answer.",
-        "content": "Here is the answer: I broke the problem into three steps, addressed each, and combined the results into a single concise response."
+        "content": "Reasoning: first, I identified the question requires step-by-step thinking. Then, I broke it into sub-steps and worked through each one. Finally, I aggregated the partial answers into a single response. The reasoning block above the answer demonstrates intermediate-thought rendering."
       }
     }
   ]
