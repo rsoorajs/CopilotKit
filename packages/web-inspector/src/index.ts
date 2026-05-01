@@ -1899,7 +1899,7 @@ class CpkThreadDetails extends LitElement {
           </svg>
           <span class="cpk-td__tool-name">${item.toolName}</span>
           ${
-            item.result
+            item.result || Object.keys(item.arguments).length > 0
               ? html`
                   <span class="cpk-td__tool-status">DONE</span>
                 `
