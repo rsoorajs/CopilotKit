@@ -20,7 +20,7 @@ services:
       aimock:
         condition: service_started
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8123/ok"]
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8123/ok"]
       interval: 5s
       timeout: 5s
       retries: 30
