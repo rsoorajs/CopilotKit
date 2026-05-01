@@ -9,6 +9,7 @@ This example demonstrates a Strands agent integrated with AG-UI, featuring:
 
 import json
 import os
+from pathlib import Path
 from typing import List
 
 from ag_ui_strands import (
@@ -22,6 +23,7 @@ from pydantic import BaseModel, Field
 from strands import Agent, tool
 from strands.models.openai import OpenAIModel
 
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 load_dotenv()
 
 
