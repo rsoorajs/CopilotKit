@@ -653,6 +653,30 @@
     },
     {
       "match": {
+        "userMessage": "Schedule a 1:1 with Alice next week to review Q2 goals.",
+        "hasToolResult": false
+      },
+      "response": {
+        "toolCalls": [
+          {
+            "id": "call_hitl_book_1on1_alice_001",
+            "name": "book_call",
+            "arguments": "{\"topic\":\"1:1 with Alice — review Q2 goals\",\"attendee\":\"Alice\"}"
+          }
+        ]
+      }
+    },
+    {
+      "match": {
+        "userMessage": "Schedule a 1:1 with Alice next week to review Q2 goals.",
+        "hasToolResult": true
+      },
+      "response": {
+        "content": "Booked the 1:1 with Alice for the time you selected — calendar invite is on its way."
+      }
+    },
+    {
+      "match": {
         "userMessage": "alice"
       },
       "response": {
