@@ -1,27 +1,33 @@
 "use client";
 
 import React from "react";
-// v1 CopilotKit provider enables the v1 `useCoAgentStateRender` hook.
-// Under the hood it also wraps the v2 provider, so v2 components such as
-// `<CopilotChat />` and `useConfigureSuggestions` still work inside it.
-import { CopilotKit, useCoAgentStateRender } from "@copilotkit/react-core";
+import { CopilotKit } from "@copilotkit/react-core";
 import {
   CopilotChat,
+  useAgent,
+  UseAgentUpdate,
   useConfigureSuggestions,
 } from "@copilotkit/react-core/v2";
-import { InlineAgentStateCard, type Step } from "./InlineAgentStateCard";
+import { InlineAgentStateCard } from "./InlineAgentStateCard";
+import type { Step } from "./InlineAgentStateCard";
 
 /**
- * Agentic Generative UI — v1 In-Chat State Rendering
+ * Agentic Generative UI — In-Chat State Rendering
  *
- * A minimal deep agent defines its OWN state schema (`steps: list[Step]`) on
- * the backend and exposes a custom `set_steps` tool that the model calls to
- * mutate that state. Every `set_steps` call streams the updated `steps` to
- * the client. The v1 `useCoAgentStateRender` hook subscribes to that state
- * and renders an inline progress tracker inside the chat transcript — no
- * `messageView` plumbing, no manual `useAgent` subscription.
+ * The deep agent on the backend defines its own state schema
+ * (`steps: list[Step]`) and exposes a custom `set_steps` tool that the model
+ * calls to mutate that state. Every `set_steps` call streams the updated
+ * `steps` to the client.
  *
- * Reference: https://docs.copilotkit.ai/reference/v1/hooks/useCoAgentStateRender
+ * On the client we subscribe to that live state via `useAgent` (v2) and
+ * render a single `InlineAgentStateCard` inside the chat transcript via
+ * `messageView.children`. The card re-renders in place as state arrives —
+ * no per-message claims, no duplicate cards.
+ *
+ * This mirrors the pattern used by every other integration's gen-ui-agent
+ * demo (mastra, strands, ag2, agno, crewai-crews, langgraph-typescript,
+ * pydantic-ai, ...) and replaces the earlier `useCoAgentStateRender`
+ * approach which produced one card per state-changing message.
  */
 export default function GenUiAgentDemo() {
   return (
@@ -35,13 +41,16 @@ export default function GenUiAgentDemo() {
   );
 }
 
-// State shape mirrors the deep agent's explicit `steps` field, declared in
-// `GenUiAgentState` on the backend and mutated by the custom `set_steps` tool.
 type AgentState = {
   steps?: Step[];
 };
 
 function Chat() {
+  const { agent } = useAgent({
+    agentId: "gen-ui-agent",
+    updates: [UseAgentUpdate.OnStateChanged],
+  });
+
   useConfigureSuggestions({
     suggestions: [
       {
@@ -61,21 +70,24 @@ function Chat() {
     available: "always",
   });
 
-  // @region[use-coagent-state-render]
-  // Subscribe to the deep agent's `steps` state. The custom `set_steps` tool
-  // updates it every time the model advances a step, streaming each
-  // transition to the UI where this `render` callback re-runs with the
-  // fresh state and an updated `status` ("inProgress" while the agent is
-  // running, "complete" when done).
-  useCoAgentStateRender<AgentState>({
-    name: "gen-ui-agent",
-    render: ({ state, status }) => {
-      const steps = state?.steps ?? [];
-      if (steps.length === 0) return null;
-      return <InlineAgentStateCard steps={steps} status={status} />;
-    },
-  });
-  // @endregion[use-coagent-state-render]
+  const steps = (agent.state as AgentState | undefined)?.steps ?? [];
+  const status = agent.isRunning ? "inProgress" : "complete";
 
-  return <CopilotChat agentId="gen-ui-agent" className="h-full rounded-2xl" />;
+  return (
+    <CopilotChat
+      agentId="gen-ui-agent"
+      className="h-full rounded-2xl"
+      messageView={{
+        children: ({ messageElements, interruptElement }) => (
+          <div data-testid="copilot-message-list" className="flex flex-col">
+            {messageElements}
+            {steps.length > 0 && (
+              <InlineAgentStateCard steps={steps} status={status} />
+            )}
+            {interruptElement}
+          </div>
+        ),
+      }}
+    />
+  );
 }

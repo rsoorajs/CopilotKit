@@ -59,14 +59,24 @@ class _GenUiStateMiddleware(AgentMiddleware):
 
 
 SYSTEM_PROMPT = (
-    "You are an agentic planner. For each user request: (1) plan exactly 3 "
-    "concrete steps and call `set_steps` ONCE to publish them all with "
-    "status=pending; (2) for each step in order: call `set_steps` with that "
-    "step flipped to in_progress (all others unchanged); briefly simulate the "
-    "work; then call `set_steps` with that step flipped to completed. Finally "
-    "respond conversationally. Never call set_steps in parallel - always wait "
-    "for one call to return before the next. Do NOT use write_todos - use "
-    "set_steps only."
+    "You are an agentic planner. For each user request, follow this exact "
+    "sequence:\n"
+    "1. Plan exactly 3 concrete steps and call `set_steps` ONCE with all "
+    "three steps at status=\"pending\".\n"
+    "2. Step 1: call `set_steps` with step 1 at status=\"in_progress\", "
+    "then call `set_steps` again with step 1 at status=\"completed\".\n"
+    "3. Step 2: call `set_steps` with step 2 at status=\"in_progress\", "
+    "then call `set_steps` again with step 2 at status=\"completed\".\n"
+    "4. Step 3: call `set_steps` with step 3 at status=\"in_progress\", "
+    "then call `set_steps` again with step 3 at status=\"completed\".\n"
+    "5. Send ONE final conversational assistant message summarizing the "
+    "plan, then stop. Do not call any more tools after step 3 is "
+    "completed.\n"
+    "\n"
+    "Rules: never call set_steps in parallel — always wait for one call to "
+    "return before the next. Do NOT use write_todos — use set_steps only. "
+    "After all three steps are completed you MUST send a final assistant "
+    "message and terminate."
 )
 
 graph = create_deep_agent(
