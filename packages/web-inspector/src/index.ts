@@ -1,11 +1,5 @@
-import {
-  LitElement,
-  css,
-  html,
-  nothing,
-  unsafeCSS,
-  type TemplateResult,
-} from "lit";
+import { LitElement, css, html, nothing, unsafeCSS } from "lit";
+import type { TemplateResult } from "lit";
 import { marked } from "marked";
 import { styleMap } from "lit/directives/style-map.js";
 import tailwindStyles from "./styles/generated.css";
@@ -1839,10 +1833,9 @@ export class ɵCpkThreadDetails extends LitElement {
                   `
                 : nothing
             }
-            ${
-              ɵCpkThreadDetails.TAB_LIST.map((tab) =>
-                this._activatedTabs.has(tab.id)
-                  ? html`<div
+            ${ɵCpkThreadDetails.TAB_LIST.map((tab) =>
+              this._activatedTabs.has(tab.id)
+                ? html`<div
                       class="cpk-td__panel"
                       style=${
                         this._tab === tab.id && !this._panelInitializing
@@ -1852,9 +1845,8 @@ export class ɵCpkThreadDetails extends LitElement {
                     >
                       ${this.renderTabContent(tab.id)}
                     </div>`
-                  : nothing,
-              )
-            }
+                : nothing,
+            )}
           </div>
         </div>
 
