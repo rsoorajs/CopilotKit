@@ -1,15 +1,11 @@
 // Dedicated runtime for the Declarative Generative UI (A2UI — Dynamic Schema)
-// cell. Mirrors the working claude-sdk-typescript reference pattern: the
-// backend is the neutral default graph (sample_agent), and the runtime
-// auto-injects the `render_a2ui` tool (injectA2UITool defaults to true).
-// The A2UI middleware serialises the registered client catalog into
-// `copilotkit.context` and detects `a2ui_operations` in the tool result,
-// streaming rendered surfaces to the frontend.
-//
-// Reference:
-// - showcase/integrations/claude-sdk-typescript/src/app/api/copilotkit-declarative-gen-ui/route.ts
+// cell. Splitting into its own endpoint (mirroring beautiful-chat) lets us set
+// `a2ui.injectA2UITool: false` — the backend agent owns the `generate_a2ui`
+// tool itself, so double-binding from the runtime would duplicate the tool
+// slot and confuse the LLM.
 
-import { NextRequest, NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 import {
   CopilotRuntime,
   ExperimentalEmptyAdapter,
@@ -20,18 +16,18 @@ import { LangGraphAgent } from "@copilotkit/runtime/langgraph";
 const LANGGRAPH_URL =
   process.env.LANGGRAPH_DEPLOYMENT_URL || "http://localhost:8123";
 
+const declarativeGenUiAgent = new LangGraphAgent({
+  deploymentUrl: LANGGRAPH_URL,
+  graphId: "a2ui_dynamic",
+  langsmithApiKey: process.env.LANGSMITH_API_KEY || "",
+});
+
 const runtime = new CopilotRuntime({
   // @ts-ignore -- see main route.ts
-  agents: {
-    "declarative-gen-ui": new LangGraphAgent({
-      deploymentUrl: LANGGRAPH_URL,
-      graphId: "sample_agent",
-      langsmithApiKey: process.env.LANGSMITH_API_KEY || "",
-    }),
+  agents: { "declarative-gen-ui": declarativeGenUiAgent },
+  a2ui: {
+    injectA2UITool: false,
   },
-  // `injectA2UITool` defaults to true — the runtime injects the A2UI tool
-  // and the default graph receives it via CopilotKit middleware, matching
-  // the working claude-sdk-typescript reference pattern.
 });
 
 export const POST = async (req: NextRequest) => {
