@@ -30,12 +30,10 @@ Reference:
 - showcase/integrations/langgraph-python/src/agents/multimodal_agent.py
 """
 
-from __future__ import annotations
-
 import base64
 import io
 from textwrap import dedent
-from typing import Any
+from typing import Any, Optional, Tuple
 
 from agent_framework import Agent, BaseChatClient
 from agent_framework_ag_ui import AgentFrameworkAgent
@@ -101,7 +99,7 @@ def _extract_pdf_text(b64: str) -> str:
         return ""
 
 
-def _classify_attachment_part(part: Any) -> tuple[str, str, str] | None:
+def _classify_attachment_part(part: Any) -> Optional[Tuple[str, str, str]]:
     """Inspect a content part and return (kind, mime, base64_payload).
 
     ``kind`` is one of ``"image"``, ``"pdf"``, ``"other"``. Returns ``None``
@@ -124,7 +122,7 @@ def _classify_attachment_part(part: Any) -> tuple[str, str, str] | None:
 
     if part_type == "image_url":
         image_url = part.get("image_url")
-        url: str | None = None
+        url: Optional[str] = None
         if isinstance(image_url, str):
             url = image_url
         elif isinstance(image_url, dict):
@@ -217,14 +215,12 @@ class _MultimodalAgent(AgentFrameworkAgent):
             rewritten.append({**message, "content": new_parts})
         return rewritten
 
-    async def run(self, *args: Any, **kwargs: Any) -> Any:  # type: ignore[override]
-        # AG-UI may hand us messages via a positional or keyword argument;
-        # normalize both shapes before delegating to the base implementation.
-        if "messages" in kwargs:
-            kwargs["messages"] = self._flatten_messages(kwargs["messages"])
-        elif args and isinstance(args[0], list):
-            args = (self._flatten_messages(args[0]), *args[1:])
-        return await super().run(*args, **kwargs)
+    async def run(self, input_data: dict[str, Any]):  # type: ignore[override]
+        messages = input_data.get("messages")
+        if isinstance(messages, list):
+            input_data = {**input_data, "messages": self._flatten_messages(messages)}
+        async for event in super().run(input_data):
+            yield event
 
 
 def create_multimodal_agent(chat_client: BaseChatClient) -> AgentFrameworkAgent:
