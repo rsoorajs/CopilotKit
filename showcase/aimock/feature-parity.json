@@ -653,8 +653,15 @@
     },
     {
       "match": {
-        "userMessage": "Please book an intro call with the sales team to discuss pricing.",
-        "hasToolResult": false
+        "toolCallId": "call_hitl_book_intro_sales_001"
+      },
+      "response": {
+        "content": "Booked the intro call with the sales team for the time you selected — calendar invite is on its way."
+      }
+    },
+    {
+      "match": {
+        "userMessage": "Please book an intro call with the sales team to discuss pricing."
       },
       "response": {
         "toolCalls": [
@@ -668,17 +675,15 @@
     },
     {
       "match": {
-        "userMessage": "Please book an intro call with the sales team to discuss pricing.",
-        "hasToolResult": true
+        "toolCallId": "call_hitl_book_1on1_alice_001"
       },
       "response": {
-        "content": "Booked the intro call with the sales team for the time you selected — calendar invite is on its way."
+        "content": "Booked the 1:1 with Alice for the time you selected — calendar invite is on its way."
       }
     },
     {
       "match": {
-        "userMessage": "Schedule a 1:1 with Alice next week to review Q2 goals.",
-        "hasToolResult": false
+        "userMessage": "Schedule a 1:1 with Alice next week to review Q2 goals."
       },
       "response": {
         "toolCalls": [
@@ -688,15 +693,6 @@
             "arguments": "{\"topic\":\"1:1 with Alice — review Q2 goals\",\"attendee\":\"Alice\"}"
           }
         ]
-      }
-    },
-    {
-      "match": {
-        "userMessage": "Schedule a 1:1 with Alice next week to review Q2 goals.",
-        "hasToolResult": true
-      },
-      "response": {
-        "content": "Booked the 1:1 with Alice for the time you selected — calendar invite is on its way."
       }
     },
     {

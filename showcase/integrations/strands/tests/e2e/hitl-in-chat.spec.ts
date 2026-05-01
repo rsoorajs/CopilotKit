@@ -97,4 +97,56 @@ test.describe("HITL in chat — booking flow", () => {
         .first(),
     ).toBeVisible({ timeout: 30000 });
   });
+
+  // Regression: the second booking flow in a single chat session used to
+  // skip the picker entirely and jump straight to "Booked ..." text. Cause
+  // was the aimock confirmation fixture being keyed on `hasToolResult: true`
+  // — once the first flow finished, the conversation had a tool message in
+  // history, so on the second user message the confirmation fixture matched
+  // before the toolCall fixture (which required `hasToolResult: false`) had
+  // a chance to fire. Fix re-keyed confirmation fixtures on `toolCallId`
+  // (matches only when the LAST message is a tool result with that id) and
+  // dropped the `hasToolResult: false` constraint on the toolCall fixtures.
+  // This test explicitly walks both flows in one page session — if the
+  // multi-flow regression returns, the second time-picker never renders and
+  // this test fails at step 2.
+  test("both suggestions render the picker when run back-to-back without refresh", async ({
+    page,
+  }) => {
+    const input = page.getByPlaceholder("Type a message");
+    const card = page.locator('[data-testid="time-picker-card"]');
+
+    // Flow 1: Alice
+    await input.fill("Schedule a 1:1 with Alice next week to review Q2 goals.");
+    await input.press("Enter");
+    await expect(card.first()).toBeVisible({ timeout: 60000 });
+    await page.locator('[data-testid="time-picker-slot"]').first().click();
+    await expect(
+      page
+        .locator('[data-role="assistant"]')
+        .filter({ hasText: /Booked.*Alice/i })
+        .first(),
+    ).toBeVisible({ timeout: 30000 });
+
+    // Flow 2: sales — same page, no refresh.
+    await input.fill(
+      "Please book an intro call with the sales team to discuss pricing.",
+    );
+    await input.press("Enter");
+
+    // A SECOND picker card must appear. If the regression returns, no new
+    // card renders and the agent jumps straight to confirmation text.
+    await expect(card).toHaveCount(2, { timeout: 60000 });
+    await expect(card.last().getByText(/Sales team/i)).toBeVisible();
+
+    // Pick a slot in the new card and verify the sales-specific
+    // confirmation arrives.
+    await page.locator('[data-testid="time-picker-slot"]').last().click();
+    await expect(
+      page
+        .locator('[data-role="assistant"]')
+        .filter({ hasText: /Booked.*sales team/i })
+        .first(),
+    ).toBeVisible({ timeout: 30000 });
+  });
 });
