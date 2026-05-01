@@ -483,6 +483,23 @@
       }
     },
     {
+      "_comment": "Mastra registers the weather tool as get-weather (hyphen); duplicate for compat",
+      "match": {
+        "userMessage": "weather in Tokyo",
+        "hasToolResult": false,
+        "toolName": "get-weather"
+      },
+      "response": {
+        "toolCalls": [
+          {
+            "id": "call_d5_get_weather_001",
+            "name": "get-weather",
+            "arguments": "{\"location\":\"Tokyo\"}"
+          }
+        ]
+      }
+    },
+    {
       "match": {
         "userMessage": "weather in Tokyo",
         "hasToolResult": true
