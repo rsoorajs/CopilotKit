@@ -73,7 +73,9 @@ export type D5FeatureType =
   | "gen-ui-interrupt"
   // BYOC family — bring-your-own-component structured-output rendering
   // (one literal covers hashbrown + json-render via preNavigateRoute).
-  | "byoc";
+  | "byoc"
+  // Voice family — voice input/output.
+  | "voice";
 
 /**
  * Closed-set runtime mirror of `D5FeatureType`. Kept in lock-step with
@@ -112,6 +114,7 @@ const D5_FEATURE_TYPES: readonly D5FeatureType[] = [
   "interrupt-headless",
   "gen-ui-interrupt",
   "byoc",
+  "voice",
 ] as const satisfies readonly D5FeatureType[];
 
 /**

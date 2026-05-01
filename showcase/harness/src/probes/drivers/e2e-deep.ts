@@ -4,18 +4,17 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { z } from "zod";
 import { truncateUtf8 } from "../../render/filters.js";
 import { showcaseShapeSchema } from "../discovery/railway-services.js";
-import {
-  D5_REGISTRY,
-  type D5BuildContext,
-  type D5FeatureType,
-  type D5Script,
-  isD5FeatureType,
+import { D5_REGISTRY, isD5FeatureType } from "../helpers/d5-registry.js";
+import type {
+  D5BuildContext,
+  D5FeatureType,
+  D5Script,
 } from "../helpers/d5-registry.js";
 import { demosToFeatureTypes } from "../helpers/d5-feature-mapping.js";
-import {
-  runConversation,
-  type ConversationResult,
-  type Page,
+import { runConversation } from "../helpers/conversation-runner.js";
+import type {
+  ConversationResult,
+  Page,
 } from "../helpers/conversation-runner.js";
 import type { ProbeDriver } from "../types.js";
 import type { ProbeContext, ProbeResult } from "../../types/index.js";
@@ -337,6 +336,7 @@ const defaultLauncher: E2eDeepBrowserLauncher =
               fill: (s, v, o) => page.fill(s, v, o),
               press: (s, k, o) => page.press(s, k, o),
               evaluate: <R>(fn: () => R) => page.evaluate(fn),
+              inputValue: (s) => page.inputValue(s),
               goto: (url, opts) =>
                 page.goto(url, opts as Parameters<typeof page.goto>[1]),
               close: () => page.close(),
@@ -451,6 +451,7 @@ export function createPooledE2eDeepLauncher(
               fill: (s, v, o) => page.fill(s, v, o),
               press: (s, k, o) => page.press(s, k, o),
               evaluate: <R>(fn: () => R) => page.evaluate(fn),
+              inputValue: (s) => page.inputValue(s),
               goto: (url, opts) =>
                 page.goto(url, opts as Parameters<typeof page.goto>[1]),
               close: () => page.close(),

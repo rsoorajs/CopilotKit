@@ -533,7 +533,7 @@ describe("e2e-deep driver", () => {
     //   - `tool-rendering-default-catchall` → `tool-rendering`
     //   - `shared-state-read-write` → BOTH `shared-state-read` AND
     //     `shared-state-write` (one-to-many)
-    //   - `voice` is unmapped and silently dropped.
+    //   - `voice` → `voice` (mapped, but no script → skipped).
     // Only the shared-state script is registered, so
     // `tool-rendering` lands in `skipped[]` — the test exercises
     // both the mapping AND the closed-set filter without paying
@@ -562,26 +562,26 @@ describe("e2e-deep driver", () => {
       demos: [
         "tool-rendering-default-catchall", // → tool-rendering (skipped, no script)
         "shared-state-read-write", // → shared-state-read + shared-state-write (run)
-        "voice", // unmapped → dropped
+        "voice", // → voice (skipped, no script)
       ],
       shape: "package",
     });
 
     expect(result.state).toBe("green");
     const sig = result.signal as E2eDeepAggregateSignal;
-    // 3 mapped D5 types: tool-rendering (skipped) + shared-state-read
-    // + shared-state-write (both run). `voice` was dropped before
-    // counting.
-    expect(sig.total).toBe(3);
+    // 4 mapped D5 types: tool-rendering (skipped) + shared-state-read
+    // + shared-state-write (both run) + voice (skipped, no script).
+    expect(sig.total).toBe(4);
     expect(sig.passed).toBe(2);
     expect(sig.failed).toEqual([]);
-    expect(sig.skipped).toEqual(["tool-rendering"]);
+    expect(sig.skipped).toEqual(["tool-rendering", "voice"]);
 
     const sideKeys = writes.map((w) => w.key).sort();
     expect(sideKeys).toEqual([
       "d5:langgraph-python/shared-state-read",
       "d5:langgraph-python/shared-state-write",
       "d5:langgraph-python/tool-rendering",
+      "d5:langgraph-python/voice",
     ]);
   });
 

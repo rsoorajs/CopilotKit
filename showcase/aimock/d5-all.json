@@ -469,7 +469,8 @@
     {
       "match": {
         "userMessage": "weather in Tokyo",
-        "hasToolResult": false
+        "hasToolResult": false,
+        "toolName": "get_weather"
       },
       "response": {
         "toolCalls": [
@@ -488,6 +489,24 @@
       },
       "response": {
         "content": "Tokyo is 22°C and partly cloudy."
+      }
+    },
+    {
+      "match": {
+        "userMessage": "weather in Tokyo"
+      },
+      "response": {
+        "content": "The weather in Tokyo is currently 22°C with partly cloudy skies and light easterly winds."
+      }
+    },
+    {
+      "match": {
+        "endpoint": "transcription"
+      },
+      "response": {
+        "transcription": {
+          "text": "What is the weather in Tokyo?"
+        }
       }
     }
   ]
