@@ -1241,12 +1241,15 @@ async function runFeature(opts: {
         error: conversation.error,
       });
       const diagnostics = await captureDiagnostics(page);
-      console.warn("[e2e-deep] runFeature — FLAP DIAGNOSTICS", JSON.stringify({
-        slug: buildCtx.integrationSlug,
-        featureType: buildCtx.featureType,
-        error: conversation.error?.slice(0, 200),
-        diagnostics,
-      }));
+      console.warn(
+        "[e2e-deep] runFeature — FLAP DIAGNOSTICS",
+        JSON.stringify({
+          slug: buildCtx.integrationSlug,
+          featureType: buildCtx.featureType,
+          error: conversation.error?.slice(0, 200),
+          diagnostics,
+        }),
+      );
       return {
         ok: false,
         errorClass: "conversation-error",
