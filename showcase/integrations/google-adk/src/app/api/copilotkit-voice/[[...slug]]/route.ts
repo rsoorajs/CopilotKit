@@ -42,7 +42,7 @@ class GuardedOpenAITranscriptionService extends TranscriptionService {
     if (!this.delegate) {
       throw new Error(
         "OPENAI_API_KEY not configured for this deployment (api key missing). " +
-          "Set OPENAI_API_KEY to enable voice transcription.",
+          "Set OPENAI_API_KEY to enable voice transcription."
       );
     }
     return this.delegate.transcribeFile(options);
