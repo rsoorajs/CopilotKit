@@ -6,12 +6,15 @@ import {
   buildTurns,
   buildAuthAssertion,
   SIGN_OUT_BUTTON_SELECTOR,
+  AUTH_BANNER_UNAUTHENTICATED_SELECTOR,
   ERROR_BANNER_SELECTOR,
   ERROR_BOUNDARY_SELECTOR,
 } from "./d5-auth.js";
 
 interface FakeOpts {
   signOutButtonVisible?: boolean;
+  /** Whether the banner flips to unauthenticated after sign-out. Default true. */
+  bannerFlipsToUnauth?: boolean;
   errorAfterClick?: boolean;
 }
 
@@ -23,9 +26,20 @@ function makePage(opts: FakeOpts): {
 } {
   let clicked = false;
   const page: Page = {
-    async waitForSelector() {
-      if (!opts.signOutButtonVisible) {
-        throw new Error("waitForSelector timeout (test fake)");
+    async waitForSelector(selector: string) {
+      // Sign-out button selector — gates on signOutButtonVisible
+      if (selector === SIGN_OUT_BUTTON_SELECTOR) {
+        if (!opts.signOutButtonVisible) {
+          throw new Error("waitForSelector timeout (test fake)");
+        }
+        return;
+      }
+      // Auth banner unauthenticated selector — gates on bannerFlipsToUnauth
+      if (selector === AUTH_BANNER_UNAUTHENTICATED_SELECTOR) {
+        if (!(opts.bannerFlipsToUnauth ?? true)) {
+          throw new Error("waitForSelector timeout (banner never flipped)");
+        }
+        return;
       }
     },
     async fill() {},
@@ -59,9 +73,12 @@ describe("d5-auth script", () => {
     expect(buildTurns(ctx)[0]!.input).toBe("auth check turn 1");
   });
 
-  it("exposes the sign-out + error selectors", () => {
+  it("exposes the sign-out, banner, and error selectors", () => {
     expect(SIGN_OUT_BUTTON_SELECTOR).toBe(
       '[data-testid="auth-sign-out-button"]',
+    );
+    expect(AUTH_BANNER_UNAUTHENTICATED_SELECTOR).toBe(
+      '[data-testid="auth-banner"][data-authenticated="false"]',
     );
     expect(ERROR_BANNER_SELECTOR).toBe('[data-testid="auth-demo-error"]');
     expect(ERROR_BOUNDARY_SELECTOR).toBe(
@@ -77,6 +94,20 @@ describe("d5-auth script", () => {
     });
     await expect(assertion(page)).rejects.toThrow(
       /sign-out button.*not visible/,
+    );
+  });
+
+  it("assertion fails when banner does not flip to unauthenticated after sign-out", async () => {
+    const { page, fakeClick } = makePage({
+      signOutButtonVisible: true,
+      bannerFlipsToUnauth: false,
+    });
+    const assertion = buildAuthAssertion({
+      signOutTimeoutMs: 50,
+      click: fakeClick,
+    });
+    await expect(assertion(page)).rejects.toThrow(
+      /banner did not flip to unauthenticated/,
     );
   });
 
