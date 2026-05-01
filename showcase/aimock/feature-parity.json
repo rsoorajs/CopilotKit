@@ -653,6 +653,30 @@
     },
     {
       "match": {
+        "userMessage": "Please book an intro call with the sales team to discuss pricing.",
+        "hasToolResult": false
+      },
+      "response": {
+        "toolCalls": [
+          {
+            "id": "call_hitl_book_intro_sales_001",
+            "name": "book_call",
+            "arguments": "{\"topic\":\"Intro call — discuss pricing\",\"attendee\":\"Sales team\"}"
+          }
+        ]
+      }
+    },
+    {
+      "match": {
+        "userMessage": "Please book an intro call with the sales team to discuss pricing.",
+        "hasToolResult": true
+      },
+      "response": {
+        "content": "Booked the intro call with the sales team for the time you selected — calendar invite is on its way."
+      }
+    },
+    {
+      "match": {
         "userMessage": "Schedule a 1:1 with Alice next week to review Q2 goals.",
         "hasToolResult": false
       },

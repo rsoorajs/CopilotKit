@@ -64,4 +64,37 @@ test.describe("HITL in chat — booking flow", () => {
         .first(),
     ).toBeVisible({ timeout: 30000 });
   });
+
+  // The other suggestion in the demo. Same HITL flow, different
+  // attendee/topic. Pinned here so a missing/regressed aimock fixture for
+  // this suggestion (or a wiring regression in this integration's
+  // useHumanInTheLoop binding) fails CI loudly instead of silently falling
+  // through to "the agent rambled at me with no toolCall."
+  test("'Book a call with sales' suggestion runs the HITL flow end-to-end", async ({
+    page,
+  }) => {
+    const input = page.getByPlaceholder("Type a message");
+    await input.fill(
+      "Please book an intro call with the sales team to discuss pricing.",
+    );
+    await input.press("Enter");
+
+    const card = page.locator('[data-testid="time-picker-card"]');
+    await expect(card).toBeVisible({ timeout: 60000 });
+    await expect(card.getByText(/Sales team/i)).toBeVisible();
+
+    const slot = page.locator('[data-testid="time-picker-slot"]').first();
+    await slot.click();
+
+    await expect(
+      page.locator('[data-testid="time-picker-picked"]'),
+    ).toBeVisible({ timeout: 10000 });
+
+    await expect(
+      page
+        .locator('[data-role="assistant"]')
+        .filter({ hasText: /Booked.*sales team/i })
+        .first(),
+    ).toBeVisible({ timeout: 30000 });
+  });
 });
