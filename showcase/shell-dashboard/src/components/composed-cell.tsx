@@ -179,8 +179,8 @@ function ComposedCellInner({ ctx, overlays, catalogCell }: ComposedCellProps) {
   // Without this, docs-only rows render as empty cells under the
   // default overlay set (links + health) which has no docs toggle.
   if (isDocsOnly) {
-    const anyContentOverlay = hasLinks || hasDepth || hasHealth || hasDocs;
-    if (!anyContentOverlay) {
+    const hasDocsOnlyContent = hasLinks || hasDocs;
+    if (!hasDocsOnlyContent) {
       return <div data-testid="composed-cell-empty" />;
     }
     return (
@@ -189,7 +189,7 @@ function ComposedCellInner({ ctx, overlays, catalogCell }: ComposedCellProps) {
         className="flex flex-col items-center gap-0.5 text-[11px] opacity-60"
       >
         {hasLinks && <LinksLayer ctx={ctx} />}
-        <DocsLayer ctx={ctx} />
+        {hasDocs && <DocsLayer ctx={ctx} />}
       </div>
     );
   }
