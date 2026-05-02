@@ -120,6 +120,31 @@ Rate limit: 5 minutes per probe ID.
 
 When `package.json` changes (new deps, version bumps), volume mounts don't cover `node_modules`. You MUST rebuild the Docker image: `bin/showcase rebuild <slug>`, then re-test. A passing `bin/showcase test` against a volume-mounted container does NOT validate the build.
 
+## Isolated Test Runs (`--isolate`)
+
+Use `--isolate` when another agent or terminal session is already running showcase locally. It prevents port collisions and container name conflicts by scoping everything into a temporary overlay.
+
+```
+bin/showcase test <slug> --d5 --isolate
+```
+
+### Operational notes
+
+- **Required when sharing a machine**: If any other session has `showcase up` running, use `--isolate` to avoid stomping on its containers and ports.
+- **Parallel runs supported**: Up to 46 concurrent `--isolate` runs. Each gets a unique port range (slot 0 = +200, slot 1 = +400, ...) and a scoped docker compose project name.
+- **Originals are never modified**: The flag writes temp copies of `docker-compose.local.yml` and `shared/local-ports.json` to `$TMPDIR/showcase-isolate-$$/`. If the process crashes, originals are untouched.
+- **Cleanup is automatic**: The temp directory and slot are released on exit (via `trap EXIT`). If a run was killed with `SIGKILL`, clean up manually:
+
+  ```sh
+  # Remove orphaned containers from a specific isolated run:
+  docker compose --project-name <name> down
+
+  # Clear all stale slot reservations:
+  rm -rf /tmp/showcase-isolate-slots/*
+  ```
+
+- **Stale `.iso-bak` files**: If you see `docker-compose.local.yml.iso-bak` or `local-ports.json.iso-bak`, those are leftovers from the old (pre-PR#4570) isolate behavior. The new code auto-restores them on startup, but you can also clean up manually with `git checkout` on the affected files.
+
 ## Anti-Patterns
 
 Earned by bugs. Do not repeat.
