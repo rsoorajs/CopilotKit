@@ -276,6 +276,39 @@ showcase diff-logs aimock --since last-test --grep "fixture"
 
 This filters out all log output from before your test started, showing only what happened during the test run itself.
 
+## Isolated Test Runs (`--isolate`)
+
+The `--isolate` flag on `showcase test` lets you run tests without interfering with an already-running local stack (or other isolated runs). It works by creating temporary overlay files rather than mutating originals in place.
+
+### How it works
+
+1. **Temp overlay directory**: `apply_isolation` copies `docker-compose.local.yml` and `shared/local-ports.json` to `$TMPDIR/showcase-isolate-$$/`. The originals are never touched. Shell variables (`COMPOSE_FILE`, `COMPOSE_CMD`, `PORTS_FILE`) and the `LOCAL_PORTS_FILE` env var passed to the TS harness all point at the temp copies.
+
+2. **Slot-based port allocation**: Concurrent `--isolate` runs acquire unique port ranges via atomic `mkdir /tmp/showcase-isolate-slots/N`. Slot 0 adds a +200 offset to all ports, slot 1 adds +400, slot 2 adds +600, etc. Up to 46 concurrent isolated runs are supported. Each slot directory contains a `pid` file for stale-slot detection.
+
+3. **Project name scoping**: Each isolated run passes `--project-name <name>` to docker compose, so containers, networks, and volumes are fully namespaced. No collision with the base `showcase` project or other isolated runs.
+
+4. **Cleanup**: `restore_isolation` removes the temp directory and releases the slot. It is registered via `trap EXIT` before any mutation occurs, so cleanup runs even on crashes or `Ctrl-C`.
+
+### Parallel runs are safe
+
+Multiple agents or terminal sessions can each run `showcase test <slug> --isolate` simultaneously. Each gets its own port range and project namespace. No coordination is needed beyond the atomic slot allocation.
+
+### Troubleshooting
+
+- **Wrong ports / stale compose state**: If you see `.iso-bak` files next to `docker-compose.local.yml` or `shared/local-ports.json`, those are leftovers from the OLD isolate behavior (which mutated files in place). Remove them and restore originals:
+
+  ```sh
+  git checkout showcase/docker-compose.local.yml showcase/shared/local-ports.json
+  rm -f showcase/docker-compose.local.yml.iso-bak showcase/shared/local-ports.json.iso-bak
+  ```
+
+  The new isolate behavior auto-detects and cleans up these stale backups on startup, but a manual restore is the safest fix if things look wrong.
+
+- **Temp files**: Overlay directories live at `$TMPDIR/showcase-isolate-*/`. They are cleaned up on normal exit; if a run was killed with `SIGKILL`, the directory may linger. Safe to remove manually.
+
+- **Slot directories**: Located at `/tmp/showcase-isolate-slots/`. Each numbered subdirectory is a claimed slot. If slots accumulate from killed processes, clean them with `rm -rf /tmp/showcase-isolate-slots/*`.
+
 ## Environment Variables
 
 | Variable            | Purpose                                                                            | Default                                                                         |
