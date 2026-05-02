@@ -68,6 +68,7 @@ vi.mock("@/components/depth-utils", async () => {
     ...actual,
     deriveDepth: vi.fn(() => ({
       achieved: 2,
+      maxPossible: 4,
       isRegression: false,
       unsupported: false,
     })),
@@ -248,10 +249,10 @@ describe("ComposedCell", () => {
     ).toBeTruthy();
   });
 
-  it("renders 3 layers when all active — docs deduped by health", () => {
+  it("renders 4 layers when all content overlays active", () => {
     const ctx = makeCtx();
     const catalogCell = makeCatalogCell();
-    const { getByText, getByTestId, queryByTestId } = render(
+    const { getByText, getByTestId } = render(
       <ComposedCell
         ctx={ctx}
         overlays={overlaySet("links", "depth", "health", "docs", "parity")}
@@ -262,12 +263,12 @@ describe("ComposedCell", () => {
     expect(getByText("Demo")).toBeInTheDocument();
     expect(getByTestId("depth-layer")).toBeInTheDocument();
     expect(getByTestId("health-layer")).toBeInTheDocument();
-    // DocsLayer suppressed when health is active (CellStatus already includes docs)
-    expect(queryByTestId("docs-layer")).toBeNull();
+    // DocsLayer renders independently — health and docs are separate layers
+    expect(getByTestId("docs-layer")).toBeInTheDocument();
 
     const composedCell = getByTestId("composed-cell");
     const children = Array.from(composedCell.children);
-    expect(children.length).toBe(3);
+    expect(children.length).toBe(4); // links, depth, health, docs (parity adds no content)
   });
 
   it("applies opacity-60 for testing-kind features", () => {
@@ -345,9 +346,12 @@ describe("ComposedCell", () => {
       });
     }
 
-    it("renders only docs layer even when all overlays active", () => {
+    // Updated: docs-only features now render LinksLayer when "links" is
+    // active (showing Demo/Code links) plus DocsLayer when "docs" is active.
+    // Depth and health layers are suppressed for docs-only features.
+    it("renders links + docs layers when all overlays active (no depth/health)", () => {
       const ctx = docsOnlyCtx();
-      const { getByTestId, queryByText, queryByTestId } = render(
+      const { getByTestId, getByText, queryByTestId } = render(
         <ComposedCell
           ctx={ctx}
           overlays={overlaySet("links", "depth", "health", "docs")}
@@ -355,23 +359,24 @@ describe("ComposedCell", () => {
         />,
       );
 
-      // Only docs layer present
+      // Links and docs layers present for docs-only features
+      expect(getByText("Demo")).toBeInTheDocument();
       expect(getByTestId("docs-layer")).toBeInTheDocument();
-      // No other layers
-      expect(queryByText("Demo")).not.toBeInTheDocument();
+      // Depth and health layers suppressed for docs-only kind
       expect(queryByTestId("depth-layer")).not.toBeInTheDocument();
       expect(queryByTestId("health-layer")).not.toBeInTheDocument();
     });
 
-    it("renders docs layer when any content overlay is active (not just docs)", () => {
+    // Updated: with only links + health active, docs-only features show
+    // LinksLayer (their fallback content) — not DocsLayer.
+    it("renders links layer when links overlay is active (not just docs)", () => {
       const ctx = docsOnlyCtx();
-      const { getByTestId } = render(
+      const { getByTestId, getByText } = render(
         <ComposedCell ctx={ctx} overlays={overlaySet("links", "health")} />,
       );
 
-      // Docs-only features always show their docs row when any content
-      // overlay is active — docs are their only content.
-      expect(getByTestId("docs-layer")).toBeInTheDocument();
+      // Docs-only features show links content when "links" overlay active
+      expect(getByText("Demo")).toBeInTheDocument();
       expect(getByTestId("composed-cell")).toBeInTheDocument();
     });
 

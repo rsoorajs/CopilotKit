@@ -145,7 +145,7 @@ function CategorySection({
               const cell = cellIndex.get(`${int.slug}/${feature.id}`);
               const depth: DepthResult = cell
                 ? deriveDepth(cell, liveStatus)
-                : { achieved: 0, isRegression: false, unsupported: false };
+                : { achieved: 0, maxPossible: 0, isRegression: false, unsupported: false };
               const cellStatus = depth.unsupported
                 ? "unsupported"
                 : (cell?.status ?? "unshipped");

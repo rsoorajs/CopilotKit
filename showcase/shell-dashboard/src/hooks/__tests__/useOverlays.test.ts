@@ -24,15 +24,21 @@ beforeEach(() => {
     },
   });
 
-  // Stub history.replaceState so writeHash updates our hashValue variable.
-  vi.spyOn(window.history, "replaceState").mockImplementation(
-    (_data: unknown, _title: string, url?: string | URL | null) => {
-      if (typeof url === "string") {
-        const hashIdx = url.indexOf("#");
-        hashValue = hashIdx >= 0 ? url.slice(hashIdx) : "";
-      }
-    },
-  );
+  // Stub history.replaceState and pushState so writeHash updates our hashValue variable.
+  // Updated: writeHash now uses pushState (push=true) for user interactions
+  // and replaceState (push=false) for initial mount sync. Both need stubbing.
+  const historyHandler = (
+    _data: unknown,
+    _title: string,
+    url?: string | URL | null,
+  ) => {
+    if (typeof url === "string") {
+      const hashIdx = url.indexOf("#");
+      hashValue = hashIdx >= 0 ? url.slice(hashIdx) : "";
+    }
+  };
+  vi.spyOn(window.history, "replaceState").mockImplementation(historyHandler);
+  vi.spyOn(window.history, "pushState").mockImplementation(historyHandler);
 
   // Stub localStorage
   vi.stubGlobal("localStorage", {

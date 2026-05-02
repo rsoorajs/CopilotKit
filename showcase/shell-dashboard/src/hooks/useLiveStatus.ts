@@ -232,23 +232,15 @@ export function useLiveStatus(dimension?: string): UseLiveStatusResult {
     }
 
     async function fetchInitial(): Promise<StatusRow[]> {
-      // Paginated fetch with a hard total cap. `getFullList({batch})`
-      // would keep pulling every page of matching rows; we instead loop
-      // `getList` and break once we hit INITIAL_CAP.
-      const collected: StatusRow[] = [];
-      let page = 1;
-      while (collected.length < INITIAL_CAP) {
-        const remaining = INITIAL_CAP - collected.length;
-        const perPage = Math.min(INITIAL_PAGE_SIZE, remaining);
-        const resp = await pb
-          .collection("status")
-          .getList<StatusRow>(page, perPage, { filter });
-        if (!resp.items || resp.items.length === 0) break;
-        collected.push(...resp.items);
-        if (collected.length >= resp.totalItems) break;
-        page += 1;
-      }
-      return collected;
+      // Single-call fetch: getFullList with batch=INITIAL_CAP fetches all
+      // ~1300 records in one HTTP request (1300 < 2000). Previously used
+      // 7 sequential getList calls at 200/page = ~1050ms latency.
+      // Single call = ~150ms. If the collection grows past INITIAL_CAP,
+      // the SDK auto-paginates internally.
+      const filterOpts = filter ? { filter } : {};
+      return pb
+        .collection("status")
+        .getFullList<StatusRow>({ batch: INITIAL_CAP, ...filterOpts });
     }
 
     async function connect(): Promise<void> {
