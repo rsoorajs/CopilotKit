@@ -241,17 +241,33 @@ describe("CopilotKitCore.registerProxiedAgent — isolation", () => {
     expect(core.getAgent("chat-1")).toBe(agent);
   });
 
-  it("registering before runtime connects yields a proxy in pending runtimeMode", () => {
-    // Disconnected core (no runtime URL set) — proxy still mints, but in a
-    // mode that doesn't try to call out before /info has been resolved.
+  it("registering on a core with no runtime URL still yields a queryable proxy", () => {
+    // The proxy is in-memory only — it can't actually run requests, but
+    // it is registered, returned by getAgent, and ready for the runtime
+    // to connect later.
     const offlineCore = new CopilotKitCore({});
     const { agent } = offlineCore.registerProxiedAgent({
       agentId: "chat-1",
       remoteAgentId: "default",
     });
     expect(agent).toBeInstanceOf(ProxiedCopilotRuntimeAgent);
-    // The proxy is registered and queryable even with no runtime URL.
     expect(offlineCore.getAgent("chat-1")).toBe(agent);
+  });
+
+  it("registering while the runtime is still connecting mints the proxy in 'pending' runtimeMode", () => {
+    // With runtimeUrl set but `/info` not yet resolved, the agent-registry
+    // mints proxies with runtimeMode='pending' so the proxy doesn't try
+    // to call out with stale-or-missing mode/intelligence info.
+    const connectingCore = new CopilotKitCore({
+      runtimeUrl: "http://localhost:4000",
+    });
+    const { agent } = connectingCore.registerProxiedAgent({
+      agentId: "chat-1",
+      remoteAgentId: "default",
+    });
+    // `runtimeMode` is private — peek through unknown for this assertion.
+    const mode = (agent as unknown as { runtimeMode: string }).runtimeMode;
+    expect(mode).toBe("pending");
   });
 
   it("a proxy registered with a remote id that doesn't (yet) exist on the runtime is still usable for in-memory ops", () => {

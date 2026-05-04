@@ -406,7 +406,7 @@ export class RunHandler {
       return await this.runAgent({ agent });
     }
 
-    void this._internal.suggestionEngine.reloadSuggestions(agentId, agent);
+    void this._internal.suggestionEngine.reloadSuggestions(agentId);
 
     return runAgentResult;
   }

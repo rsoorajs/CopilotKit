@@ -205,7 +205,10 @@ export class AgentRegistry {
     agentId,
     remoteAgentId,
   }: CopilotKitCoreRegisterProxiedAgentParams): CopilotKitCoreRegisterProxiedAgentResult {
-    if (agentId in this._agents) {
+    // Use hasOwnProperty rather than `in`: `in` walks the prototype chain,
+    // so an agentId of "__proto__", "constructor", "toString" etc. would
+    // falsely test as already-registered.
+    if (Object.prototype.hasOwnProperty.call(this._agents, agentId)) {
       throw new Error(
         `CopilotKitCore.registerProxiedAgent: agentId "${agentId}" is already registered. ` +
           `Pick a different agentId, or unregister the existing agent first.`,

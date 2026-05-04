@@ -309,14 +309,18 @@ describe("CopilotChat activity message rendering", () => {
     // Regression: the renderer's `agent` prop must come from
     // `copilotkit.getAgent(config.agentId)` — the local registry id from
     // CopilotChatConfigurationProvider — not from any other agent in the
-    // registry (e.g. the runtime-side id a proxy might route to).
+    // registry (e.g. a sibling chat's agent).
     //
-    // Pre-#3525 → #3630 cycle, this manifested as a clone-vs-registry split.
-    // In the explicit-registration model the trap is different: a refactor
-    // could accidentally key on a proxy's `remoteAgentId` instead of its
-    // local `agentId`. This test pins the local-id contract by mounting two
-    // distinct mock agents and asserting the renderer receives the one that
-    // matches `config.agentId`.
+    // The trap this catches is a refactor where the renderer pipeline keys
+    // on something other than `config.agentId` (e.g. for proxied
+    // registrations, accidentally keying on `proxy.remoteAgentId`). The
+    // assertion shape — "two agents in the registry, the renderer must
+    // receive the one matching config.agentId" — is generic to that bug
+    // class. The proxy-routing-specific behavior (registering a
+    // ProxiedCopilotRuntimeAgent with `remoteAgentId !== agentId` and
+    // verifying `getAgent(agentId)` returns the proxy, not the agent at
+    // remoteAgentId) is covered by `core-register-proxied-agent.test.ts`
+    // at the registry level.
     const localAgent = new MockStepwiseAgent();
     localAgent.agentId = "chat-1";
     const otherAgent = new MockStepwiseAgent();

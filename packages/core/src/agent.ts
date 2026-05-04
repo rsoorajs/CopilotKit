@@ -95,7 +95,11 @@ export interface ProxiedCopilotRuntimeAgentConfig extends Omit<
 export class ProxiedCopilotRuntimeAgent extends HttpAgent {
   runtimeUrl?: string;
   credentials?: RequestCredentials;
-  remoteAgentId?: string;
+  // `readonly` because `super.url` is baked at construction; mutating
+  // `remoteAgentId` post-construction would desync the REST `run` URL
+  // (already captured) from `routedAgentId()` (consulted per-call by
+  // stop/connect/single-route paths).
+  readonly remoteAgentId?: string;
   private transport: CopilotRuntimeTransport;
   private singleEndpointUrl?: string;
   private runtimeMode: ResolvedRuntimeMode;
@@ -142,11 +146,22 @@ export class ProxiedCopilotRuntimeAgent extends HttpAgent {
 
   /**
    * The agent id used for outbound runtime requests — `remoteAgentId` when
-   * set (manually-registered proxy), otherwise `agentId` (registry id matches
-   * runtime id). Subscriber bookkeeping keeps using `agentId` directly.
+   * set (manually-registered proxy), otherwise `agentId` (registry id
+   * matches runtime id). Subscriber bookkeeping keeps using `agentId`
+   * directly.
+   *
+   * Throws when both are unset: a proxy reaching an HTTP path with no
+   * routable id is a bug, and a missing id would otherwise produce a
+   * malformed `/agent//run` or `/agent/undefined/connect` URL silently.
    */
-  private routedAgentId(): string | undefined {
-    return this.remoteAgentId ?? this.agentId;
+  private routedAgentId(): string {
+    const id = this.remoteAgentId ?? this.agentId;
+    if (!id) {
+      throw new Error(
+        "ProxiedCopilotRuntimeAgent: cannot make a runtime request without an agentId or remoteAgentId.",
+      );
+    }
+    return id;
   }
 
   get capabilities(): AgentCapabilities | undefined {
@@ -350,7 +365,7 @@ export class ProxiedCopilotRuntimeAgent extends HttpAgent {
         input,
         "agent/connect",
         {
-          agentId: routedId!,
+          agentId: routedId,
         },
       );
       const httpEvents = runHttpRequest(this.singleEndpointUrl, requestInit);
@@ -380,7 +395,7 @@ export class ProxiedCopilotRuntimeAgent extends HttpAgent {
         input,
         "agent/run",
         {
-          agentId: this.routedAgentId()!,
+          agentId: this.routedAgentId(),
         },
       );
       const httpEvents = runHttpRequest(this.singleEndpointUrl, requestInit);

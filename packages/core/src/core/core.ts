@@ -414,6 +414,19 @@ export class CopilotKitCore {
             this.threadStoreRegistry.unregister(agentId);
           }
         }
+
+        // Symmetric cleanup for state-manager subscriptions: any agentId
+        // that disappeared from the registry (e.g. via `unregister()` from
+        // a registerProxiedAgent caller) should release its StateManager
+        // subscription. Without this, the subscription leaks — events from
+        // a still-running observable on the removed agent would continue
+        // to populate stateByRun/messageToRun for the dead id.
+        for (const agentId of this.previousAgentIds) {
+          if (!currentAgentIds.has(agentId)) {
+            this.stateManager.unsubscribeFromAgent(agentId);
+          }
+        }
+
         this.previousAgentIds = currentAgentIds;
       },
     });
