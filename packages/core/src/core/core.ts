@@ -185,16 +185,6 @@ export interface CopilotKitCoreSubscriber {
     agentId: string;
     prevStore: ɵThreadStore;
   }) => void | Promise<void>;
-  /**
-   * Fired immediately before each agent run, including per-thread clones that
-   * are not in the agent registry and therefore not surfaced via onAgentsChanged.
-   * Subscribers that track agent events (e.g. the web inspector) can use this
-   * to subscribe to the concrete agent instance that will emit events.
-   */
-  onAgentRunStarted?: (event: {
-    copilotkit: CopilotKitCore;
-    agent: AbstractAgent;
-  }) => void | Promise<void>;
 }
 
 // Subscription object returned by subscribe() and subscribeToAgentWithOptions()
@@ -322,12 +312,6 @@ export interface CopilotKitCoreFriendsAccess {
    */
   waitForPendingFrameworkUpdates(): Promise<void>;
 
-  /**
-   * Subscribe the state manager to an agent (including per-thread clones).
-   * Called by RunHandler before executing an agent so that events from
-   * clones are tracked in stateByRun/messageToRun.
-   */
-  subscribeAgentToStateManager(agent: AbstractAgent): void;
 }
 
 export class CopilotKitCore {
@@ -1007,12 +991,6 @@ export class CopilotKitCore {
 
   getRunIdsForThread(agentId: string, threadId: string): string[] {
     return this.stateManager.getRunIdsForThread(agentId, threadId);
-  }
-
-  subscribeAgentToStateManager(agent: AbstractAgent): void {
-    // isClone: true — use composite agentId:threadId key, keeping the clone's
-    // subscription independent of the registry agent's bare-agentId subscription.
-    this.stateManager.subscribeToAgent(agent, { isClone: true });
   }
 
   /**
