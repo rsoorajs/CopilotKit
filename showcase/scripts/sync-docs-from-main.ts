@@ -54,6 +54,17 @@ const LANGCHAIN_EXCLUSIONS = [
  * `telemetry/` content across every framework; shell-docs owns the
  * canonical copy at root `(other)/`.
  *
+ * The `/learn/` tree is retired in shell-docs (PRs #4494/#4496 promoted
+ * the seven explanation pages into Concepts/Premium and the multi-
+ * conversation tutorial into /tutorials/). All `/learn/*` URLs are
+ * served via redirects in `next.config.ts`, and the physical files
+ * must NOT be re-introduced by the sync script.
+ *
+ * The root `ag-ui-middleware.mdx` was moved to
+ * `agentic-protocols/ag-ui-middleware.mdx` in PR #4496 (with a 302
+ * redirect). The root path stays excluded so future syncs don't restore
+ * the duplicate.
+ *
  * Upstream keeps all of these copies — removing them there means touching
  * every parallel framework tree, which is upstream-IA work outside this
  * branch's scope. The exclusion is the durable shell-docs-only fix.
@@ -62,6 +73,24 @@ const PATH_EXCLUSIONS: RegExp[] = [
   /^docs\/content\/docs\/integrations\/[^/]+\/\(other\)\//,
   /^docs\/content\/docs\/integrations\/[^/]+\/threads\.mdx$/,
   /^docs\/content\/docs\/integrations\/[^/]+\/premium\/self-hosting\.mdx$/,
+  /^docs\/content\/docs\/learn\//,
+  /^docs\/content\/docs\/\(root\)\/ag-ui-middleware\.mdx$/,
+  // PR #4494 dropped these stale workflow-execution / state-inputs-outputs
+  // duplicates from shell-docs. Each shared-state meta.json wires only one
+  // of the two files; the other was an orphan. Block the sync from
+  // restoring them.
+  /^docs\/content\/docs\/integrations\/langgraph\/shared-state\/workflow-execution\.mdx$/,
+  /^docs\/content\/docs\/integrations\/adk\/shared-state\/(workflow-execution|state-inputs-outputs)\.mdx$/,
+  /^docs\/content\/docs\/integrations\/llamaindex\/shared-state\/state-inputs-outputs\.mdx$/,
+  // AgentCore content was inlined into the canonical
+  // `deploy/agentcore.mdx` page (see PR #4514 follow-up). Block the
+  // upstream 3-shell + shared-snippet sources from re-flowing in:
+  // - the upstream root shell that delegates to `<Content />`
+  // - the per-framework shells that delegate to `<Content framework="..." />`
+  // - the 355-line shared snippet that powers them
+  /^docs\/content\/docs\/\(root\)\/deploy\/agentcore\.mdx$/,
+  /^docs\/content\/docs\/integrations\/[^/]+\/deploy-agentcore\.mdx$/,
+  /^docs\/snippets\/integrations\/agentcore\//,
 ];
 
 function isExcludedPath(relPath: string): boolean {
