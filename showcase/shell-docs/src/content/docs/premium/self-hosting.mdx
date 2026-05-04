@@ -20,7 +20,7 @@ If none of these apply, use [Copilot Cloud](https://cloud.copilotkit.ai) — it 
 
 ## Prerequisites
 
-Before starting, make sure the following are in place. The [How the Intelligence Platform Works](/premium/intelligence-platform) page explains the layering in more depth.
+Before starting, make sure the following are in place. The [How the Intelligence Platform Works](/learn/intelligence-platform) page explains the layering in more depth.
 
 **License and registry access:**
 
@@ -192,19 +192,6 @@ Before starting, make sure the following are in place. The [How the Intelligence
   </Step>
 
   <Step>
-    ### (Optional) Enable schema migrations
-
-    The chart can run database schema migrations as a pre-install `Job`. This is **disabled by default** (`migrations.enabled: false`). If you want the chart to apply migrations for you on install, set the following in `my-values.yaml`:
-
-    ```yaml title="my-values.yaml"
-    migrations:
-      enabled: true
-    ```
-
-    With this enabled, `helm install` blocks the rollout until the migrations Job reports `Completed`. Leave it disabled if you manage schema migrations out-of-band (for example, via your existing CI/CD or DBA pipeline).
-  </Step>
-
-  <Step>
     ### Install the chart
 
     ```bash title="Terminal"
@@ -216,7 +203,7 @@ Before starting, make sure the following are in place. The [How the Intelligence
       --timeout 10m
     ```
 
-    `--wait` blocks until the `Deployments` report healthy replicas; `--timeout 10m` allows enough time for image pulls and (if you enabled it in the previous step) the initial database migration job.
+    `--wait` blocks until the `Deployments` report healthy replicas; `--timeout 10m` allows enough time for image pulls and the initial database migration job.
   </Step>
 
   <Step>
@@ -229,7 +216,7 @@ Before starting, make sure the following are in place. The [How the Intelligence
     kubectl get ingress -n copilot-intelligence
     ```
 
-    You should see `app-api`, `app-frontend`, and — if enabled — `realtime-gateway` pods running. If you opted into migrations (`migrations.enabled: true`, see the values step above), the migrations `Job` will also appear as `Completed`; if you left migrations disabled, no Job is created.
+    You should see `app-api`, `app-frontend`, and — if enabled — `realtime-gateway` pods running. The migrations `Job` will appear as `Completed`.
 
     Confirm the API health check reports `ok`:
 
@@ -387,6 +374,6 @@ Per-service keys `podDisruptionBudget`, `podAntiAffinity`, and `networkPolicy` a
 
 ## Next steps
 
-- **Understand how it works:** [How the Intelligence Platform Works](/premium/intelligence-platform) — architecture, multi-tenancy model, platform layering, and the decision between hosted and self-hosted
+- **Understand how it works:** [How the Intelligence Platform Works](/learn/intelligence-platform) — architecture, multi-tenancy model, platform layering, and the decision between hosted and self-hosted
 - **Premium features overview:** [CopilotKit Premium](/premium/overview) — all premium capabilities that require an Intelligence license
 - **Use threads in your app:** [Threads](/threads) — the persistent-conversation surface powered by the Intelligence Platform you just deployed
