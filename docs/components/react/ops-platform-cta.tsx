@@ -2,7 +2,6 @@
 
 import { ArrowRight, Info, Sparkles } from "lucide-react";
 import posthog from "posthog-js";
-import { usePathname } from "next/navigation";
 import { useCallback } from "react";
 
 const DEFAULT_SIGNUP_URL = "https://dashboard.operations.copilotkit.ai/";
@@ -44,20 +43,13 @@ export function OpsPlatformCTA({
   ctaLabel = "Get Intelligence free",
   className,
 }: OpsPlatformCTAProps) {
-  const pathname = usePathname();
-
   const handleClick = useCallback(() => {
     try {
-      posthog.capture("cta_clicked", {
-        surface,
-        variant,
-        target: "intelligence",
-        page_path: pathname,
-      });
+      posthog.capture("try_for_free_clicked", { location: surface });
     } catch {
       // PostHog may be blocked by ad blockers — never let analytics block navigation.
     }
-  }, [surface, variant, pathname]);
+  }, [surface]);
 
   const href = buildHref(surface);
 

@@ -19,7 +19,6 @@ import DiscordIcon from "@/components/ui/icons/discord";
 import ExternalLinkIcon from "@/components/ui/icons/external-link";
 import BurgerMenuIcon from "@/components/ui/icons/burger-menu";
 import { BookOpenIcon, ScrollTextIcon } from "lucide-react";
-import posthog from "posthog-js";
 
 export interface NavbarLink {
   href: string;
@@ -130,17 +129,8 @@ const Navbar = ({ pageTree }: NavbarProps) => {
     };
   }, [isMobileSidebarOpen]);
 
-  const handleIntelligenceCtaClick = (surface: string) => {
-    try {
-      posthog.capture("cta_clicked", {
-        surface,
-        variant: "navbar",
-        target: "intelligence",
-        page_path: pathname,
-      });
-    } catch {
-      // PostHog may be blocked — never let analytics block navigation.
-    }
+  const handleTryForFreeClick = (location: string) => {
+    posthog?.capture("try_for_free_clicked", { location });
   };
 
   const handleToggleTheme = () => {
@@ -191,7 +181,7 @@ const Navbar = ({ pageTree }: NavbarProps) => {
                       onClick={
                         link.label === "Free Developer Access"
                           ? () =>
-                              handleIntelligenceCtaClick("docs:navbar:left")
+                              handleTryForFreeClick("docs_navbar_left")
                           : undefined
                       }
                       className={`h-full ${
@@ -286,7 +276,7 @@ const Navbar = ({ pageTree }: NavbarProps) => {
                   target={link.target}
                   onClick={
                     link.label === "Free Developer Access"
-                      ? () => handleIntelligenceCtaClick("docs:navbar:right")
+                      ? () => handleTryForFreeClick("docs_navbar_right")
                       : undefined
                   }
                   className={`${isIconOnlyLink ? "[@media(width>=1028px)]:hidden [@media(width<768px)]:hidden" : "hidden"} justify-center items-center w-11 h-full md:flex`}
