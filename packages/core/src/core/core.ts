@@ -319,7 +319,6 @@ export interface CopilotKitCoreFriendsAccess {
    * See CopilotKitCore.waitForPendingFrameworkUpdates for details.
    */
   waitForPendingFrameworkUpdates(): Promise<void>;
-
 }
 
 export class CopilotKitCore {

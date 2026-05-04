@@ -224,10 +224,10 @@ export class AgentRegistry {
       // the proxy doesn't have to re-resolve. Otherwise stay "pending" until
       // /info lands.
       runtimeMode: this._runtimeUrl
-        ? (this._runtimeConnectionStatus ===
+        ? this._runtimeConnectionStatus ===
           CopilotKitCoreRuntimeConnectionStatus.Connected
-            ? this._runtimeMode
-            : "pending")
+          ? this._runtimeMode
+          : "pending"
         : RUNTIME_MODE_SSE,
       intelligence: this._intelligence,
       debug: debug ? resolveDebugConfig(debug) : undefined,

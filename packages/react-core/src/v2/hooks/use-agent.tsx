@@ -48,11 +48,7 @@ export interface UseAgentProps {
   throttleMs?: number;
 }
 
-export function useAgent({
-  agentId,
-  updates,
-  throttleMs,
-}: UseAgentProps = {}) {
+export function useAgent({ agentId, updates, throttleMs }: UseAgentProps = {}) {
   agentId ??= DEFAULT_AGENT_ID;
 
   const { copilotkit } = useCopilotKit();
