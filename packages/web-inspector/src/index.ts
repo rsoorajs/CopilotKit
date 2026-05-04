@@ -7813,36 +7813,36 @@ ${prettyEvent}</pre
       const encoded = this.encodeBase64(code);
       return `<div class="announcement-code"><pre><code${langClass}>${escaped}</code></pre><div class="announcement-code__copy-shield"><button type="button" class="announcement-code__copy" data-copy="${encoded}" aria-label="Copy code">Copy</button></div></div>`;
     };
-    return marked.parse(markdown, { renderer });
+    return marked.parse(markdown, { renderer, async: false });
   }
 
+  private copyResetTimeout: number | null = null;
+
   private encodeBase64(value: string): string {
-    if (typeof window !== "undefined" && typeof window.btoa === "function") {
-      // Encode UTF-8 safely before btoa
-      const utf8 = unescape(encodeURIComponent(value));
-      return window.btoa(utf8);
+    if (typeof window === "undefined" || typeof window.btoa !== "function") {
+      return "";
     }
-    return "";
+    // btoa only accepts Latin-1; round-trip via TextEncoder to keep full UTF-8.
+    const bytes = new TextEncoder().encode(value);
+    let binary = "";
+    for (const b of bytes) binary += String.fromCharCode(b);
+    return window.btoa(binary);
   }
 
   private decodeBase64(value: string): string {
-    if (typeof window !== "undefined" && typeof window.atob === "function") {
-      const decoded = window.atob(value);
-      try {
-        return decodeURIComponent(escape(decoded));
-      } catch {
-        return decoded;
-      }
+    if (typeof window === "undefined" || typeof window.atob !== "function") {
+      return "";
     }
-    return "";
+    const decoded = window.atob(value);
+    const bytes = new Uint8Array(decoded.length);
+    for (let i = 0; i < decoded.length; i++) bytes[i] = decoded.charCodeAt(i);
+    return new TextDecoder().decode(bytes);
   }
 
   private handleAnnouncementContentClick = (event: Event): void => {
-    const target = event.target as HTMLElement | null;
-    const button = target?.closest(
-      ".announcement-code__copy",
-    ) as HTMLButtonElement | null;
-    if (!button) {
+    const target = event.target instanceof HTMLElement ? event.target : null;
+    const button = target?.closest(".announcement-code__copy");
+    if (!(button instanceof HTMLButtonElement)) {
       return;
     }
     event.preventDefault();
@@ -7853,17 +7853,21 @@ ${prettyEvent}</pre
       return;
     }
     const showCopied = () => {
-      const original = button.textContent;
+      if (this.copyResetTimeout !== null) {
+        window.clearTimeout(this.copyResetTimeout);
+      }
       button.setAttribute("data-copied", "true");
       button.textContent = "Copied";
-      window.setTimeout(() => {
+      this.copyResetTimeout = window.setTimeout(() => {
         button.removeAttribute("data-copied");
-        button.textContent = original ?? "Copy";
+        button.textContent = "Copy";
+        this.copyResetTimeout = null;
       }, 1500);
     };
     if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
       navigator.clipboard.writeText(code).then(showCopied, () => {
-        // ignore — clipboard may be blocked by permissions
+        // ignore — clipboard may be unavailable (insecure context, denied
+        // permission, focus loss); button silently stays in idle state.
       });
     }
   };
@@ -7886,12 +7890,7 @@ ${prettyEvent}</pre
   }
 
   private escapeHtmlAttr(value: string): string {
-    return value
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#39;");
+    return escapeHtml(value).replace(/"/g, "&quot;").replace(/'/g, "&#39;");
   }
 
   private loadStoredAnnouncementTimestamp(): string | null {
