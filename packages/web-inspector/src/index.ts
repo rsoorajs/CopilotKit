@@ -3691,48 +3691,156 @@ ${argsString}</pre
       }
 
       .announcement-content {
-        color: #010507;
-        font-size: 12px;
+        color: #1f2230;
+        font-size: 13px;
         font-family: "Plus Jakarta Sans", system-ui, sans-serif;
-        line-height: 1.5;
+        line-height: 1.55;
       }
 
       .announcement-content h1,
       .announcement-content h2,
       .announcement-content h3 {
+        color: #010507;
         font-weight: 700;
-        margin: 0.4rem 0 0.2rem;
+        line-height: 1.3;
+        margin: 0.9rem 0 0.4rem;
+      }
+      .announcement-content > h1:first-child,
+      .announcement-content > h2:first-child,
+      .announcement-content > h3:first-child {
+        margin-top: 0;
       }
 
       .announcement-content h1 {
-        font-size: 0.75rem;
+        font-size: 1.15rem;
+        letter-spacing: -0.01em;
       }
       .announcement-content h2 {
-        font-size: 0.8rem;
+        font-size: 1rem;
       }
       .announcement-content h3 {
-        font-size: 0.75rem;
+        font-size: 0.9rem;
+        text-transform: none;
       }
 
       .announcement-content p {
-        margin: 0.2rem 0;
+        margin: 0.45rem 0;
+      }
+
+      .announcement-content strong {
+        color: #010507;
+        font-weight: 700;
       }
 
       .announcement-content ul {
         list-style: disc;
         padding-left: 1.25rem;
-        margin: 0.2rem 0;
+        margin: 0.45rem 0;
       }
 
       .announcement-content ol {
         list-style: decimal;
         padding-left: 1.25rem;
-        margin: 0.2rem 0;
+        margin: 0.45rem 0;
+      }
+
+      .announcement-content li + li {
+        margin-top: 0.15rem;
       }
 
       .announcement-content a {
         color: #757cf2;
         text-decoration: underline;
+      }
+
+      .announcement-content :not(pre) > code {
+        background: #f3f3f7;
+        border: 1px solid #e4e4ec;
+        border-radius: 4px;
+        padding: 1px 5px;
+        font-size: 0.85em;
+        color: #4a3a8a;
+      }
+
+      .announcement-code {
+        position: relative;
+        margin: 0.6rem 0;
+      }
+
+      .announcement-code pre {
+        background: #0f1117;
+        color: #e6e8f2;
+        border-radius: 8px;
+        padding: 10px 12px;
+        overflow-x: auto;
+        font-size: 12px;
+        line-height: 1.5;
+        white-space: pre;
+      }
+
+      .announcement-code pre code::after {
+        content: "";
+        display: inline-block;
+        width: 80px;
+      }
+
+      .announcement-code__copy-shield {
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        padding: 4px 4px 4px 24px;
+        border-top-right-radius: 8px;
+        background: linear-gradient(
+          to right,
+          rgba(15, 17, 23, 0) 0%,
+          rgba(15, 17, 23, 0.95) 40%,
+          #0f1117 100%
+        );
+        pointer-events: none;
+      }
+
+      .announcement-code pre code {
+        background: transparent;
+        border: none;
+        padding: 0;
+        color: inherit;
+        font-size: inherit;
+      }
+
+      .announcement-code pre::-webkit-scrollbar {
+        height: 6px;
+      }
+      .announcement-code pre::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      .announcement-code pre::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 3px;
+      }
+
+      .announcement-code__copy {
+        position: relative;
+        pointer-events: auto;
+        padding: 3px 8px;
+        font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+        font-size: 11px;
+        font-weight: 600;
+        color: #e6e8f2;
+        background: #1f222d;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 5px;
+        cursor: pointer;
+        transition:
+          background 0.12s ease,
+          color 0.12s ease;
+      }
+      .announcement-code__copy:hover {
+        background: #2a2e3c;
+      }
+      .announcement-code__copy[data-copied="true"] {
+        background: #eee6fe;
+        color: #6430ab;
+        border-color: transparent;
       }
 
       .announcement-body {
@@ -4266,7 +4374,6 @@ ${argsString}</pre
                 </div>
               </div>
             </div>
-            ${this.renderAnnouncementBanner()}
             <div
               class="flex flex-wrap items-center gap-2 border-t border-gray-100 px-3 py-2 text-xs"
             >
@@ -4299,6 +4406,7 @@ ${argsString}</pre
           </div>
           <div class="flex flex-1 flex-col overflow-hidden">
             <div id="cpk-main-scroll" class="flex-1 overflow-auto">
+              ${this.renderAnnouncementBanner()}
               ${this.renderCoreWarningBanner()} ${this.renderMainContent()}
               <slot></slot>
             </div>
@@ -7552,7 +7660,7 @@ ${prettyEvent}</pre
       return nothing;
     }
 
-    return html`<div class="mx-4 mb-3 rounded-xl border border-slate-200 bg-white px-4 py-3">
+    return html`<div class="mx-4 mt-3 mb-3 rounded-xl border border-slate-200 bg-white px-4 py-3">
       <div
         class="mb-2 flex items-center gap-2 text-xs font-semibold text-slate-900"
       >
@@ -7572,7 +7680,10 @@ ${prettyEvent}</pre
         </button>
       </div>
       <div class="announcement-body ${this.announcementExpanded ? "announcement-body--expanded" : "announcement-body--collapsed"}">
-        <div class="announcement-content">
+        <div
+          class="announcement-content"
+          @click=${this.handleAnnouncementContentClick}
+        >
           ${unsafeHTML(this.announcementHtml)}
         </div>
         ${
@@ -7695,8 +7806,75 @@ ${prettyEvent}</pre
       const titleAttr = title ? ` title="${this.escapeHtmlAttr(title)}"` : "";
       return `<a href="${safeHref}" target="_blank" rel="noopener"${titleAttr}>${text}</a>`;
     };
-    return marked.parse(markdown, { renderer });
+    renderer.code = (code, lang) => {
+      const safeLang = (lang ?? "").replace(/[^a-z0-9-]/gi, "");
+      const langClass = safeLang ? ` class="language-${safeLang}"` : "";
+      const escaped = escapeHtml(code);
+      const encoded = this.encodeBase64(code);
+      return `<div class="announcement-code"><pre><code${langClass}>${escaped}</code></pre><div class="announcement-code__copy-shield"><button type="button" class="announcement-code__copy" data-copy="${encoded}" aria-label="Copy code">Copy</button></div></div>`;
+    };
+    return marked.parse(markdown, { renderer, async: false });
   }
+
+  private copyResetTimeouts = new WeakMap<HTMLButtonElement, number>();
+
+  private encodeBase64(value: string): string {
+    if (typeof window === "undefined" || typeof window.btoa !== "function") {
+      return "";
+    }
+    // btoa only accepts Latin-1; round-trip via TextEncoder to keep full UTF-8.
+    const bytes = new TextEncoder().encode(value);
+    let binary = "";
+    for (const b of bytes) binary += String.fromCharCode(b);
+    return window.btoa(binary);
+  }
+
+  private decodeBase64(value: string): string {
+    if (typeof window === "undefined" || typeof window.atob !== "function") {
+      return "";
+    }
+    const decoded = window.atob(value);
+    const bytes = new Uint8Array(decoded.length);
+    for (let i = 0; i < decoded.length; i++) bytes[i] = decoded.charCodeAt(i);
+    return new TextDecoder().decode(bytes);
+  }
+
+  private handleAnnouncementContentClick = (event: Event): void => {
+    const target = event.target instanceof HTMLElement ? event.target : null;
+    const button = target?.closest(".announcement-code__copy");
+    if (!(button instanceof HTMLButtonElement)) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    const encoded = button.getAttribute("data-copy") ?? "";
+    const code = this.decodeBase64(encoded);
+    if (!code) {
+      return;
+    }
+    const showCopied = () => {
+      const existing = this.copyResetTimeouts.get(button);
+      if (existing !== undefined) {
+        window.clearTimeout(existing);
+      }
+      button.setAttribute("data-copied", "true");
+      button.setAttribute("aria-label", "Code copied");
+      button.textContent = "Copied";
+      const id = window.setTimeout(() => {
+        button.removeAttribute("data-copied");
+        button.setAttribute("aria-label", "Copy code");
+        button.textContent = "Copy";
+        this.copyResetTimeouts.delete(button);
+      }, 1500);
+      this.copyResetTimeouts.set(button, id);
+    };
+    if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(code).then(showCopied, () => {
+        // ignore — clipboard may be unavailable (insecure context, denied
+        // permission, focus loss); button silently stays in idle state.
+      });
+    }
+  };
 
   private appendRefParam(href: string): string {
     try {
@@ -7716,12 +7894,7 @@ ${prettyEvent}</pre
   }
 
   private escapeHtmlAttr(value: string): string {
-    return value
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#39;");
+    return escapeHtml(value).replace(/"/g, "&quot;").replace(/'/g, "&#39;");
   }
 
   private loadStoredAnnouncementTimestamp(): string | null {
