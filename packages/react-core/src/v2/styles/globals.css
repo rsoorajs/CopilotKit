@@ -233,7 +233,8 @@
  * IntelligenceIndicator pill — visual styles ported from
  * CopilotKit/Intelligence #155.
  *
- * Color palette: violet/indigo glassmorphism (#BEC2FF / #9599E0 / #EEE6FE).
+ * Violet/indigo glassmorphism — text #5B21B6, icon #7C3AED, border
+ * #9599E0, gradient stop #EEE6FE, soft shadow #5E64AD.
  */
 .cpk-intelligence-pill {
   display: inline-flex;

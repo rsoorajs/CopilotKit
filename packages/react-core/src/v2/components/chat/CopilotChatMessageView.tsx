@@ -330,8 +330,8 @@ const MemoizedCustomMessage = React.memo(
     // before runAgent fires) won't observe the false→true transition for
     // the first run. In practice this is rare; the canonical pattern is
     // to gate on the slot's own runId membership (see
-    // CopilotKitProvider.intelligenceIndicator.e2e.test.tsx for the
-    // recommended renderer shape).
+    // intelligence-indicator/__tests__/IntelligenceIndicator.e2e.test.tsx
+    // for the recommended renderer shape).
     if (
       nextProps.isInLatestRun &&
       prevProps.isRunning !== nextProps.isRunning
@@ -699,12 +699,17 @@ export function CopilotChatMessageView({
       );
     }
 
-    // Auto-mount the IntelligenceIndicator for every message slot when
-    // the runtime is in intelligence mode. The component self-gates so
-    // only the canonical slot (last message of latest in-flight run
-    // containing a matching tool call) actually renders a pill — every
-    // other invocation returns null.
-    if (copilotkit.intelligence !== undefined) {
+    // Auto-mount the IntelligenceIndicator on assistant message slots
+    // when the runtime is in intelligence mode. The component self-gates
+    // further (last in run, latest run, matching tool call) so only one
+    // pill renders at a time — but mounting it only for assistant
+    // messages avoids spinning up a `useAgent` subscription, a 200 ms
+    // poll interval, and four effects on every user/reasoning/activity
+    // slot just to have it return null at the role gate.
+    if (
+      copilotkit.intelligence !== undefined &&
+      message.role === "assistant"
+    ) {
       elements.push(
         <IntelligenceIndicator
           key={`${message.id}-intelligence`}

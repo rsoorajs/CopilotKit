@@ -23,15 +23,19 @@ const CHECK_HOLD_MS = 800;
 const FADE_OUT_ANIMATION_MS = 480;
 
 /**
- * Polling interval for `agent.isRunning`. Background: AG-UI's
- * `runAgent` snapshots `[...this.subscribers]` at invocation time, so a
- * subscriber added AFTER the run starts — which is always the case here
- * since the renderer mounts when the matching message appears INSIDE
- * the run — is missing from that snapshot and never sees the falling
- * edge. `onMessagesChanged` works because `addMessage` iterates
- * subscribers live, but it stops firing once streaming ends, leaving
- * the renderer stuck on its last view of `isRunning=true`. A 200 ms
- * poll closes the gap.
+ * Polling interval for `agent.isRunning`. Background: AG-UI's `runAgent`
+ * snapshots `[...this.subscribers]` at invocation time and threads that
+ * snapshot through the entire run pipeline (including the `finalize`
+ * block that fires `onRunFinalized` and flips `isRunning` off). A
+ * subscriber added AFTER `runAgent` starts — which is always the case
+ * here, because the renderer mounts when the matching message first
+ * appears INSIDE the run — is missing from that snapshot and never
+ * receives the falling edge.
+ *
+ * Re-renders driven by parent state still keep the pill alive while
+ * messages stream, but `agent.isRunning` only flips off via the
+ * snapshotted set. A 200 ms poll reads the live property and forces a
+ * re-render when it changes, closing the gap.
  */
 const ISRUNNING_POLL_MS = 200;
 
@@ -167,10 +171,17 @@ export function IntelligenceIndicator(
 
   // Must be an assistant message with at least one matching tool call.
   if (message.role !== "assistant") return null;
-  const toolCalls = message.toolCalls ?? [];
-  const hasMatch = toolCalls.some((tc) =>
-    DEFAULT_TOOL_PATTERNS.some((p) => p.test(tc.function.name)),
-  );
+  // Defensive: a malformed `toolCalls` (non-array, missing nested
+  // `function.name`) would otherwise throw inside `.some(...)` and take
+  // down the chat tree. Treat as "no match" instead.
+  const toolCalls = Array.isArray(message.toolCalls) ? message.toolCalls : [];
+  const hasMatch = toolCalls.some((tc) => {
+    const name = tc?.function?.name;
+    return (
+      typeof name === "string" &&
+      DEFAULT_TOOL_PATTERNS.some((p) => p.test(name))
+    );
+  });
   if (!hasMatch) return null;
 
   // The message must belong to the latest run on the thread, AND must
