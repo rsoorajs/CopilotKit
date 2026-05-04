@@ -24,6 +24,8 @@ import { twMerge } from "tailwind-merge";
 import { useRenderActivityMessage, useRenderCustomMessages } from "../../hooks";
 import { useCopilotKit } from "../../providers/CopilotKitProvider";
 import { useCopilotChatConfiguration } from "../../providers/CopilotChatConfigurationProvider";
+import { IntelligenceIndicator } from "../intelligence-indicator";
+import { DEFAULT_AGENT_ID } from "@copilotkit/shared";
 
 /**
  * Resolves a slot value into a { Component, slotProps } pair, handling the three
@@ -693,6 +695,21 @@ export function CopilotChatMessageView({
           numberOfMessagesInRun={numberOfMessagesInRun}
           isInLatestRun={isInLatestRun}
           isRunning={isRunning}
+        />,
+      );
+    }
+
+    // Auto-mount the IntelligenceIndicator for every message slot when
+    // the runtime is in intelligence mode. The component self-gates so
+    // only the canonical slot (last message of latest in-flight run
+    // containing a matching tool call) actually renders a pill — every
+    // other invocation returns null.
+    if (copilotkit.intelligence !== undefined) {
+      elements.push(
+        <IntelligenceIndicator
+          key={`${message.id}-intelligence`}
+          message={message}
+          agentId={config?.agentId ?? DEFAULT_AGENT_ID}
         />,
       );
     }
