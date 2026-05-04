@@ -83,11 +83,19 @@ export interface ProxiedCopilotRuntimeAgentConfig extends Omit<
   intelligence?: IntelligenceRuntimeInfo;
   capabilities?: AgentCapabilities;
   debug?: ResolvedDebugConfig;
+  /**
+   * When set, runtime requests (HTTP path, single-route envelope, intelligence
+   * delegate) are routed to this agent on the runtime instead of `agentId`.
+   * The local `agentId` remains the registry key used for subscriber
+   * bookkeeping; only outbound routing is overridden.
+   */
+  remoteAgentId?: string;
 }
 
 export class ProxiedCopilotRuntimeAgent extends HttpAgent {
   runtimeUrl?: string;
   credentials?: RequestCredentials;
+  remoteAgentId?: string;
   private transport: CopilotRuntimeTransport;
   private singleEndpointUrl?: string;
   private runtimeMode: ResolvedRuntimeMode;
@@ -101,10 +109,11 @@ export class ProxiedCopilotRuntimeAgent extends HttpAgent {
       ? config.runtimeUrl.replace(/\/$/, "")
       : undefined;
     const transport = config.transport ?? "auto";
+    const routedId = config.remoteAgentId ?? config.agentId ?? "";
     const runUrl =
       transport === "single"
         ? (normalizedRuntimeUrl ?? config.runtimeUrl ?? "")
-        : `${normalizedRuntimeUrl ?? config.runtimeUrl}/agent/${encodeURIComponent(config.agentId ?? "")}/run`;
+        : `${normalizedRuntimeUrl ?? config.runtimeUrl}/agent/${encodeURIComponent(routedId)}/run`;
 
     if (!runUrl) {
       throw new Error(
@@ -118,6 +127,7 @@ export class ProxiedCopilotRuntimeAgent extends HttpAgent {
     });
     this.runtimeUrl = normalizedRuntimeUrl ?? config.runtimeUrl;
     this.credentials = config.credentials;
+    this.remoteAgentId = config.remoteAgentId;
     this.transport = transport;
     this.runtimeMode = config.runtimeMode ?? RUNTIME_MODE_SSE;
     this.intelligence = config.intelligence;
@@ -128,6 +138,15 @@ export class ProxiedCopilotRuntimeAgent extends HttpAgent {
     if (this.transport === "single") {
       this.singleEndpointUrl = this.runtimeUrl;
     }
+  }
+
+  /**
+   * The agent id used for outbound runtime requests — `remoteAgentId` when
+   * set (manually-registered proxy), otherwise `agentId` (registry id matches
+   * runtime id). Subscriber bookkeeping keeps using `agentId` directly.
+   */
+  private routedAgentId(): string | undefined {
+    return this.remoteAgentId ?? this.agentId;
   }
 
   get capabilities(): AgentCapabilities | undefined {
@@ -164,6 +183,11 @@ export class ProxiedCopilotRuntimeAgent extends HttpAgent {
       return;
     }
 
+    const routedId = this.routedAgentId();
+    if (!routedId) {
+      return;
+    }
+
     if (this.transport === "single") {
       if (!this.singleEndpointUrl) {
         return;
@@ -179,7 +203,7 @@ export class ProxiedCopilotRuntimeAgent extends HttpAgent {
         body: JSON.stringify({
           method: "agent/stop",
           params: {
-            agentId: this.agentId,
+            agentId: routedId,
             threadId: this.threadId,
           },
         }),
@@ -194,7 +218,7 @@ export class ProxiedCopilotRuntimeAgent extends HttpAgent {
       return;
     }
 
-    const stopPath = `${this.runtimeUrl}/agent/${encodeURIComponent(this.agentId)}/stop/${encodeURIComponent(this.threadId)}`;
+    const stopPath = `${this.runtimeUrl}/agent/${encodeURIComponent(routedId)}/stop/${encodeURIComponent(this.threadId)}`;
     const origin =
       typeof window !== "undefined" && window.location
         ? window.location.origin
@@ -316,6 +340,7 @@ export class ProxiedCopilotRuntimeAgent extends HttpAgent {
   }
 
   #connectViaHttp(input: RunAgentInput): Observable<BaseEvent> {
+    const routedId = this.routedAgentId();
     if (this.transport === "single") {
       if (!this.singleEndpointUrl) {
         throw new Error("Single endpoint transport requires a runtimeUrl");
@@ -325,7 +350,7 @@ export class ProxiedCopilotRuntimeAgent extends HttpAgent {
         input,
         "agent/connect",
         {
-          agentId: this.agentId!,
+          agentId: routedId!,
         },
       );
       const httpEvents = runHttpRequest(this.singleEndpointUrl, requestInit);
@@ -333,7 +358,7 @@ export class ProxiedCopilotRuntimeAgent extends HttpAgent {
     }
 
     const httpEvents = runHttpRequest(
-      `${this.runtimeUrl}/agent/${this.agentId}/connect`,
+      `${this.runtimeUrl}/agent/${routedId}/connect`,
       this.requestInit(input),
     );
     return withAbortErrorHandling(transformHttpEventStream(httpEvents));
@@ -355,7 +380,7 @@ export class ProxiedCopilotRuntimeAgent extends HttpAgent {
         input,
         "agent/run",
         {
-          agentId: this.agentId!,
+          agentId: this.routedAgentId()!,
         },
       );
       const httpEvents = runHttpRequest(this.singleEndpointUrl, requestInit);
@@ -369,6 +394,7 @@ export class ProxiedCopilotRuntimeAgent extends HttpAgent {
     const cloned = new ProxiedCopilotRuntimeAgent({
       runtimeUrl: this.runtimeUrl,
       agentId: this.agentId,
+      remoteAgentId: this.remoteAgentId,
       description: this.description,
       headers: { ...this.headers },
       credentials: this.credentials,
@@ -549,7 +575,8 @@ export class ProxiedCopilotRuntimeAgent extends HttpAgent {
   }
 
   private createIntelligenceDelegate(): AbstractAgent {
-    if (!this.runtimeUrl || !this.agentId || !this.intelligence?.wsUrl) {
+    const routedId = this.routedAgentId();
+    if (!this.runtimeUrl || !routedId || !this.intelligence?.wsUrl) {
       throw new Error(
         "Intelligence mode requires runtimeUrl, agentId, and intelligence websocket metadata",
       );
@@ -558,14 +585,16 @@ export class ProxiedCopilotRuntimeAgent extends HttpAgent {
     return new IntelligenceAgent({
       url: this.intelligence.wsUrl,
       runtimeUrl: this.runtimeUrl,
-      agentId: this.agentId,
+      agentId: routedId,
       headers: { ...this.headers },
       credentials: this.credentials,
     });
   }
 
   private syncDelegate(delegate: AbstractAgent): void {
-    delegate.agentId = this.agentId;
+    // Delegate is the IntelligenceAgent that talks to the runtime — it must
+    // use the routed id so that requests reach the right runtime agent.
+    delegate.agentId = this.routedAgentId();
     delegate.description = this.description;
     delegate.threadId = this.threadId;
     delegate.setMessages(this.messages);

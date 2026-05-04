@@ -10,7 +10,11 @@ import type {
   RuntimeLicenseStatus,
   IntelligenceRuntimeInfo,
 } from "../types";
-import type { CopilotKitCoreAddAgentParams } from "./agent-registry";
+import type {
+  CopilotKitCoreAddAgentParams,
+  CopilotKitCoreRegisterProxiedAgentParams,
+  CopilotKitCoreRegisterProxiedAgentResult,
+} from "./agent-registry";
 import { AgentRegistry } from "./agent-registry";
 import { ContextStore } from "./context-store";
 import { SuggestionEngine } from "./suggestion-engine";
@@ -49,7 +53,11 @@ export interface CopilotKitCoreConfig {
   debug?: DebugConfig;
 }
 
-export type { CopilotKitCoreAddAgentParams };
+export type {
+  CopilotKitCoreAddAgentParams,
+  CopilotKitCoreRegisterProxiedAgentParams,
+  CopilotKitCoreRegisterProxiedAgentResult,
+};
 export type {
   CopilotKitCoreRunAgentParams,
   CopilotKitCoreConnectAgentParams,
@@ -640,6 +648,31 @@ export class CopilotKitCore {
 
   removeAgent__unsafe_dev_only(id: string): void {
     this.agentRegistry.removeAgent__unsafe_dev_only(id);
+  }
+
+  /**
+   * Register a proxied agent against an existing runtime agent. The proxy is
+   * exposed under `agentId` (local registry id) and routes outbound runtime
+   * requests to `remoteAgentId`. Throws if `agentId` is already taken.
+   *
+   * Returns the minted proxy and an `unregister` handle for cleanup.
+   *
+   * Use this to mount multiple frontend agents against a single runtime
+   * agent (e.g. one per chat window) without implicit per-thread cloning.
+   *
+   * @example
+   * const { agent, unregister } = copilotkit.registerProxiedAgent({
+   *   agentId: "chat-1",
+   *   remoteAgentId: "default",
+   * });
+   * // ... <CopilotChat agentId="chat-1" />
+   * // on cleanup:
+   * unregister();
+   */
+  registerProxiedAgent(
+    params: CopilotKitCoreRegisterProxiedAgentParams,
+  ): CopilotKitCoreRegisterProxiedAgentResult {
+    return this.agentRegistry.registerProxiedAgent(params);
   }
 
   getAgent(id: string): AbstractAgent | undefined {

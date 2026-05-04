@@ -25,6 +25,29 @@ export interface CopilotKitCoreAddAgentParams {
 }
 
 /**
+ * Parameters for registering a proxied agent against an existing runtime agent.
+ */
+export interface CopilotKitCoreRegisterProxiedAgentParams {
+  /**
+   * The local registry id under which the proxy is registered. Used by
+   * `useAgent`, state-manager subscriptions, and all subscriber bookkeeping.
+   * Must not collide with any existing local or runtime-discovered agent id.
+   */
+  agentId: string;
+  /**
+   * The id of the runtime agent that this proxy routes outbound HTTP requests
+   * to. Invisible to subscribers — only affects URL paths and single-route
+   * envelopes.
+   */
+  remoteAgentId: string;
+}
+
+export interface CopilotKitCoreRegisterProxiedAgentResult {
+  agent: ProxiedCopilotRuntimeAgent;
+  unregister: () => void;
+}
+
+/**
  * Manages agent registration, lifecycle, and runtime connectivity for CopilotKitCore.
  * Handles both local development agents and remote runtime agents.
  */
@@ -165,6 +188,69 @@ export class AgentRegistry {
     delete this.localAgents[id];
     this._agents = { ...this.localAgents, ...this.remoteAgents };
     void this.notifyAgentsChanged();
+  }
+
+  /**
+   * Register a proxied agent that routes outbound runtime requests to an
+   * existing runtime agent (`remoteAgentId`) while exposing a distinct local
+   * registry id (`agentId`). Throws if `agentId` is already taken by either a
+   * local or runtime-discovered agent.
+   *
+   * Use this to mount multiple frontend agents against a single runtime
+   * agent (e.g. a chat-1 / chat-2 pair both proxying to "default") without
+   * implicit per-thread cloning. The returned `unregister` removes the proxy
+   * from the registry and emits `onAgentsChanged`.
+   */
+  registerProxiedAgent({
+    agentId,
+    remoteAgentId,
+  }: CopilotKitCoreRegisterProxiedAgentParams): CopilotKitCoreRegisterProxiedAgentResult {
+    if (agentId in this._agents) {
+      throw new Error(
+        `CopilotKitCore.registerProxiedAgent: agentId "${agentId}" is already registered. ` +
+          `Pick a different agentId, or unregister the existing agent first.`,
+      );
+    }
+
+    const friends = this.core as unknown as CopilotKitCoreFriendsAccess;
+    const debug = friends.debug;
+    const agent = new ProxiedCopilotRuntimeAgent({
+      runtimeUrl: this._runtimeUrl,
+      agentId,
+      remoteAgentId,
+      transport: this._runtimeTransport,
+      credentials: friends.credentials,
+      // If runtime info has already synced, mirror its mode/intelligence so
+      // the proxy doesn't have to re-resolve. Otherwise stay "pending" until
+      // /info lands.
+      runtimeMode: this._runtimeUrl
+        ? (this._runtimeConnectionStatus ===
+          CopilotKitCoreRuntimeConnectionStatus.Connected
+            ? this._runtimeMode
+            : "pending")
+        : RUNTIME_MODE_SSE,
+      intelligence: this._intelligence,
+      debug: debug ? resolveDebugConfig(debug) : undefined,
+    });
+    this.applyHeadersToAgent(agent);
+
+    this.localAgents[agentId] = agent;
+    this._agents = { ...this.localAgents, ...this.remoteAgents };
+    void this.notifyAgentsChanged();
+
+    return {
+      agent,
+      unregister: () => {
+        // Only unregister if the same instance is still in place — guards
+        // against double-unregister or against unregistering after a
+        // subsequent register replaced the slot.
+        if (this.localAgents[agentId] === agent) {
+          delete this.localAgents[agentId];
+          this._agents = { ...this.localAgents, ...this.remoteAgents };
+          void this.notifyAgentsChanged();
+        }
+      },
+    };
   }
 
   /**
