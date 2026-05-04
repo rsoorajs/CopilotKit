@@ -281,25 +281,63 @@ const MemoizedCustomMessage = React.memo(
       message: Message;
       position: "before" | "after";
     }) => React.ReactElement | null;
-    stateSnapshot?: unknown;
+    stateSnapshot: unknown;
+    numberOfMessagesInRun: number | undefined;
+    isInLatestRun: boolean | undefined;
+    isRunning: boolean;
   }) {
     return renderCustomMessage({ message, position });
   },
   (prevProps, nextProps) => {
-    // Only re-render if the message or position changed
+    // Skip the re-render unless an input that an authored renderer can
+    // observe has changed. Each branch returns false to invalidate.
     if (prevProps.message.id !== nextProps.message.id) return false;
     if (prevProps.position !== nextProps.position) return false;
-    // Compare message content - for assistant messages this is a string, for others may differ
     if (prevProps.message.content !== nextProps.message.content) return false;
     if (prevProps.message.role !== nextProps.message.role) return false;
-    // Compare state snapshot - custom renderers may depend on state
+    // State snapshot — custom renderers may read it. Deep-compare via
+    // JSON.stringify (state-manager already deep-copies on each call, so
+    // reference equality would never hit anyway).
     if (
       JSON.stringify(prevProps.stateSnapshot) !==
       JSON.stringify(nextProps.stateSnapshot)
     )
       return false;
-    // Note: We don't compare renderCustomMessage function reference because it changes
-    // frequently. The message and state comparison is sufficient to determine if a re-render is needed.
+    // Re-render when this message's run grows. The runId-to-message
+    // association is unidirectional in StateManager (only set, never
+    // revoked except via clearAgentState/clearThreadState which wipe
+    // wholesale), so in practice this fires only on growth as new messages
+    // stream into the run. Slots in completed runs are unaffected — their
+    // count is stable once the run has finished.
+    if (prevProps.numberOfMessagesInRun !== nextProps.numberOfMessagesInRun)
+      return false;
+    // Re-render when this message's run stops being the latest run on the
+    // thread — e.g. a new run starts and previously-completed messages need
+    // to drop "is this the latest activity?" indicators. Only the slots
+    // belonging to the run that just lost its "latest" status are
+    // invalidated; the new run's slots and any older runs are unaffected.
+    if (prevProps.isInLatestRun !== nextProps.isInLatestRun) return false;
+    // Re-render when isRunning flips, but only for slots known to belong
+    // to the latest run (`isInLatestRun === true`). Slots whose run is
+    // older or whose run-id hasn't been recorded yet (undefined) are not
+    // invalidated on isRunning changes — this preserves the perf guarantee
+    // that completed messages skip re-renders during streaming.
+    //
+    // Renderers that gate solely on `agent.isRunning` and attach to a
+    // message added before any run started (e.g. a user message inserted
+    // before runAgent fires) won't observe the false→true transition for
+    // the first run. In practice this is rare; the canonical pattern is
+    // to gate on the slot's own runId membership (see
+    // CopilotKitProvider.intelligenceIndicator.e2e.test.tsx for the
+    // recommended renderer shape).
+    if (
+      nextProps.isInLatestRun &&
+      prevProps.isRunning !== nextProps.isRunning
+    )
+      return false;
+    // Note: renderCustomMessage's reference is intentionally not compared —
+    // it's a closure that changes frequently. The inputs above are the only
+    // observable signals.
     return true;
   },
 );
@@ -412,6 +450,48 @@ export function CopilotChatMessageView({
     });
     return () => subscription.unsubscribe();
   }, [copilotkit]);
+
+  // Build per-run metadata once per render, not once per message. The two
+  // memo inputs MemoizedCustomMessage cares about (numberOfMessagesInRun and
+  // isInLatestRun) are both derived from the same scan of `messages` →
+  // `getRunIdForMessage`, so consolidating here turns an O(n²) per-render
+  // pass (one O(n) helper call per message) into a single O(n) pass.
+  //
+  // Re-fires whenever messages, the active agent/thread, or copilotkit
+  // changes. The internal messageToRun map can update without these props
+  // changing (a runId association lands one tick after the message is
+  // appended) — in that case the next external trigger refreshes. Note
+  // the `MemoizedCustomMessage` gate at the `isInLatestRun &&` check is
+  // strict-truthy — slots whose runId is still undefined during that
+  // pre-association window will not re-render on isRunning flips. The
+  // canonical pattern (see the IntelligenceIndicator e2e test) is to gate
+  // the renderer on the slot's own runId membership rather than `isRunning`
+  // alone, so the limitation doesn't bite typical use.
+  const runMetadata = useMemo(() => {
+    if (!config) return null;
+    const runIdByMessageId = new Map<string, string>();
+    for (const msg of messages) {
+      const r = copilotkit.getRunIdForMessage(
+        config.agentId,
+        config.threadId,
+        msg.id,
+      );
+      if (r) runIdByMessageId.set(msg.id, r);
+    }
+    const countByRunId = new Map<string, number>();
+    for (const r of runIdByMessageId.values()) {
+      countByRunId.set(r, (countByRunId.get(r) ?? 0) + 1);
+    }
+    let latestRunId: string | undefined;
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const r = runIdByMessageId.get(messages[i]!.id);
+      if (r) {
+        latestRunId = r;
+        break;
+      }
+    }
+    return { runIdByMessageId, countByRunId, latestRunId };
+  }, [messages, config?.agentId, config?.threadId, copilotkit]);
 
   // Helper to get state snapshot for a message (used for memoization)
   const getStateSnapshotForMessage = (messageId: string): unknown => {
@@ -537,6 +617,14 @@ export function CopilotChatMessageView({
   const renderMessageBlock = (message: Message): React.ReactElement[] => {
     const elements: (React.ReactElement | null | undefined)[] = [];
     const stateSnapshot = getStateSnapshotForMessage(message.id);
+    const messageRunId = runMetadata?.runIdByMessageId.get(message.id);
+    const numberOfMessagesInRun = messageRunId
+      ? runMetadata?.countByRunId.get(messageRunId)
+      : undefined;
+    const isInLatestRun =
+      messageRunId === undefined
+        ? undefined
+        : messageRunId === runMetadata?.latestRunId;
 
     if (renderCustomMessage) {
       elements.push(
@@ -546,6 +634,9 @@ export function CopilotChatMessageView({
           position="before"
           renderCustomMessage={renderCustomMessage}
           stateSnapshot={stateSnapshot}
+          numberOfMessagesInRun={numberOfMessagesInRun}
+          isInLatestRun={isInLatestRun}
+          isRunning={isRunning}
         />,
       );
     }
@@ -599,6 +690,9 @@ export function CopilotChatMessageView({
           position="after"
           renderCustomMessage={renderCustomMessage}
           stateSnapshot={stateSnapshot}
+          numberOfMessagesInRun={numberOfMessagesInRun}
+          isInLatestRun={isInLatestRun}
+          isRunning={isRunning}
         />,
       );
     }
