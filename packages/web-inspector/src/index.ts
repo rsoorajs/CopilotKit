@@ -7809,7 +7809,7 @@ ${prettyEvent}</pre
     renderer.code = (code, lang) => {
       const safeLang = (lang ?? "").replace(/[^a-z0-9-]/gi, "");
       const langClass = safeLang ? ` class="language-${safeLang}"` : "";
-      const escaped = this.escapeHtmlText(code);
+      const escaped = escapeHtml(code);
       const encoded = this.encodeBase64(code);
       return `<div class="announcement-code"><pre><code${langClass}>${escaped}</code></pre><div class="announcement-code__copy-shield"><button type="button" class="announcement-code__copy" data-copy="${encoded}" aria-label="Copy code">Copy</button></div></div>`;
     };
@@ -7835,13 +7835,6 @@ ${prettyEvent}</pre
       }
     }
     return "";
-  }
-
-  private escapeHtmlText(value: string): string {
-    return value
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;");
   }
 
   private handleAnnouncementContentClick = (event: Event): void => {
