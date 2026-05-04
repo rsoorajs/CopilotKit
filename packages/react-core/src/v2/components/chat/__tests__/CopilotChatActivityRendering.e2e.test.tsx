@@ -1,6 +1,7 @@
 import React from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { z } from "zod";
+import type { AbstractAgent } from "@ag-ui/client";
 import { EventType } from "@ag-ui/client";
 import {
   MockReconnectableAgent,
@@ -302,6 +303,66 @@ describe("CopilotChat activity message rendering", () => {
     // Verify context is properly propagated - copilotkit should NOT be null
     expect(capturedCopilotkit).not.toBeNull();
     expect(capturedCopilotkit).toBeDefined();
+  });
+
+  it("activity renderers receive the agent under the config agentId, not any other registered agent", async () => {
+    // Regression: the renderer's `agent` prop must come from
+    // `copilotkit.getAgent(config.agentId)` — the local registry id from
+    // CopilotChatConfigurationProvider — not from any other agent in the
+    // registry (e.g. the runtime-side id a proxy might route to).
+    //
+    // Pre-#3525 → #3630 cycle, this manifested as a clone-vs-registry split.
+    // In the explicit-registration model the trap is different: a refactor
+    // could accidentally key on a proxy's `remoteAgentId` instead of its
+    // local `agentId`. This test pins the local-id contract by mounting two
+    // distinct mock agents and asserting the renderer receives the one that
+    // matches `config.agentId`.
+    const localAgent = new MockStepwiseAgent();
+    localAgent.agentId = "chat-1";
+    const otherAgent = new MockStepwiseAgent();
+    otherAgent.agentId = "default";
+
+    let capturedAgent: AbstractAgent | undefined;
+    const activityRenderer: ReactActivityMessageRenderer<{ label: string }> = {
+      activityType: "button-action",
+      content: z.object({ label: z.string() }),
+      render: ({ content, agent: renderedAgent }) => {
+        capturedAgent = renderedAgent;
+        return <button data-testid="action-button">{content.label}</button>;
+      },
+    };
+
+    renderWithCopilotKit({
+      agents: { "chat-1": localAgent, default: otherAgent },
+      agentId: "chat-1",
+      threadId: "thread-for-action-test",
+      renderActivityMessages: [activityRenderer],
+    });
+
+    const input = await screen.findByRole("textbox");
+    fireEvent.change(input, { target: { value: "show me buttons" } });
+    fireEvent.keyDown(input, { key: "Enter", code: "Enter" });
+
+    await waitFor(() => {
+      expect(screen.getByText("show me buttons")).toBeDefined();
+    });
+
+    localAgent.emit(runStartedEvent());
+    localAgent.emit(
+      activitySnapshotEvent({
+        messageId: testId("activity-action"),
+        activityType: "button-action",
+        content: { label: "Click Me" },
+      }),
+    );
+    localAgent.emit(runFinishedEvent());
+
+    await waitFor(() => {
+      expect(screen.getByTestId("action-button")).toBeDefined();
+    });
+
+    expect(capturedAgent).toBe(localAgent);
+    expect(capturedAgent).not.toBe(otherAgent);
   });
 
   it("restores a completed A2UI surface after reconnect from an event-native baseline", async () => {
