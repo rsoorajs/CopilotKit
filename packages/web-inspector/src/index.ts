@@ -72,7 +72,7 @@ const MIN_WINDOW_WIDTH_DOCKED_LEFT = 420;
 const MIN_WINDOW_HEIGHT = 200;
 const INSPECTOR_STORAGE_KEY = "cpk:inspector:state";
 const ANNOUNCEMENT_STORAGE_KEY = "cpk:inspector:announcements";
-const ANNOUNCEMENT_URL = "https://cdn.copilotkit.ai/announcements.json";
+const ANNOUNCEMENT_URL = "https://cdn.copilotkit.ai/announcements-draft.json";
 const DEFAULT_BUTTON_SIZE: Size = { width: 48, height: 48 };
 const DEFAULT_WINDOW_SIZE: Size = { width: 840, height: 700 };
 const DOCKED_LEFT_WIDTH = 500; // Sensible width for left dock with collapsed sidebar
@@ -7816,7 +7816,7 @@ ${prettyEvent}</pre
     return marked.parse(markdown, { renderer, async: false });
   }
 
-  private copyResetTimeout: number | null = null;
+  private copyResetTimeouts = new WeakMap<HTMLButtonElement, number>();
 
   private encodeBase64(value: string): string {
     if (typeof window === "undefined" || typeof window.btoa !== "function") {
@@ -7853,16 +7853,20 @@ ${prettyEvent}</pre
       return;
     }
     const showCopied = () => {
-      if (this.copyResetTimeout !== null) {
-        window.clearTimeout(this.copyResetTimeout);
+      const existing = this.copyResetTimeouts.get(button);
+      if (existing !== undefined) {
+        window.clearTimeout(existing);
       }
       button.setAttribute("data-copied", "true");
+      button.setAttribute("aria-label", "Code copied");
       button.textContent = "Copied";
-      this.copyResetTimeout = window.setTimeout(() => {
+      const id = window.setTimeout(() => {
         button.removeAttribute("data-copied");
+        button.setAttribute("aria-label", "Copy code");
         button.textContent = "Copy";
-        this.copyResetTimeout = null;
+        this.copyResetTimeouts.delete(button);
       }, 1500);
+      this.copyResetTimeouts.set(button, id);
     };
     if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
       navigator.clipboard.writeText(code).then(showCopied, () => {
