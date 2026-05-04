@@ -199,9 +199,6 @@ export class ProxiedCopilotRuntimeAgent extends HttpAgent {
     }
 
     const routedId = this.routedAgentId();
-    if (!routedId) {
-      return;
-    }
 
     if (this.transport === "single") {
       if (!this.singleEndpointUrl) {

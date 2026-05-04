@@ -406,12 +406,23 @@ export class CopilotKitCore {
         // is asynchronously populated and the empty-map notification fires
         // before the published agents are merged in.
         const currentAgentIds = new Set(Object.keys(agents));
+        // Each iteration is wrapped so a throw on one id does not stall
+        // cleanup for the rest of the set. Both registries' unregister
+        // paths are idempotent, so re-attempts on the next
+        // onAgentsChanged are safe.
         for (const agentId of Object.keys(this.threadStoreRegistry.getAll())) {
           if (
             this.previousAgentIds.has(agentId) &&
             !currentAgentIds.has(agentId)
           ) {
-            this.threadStoreRegistry.unregister(agentId);
+            try {
+              this.threadStoreRegistry.unregister(agentId);
+            } catch (err) {
+              console.error(
+                `CopilotKitCore.onAgentsChanged: threadStoreRegistry.unregister failed for "${agentId}":`,
+                err,
+              );
+            }
           }
         }
 
@@ -423,7 +434,14 @@ export class CopilotKitCore {
         // to populate stateByRun/messageToRun for the dead id.
         for (const agentId of this.previousAgentIds) {
           if (!currentAgentIds.has(agentId)) {
-            this.stateManager.unsubscribeFromAgent(agentId);
+            try {
+              this.stateManager.unsubscribeFromAgent(agentId);
+            } catch (err) {
+              console.error(
+                `CopilotKitCore.onAgentsChanged: stateManager.unsubscribeFromAgent failed for "${agentId}":`,
+                err,
+              );
+            }
           }
         }
 
