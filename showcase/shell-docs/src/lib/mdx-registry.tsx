@@ -19,6 +19,7 @@ import {
   TailoredContentOption as RealTailoredContentOption,
 } from "@/components/react/tailored-content";
 import { FrameworkTabs } from "@/components/framework-tabs";
+import { OpsPlatformCTA } from "@/components/react/ops-platform-cta";
 import { PropertyReference } from "@/components/property-reference";
 import { IntegrationGrid } from "@/components/integration-grid";
 import { DocsLandingNext } from "@/components/docs-landing-next";
@@ -81,6 +82,7 @@ export const docsComponents = {
   Accordions,
   Accordion,
   PropertyReference,
+  OpsPlatformCTA,
   FeatureIntegrations: ({ feature }: { feature?: string }) => {
     if (!feature) {
       warnSilentNull("FeatureIntegrations", "no `feature` prop provided");
