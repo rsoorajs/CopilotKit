@@ -3,7 +3,23 @@ import { Tabs, Tab } from "fumadocs-ui/components/tabs";
 
 ## What is this?
 
-CopilotKit Intelligence — the platform that powers threads, shared state, the inspector, and observability — can be self-hosted on your own Kubernetes cluster using the `copilot-intelligence` Helm chart. Self-hosting is a licensed deployment mode: you run the control plane and data plane inside your own network boundary, bring your own Postgres and Redis (or run bundled Bitnami subcharts), point the chart at your own OIDC provider, and manage secrets with External Secrets Operator, direct Kubernetes Secrets, or chart-managed credentials. The chart deploys two always-on workloads — `app-api` (the backend service, port 4201) and `app-frontend` (the web UI, port 8080) — plus an optional `realtime-gateway` (a WebSocket service for realtime sync, port 4401), a database-migrations Job, and a thread-culler CronJob. Supporting resources include Services, an Ingress, HPAs, PodDisruptionBudgets, ConfigMaps, and (when ESO is enabled) ExternalSecret resources.
+CopilotKit Intelligence — the platform that powers threads, shared state, the inspector, and observability — can be self-hosted on your own Kubernetes cluster using the `copilot-intelligence` Helm chart. You run the control plane and data plane inside your own network boundary; the chart leaves you in charge of identity, storage, and secrets.
+
+**What you bring:**
+
+- Postgres and Redis — your own, or the bundled Bitnami subcharts
+- An OIDC provider for identity
+- Secrets via External Secrets Operator, direct Kubernetes Secrets, or chart-managed credentials
+
+**What the chart deploys:**
+
+| Component | Role | Port |
+|---|---|---|
+| `app-api` | Backend service | 4201 |
+| `app-frontend` | Web UI | 8080 |
+| `realtime-gateway` *(optional)* | WebSocket service for realtime sync | 4401 |
+
+Plus a `database-migrations` Job, a `thread-culler` CronJob, and the usual supporting resources (Services, Ingress, HPAs, PodDisruptionBudgets, ConfigMaps, and — when ESO is enabled — ExternalSecret resources).
 
 ## When should I use this?
 
@@ -12,16 +28,17 @@ CopilotKit Intelligence — the platform that powers threads, shared state, the 
 - You need to operate the platform under your existing Kubernetes tooling, CI/CD, and observability stack
 - You have a CopilotKit Intelligence Platform license and the platform-engineering capacity to run a production Kubernetes workload
 
-If none of these apply, use [Copilot Cloud](https://cloud.copilotkit.ai) — it is the fastest path to a working Intelligence deployment and requires no cluster operations.
-
 <Callout type="info" title="Validate locally before committing to a real cluster">
-The chart installs the same way against a local Docker Desktop or k3d cluster as it does against a production cluster. Walk this guide end-to-end on your laptop first — the `values-quickstart-local.yaml` overlay shipped in the chart enables bundled in-cluster Postgres, Redis, and (optionally) Keycloak so you can validate without any external dependencies. The chart repo also ships `scripts/local-demo.sh`, which spins up a disposable k3d cluster, installs the released chart from GHCR, and brings up a bundled Keycloak in one command:
+The chart installs the same way against a local Docker Desktop or k3d cluster as against a production one, so walk this guide end-to-end on your laptop first. Two local paths are supported:
+
+- **Bundled overlay** — install with the `values-quickstart-local.yaml` overlay shipped in the chart. It enables in-cluster Postgres, Redis, and (optionally) Keycloak; you drive the install yourself, following this guide.
+- **One-shot script** — `scripts/local-demo.sh` spins up a disposable k3d cluster, installs the released chart from GHCR, and brings up bundled Keycloak in one command:
 
 ```bash title="Terminal"
 ./scripts/local-demo.sh --version <chart-version>
 ```
 
-Use whichever local path you prefer; both follow the same install commands described below.
+Both paths use the same install commands described below — pick whichever fits.
 </Callout>
 
 ## Prerequisites
@@ -70,7 +87,7 @@ Before starting, make sure the following are in place. The [How the Intelligence
     kubectl auth can-i create namespace --all-namespaces
     ```
 
-    The context shown should be the target cluster, and the permission check should return `yes`. If either is wrong, fix your kubeconfig before proceeding.
+    Confirm the context names your target cluster and that the permission check returns `yes`. If not, fix your kubeconfig before proceeding.
   </Step>
 
   <Step>
