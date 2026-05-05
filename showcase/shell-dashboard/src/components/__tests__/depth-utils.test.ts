@@ -454,9 +454,7 @@ describe("deriveDepth", () => {
 
     it("(h) unsupported → unsupported=true, maxPossible=0, no regression", () => {
       const c = cell("lgp", "agentic-chat", "unsupported");
-      const live = mapOf([
-        row("health:lgp", "health", "green"),
-      ]);
+      const live = mapOf([row("health:lgp", "health", "green")]);
       const result = deriveDepth(c, live);
       expect(result.achieved).toBe(0);
       expect(result.maxPossible).toBe(0);

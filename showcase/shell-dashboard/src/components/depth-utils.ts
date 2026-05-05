@@ -137,7 +137,12 @@ export function deriveDepth(
   // Unshipped cells never advance past D0 — no probes attached, no
   // possibility of regression.
   if (cell.status === "unshipped") {
-    return { achieved: 0, maxPossible, isRegression: false, unsupported: false };
+    return {
+      achieved: 0,
+      maxPossible,
+      isRegression: false,
+      unsupported: false,
+    };
   }
 
   // D0: cell exists (wired or stub) — always true if we reach here.
