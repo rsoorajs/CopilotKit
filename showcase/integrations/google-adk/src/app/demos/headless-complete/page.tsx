@@ -1,7 +1,12 @@
 "use client";
 
 import React, { useCallback, useState } from "react";
-import { CopilotKit, useAgent, useCopilotKit } from "@copilotkit/react-core/v2";
+import {
+  CopilotKit,
+  useAgent,
+  useCopilotKit,
+  useDefaultRenderTool,
+} from "@copilotkit/react-core/v2";
 
 import { MessageList } from "./message-list";
 
@@ -29,6 +34,7 @@ function HeadlessChat() {
   // @region[page-send-message]
   const { agent } = useAgent({ agentId: "headless_complete" });
   const { copilotkit } = useCopilotKit();
+  useDefaultRenderTool();
   const [input, setInput] = useState("");
 
   const isRunning = agent.isRunning;

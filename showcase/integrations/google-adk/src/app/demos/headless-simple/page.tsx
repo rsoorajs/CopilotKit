@@ -64,17 +64,14 @@ function HeadlessChat() {
   };
 
   const suggestions = [
-    { title: "Weather in Tokyo", message: "What's the weather in Tokyo?" },
-    { title: "AAPL stock price", message: "What's AAPL trading at right now?" },
     {
-      title: "Highlight a note",
-      message: "Highlight 'meeting at 3pm' in yellow.",
+      title: "Profile card",
+      message: "Show me a profile card for Ada Lovelace",
     },
     {
-      title: "Sketch a diagram",
-      message: "Use Excalidraw to sketch a simple system diagram.",
+      title: "Largest continent",
+      message: "What is the largest continent?",
     },
-    { title: "Largest continent", message: "What is the largest continent?" },
   ];
 
   return (
