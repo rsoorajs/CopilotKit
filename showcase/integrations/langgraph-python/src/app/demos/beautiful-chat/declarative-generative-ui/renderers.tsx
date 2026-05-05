@@ -12,7 +12,8 @@
  */
 "use client";
 
-import React, { useState, type JSX } from "react";
+import React, { useState } from "react";
+import type { JSX } from "react";
 import {
   PieChart as RechartsPie,
   Pie,
@@ -25,14 +26,10 @@ import {
   Tooltip,
   CartesianGrid,
 } from "recharts";
-import {
-  createCatalog,
-  type CatalogRenderers,
-} from "@copilotkit/a2ui-renderer";
-import {
-  demonstrationCatalogDefinitions,
-  type DemonstrationCatalogDefinitions,
-} from "./definitions";
+import { createCatalog } from "@copilotkit/a2ui-renderer";
+import type { CatalogRenderers } from "@copilotkit/a2ui-renderer";
+import { demonstrationCatalogDefinitions } from "./definitions";
+import type { DemonstrationCatalogDefinitions } from "./definitions";
 
 // ─── Theme-aware colors ─────────────────────────────────────────────
 
@@ -154,10 +151,7 @@ const demonstrationCatalogRenderers: CatalogRenderers<DemonstrationCatalogDefini
           }}
         >
           {items.map((id: string, i: number) => (
-            <div
-              key={`${id}-${i}`}
-              style={{ flex: "1 1 0", minWidth: 0 }}
-            >
+            <div key={`${id}-${i}`} style={{ flex: "1 1 0", minWidth: 0 }}>
               {children(id)}
             </div>
           ))}
