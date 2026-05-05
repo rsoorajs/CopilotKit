@@ -312,7 +312,7 @@ const CategorySection = React.memo(
                       status={
                         refDepth.unsupported ? "unsupported" : refCell.status
                       }
-                      regression={refDepth.isRegression}
+                      maxDepth={refDepth.maxPossible}
                     />
                   ) : (
                     <td

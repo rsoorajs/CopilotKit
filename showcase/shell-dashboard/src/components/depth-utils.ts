@@ -90,7 +90,12 @@ function isD5Green(
  * - D0: always possible for wired/stub cells
  * - D1-D4: always possible if the cell has a feature ID
  * - D5: possible only if CATALOG_TO_D5_KEY[featureId] exists and has entries
- * - D6: always possible if D5 is possible (d6 keys are per-feature)
+ * - D6: a stretch goal, not a structural ceiling — D6 probes are rare and
+ *   not registered per-feature, so we treat D5 as the ceiling. A cell that
+ *   actually reaches D6 still renders green (depthColorClass treats
+ *   `depth >= maxDepth` as at-ceiling), so capping at 5 doesn't penalize
+ *   the rare D6 achievers — it just stops penalizing every D5 cell as
+ *   "below ceiling" when D6 was never wired.
  */
 function computeMaxPossible(cell: CatalogCell): AchievedDepth {
   // Unsupported/unshipped: max possible is 0.
@@ -110,9 +115,8 @@ function computeMaxPossible(cell: CatalogCell): AchievedDepth {
     return 4;
   }
 
-  // D5 mapping exists: D6 is always structurally possible too
-  // (d6 keys are per-feature, no separate mapping needed).
-  return 6;
+  // D5 mapping exists. D6 is a stretch goal — see fn doc above.
+  return 5;
 }
 
 /**
