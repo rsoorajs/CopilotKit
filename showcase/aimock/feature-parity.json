@@ -190,6 +190,14 @@
     },
     {
       "match": {
+        "userMessage": "What is the largest continent?"
+      },
+      "response": {
+        "content": "Asia is the largest continent — about 30% of Earth's land area, home to over 4.6 billion people."
+      }
+    },
+    {
+      "match": {
         "userMessage": "Show me a profile card for Ada Lovelace"
       },
       "response": {
