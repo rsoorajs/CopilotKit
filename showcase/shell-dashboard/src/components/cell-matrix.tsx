@@ -182,7 +182,7 @@ function CategorySection({
                     <DepthChip
                       depth={depth.achieved}
                       status={cellStatus}
-                      regression={depth.isRegression}
+                      maxDepth={depth.maxPossible}
                     />
                   </button>
                   {isSelected && (

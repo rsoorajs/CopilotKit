@@ -139,7 +139,7 @@ function ParityCategorySection({
                 <DepthChip
                   depth={refDepth.achieved}
                   status={refStatus}
-                  regression={refDepth.isRegression}
+                  maxDepth={refDepth.maxPossible}
                 />
               </td>
               {nonRefIntegrations.map((int) => {
@@ -164,7 +164,7 @@ function ParityCategorySection({
                     <DepthChip
                       depth={depth.achieved}
                       status={cellStatus}
-                      regression={depth.isRegression}
+                      maxDepth={depth.maxPossible}
                     />
                   </td>
                 );
