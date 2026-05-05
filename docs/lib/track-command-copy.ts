@@ -14,6 +14,11 @@ const KNOWN_INSTALL_TYPES = [
   "docker",
   "curl",
   "brew",
+  "helm",
+  "kubectl",
+  "make",
+  "bash",
+  "sh",
 ] as const;
 
 export type InstallType = (typeof KNOWN_INSTALL_TYPES)[number] | "code";
