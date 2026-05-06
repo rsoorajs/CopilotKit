@@ -95,4 +95,27 @@ test.describe("Headless Chat (Simple)", () => {
       timeout: 10000,
     });
   });
+
+  test("clicks the Largest continent suggestion and renders the canonical answer", async ({
+    page,
+  }) => {
+    // Suggestion chips are hand-rolled buttons inside a scoped container so the
+    // selector cannot collide with the Send button or any future composer
+    // controls. Clicking dispatches the configured message through send()
+    // imperatively (no setInput round-trip) so the user bubble appears with
+    // the verbatim configured prompt.
+    const chips = page.locator('[data-testid="headless-suggestions"]');
+    await expect(chips).toBeVisible();
+
+    await chips.getByRole("button", { name: "Largest continent" }).click();
+
+    // Verbatim user message rendered inside the message panel.
+    await expect(page.getByText("What is the largest continent?")).toBeVisible({
+      timeout: 10000,
+    });
+
+    // aimock's feature-parity fixture for "What is the largest continent?"
+    // returns a deterministic Asia-first answer.
+    await expect(page.getByText(/Asia/)).toBeVisible({ timeout: 30000 });
+  });
 });
