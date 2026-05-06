@@ -234,23 +234,6 @@ export function BrandNav(_props: BrandNavProps = {}) {
               />
             )}
           </Link>
-          <span className="mx-2 text-[var(--border)] select-none">|</span>
-          <Link
-            href="/ag-ui"
-            className="relative flex items-center gap-1.5 px-1 pb-1 text-sm font-bold tracking-tight transition-colors"
-            style={{
-              color: active === "ag-ui" ? "var(--accent)" : "var(--text-faint)",
-            }}
-          >
-            <AgUiIcon />
-            AG-UI
-            {active === "ag-ui" && (
-              <span
-                className="absolute bottom-0 left-0 right-0 h-[2px] rounded-full"
-                style={{ background: "var(--accent)" }}
-              />
-            )}
-          </Link>
         </div>
 
         {/* Context-dependent nav links (desktop) */}
