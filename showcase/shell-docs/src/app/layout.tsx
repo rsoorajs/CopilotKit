@@ -91,17 +91,18 @@ export default function RootLayout({
       className={`${plusJakartaSans.variable} ${splineSansMono.variable}`}
     >
       <head>
-        <Script
-          id="reo-init-script"
-          strategy="afterInteractive"
-          dangerouslySetInnerHTML={{
-            __html: `
+        {REO_KEY ? (
+          <Script
+            id="reo-init-script"
+            strategy="afterInteractive"
+            dangerouslySetInnerHTML={{
+              __html: `
                   !function(){
                     var e, t, n;
-                    e = "${REO_KEY}";
+                    e = ${JSON.stringify(REO_KEY)};
                     t = function() {
                       if (window.Reo) {
-                        window.Reo.init({ clientID: "${REO_KEY}" });
+                        window.Reo.init({ clientID: e });
                       }
                     };
                     n = document.createElement("script");
@@ -111,8 +112,9 @@ export default function RootLayout({
                     document.head.appendChild(n);
                   }();
                 `,
-          }}
-        />
+            }}
+          />
+        ) : null}
         <Script
           id="hubspot-script"
           type="text/javascript"
