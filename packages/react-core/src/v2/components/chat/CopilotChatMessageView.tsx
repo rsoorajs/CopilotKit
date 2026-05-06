@@ -284,26 +284,25 @@ const MemoizedCustomMessage = React.memo(
       message: Message;
       position: "before" | "after";
     }) => React.ReactElement | null;
-    stateSnapshot: unknown;
+    stateSnapshot?: unknown;
   }) {
     return renderCustomMessage({ message, position });
   },
   (prevProps, nextProps) => {
-    // Only message identity, content/role, position, and stateSnapshot are
-    // compared at the memo layer. Run-state reactivity (isRunning, run
-    // membership, message count in run) is the renderer's responsibility
-    // via `useAgent` — the canonical pattern is to subscribe with
-    // `UseAgentUpdate.OnRunStatusChanged` / `OnMessagesChanged` so the
-    // renderer's own forceUpdate fires regardless of this memo's bail-out.
+    // Only re-render if the message or position changed
     if (prevProps.message.id !== nextProps.message.id) return false;
     if (prevProps.position !== nextProps.position) return false;
+    // Compare message content - for assistant messages this is a string, for others may differ
     if (prevProps.message.content !== nextProps.message.content) return false;
     if (prevProps.message.role !== nextProps.message.role) return false;
+    // Compare state snapshot - custom renderers may depend on state
     if (
       JSON.stringify(prevProps.stateSnapshot) !==
       JSON.stringify(nextProps.stateSnapshot)
     )
       return false;
+    // Note: We don't compare renderCustomMessage function reference because it changes
+    // frequently. The message and state comparison is sufficient to determine if a re-render is needed.
     return true;
   },
 );
