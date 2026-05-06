@@ -608,11 +608,11 @@ export function CopilotChatMessageView({
 
     // Auto-mount the IntelligenceIndicator on assistant message slots
     // when the runtime is in intelligence mode. The component self-gates
-    // further (last in run, latest run, matching tool call) so only one
-    // pill renders at a time — but mounting it only for assistant
-    // messages avoids spinning up a `useAgent` subscription, a 200 ms
-    // poll interval, and four effects on every user/reasoning/activity
-    // slot just to have it return null at the role gate.
+    // further (latest matching-assistant slot, pending tool-call grace
+    // window) so only one pill renders at a time — mounting only for
+    // assistant messages avoids the per-slot `useAgent` subscription
+    // and four effects on user/reasoning/activity slots that would just
+    // return null at the role gate anyway.
     if (copilotkit.intelligence !== undefined && message.role === "assistant") {
       elements.push(
         <IntelligenceIndicator
