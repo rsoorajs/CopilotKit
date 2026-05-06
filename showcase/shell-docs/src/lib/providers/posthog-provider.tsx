@@ -46,64 +46,7 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
           : null;
       const initSessionId = params?.get("session_id") ?? sessionId;
 
-      // Suppress all PostHog-related console errors and warnings
-      const originalError = console.error;
-      const originalWarn = console.warn;
-      const originalLog = console.log;
-
-      const suppressPostHogErrors = () => {
-        console.error = (...args: unknown[]) => {
-          const errorString = args.join(" ");
-          const isPostHogError =
-            errorString.includes("posthog") ||
-            errorString.includes("PostHog") ||
-            errorString.includes("request.ts") ||
-            errorString.includes("posthog-core.ts") ||
-            errorString.includes("ERR_BLOCKED_BY_CONTENT_BLOCKER") ||
-            args.some((arg) => {
-              if (typeof arg === "string") return arg.includes("posthog");
-              if (arg && typeof arg === "object") {
-                const maybeErr = arg as { stack?: string; message?: string };
-                return (
-                  maybeErr.stack?.includes("posthog") ||
-                  maybeErr.message?.includes("posthog")
-                );
-              }
-              return false;
-            });
-
-          if (isPostHogError) {
-            // Suppress in production, log as warning in development
-            if (process.env.NODE_ENV === "development") {
-              originalWarn("[PostHog] Error suppressed:", ...args);
-            }
-            return;
-          }
-          originalError(...args);
-        };
-
-        console.warn = (...args: unknown[]) => {
-          const warnString = args.join(" ");
-          const isPostHogWarn =
-            warnString.includes("posthog") ||
-            warnString.includes("PostHog") ||
-            warnString.includes("[PostHog.js]");
-
-          if (isPostHogWarn) {
-            // Suppress in production, log in development
-            if (process.env.NODE_ENV === "development") {
-              originalLog("[PostHog] Warning suppressed:", ...args);
-            }
-            return;
-          }
-          originalWarn(...args);
-        };
-      };
-
       try {
-        // Suppress PostHog errors permanently (they're just noise from ad blockers)
-        suppressPostHogErrors();
-
         posthog.init(POSTHOG_KEY, {
           api_host: POSTHOG_HOST,
           ui_host: POSTHOG_UI_HOST,
@@ -124,7 +67,7 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
       } catch (error) {
         // Silently fail if PostHog init fails (e.g., network issues, blocked by ad blockers)
         if (process.env.NODE_ENV === "development") {
-          originalWarn("PostHog initialization failed:", error);
+          console.warn("PostHog initialization failed:", error);
         }
       }
     }
