@@ -1,23 +1,25 @@
-import { AbstractAgent, HttpAgent } from "@ag-ui/client";
-import {
-  logger,
+import type { AbstractAgent } from "@ag-ui/client";
+import { HttpAgent } from "@ag-ui/client";
+import type {
   RuntimeInfo,
   AgentDescription,
   RuntimeMode,
   RuntimeLicenseStatus,
   IntelligenceRuntimeInfo,
+} from "@copilotkit/shared";
+import {
+  logger,
   RUNTIME_MODE_SSE,
   RUNTIME_MODE_INTELLIGENCE,
   resolveDebugConfig,
 } from "@copilotkit/shared";
 import { ProxiedCopilotRuntimeAgent } from "../agent";
-import type { CopilotKitCore } from "./core";
+import type { CopilotKitCore, CopilotKitCoreFriendsAccess } from "./core";
 import {
   CopilotKitCoreErrorCode,
   CopilotKitCoreRuntimeConnectionStatus,
-  CopilotKitCoreFriendsAccess,
 } from "./core";
-import { CopilotRuntimeTransport } from "../types";
+import type { CopilotRuntimeTransport } from "../types";
 
 export interface CopilotKitCoreAddAgentParams {
   id: string;
@@ -39,7 +41,7 @@ export interface CopilotKitCoreRegisterProxiedAgentParams {
    * to. Invisible to subscribers — only affects URL paths and single-route
    * envelopes.
    */
-  remoteAgentId: string;
+  runtimeAgentId: string;
 }
 
 export interface CopilotKitCoreRegisterProxiedAgentResult {
@@ -192,7 +194,7 @@ export class AgentRegistry {
 
   /**
    * Register a proxied agent that routes outbound runtime requests to an
-   * existing runtime agent (`remoteAgentId`) while exposing a distinct local
+   * existing runtime agent (`runtimeAgentId`) while exposing a distinct local
    * registry id (`agentId`). Throws if `agentId` is already taken by either a
    * local or runtime-discovered agent.
    *
@@ -203,7 +205,7 @@ export class AgentRegistry {
    */
   registerProxiedAgent({
     agentId,
-    remoteAgentId,
+    runtimeAgentId,
   }: CopilotKitCoreRegisterProxiedAgentParams): CopilotKitCoreRegisterProxiedAgentResult {
     // Use hasOwnProperty rather than `in`: `in` walks the prototype chain,
     // so an agentId of "__proto__", "constructor", "toString" etc. would
@@ -220,7 +222,7 @@ export class AgentRegistry {
     const agent = new ProxiedCopilotRuntimeAgent({
       runtimeUrl: this._runtimeUrl,
       agentId,
-      remoteAgentId,
+      runtimeAgentId,
       transport: this._runtimeTransport,
       credentials: friends.credentials,
       // If runtime info has already synced, mirror its mode/intelligence so

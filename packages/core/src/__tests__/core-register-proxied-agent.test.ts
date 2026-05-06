@@ -10,18 +10,18 @@ describe("CopilotKitCore.registerProxiedAgent", () => {
     core = new CopilotKitCore({ runtimeUrl: "http://localhost:4000" });
   });
 
-  it("registers a proxy under agentId and routes outbound to remoteAgentId", () => {
+  it("registers a proxy under agentId and routes outbound to runtimeAgentId", () => {
     const { agent, unregister } = core.registerProxiedAgent({
       agentId: "chat-1",
-      remoteAgentId: "default",
+      runtimeAgentId: "default",
     });
 
     expect(agent).toBeInstanceOf(ProxiedCopilotRuntimeAgent);
     expect(agent.agentId).toBe("chat-1");
-    expect(agent.remoteAgentId).toBe("default");
+    expect(agent.runtimeAgentId).toBe("default");
     expect(core.getAgent("chat-1")).toBe(agent);
 
-    // The HTTP url is built from remoteAgentId, not agentId — chat-1's
+    // The HTTP url is built from runtimeAgentId, not agentId — chat-1's
     // outbound /run hits /agent/default/run on the runtime.
     expect((agent as unknown as { url: string }).url).toContain(
       "/agent/default/run",
@@ -35,13 +35,13 @@ describe("CopilotKitCore.registerProxiedAgent", () => {
   it("throws when agentId is already registered locally", () => {
     core.registerProxiedAgent({
       agentId: "chat-1",
-      remoteAgentId: "default",
+      runtimeAgentId: "default",
     });
 
     expect(() =>
       core.registerProxiedAgent({
         agentId: "chat-1",
-        remoteAgentId: "support",
+        runtimeAgentId: "support",
       }),
     ).toThrow(/already registered/);
   });
@@ -55,7 +55,7 @@ describe("CopilotKitCore.registerProxiedAgent", () => {
     expect(() =>
       collidingCore.registerProxiedAgent({
         agentId: "existing",
-        remoteAgentId: "default",
+        runtimeAgentId: "default",
       }),
     ).toThrow(/already registered/);
   });
@@ -63,7 +63,7 @@ describe("CopilotKitCore.registerProxiedAgent", () => {
   it("unregister is idempotent and does not strip a replacement", () => {
     const first = core.registerProxiedAgent({
       agentId: "chat-1",
-      remoteAgentId: "default",
+      runtimeAgentId: "default",
     });
     first.unregister();
     expect(core.getAgent("chat-1")).toBeUndefined();
@@ -76,7 +76,7 @@ describe("CopilotKitCore.registerProxiedAgent", () => {
     // `first` must NOT remove the new entry.
     const second = core.registerProxiedAgent({
       agentId: "chat-1",
-      remoteAgentId: "support",
+      runtimeAgentId: "support",
     });
     first.unregister();
     expect(core.getAgent("chat-1")).toBe(second.agent);
@@ -92,7 +92,7 @@ describe("CopilotKitCore.registerProxiedAgent", () => {
 
     const { unregister } = core.registerProxiedAgent({
       agentId: "chat-1",
-      remoteAgentId: "default",
+      runtimeAgentId: "default",
     });
     // notifyAgentsChanged is async — yield once to let the subscriber fire.
     await new Promise((r) => setTimeout(r, 0));
@@ -107,7 +107,7 @@ describe("CopilotKitCore.registerProxiedAgent", () => {
     core.setHeaders({ Authorization: "Bearer abc" });
     const { agent } = core.registerProxiedAgent({
       agentId: "chat-1",
-      remoteAgentId: "default",
+      runtimeAgentId: "default",
     });
     expect(agent.headers?.Authorization).toBe("Bearer abc");
   });
@@ -120,7 +120,7 @@ describe("CopilotKitCore.registerProxiedAgent", () => {
  * The old design implicitly cloned a registry agent per (agentId, threadId).
  * The new model: callers register a distinct proxy per logical "chat", each
  * with its own local agentId. Multiple proxies can point at the same
- * `remoteAgentId` to share a runtime agent without sharing in-memory state.
+ * `runtimeAgentId` to share a runtime agent without sharing in-memory state.
  */
 describe("CopilotKitCore.registerProxiedAgent — isolation", () => {
   let core: CopilotKitCore;
@@ -129,14 +129,14 @@ describe("CopilotKitCore.registerProxiedAgent — isolation", () => {
     core = new CopilotKitCore({ runtimeUrl: "http://localhost:4000" });
   });
 
-  it("two proxies registered against the same remoteAgentId are distinct instances", () => {
+  it("two proxies registered against the same runtimeAgentId are distinct instances", () => {
     const a = core.registerProxiedAgent({
       agentId: "chat-1",
-      remoteAgentId: "default",
+      runtimeAgentId: "default",
     });
     const b = core.registerProxiedAgent({
       agentId: "chat-2",
-      remoteAgentId: "default",
+      runtimeAgentId: "default",
     });
 
     expect(a.agent).not.toBe(b.agent);
@@ -144,18 +144,18 @@ describe("CopilotKitCore.registerProxiedAgent — isolation", () => {
     expect(core.getAgent("chat-2")).toBe(b.agent);
     expect(a.agent.agentId).toBe("chat-1");
     expect(b.agent.agentId).toBe("chat-2");
-    expect(a.agent.remoteAgentId).toBe("default");
-    expect(b.agent.remoteAgentId).toBe("default");
+    expect(a.agent.runtimeAgentId).toBe("default");
+    expect(b.agent.runtimeAgentId).toBe("default");
   });
 
-  it("two proxies share the same outbound URL (both route to remoteAgentId)", () => {
+  it("two proxies share the same outbound URL (both route to runtimeAgentId)", () => {
     const a = core.registerProxiedAgent({
       agentId: "chat-1",
-      remoteAgentId: "default",
+      runtimeAgentId: "default",
     });
     const b = core.registerProxiedAgent({
       agentId: "chat-2",
-      remoteAgentId: "default",
+      runtimeAgentId: "default",
     });
 
     const urlA = (a.agent as unknown as { url: string }).url;
@@ -166,14 +166,14 @@ describe("CopilotKitCore.registerProxiedAgent — isolation", () => {
     expect(urlA).not.toContain("chat-2");
   });
 
-  it("isolates messages between two proxies pointing to the same remoteAgentId", () => {
+  it("isolates messages between two proxies pointing to the same runtimeAgentId", () => {
     const a = core.registerProxiedAgent({
       agentId: "chat-1",
-      remoteAgentId: "default",
+      runtimeAgentId: "default",
     });
     const b = core.registerProxiedAgent({
       agentId: "chat-2",
-      remoteAgentId: "default",
+      runtimeAgentId: "default",
     });
 
     a.agent.addMessage({
@@ -197,14 +197,14 @@ describe("CopilotKitCore.registerProxiedAgent — isolation", () => {
     expect(b.agent.messages[0]?.id).toBe("msg-b-1");
   });
 
-  it("isolates state between two proxies pointing to the same remoteAgentId", () => {
+  it("isolates state between two proxies pointing to the same runtimeAgentId", () => {
     const a = core.registerProxiedAgent({
       agentId: "chat-1",
-      remoteAgentId: "default",
+      runtimeAgentId: "default",
     });
     const b = core.registerProxiedAgent({
       agentId: "chat-2",
-      remoteAgentId: "default",
+      runtimeAgentId: "default",
     });
 
     a.agent.setState({ counter: 1 });
@@ -217,11 +217,11 @@ describe("CopilotKitCore.registerProxiedAgent — isolation", () => {
   it("each proxy can hold its own threadId without affecting others", () => {
     const a = core.registerProxiedAgent({
       agentId: "chat-1",
-      remoteAgentId: "default",
+      runtimeAgentId: "default",
     });
     const b = core.registerProxiedAgent({
       agentId: "chat-2",
-      remoteAgentId: "default",
+      runtimeAgentId: "default",
     });
 
     a.agent.threadId = "thread-a";
@@ -234,7 +234,7 @@ describe("CopilotKitCore.registerProxiedAgent — isolation", () => {
   it("getAgent returns the same proxy instance across calls (no per-call clone)", () => {
     const { agent } = core.registerProxiedAgent({
       agentId: "chat-1",
-      remoteAgentId: "default",
+      runtimeAgentId: "default",
     });
 
     expect(core.getAgent("chat-1")).toBe(agent);
@@ -248,7 +248,7 @@ describe("CopilotKitCore.registerProxiedAgent — isolation", () => {
     const offlineCore = new CopilotKitCore({});
     const { agent } = offlineCore.registerProxiedAgent({
       agentId: "chat-1",
-      remoteAgentId: "default",
+      runtimeAgentId: "default",
     });
     expect(agent).toBeInstanceOf(ProxiedCopilotRuntimeAgent);
     expect(offlineCore.getAgent("chat-1")).toBe(agent);
@@ -263,7 +263,7 @@ describe("CopilotKitCore.registerProxiedAgent — isolation", () => {
     });
     const { agent } = connectingCore.registerProxiedAgent({
       agentId: "chat-1",
-      remoteAgentId: "default",
+      runtimeAgentId: "default",
     });
     // `runtimeMode` is private — peek through unknown for this assertion.
     const mode = (agent as unknown as { runtimeMode: string }).runtimeMode;
@@ -277,7 +277,7 @@ describe("CopilotKitCore.registerProxiedAgent — isolation", () => {
     // works regardless.
     const { agent } = core.registerProxiedAgent({
       agentId: "chat-1",
-      remoteAgentId: "phantom",
+      runtimeAgentId: "phantom",
     });
 
     agent.addMessage({ id: "m", role: "user", content: "test" });
@@ -287,13 +287,13 @@ describe("CopilotKitCore.registerProxiedAgent — isolation", () => {
     expect(agent.messages).toHaveLength(1);
     expect(agent.state).toEqual({ ok: true });
     expect(agent.threadId).toBe("t");
-    expect(agent.remoteAgentId).toBe("phantom");
+    expect(agent.runtimeAgentId).toBe("phantom");
   });
 
   it("registering, unregistering, and re-registering the same agentId yields a fresh proxy", () => {
     const first = core.registerProxiedAgent({
       agentId: "chat-1",
-      remoteAgentId: "default",
+      runtimeAgentId: "default",
     });
     first.agent.addMessage({
       id: "m-1",
@@ -305,7 +305,7 @@ describe("CopilotKitCore.registerProxiedAgent — isolation", () => {
 
     const second = core.registerProxiedAgent({
       agentId: "chat-1",
-      remoteAgentId: "default",
+      runtimeAgentId: "default",
     });
 
     expect(second.agent).not.toBe(first.agent);

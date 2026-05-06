@@ -172,7 +172,7 @@ function ExportButton() {
 
 ### Registering a Proxied Agent
 
-`copilotkit.registerProxiedAgent()` mounts a new frontend agent under a local `agentId` that routes its outbound runtime requests to a different runtime agent (`remoteAgentId`). Use this when you want multiple frontend agents — e.g. one per chat window — backed by a single runtime agent, with isolated message and state bookkeeping per frontend instance.
+`copilotkit.registerProxiedAgent()` mounts a new frontend agent under a local `agentId` that routes its outbound runtime requests to a different runtime agent (`runtimeAgentId`). Use this when you want multiple frontend agents — e.g. one per chat window — backed by a single runtime agent, with isolated message and state bookkeeping per frontend instance.
 
 ```tsx
 import { useEffect } from "react";
@@ -187,7 +187,7 @@ function ChatWindow({ id }: { id: string }) {
     // and state, even though they share a backend.
     const { unregister } = copilotkit.registerProxiedAgent({
       agentId: id,
-      remoteAgentId: "default",
+      runtimeAgentId: "default",
     });
     return unregister;
   }, [copilotkit, id]);
@@ -205,7 +205,7 @@ function App() {
 }
 ```
 
-The local `agentId` is what `useAgent`, state-manager subscriptions, and `onAgentsChanged` see. The `remoteAgentId` is invisible to subscribers — it only changes the URL path the proxy hits (`/agent/<remoteAgentId>/run`).
+The local `agentId` is what `useAgent`, state-manager subscriptions, and `onAgentsChanged` see. The `runtimeAgentId` is invisible to subscribers — it only changes the URL path the proxy hits (`/agent/<runtimeAgentId>/run`).
 
 #### `registerProxiedAgent` Parameters
 
@@ -214,7 +214,7 @@ The local `agentId` is what `useAgent`, state-manager subscriptions, and `onAgen
     The local registry id under which the proxy is registered. Used by `useAgent`, state-manager subscriptions, and all subscriber bookkeeping. Must not collide with any existing local agent or runtime-discovered agent — registration throws on collision.
   </PropertyReference>
 
-  <PropertyReference name="remoteAgentId" type="string" required>
+  <PropertyReference name="runtimeAgentId" type="string" required>
     The id of the runtime agent that this proxy routes outbound HTTP requests to. Invisible to subscribers — only affects URL paths and single-route envelopes.
   </PropertyReference>
 </PropertyReference>

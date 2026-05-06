@@ -313,13 +313,13 @@ describe("CopilotChat activity message rendering", () => {
     //
     // The trap this catches is a refactor where the renderer pipeline keys
     // on something other than `config.agentId` (e.g. for proxied
-    // registrations, accidentally keying on `proxy.remoteAgentId`). The
+    // registrations, accidentally keying on `proxy.runtimeAgentId`). The
     // assertion shape — "two agents in the registry, the renderer must
     // receive the one matching config.agentId" — is generic to that bug
     // class. The proxy-routing-specific behavior (registering a
-    // ProxiedCopilotRuntimeAgent with `remoteAgentId !== agentId` and
+    // ProxiedCopilotRuntimeAgent with `runtimeAgentId !== agentId` and
     // verifying `getAgent(agentId)` returns the proxy, not the agent at
-    // remoteAgentId) is covered by `core-register-proxied-agent.test.ts`
+    // runtimeAgentId) is covered by `core-register-proxied-agent.test.ts`
     // at the registry level.
     const localAgent = new MockStepwiseAgent();
     localAgent.agentId = "chat-1";
