@@ -117,6 +117,7 @@ export const CATALOG_TO_D5_KEY: Readonly<Record<string, readonly string[]>> = {
   "agentic-chat": ["agentic-chat"],
   "tool-rendering": ["tool-rendering"],
   "headless-simple": ["gen-ui-headless"],
+  "headless-complete": ["gen-ui-headless-complete"],
   "gen-ui-tool-based": ["gen-ui-custom"],
   "hitl-in-chat": ["hitl-text-input"],
   hitl: ["hitl-steps"],
