@@ -40,6 +40,7 @@ export type D5FeatureType =
   | "hitl-steps"
   | "hitl-text-input"
   | "gen-ui-headless"
+  | "gen-ui-headless-complete"
   | "gen-ui-custom"
   | "mcp-apps"
   | "subagents"
@@ -91,6 +92,7 @@ const D5_FEATURE_TYPES: readonly D5FeatureType[] = [
   "hitl-steps",
   "hitl-text-input",
   "gen-ui-headless",
+  "gen-ui-headless-complete",
   "gen-ui-custom",
   "mcp-apps",
   "subagents",

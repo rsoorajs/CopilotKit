@@ -525,6 +525,60 @@
           "text": "What is the weather in Tokyo?"
         }
       }
+    },
+    {
+      "match": {
+        "userMessage": "AAPL trading",
+        "toolCallId": "call_d5_get_stock_price_001"
+      },
+      "response": {
+        "content": "AAPL is trading at $189.42, up 1.27% on the day. The card above shows the live ticker and the percentage change."
+      }
+    },
+    {
+      "match": {
+        "userMessage": "AAPL trading"
+      },
+      "response": {
+        "toolCalls": [
+          {
+            "id": "call_d5_get_stock_price_001",
+            "name": "get_stock_price",
+            "arguments": "{\"ticker\":\"AAPL\"}"
+          }
+        ]
+      }
+    },
+    {
+      "match": {
+        "userMessage": "Highlight 'meeting at 3pm'",
+        "toolCallId": "call_d5_highlight_note_001"
+      },
+      "response": {
+        "content": "Highlighted 'meeting at 3pm' in yellow above. Let me know if you want a different color or a longer note."
+      }
+    },
+    {
+      "match": {
+        "userMessage": "Highlight 'meeting at 3pm'"
+      },
+      "response": {
+        "toolCalls": [
+          {
+            "id": "call_d5_highlight_note_001",
+            "name": "highlight_note",
+            "arguments": "{\"text\":\"meeting at 3pm\",\"color\":\"yellow\"}"
+          }
+        ]
+      }
+    },
+    {
+      "match": {
+        "userMessage": "Use Excalidraw to sketch"
+      },
+      "response": {
+        "content": "Sketched a simple system diagram for you above — three boxes (frontend, runtime, agent) connected by arrows showing the request flow. Ask if you'd like a different shape or more detail."
+      }
     }
   ]
 }
