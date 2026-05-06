@@ -108,7 +108,11 @@ const REGISTRY_TO_D5: Readonly<Record<string, readonly D5FeatureType[]>> = {
   // Chat-surface family: each surface gets its own D5 literal because
   // assertions are surface-specific (custom slot rendered, computed
   // theme colors, sidebar/popup root scoping).
-  "beautiful-chat": ["agentic-chat"], // reuses agentic-chat conversation
+  // Beautiful Chat owns a dedicated D5 probe (`d5-beautiful-chat.ts`) that
+  // asserts the A2UI fixed-schema FlightCard surface — the previous
+  // `["agentic-chat"]` alias would freeload agentic-chat's green status
+  // without exercising any of the A2UI render path the surface depends on.
+  "beautiful-chat": ["beautiful-chat"],
   "chat-slots": ["chat-slots"],
   "chat-customization-css": ["chat-css"],
   "prebuilt-sidebar": ["prebuilt-sidebar"],

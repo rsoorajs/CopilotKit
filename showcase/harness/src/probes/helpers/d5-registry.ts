@@ -75,7 +75,13 @@ export type D5FeatureType =
   // (one literal covers hashbrown + json-render via preNavigateRoute).
   | "byoc"
   // Voice family — voice input/output.
-  | "voice";
+  | "voice"
+  // Beautiful Chat surface — exercises the A2UI fixed-schema render path
+  // by asserting FlightCard surfaces from `search_flights` are visible
+  // in the rendered DOM. Owns its own literal (rather than reusing
+  // `agentic-chat`) so the probe can target surface-specific text rather
+  // than the generic conversation reply.
+  | "beautiful-chat";
 
 /**
  * Closed-set runtime mirror of `D5FeatureType`. Kept in lock-step with
@@ -115,6 +121,7 @@ const D5_FEATURE_TYPES: readonly D5FeatureType[] = [
   "gen-ui-interrupt",
   "byoc",
   "voice",
+  "beautiful-chat",
 ] as const satisfies readonly D5FeatureType[];
 
 /**
