@@ -1,15 +1,13 @@
 import { describe, it, expect } from "vitest";
-import { getD5Script, type D5BuildContext } from "../helpers/d5-registry.js";
+import { getD5Script } from "../helpers/d5-registry.js";
+import type { D5BuildContext } from "../helpers/d5-registry.js";
 import type { Page } from "../helpers/conversation-runner.js";
 // Top-level import triggers the script's `registerD5Script` side effect
 // against the singleton registry. Mirrors the pattern in
 // `d5-tool-rendering.test.ts` — the registry is process-wide, modules
 // are cached, so we register once at import time and read it back via
 // `getD5Script` per assertion.
-import {
-  buildTurns,
-  SAMPLE_AUDIO_BUTTON_SELECTOR,
-} from "./d5-voice.js";
+import { buildTurns, SAMPLE_AUDIO_BUTTON_SELECTOR } from "./d5-voice.js";
 
 /**
  * Tests for the D5 voice script. Three concerns:
@@ -200,27 +198,23 @@ describe("d5-voice script", () => {
       await expect(turn.assertions!(page)).resolves.toBeUndefined();
     });
 
-    it(
-      "throws when the assistant transcript is unrelated to weather",
-      async () => {
-        const turns = buildTurns({
-          integrationSlug: "langgraph-python",
-          featureType: "voice",
-          baseUrl: "https://example.test",
-        });
-        const turn = turns[0]!;
-        const page = makePage({
-          evaluateValues: ["i don't know how to answer that question"],
-        });
+    it("throws when the assistant transcript is unrelated to weather", async () => {
+      const turns = buildTurns({
+        integrationSlug: "langgraph-python",
+        featureType: "voice",
+        baseUrl: "https://example.test",
+      });
+      const turn = turns[0]!;
+      const page = makePage({
+        evaluateValues: ["i don't know how to answer that question"],
+      });
 
-        // The assertion polls for up to 5s before giving up — give the
-        // test enough headroom to observe the rejection rather than
-        // racing it against vitest's default 5000ms timeout.
-        await expect(turn.assertions!(page)).rejects.toThrow(
-          /assistant transcript missing weather\/Tokyo content/,
-        );
-      },
-      10_000,
-    );
+      // The assertion polls for up to 5s before giving up — give the
+      // test enough headroom to observe the rejection rather than
+      // racing it against vitest's default 5000ms timeout.
+      await expect(turn.assertions!(page)).rejects.toThrow(
+        /assistant transcript missing weather\/Tokyo content/,
+      );
+    }, 10_000);
   });
 });
