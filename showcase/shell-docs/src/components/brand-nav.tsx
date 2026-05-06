@@ -130,6 +130,7 @@ function ExternalArrowIcon({ className }: { className?: string }) {
 
 const CLOUD_CTA = {
   label: "Free Developer Access",
+  href: "https://dashboard.operations.copilotkit.ai/?utm_source=docs&utm_medium=cta&utm_campaign=intelligence&utm_content=navbar",
 };
 
 function AgUiIcon({ className }: { className?: string }) {
@@ -276,7 +277,7 @@ export function BrandNav(_props: BrandNavProps = {}) {
             Talk to Our Engineers
           </button>
           <a
-            href="https://dashboard.operations.copilotkit.ai/?utm_source=docs&utm_medium=cta&utm_campaign=intelligence&utm_content=navbar"
+            href={CLOUD_CTA.href}
             target="_blank"
             rel="noreferrer"
             onClick={() => handleFreeDeveloperAccessClick("docs_navbar")}
@@ -367,7 +368,7 @@ export function BrandNav(_props: BrandNavProps = {}) {
                 </Link>
               ))}
               <a
-                href="https://dashboard.operations.copilotkit.ai/?utm_source=docs&utm_medium=cta&utm_campaign=intelligence&utm_content=navbar"
+                href={CLOUD_CTA.href}
                 target="_blank"
                 rel="noreferrer"
                 onClick={() => {
