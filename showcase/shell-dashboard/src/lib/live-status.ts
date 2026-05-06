@@ -126,7 +126,16 @@ export const CATALOG_TO_D5_KEY: Readonly<Record<string, readonly string[]>> = {
   subagents: ["subagents"],
   // ── LGP D5 coverage wave (mirrors REGISTRY_TO_D5 in
   //    harness/src/probes/helpers/d5-feature-mapping.ts) ──
-  "beautiful-chat": ["beautiful-chat"],
+  // Beautiful Chat: 5 per-pill literals — see harness/_beautiful-chat-shared.ts
+  // for why Excalidraw / Calculator / Sales Dashboard / Task Manager are
+  // intentionally out of scope for this PR.
+  "beautiful-chat": [
+    "beautiful-chat-toggle-theme",
+    "beautiful-chat-pie-chart",
+    "beautiful-chat-bar-chart",
+    "beautiful-chat-search-flights",
+    "beautiful-chat-schedule-meeting",
+  ],
   "chat-slots": ["chat-slots"],
   "chat-customization-css": ["chat-css"],
   "prebuilt-sidebar": ["prebuilt-sidebar"],
