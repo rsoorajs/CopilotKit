@@ -129,4 +129,23 @@ test.describe("Headless Chat (Complete)", () => {
       )
       .toBeGreaterThanOrEqual(2);
   });
+
+  test("clicks the Largest continent suggestion and renders the canonical answer", async ({
+    page,
+  }) => {
+    const chips = page.locator('[data-testid="headless-suggestions"]');
+    await expect(chips).toBeVisible();
+
+    await chips.getByRole("button", { name: "Largest continent" }).click();
+
+    const messages = page.locator('[data-testid="headless-complete-messages"]');
+    await expect(messages).toContainText("What is the largest continent?", {
+      timeout: 10000,
+    });
+
+    // aimock fixture returns "Asia is the largest continent — ..."
+    await expect(messages.getByText(/Asia/).first()).toBeVisible({
+      timeout: 30000,
+    });
+  });
 });

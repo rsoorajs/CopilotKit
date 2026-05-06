@@ -10,6 +10,7 @@ import {
   Accordions,
   Accordion,
 } from "@/components/mdx-components";
+import { OpsPlatformCTA } from "@/components/react/ops-platform-cta";
 import { SidebarNav } from "@/components/sidebar-nav";
 import {
   REFERENCE_CONTENT_DIR,
@@ -27,6 +28,7 @@ const mdxComponents = {
   Card,
   Accordions,
   Accordion,
+  OpsPlatformCTA,
   // Strip unknown imports — MDX import statements become no-ops in next-mdx-remote
 };
 
