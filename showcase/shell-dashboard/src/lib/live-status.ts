@@ -126,6 +126,7 @@ export const CATALOG_TO_D5_KEY: Readonly<Record<string, readonly string[]>> = {
   subagents: ["subagents"],
   // ── LGP D5 coverage wave (mirrors REGISTRY_TO_D5 in
   //    harness/src/probes/helpers/d5-feature-mapping.ts) ──
+  "beautiful-chat": ["beautiful-chat"],
   "chat-slots": ["chat-slots"],
   "chat-customization-css": ["chat-css"],
   "prebuilt-sidebar": ["prebuilt-sidebar"],
