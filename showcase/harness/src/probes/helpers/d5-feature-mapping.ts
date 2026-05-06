@@ -64,11 +64,14 @@ const REGISTRY_TO_D5: Readonly<Record<string, readonly D5FeatureType[]>> = {
   "tool-rendering-default-catchall": ["tool-rendering"],
   "tool-rendering-custom-catchall": ["tool-rendering"],
 
-  // gen-ui (headless tier) — D5 script `d5-gen-ui-headless.ts` drives
-  // /demos/headless-simple, but the registry also exposes a fuller
-  // /demos/headless-complete demo on the same surface.
+  // gen-ui (headless tier) — `headless-simple` and `headless-complete`
+  // each have their own D5 script and fixture. They live on different
+  // routes (`/demos/headless-simple` vs `/demos/headless-complete`) and
+  // exercise different rendering surfaces (show_card via useComponent
+  // vs WeatherCard/StockCard/HighlightNote via useRenderTool +
+  // useComponent + MCP), so the mapping is one-to-one.
   "headless-simple": ["gen-ui-headless"],
-  "headless-complete": ["gen-ui-headless"],
+  "headless-complete": ["gen-ui-headless-complete"],
 
   // gen-ui (custom tier)
   "gen-ui-tool-based": ["gen-ui-custom"],

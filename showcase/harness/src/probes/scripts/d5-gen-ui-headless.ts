@@ -1,27 +1,36 @@
 /**
  * D5 — gen-UI (headless) script.
  *
- * Probes the showcase's `/demos/headless-simple` page against the
- * frontend-defined `show_card` tool (registered via `useComponent` in
- * `headless-simple/page.tsx`). The fixture
- * (`fixtures/d5/gen-ui-headless.json`) makes the agent emit a
- * `show_card` tool call which the headless chat surface materialises
- * into a `ShowCard` React component (titled card with a body
- * paragraph).
+ * Probes the showcase's `/demos/headless-simple` page. The page exposes
+ * a row of suggestion chips (`[data-testid="headless-suggestions"]`)
+ * whose buttons dispatch deterministic prompts directly to the agent's
+ * `send()` handler — the same code path the textarea+Enter flow uses,
+ * just without the typing.
  *
- * Two-turn shape (mirrors the recorded fixture):
- *   1. User: "Show me a profile card for Ada Lovelace"
- *      -> Agent calls `show_card({ title, body })` -> frontend renders
- *      `ShowCard` -> second-leg LLM round narrates the rendered card.
+ * Two turns (both chip-driven):
+ *   1. Click "Profile card" → agent emits `show_card({title, body})` →
+ *      frontend `useComponent` materialises a `ShowCard` React component
+ *      (titled card with body paragraph). Asserts the gen-UI cascade
+ *      finds the rendered component AND the assistant narration
+ *      mentions "card" or "ada".
+ *   2. Click "Largest continent" → agent returns plain text "Asia is
+ *      the largest continent…". Asserts the assistant text contains
+ *      "asia".
+ *
+ * Both turns use `preFill` to click the chip — the runner's normal
+ * fill+press is a guarded no-op because the chip click already
+ * submitted the message and the demo's `send()` rejects empty input.
  *
  * Acceptance for the headless tier (NOT the custom tier):
- *   - The custom-rendered component must be present in the DOM (NOT
- *     just text). Empty wrappers are explicitly rejected by the
- *     selector cascade in `_gen-ui-shared.ts`.
- *   - Component must have at least one child element (the headless
- *     `ShowCard` has two: the title `<div>` and the body `<div>`).
- *   - The assistant's follow-up narration must reference the rendered
- *     content (the fixture narrates "card above" / Ada's biography).
+ *   - Turn 1: the custom-rendered ShowCard must be present in the DOM
+ *     with at least one child element (NOT just text). Empty wrappers
+ *     are explicitly rejected by the selector cascade in
+ *     `_gen-ui-shared.ts`.
+ *   - Turn 2: the deterministic continent fixture lives in
+ *     `aimock/feature-parity.json` ("What is the largest continent?" →
+ *     "Asia is the largest continent — about 30% of Earth's land area,
+ *     home to over 4.6 billion people.") so the substring `asia` is
+ *     reliable across integrations.
  *
  * The custom-tier script (`d5-gen-ui-custom.ts`) layers a STRUCTURAL
  * match on top -- for `render_pie_chart` it asserts an SVG with
@@ -31,11 +40,35 @@
 
 import { registerD5Script } from "../helpers/d5-registry.js";
 import type { D5BuildContext } from "../helpers/d5-registry.js";
-import type { ConversationTurn } from "../helpers/conversation-runner.js";
+import type { ConversationTurn, Page } from "../helpers/conversation-runner.js";
 import {
   readLastAssistantText,
   waitForGenUiComponent,
 } from "./_gen-ui-shared.js";
+
+/**
+ * Click a suggestion chip by its visible label, scoped to the
+ * `[data-testid="headless-suggestions"]` row so the click can't pick
+ * up an unrelated button on the page. The runner's structural Page
+ * shim doesn't expose `click()` (Playwright's real Page does); the
+ * driver's wrapper passes it through, so we narrow at call time.
+ */
+async function clickChip(page: Page, label: string): Promise<void> {
+  const pageWithClick = page as Page & {
+    click(selector: string, opts?: { timeout?: number }): Promise<void>;
+  };
+  if (typeof pageWithClick.click !== "function") {
+    throw new Error(
+      "headless probe: page.click is not available — the runner's Page " +
+        "shim must expose click() for chip-driven turns",
+    );
+  }
+  // Playwright's `text=` engine matches button text. The visible
+  // label on the chip is the suggestion's `title` field
+  // (e.g. "Profile card", "Largest continent").
+  const selector = `[data-testid="headless-suggestions"] >> text="${label}"`;
+  await pageWithClick.click(selector, { timeout: 10_000 });
+}
 
 /**
  * Minimum childElementCount required after the cascade resolves. The
@@ -46,40 +79,38 @@ import {
 const MIN_CHILDREN = 1;
 
 /**
- * Lower-case tokens we expect to find in the assistant's follow-up
- * text (post-tool-call narration). The fixture writes a short
- * paragraph that mentions "card" and "Ada".
- *
- * We accept EITHER "card" OR "ada" (not both) because the headless
- * surface may combine the tool-call message and narration into a
- * single `[data-message-role="assistant"]` element. When that
- * happens, `readLastAssistantText` captures the full text including
- * the ShowCard's content ("Ada Lovelace", "English mathematician...")
- * which guarantees "ada" is present. Requiring both tokens would
- * be fragile if the narration message arrives as a separate element
- * that only mentions "card" or only mentions "Ada".
+ * Lower-case tokens we expect to find in the assistant's text after
+ * the ShowCard render. Accept EITHER "card" OR "ada" — see the file
+ * header for the rationale (combined-message edge case in headless).
  */
-const FOLLOWUP_TOKENS_PRIMARY = ["card"] as const;
-const FOLLOWUP_TOKENS_SECONDARY = ["ada"] as const;
+const PROFILE_FOLLOWUP_TOKENS_PRIMARY = ["card"] as const;
+const PROFILE_FOLLOWUP_TOKENS_SECONDARY = ["ada"] as const;
 
 export function buildTurns(_ctx: D5BuildContext): ConversationTurn[] {
   return [
     {
-      input: "Show me a profile card for Ada Lovelace",
+      // Empty input + chip click via preFill. The chip's onClick
+      // submits the message directly; the runner's fill+press is a
+      // no-op because the demo's `send()` guards empty input.
+      input: "",
+      preFill: async (page) => {
+        console.debug(
+          "[d5-gen-ui-headless] turn 1: clicking 'Profile card' chip",
+        );
+        await clickChip(page, "Profile card");
+      },
       assertions: async (page) => {
-        // 1. Cascade-find the rendered component. Throws on timeout
-        //    with a descriptive error so the conversation-runner
-        //    surfaces it as the turn's failure_turn.
+        // 1. Cascade-find the rendered ShowCard component. Throws on
+        //    timeout with a descriptive error.
         console.debug("[d5-gen-ui-headless] waiting for gen-UI component");
         const matchedSelector = await waitForGenUiComponent(page);
         console.debug("[d5-gen-ui-headless] gen-UI component found", {
           matchedSelector,
         });
 
-        // 2. Read the matched node's child count via page.evaluate.
-        //    Ensures the component is structurally non-trivial. The
-        //    selector cascade already filtered empty wrappers, but
-        //    the chat surface may grow content asynchronously.
+        // 2. Structural check: the matched node has children (i.e. the
+        //    ShowCard's title + body actually rendered, not just an
+        //    empty wrapper).
         const childCount = await readChildCountForSelector(
           page,
           matchedSelector,
@@ -95,29 +126,56 @@ export function buildTurns(_ctx: D5BuildContext): ConversationTurn[] {
           );
         }
 
-        // 3. Confirm the assistant followed up with narration that
-        //    references the rendered card. Token-level check (NOT a
-        //    string-equality assertion) so wording drift across
-        //    integrations doesn't fail the probe. We require at
-        //    least one primary token OR one secondary token.
+        // 3. Token-level narration check. Require at least one
+        //    primary OR one secondary token.
         const text = (await readLastAssistantText(page)).toLowerCase();
         console.debug("[d5-gen-ui-headless] follow-up text check", {
-          primaryTokens: [...FOLLOWUP_TOKENS_PRIMARY],
-          secondaryTokens: [...FOLLOWUP_TOKENS_SECONDARY],
+          primaryTokens: [...PROFILE_FOLLOWUP_TOKENS_PRIMARY],
+          secondaryTokens: [...PROFILE_FOLLOWUP_TOKENS_SECONDARY],
           assistantText: text.slice(0, 300),
         });
-        const primaryMissing = FOLLOWUP_TOKENS_PRIMARY.filter(
+        const primaryMissing = PROFILE_FOLLOWUP_TOKENS_PRIMARY.filter(
           (tok) => !text.includes(tok),
         );
-        const secondaryMissing = FOLLOWUP_TOKENS_SECONDARY.filter(
+        const secondaryMissing = PROFILE_FOLLOWUP_TOKENS_SECONDARY.filter(
           (tok) => !text.includes(tok),
         );
         if (primaryMissing.length > 0 && secondaryMissing.length > 0) {
           throw new Error(
-            `gen-ui-headless: assistant follow-up missing tokens (need at least one of [${[...FOLLOWUP_TOKENS_PRIMARY, ...FOLLOWUP_TOKENS_SECONDARY].join(", ")}]); last assistant text: ${text.slice(0, 200)}`,
+            `gen-ui-headless: assistant follow-up missing tokens (need at least one of [${[
+              ...PROFILE_FOLLOWUP_TOKENS_PRIMARY,
+              ...PROFILE_FOLLOWUP_TOKENS_SECONDARY,
+            ].join(", ")}]); last assistant text: ${text.slice(0, 200)}`,
           );
         }
-        console.debug("[d5-gen-ui-headless] all assertions passed");
+        console.debug("[d5-gen-ui-headless] turn 1 assertions passed");
+      },
+    },
+    {
+      input: "",
+      preFill: async (page) => {
+        console.debug(
+          "[d5-gen-ui-headless] turn 2: clicking 'Largest continent' chip",
+        );
+        await clickChip(page, "Largest continent");
+      },
+      assertions: async (page) => {
+        // The aimock fixture returns "Asia is the largest continent…".
+        // Asserting on the lowercase token "asia" is robust to wording
+        // drift while still pinning the deterministic answer.
+        const text = (await readLastAssistantText(page)).toLowerCase();
+        console.debug("[d5-gen-ui-headless] continent text check", {
+          assistantText: text.slice(0, 300),
+        });
+        if (!text.includes("asia")) {
+          throw new Error(
+            `gen-ui-headless: continent reply missing "asia"; last assistant text: ${text.slice(
+              0,
+              200,
+            )}`,
+          );
+        }
+        console.debug("[d5-gen-ui-headless] turn 2 assertions passed");
       },
     },
   ];
