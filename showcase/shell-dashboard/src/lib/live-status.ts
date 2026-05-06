@@ -147,6 +147,7 @@ export const CATALOG_TO_D5_KEY: Readonly<Record<string, readonly string[]>> = {
   "interrupt-headless": ["interrupt-headless"],
   "gen-ui-interrupt": ["gen-ui-interrupt"],
   "byoc-hashbrown": ["byoc"],
+  voice: ["voice"],
 };
 
 function resolveD5Row(
