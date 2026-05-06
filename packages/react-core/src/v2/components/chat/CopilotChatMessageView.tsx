@@ -8,11 +8,12 @@ import React, {
 } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { ScrollElementContext } from "./scroll-element-context";
-import { WithSlots, renderSlot, isReactComponentType } from "../../lib/slots";
+import type { WithSlots } from "../../lib/slots";
+import { renderSlot, isReactComponentType } from "../../lib/slots";
 import CopilotChatAssistantMessage from "./CopilotChatAssistantMessage";
 import CopilotChatUserMessage from "./CopilotChatUserMessage";
 import CopilotChatReasoningMessage from "./CopilotChatReasoningMessage";
-import {
+import type {
   ActivityMessage,
   AssistantMessage,
   Message,
@@ -24,6 +25,8 @@ import { twMerge } from "tailwind-merge";
 import { useRenderActivityMessage, useRenderCustomMessages } from "../../hooks";
 import { useCopilotKit } from "../../providers/CopilotKitProvider";
 import { useCopilotChatConfiguration } from "../../providers/CopilotChatConfigurationProvider";
+import { IntelligenceIndicator } from "../intelligence-indicator";
+import { DEFAULT_AGENT_ID } from "@copilotkit/shared";
 
 /**
  * Resolves a slot value into a { Component, slotProps } pair, handling the three
@@ -599,6 +602,23 @@ export function CopilotChatMessageView({
           position="after"
           renderCustomMessage={renderCustomMessage}
           stateSnapshot={stateSnapshot}
+        />,
+      );
+    }
+
+    // Auto-mount the IntelligenceIndicator on assistant message slots
+    // when the runtime is in intelligence mode. The component self-gates
+    // further (latest matching-assistant slot, pending tool-call grace
+    // window) so only one pill renders at a time — mounting only for
+    // assistant messages avoids the per-slot `useAgent` subscription
+    // and four effects on user/reasoning/activity slots that would just
+    // return null at the role gate anyway.
+    if (copilotkit.intelligence !== undefined && message.role === "assistant") {
+      elements.push(
+        <IntelligenceIndicator
+          key={`${message.id}-intelligence`}
+          message={message}
+          agentId={config?.agentId ?? DEFAULT_AGENT_ID}
         />,
       );
     }
