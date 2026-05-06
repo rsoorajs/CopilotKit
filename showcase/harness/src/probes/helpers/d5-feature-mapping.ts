@@ -111,11 +111,22 @@ const REGISTRY_TO_D5: Readonly<Record<string, readonly D5FeatureType[]>> = {
   // Chat-surface family: each surface gets its own D5 literal because
   // assertions are surface-specific (custom slot rendered, computed
   // theme colors, sidebar/popup root scoping).
-  // Beautiful Chat owns a dedicated D5 probe (`d5-beautiful-chat.ts`) that
-  // asserts the A2UI fixed-schema FlightCard surface — the previous
-  // `["agentic-chat"]` alias would freeload agentic-chat's green status
-  // without exercising any of the A2UI render path the surface depends on.
-  "beautiful-chat": ["beautiful-chat"],
+  // Beautiful Chat owns a per-pill probe family rather than a single
+  // aggregated probe — see `d5-beautiful-chat-*.ts` and
+  // `_beautiful-chat-shared.ts`. Each literal runs its own browser
+  // session against /demos/beautiful-chat so per-pill failure isolation
+  // surfaces in PB by row name, and the multi-turn `useComponent`
+  // rendering quirk on this surface is sidestepped. `isD5Green` uses
+  // `every`, so the cell advances to D5 only when all seven probes are
+  // green. Excalidraw + Calculator are intentionally excluded — see the
+  // shared module for the rationale.
+  "beautiful-chat": [
+    "beautiful-chat-toggle-theme",
+    "beautiful-chat-pie-chart",
+    "beautiful-chat-bar-chart",
+    "beautiful-chat-search-flights",
+    "beautiful-chat-schedule-meeting",
+  ],
   "chat-slots": ["chat-slots"],
   "chat-customization-css": ["chat-css"],
   "prebuilt-sidebar": ["prebuilt-sidebar"],
