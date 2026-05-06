@@ -9,7 +9,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import posthog from "posthog-js";
+import { usePostHog } from "posthog-js/react";
 import { useFramework } from "./framework-provider";
 import { FrameworkLogo } from "./icons/framework-icons";
 
@@ -74,6 +74,7 @@ export function FrameworkSelector({
 }: FrameworkSelectorProps) {
   const router = useRouter();
   const pathname = usePathname() ?? "";
+  const posthog = usePostHog();
   const { effectiveFramework, knownFrameworks, setStoredFramework } =
     useFramework();
   const [open, setOpen] = useState(false);
@@ -157,7 +158,7 @@ export function FrameworkSelector({
     // analytics call must never break navigation.
     try {
       const opt = options.find((o) => o.slug === slug);
-      posthog.capture("framework_selected", {
+      posthog?.capture("docs.framework_selected", {
         framework: slug,
         framework_name: opt?.name ?? slug,
         category: opt?.category,
