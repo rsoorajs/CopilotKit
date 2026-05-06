@@ -1,5 +1,5 @@
 import type { AbstractAgent, Context, State } from "@ag-ui/client";
-import { type AgentSubscriber } from "@ag-ui/client";
+import type { AgentSubscriber } from "@ag-ui/client";
 import { Throttler } from "@tanstack/pacer";
 import type {
   FrontendTool,
@@ -683,7 +683,7 @@ export class CopilotKitCore {
   /**
    * Register a proxied agent against an existing runtime agent. The proxy is
    * exposed under `agentId` (local registry id) and routes outbound runtime
-   * requests to `remoteAgentId`. Throws if `agentId` is already taken.
+   * requests to `runtimeAgentId`. Throws if `agentId` is already taken.
    *
    * Returns the minted proxy and an `unregister` handle for cleanup.
    *
@@ -693,7 +693,7 @@ export class CopilotKitCore {
    * @example
    * const { agent, unregister } = copilotkit.registerProxiedAgent({
    *   agentId: "chat-1",
-   *   remoteAgentId: "default",
+   *   runtimeAgentId: "default",
    * });
    * // ... <CopilotChat agentId="chat-1" />
    * // on cleanup:

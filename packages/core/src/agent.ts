@@ -1,28 +1,33 @@
-import {
+import type {
   AbstractAgent,
   AgentSubscriber,
   BaseEvent,
-  HttpAgent,
   HttpAgentConfig,
   RunAgentInput,
   RunAgentParameters,
   RunAgentResult,
+} from "@ag-ui/client";
+import {
+  HttpAgent,
   runHttpRequest,
   transformHttpEventStream,
 } from "@ag-ui/client";
 import type { AgentCapabilities } from "@ag-ui/core";
-import { Observable, EMPTY, defer, from } from "rxjs";
+import type { Observable } from "rxjs";
+import { EMPTY, defer, from } from "rxjs";
 import { catchError, switchMap } from "rxjs/operators";
 import {
   RUNTIME_MODE_SSE,
   RUNTIME_MODE_INTELLIGENCE,
-  type IntelligenceRuntimeInfo,
-  type RuntimeInfo,
-  type RuntimeMode,
-  type ResolvedDebugConfig,
+} from "@copilotkit/shared";
+import type {
+  IntelligenceRuntimeInfo,
+  RuntimeInfo,
+  RuntimeMode,
+  ResolvedDebugConfig,
 } from "@copilotkit/shared";
 import { IntelligenceAgent } from "./intelligence-agent";
-import { CopilotRuntimeTransport } from "./types";
+import type { CopilotRuntimeTransport } from "./types";
 
 type ResolvedRuntimeMode = RuntimeMode | "pending";
 
@@ -89,17 +94,17 @@ export interface ProxiedCopilotRuntimeAgentConfig extends Omit<
    * The local `agentId` remains the registry key used for subscriber
    * bookkeeping; only outbound routing is overridden.
    */
-  remoteAgentId?: string;
+  runtimeAgentId?: string;
 }
 
 export class ProxiedCopilotRuntimeAgent extends HttpAgent {
   runtimeUrl?: string;
   credentials?: RequestCredentials;
   // `readonly` because `super.url` is baked at construction; mutating
-  // `remoteAgentId` post-construction would desync the REST `run` URL
+  // `runtimeAgentId` post-construction would desync the REST `run` URL
   // (already captured) from `routedAgentId()` (consulted per-call by
   // stop/connect/single-route paths).
-  readonly remoteAgentId?: string;
+  readonly runtimeAgentId?: string;
   private transport: CopilotRuntimeTransport;
   private singleEndpointUrl?: string;
   private runtimeMode: ResolvedRuntimeMode;
@@ -113,7 +118,7 @@ export class ProxiedCopilotRuntimeAgent extends HttpAgent {
       ? config.runtimeUrl.replace(/\/$/, "")
       : undefined;
     const transport = config.transport ?? "auto";
-    const routedId = config.remoteAgentId ?? config.agentId ?? "";
+    const routedId = config.runtimeAgentId ?? config.agentId ?? "";
     const runUrl =
       transport === "single"
         ? (normalizedRuntimeUrl ?? config.runtimeUrl ?? "")
@@ -131,7 +136,7 @@ export class ProxiedCopilotRuntimeAgent extends HttpAgent {
     });
     this.runtimeUrl = normalizedRuntimeUrl ?? config.runtimeUrl;
     this.credentials = config.credentials;
-    this.remoteAgentId = config.remoteAgentId;
+    this.runtimeAgentId = config.runtimeAgentId;
     this.transport = transport;
     this.runtimeMode = config.runtimeMode ?? RUNTIME_MODE_SSE;
     this.intelligence = config.intelligence;
@@ -145,7 +150,7 @@ export class ProxiedCopilotRuntimeAgent extends HttpAgent {
   }
 
   /**
-   * The agent id used for outbound runtime requests — `remoteAgentId` when
+   * The agent id used for outbound runtime requests — `runtimeAgentId` when
    * set (manually-registered proxy), otherwise `agentId` (registry id
    * matches runtime id). Subscriber bookkeeping keeps using `agentId`
    * directly.
@@ -155,10 +160,10 @@ export class ProxiedCopilotRuntimeAgent extends HttpAgent {
    * malformed `/agent//run` or `/agent/undefined/connect` URL silently.
    */
   private routedAgentId(): string {
-    const id = this.remoteAgentId ?? this.agentId;
+    const id = this.runtimeAgentId ?? this.agentId;
     if (!id) {
       throw new Error(
-        "ProxiedCopilotRuntimeAgent: cannot make a runtime request without an agentId or remoteAgentId.",
+        "ProxiedCopilotRuntimeAgent: cannot make a runtime request without an agentId or runtimeAgentId.",
       );
     }
     return id;
@@ -406,7 +411,7 @@ export class ProxiedCopilotRuntimeAgent extends HttpAgent {
     const cloned = new ProxiedCopilotRuntimeAgent({
       runtimeUrl: this.runtimeUrl,
       agentId: this.agentId,
-      remoteAgentId: this.remoteAgentId,
+      runtimeAgentId: this.runtimeAgentId,
       description: this.description,
       headers: { ...this.headers },
       credentials: this.credentials,
