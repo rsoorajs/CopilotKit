@@ -1214,7 +1214,9 @@ export class BuiltInAgent extends AbstractAgent {
             cpkiUserId &&
             cpkiApiKey &&
             cpkiMcpUrl &&
-            !allMcpServers.some((s) => s.type === "http" && s.url === cpkiMcpUrl)
+            !allMcpServers.some(
+              (s) => s.type === "http" && s.url === cpkiMcpUrl,
+            )
           ) {
             allMcpServers.push({
               type: "http",
