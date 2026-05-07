@@ -40,6 +40,7 @@ export type D5FeatureType =
   | "hitl-steps"
   | "hitl-text-input"
   | "gen-ui-headless"
+  | "gen-ui-headless-complete"
   | "gen-ui-custom"
   | "mcp-apps"
   | "subagents"
@@ -75,7 +76,21 @@ export type D5FeatureType =
   // (one literal covers hashbrown + json-render via preNavigateRoute).
   | "byoc"
   // Voice family — voice input/output.
-  | "voice";
+  | "voice"
+  // Beautiful Chat family — one literal per pill on /demos/beautiful-chat
+  // because CopilotKit v2 only renders the FIRST useComponent tool call
+  // in a conversation. Splitting into per-pill scripts means each probe
+  // gets its own browser launch (fresh page, fresh conversation), which
+  // sidesteps the multi-turn rendering quirk. CATALOG_TO_D5_KEY maps
+  // `beautiful-chat` to all five listed literals; `isD5Green` requires
+  // every listed key to be green for the cell to advance to D5. See
+  // `_beautiful-chat-shared.ts` for the full rationale and the
+  // Excalidraw / Calculator / Sales Dashboard / Task Manager exclusions.
+  | "beautiful-chat-toggle-theme"
+  | "beautiful-chat-pie-chart"
+  | "beautiful-chat-bar-chart"
+  | "beautiful-chat-search-flights"
+  | "beautiful-chat-schedule-meeting";
 
 /**
  * Closed-set runtime mirror of `D5FeatureType`. Kept in lock-step with
@@ -91,6 +106,7 @@ const D5_FEATURE_TYPES: readonly D5FeatureType[] = [
   "hitl-steps",
   "hitl-text-input",
   "gen-ui-headless",
+  "gen-ui-headless-complete",
   "gen-ui-custom",
   "mcp-apps",
   "subagents",
@@ -115,6 +131,11 @@ const D5_FEATURE_TYPES: readonly D5FeatureType[] = [
   "gen-ui-interrupt",
   "byoc",
   "voice",
+  "beautiful-chat-toggle-theme",
+  "beautiful-chat-pie-chart",
+  "beautiful-chat-bar-chart",
+  "beautiful-chat-search-flights",
+  "beautiful-chat-schedule-meeting",
 ] as const satisfies readonly D5FeatureType[];
 
 /**

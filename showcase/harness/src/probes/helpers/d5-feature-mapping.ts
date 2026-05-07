@@ -64,11 +64,14 @@ const REGISTRY_TO_D5: Readonly<Record<string, readonly D5FeatureType[]>> = {
   "tool-rendering-default-catchall": ["tool-rendering"],
   "tool-rendering-custom-catchall": ["tool-rendering"],
 
-  // gen-ui (headless tier) — D5 script `d5-gen-ui-headless.ts` drives
-  // /demos/headless-simple, but the registry also exposes a fuller
-  // /demos/headless-complete demo on the same surface.
+  // gen-ui (headless tier) — `headless-simple` and `headless-complete`
+  // each have their own D5 script and fixture. They live on different
+  // routes (`/demos/headless-simple` vs `/demos/headless-complete`) and
+  // exercise different rendering surfaces (show_card via useComponent
+  // vs WeatherCard/StockCard/HighlightNote via useRenderTool +
+  // useComponent + MCP), so the mapping is one-to-one.
   "headless-simple": ["gen-ui-headless"],
-  "headless-complete": ["gen-ui-headless"],
+  "headless-complete": ["gen-ui-headless-complete"],
 
   // gen-ui (custom tier)
   "gen-ui-tool-based": ["gen-ui-custom"],
@@ -108,7 +111,22 @@ const REGISTRY_TO_D5: Readonly<Record<string, readonly D5FeatureType[]>> = {
   // Chat-surface family: each surface gets its own D5 literal because
   // assertions are surface-specific (custom slot rendered, computed
   // theme colors, sidebar/popup root scoping).
-  "beautiful-chat": ["agentic-chat"], // reuses agentic-chat conversation
+  // Beautiful Chat owns a per-pill probe family rather than a single
+  // aggregated probe — see `d5-beautiful-chat-*.ts` and
+  // `_beautiful-chat-shared.ts`. Each literal runs its own browser
+  // session against /demos/beautiful-chat so per-pill failure isolation
+  // surfaces in PB by row name, and the multi-turn `useComponent`
+  // rendering quirk on this surface is sidestepped. `isD5Green` uses
+  // `every`, so the cell advances to D5 only when all seven probes are
+  // green. Excalidraw + Calculator are intentionally excluded — see the
+  // shared module for the rationale.
+  "beautiful-chat": [
+    "beautiful-chat-toggle-theme",
+    "beautiful-chat-pie-chart",
+    "beautiful-chat-bar-chart",
+    "beautiful-chat-search-flights",
+    "beautiful-chat-schedule-meeting",
+  ],
   "chat-slots": ["chat-slots"],
   "chat-customization-css": ["chat-css"],
   "prebuilt-sidebar": ["prebuilt-sidebar"],

@@ -38,7 +38,7 @@ class Delegation(TypedDict):
     id: str
     sub_agent: Literal["research_agent", "writing_agent", "critique_agent"]
     task: str
-    status: Literal["running", "completed", "failed"]
+    status: Literal["completed"]
     result: str
 
 

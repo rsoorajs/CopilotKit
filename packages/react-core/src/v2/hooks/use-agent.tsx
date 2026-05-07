@@ -1,4 +1,4 @@
-import { useCopilotKit } from "../providers/CopilotKitProvider";
+import { useCopilotKit } from "../context";
 import { useMemo, useEffect, useReducer, useRef } from "react";
 import { DEFAULT_AGENT_ID } from "@copilotkit/shared";
 import { AbstractAgent, HttpAgent } from "@ag-ui/client";
@@ -181,7 +181,7 @@ export function useAgent({ agentId, updates, throttleMs }: UseAgentProps = {}) {
     };
 
     if (updateFlags.includes(UseAgentUpdate.OnMessagesChanged)) {
-      handlers.onMessagesChanged = forceUpdate;
+      handlers.onMessagesChanged = batchedForceUpdate;
     }
 
     if (updateFlags.includes(UseAgentUpdate.OnStateChanged)) {

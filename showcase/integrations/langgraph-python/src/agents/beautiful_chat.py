@@ -101,8 +101,6 @@ def query_data(query: str):
     """
     Query the database, takes natural language. Always call before showing a chart or graph.
     """
-    import time
-    print(f"[A2UI-DEBUG] query_data called: query='{query[:60]}' at {time.strftime('%H:%M:%S')}")
     return _cached_data
 
 
@@ -110,9 +108,7 @@ def query_data(query: str):
 
 CATALOG_ID = "copilotkit://app-dashboard-catalog"
 SURFACE_ID = "flight-search-results"
-FLIGHT_SCHEMA = a2ui.load_schema(
-    _DATA_DIR / "schemas" / "flight_schema.json"
-)
+FLIGHT_SCHEMA = a2ui.load_schema(_DATA_DIR / "schemas" / "flight_schema.json")
 
 
 class Flight(TypedDict):
@@ -191,12 +187,7 @@ def generate_a2ui(runtime: ToolRuntime[Any]) -> str:
     A secondary LLM designs the UI schema and data. The result is
     returned as an a2ui_operations container for the middleware to detect.
     """
-    import time
-    t0 = time.time()
-    print(f"[A2UI-DEBUG] generate_a2ui STARTED at t=0")
-
     messages = runtime.state["messages"][:-1]
-    print(f"[A2UI-DEBUG]   messages count: {len(messages)}")
 
     # Get context entries from copilotkit state (catalog capabilities + component schema)
     context_entries = runtime.state.get("copilotkit", {}).get("context", [])
@@ -204,7 +195,6 @@ def generate_a2ui(runtime: ToolRuntime[Any]) -> str:
         entry.get("value", "") for entry in context_entries
         if isinstance(entry, dict) and entry.get("value")
     )
-    print(f"[A2UI-DEBUG]   context entries: {len(context_entries)}, context_text_len: {len(context_text)}")
 
     prompt = context_text
 
@@ -214,15 +204,11 @@ def generate_a2ui(runtime: ToolRuntime[Any]) -> str:
         tool_choice="render_a2ui",
     )
 
-    print(f"[A2UI-DEBUG]   calling secondary LLM at t={time.time()-t0:.1f}s")
     response = model_with_tool.invoke(
         [SystemMessage(content=prompt), *messages],
     )
-    print(f"[A2UI-RESPONSE] {response}")
-    print(f"[A2UI-DEBUG]   secondary LLM responded at t={time.time()-t0:.1f}s")
 
     if not response.tool_calls:
-        print(f"[A2UI-DEBUG]   ERROR: no tool calls in response")
         return json.dumps({"error": "LLM did not call render_a2ui"})
 
     tool_call = response.tool_calls[0]
@@ -232,7 +218,6 @@ def generate_a2ui(runtime: ToolRuntime[Any]) -> str:
     catalog_id = args.get("catalogId", CUSTOM_CATALOG_ID)
     components = args.get("components", [])
     data = args.get("data", {})
-    print(f"[A2UI-DEBUG]   components={len(components)} data_keys={list(data.keys()) if data else []} surface={surface_id}")
 
     ops = [
         a2ui.create_surface(surface_id, catalog_id=catalog_id),
@@ -241,14 +226,12 @@ def generate_a2ui(runtime: ToolRuntime[Any]) -> str:
     if data:
         ops.append(a2ui.update_data_model(surface_id, data))
 
-    result = a2ui.render(operations=ops)
-    print(f"[A2UI-DEBUG] generate_a2ui DONE at t={time.time()-t0:.1f}s result_len={len(result)}")
-    return result
+    return a2ui.render(operations=ops)
 
 
 # ─── Graph ──────────────────────────────────────────────────────────
 
-model = ChatOpenAI(model="gpt-5.4", model_kwargs={"parallel_tool_calls": False})
+model = ChatOpenAI(model="gpt-5-mini", model_kwargs={"parallel_tool_calls": False})
 
 agent = create_agent(
     model=model,
