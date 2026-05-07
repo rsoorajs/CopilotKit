@@ -47,14 +47,14 @@ Before you begin, you'll need the following:
                 ### Run our CLI
 
                 ```bash
-                npx copilotkit@latest create
+                # .NET (default)
+                npx copilotkit@latest create --framework microsoft-agent-framework-dotnet
+
+                # Python
+                npx copilotkit@latest create --framework microsoft-agent-framework-py
                 ```
 
-                The CLI walks you through:
-
-                - **Project name**
-                - **Enterprise Intelligence Platform** — persistent threads, observability, and the inspector. Choose **Yes** to scaffold a project pre-wired for the platform (the CLI walks you through sign-up, or you can [create an account](https://dashboard.operations.copilotkit.ai/?utm_source=docs&utm_medium=cta&utm_campaign=intelligence&utm_content=docs_cli_prompt) first), or **No** for a standard Microsoft Agent Framework setup.
-                - **Framework** — pick **Microsoft Agent Framework (.NET)** or **Microsoft Agent Framework (Python)**.
+                The CLI prompts for a project name, then scaffolds the Microsoft Agent Framework starter pre-wired for CopilotKit.
             </Step>
             <Step>
                 ### Install dependencies
@@ -310,7 +310,7 @@ Before you begin, you'll need the following:
                 ### Install CopilotKit packages
 
                 ```npm
-                npm install @copilotkit/react-ui @copilotkit/react-core @copilotkit/runtime @ag-ui/client
+                npm install @copilotkit/react-core @copilotkit/runtime @ag-ui/client
                 ```
             </Step>
             <Step>
@@ -362,8 +362,8 @@ Before you begin, you'll need the following:
                 via the Microsoft Agent Framework agent.
 
                 ```tsx title="app/layout.tsx"
-                import { CopilotKit } from "@copilotkit/react-core/v2"; // [!code highlight]
-                import "@copilotkit/react-ui/v2/styles.css";
+                import { CopilotKit } from "@copilotkit/react-core"; // [!code highlight]
+                import "@copilotkit/react-core/styles.css";
                 import './globals.css';
 
                 export default function RootLayout({ children }: {children: React.ReactNode}) {
@@ -389,7 +389,7 @@ Before you begin, you'll need the following:
               "use client";
 
               // [!code highlight:1]
-              import { CopilotSidebar } from "@copilotkit/react-core/v2";
+              import { CopilotSidebar } from "@copilotkit/react-core";
 
               export default function Page() {
                 return (
