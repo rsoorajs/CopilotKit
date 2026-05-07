@@ -372,8 +372,8 @@ Before you begin, you'll need the following:
                 via the Microsoft Agent Framework agent.
 
                 ```tsx title="app/layout.tsx"
-                import { CopilotKit } from "@copilotkit/react-core"; // [!code highlight]
-                import "@copilotkit/react-core/styles.css";
+                import { CopilotKit } from "@copilotkit/react-core/v2"; // [!code highlight]
+                import "@copilotkit/react-core/v2/styles.css";
                 import './globals.css';
 
                 export default function RootLayout({ children }: {children: React.ReactNode}) {
@@ -399,7 +399,7 @@ Before you begin, you'll need the following:
               "use client";
 
               // [!code highlight:1]
-              import { CopilotSidebar } from "@copilotkit/react-core";
+              import { CopilotSidebar } from "@copilotkit/react-core/v2";
 
               export default function Page() {
                 return (
