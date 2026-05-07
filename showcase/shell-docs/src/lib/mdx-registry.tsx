@@ -26,7 +26,7 @@ import { IntegrationGrid } from "@/components/integration-grid";
 import { DocsLandingNext } from "@/components/docs-landing-next";
 import { WhenFrameworkHas } from "@/components/when-framework-has";
 import { AgentCoreCommandTabs } from "@/components/agentcore-command-tabs";
-import { getRegistry } from "@/lib/registry";
+import { getRegistry, getDocsFolder } from "@/lib/registry";
 
 const Callout = DocsCallout;
 
@@ -162,6 +162,18 @@ export const docsComponents = {
     const shellHost =
       process.env.NEXT_PUBLIC_SHELL_URL || "https://showcase.copilotkit.ai";
     const profileUrl = `${shellHost}/integrations/${integration}?demo=${demo}`;
+    // Feature-viewer expects the upstream framework folder name (e.g.
+    // `langgraph`), not the registry's URL slug (e.g. `langgraph-python`).
+    // `getDocsFolder` performs the same translation used elsewhere in
+    // shell-docs so both URL variants resolve to the right viewer entry.
+    const upstreamFramework = getDocsFolder(integration);
+    const codeUrl = `https://feature-viewer.copilotkit.ai/${upstreamFramework}/feature/${demo}?view=code&sidebar=false&codeLayout=tabs`;
+    const iframeStyle: React.CSSProperties = {
+      width: "100%",
+      height: "500px",
+      border: "none",
+      background: "var(--bg-surface)",
+    };
     return (
       <div className="my-6 rounded-xl border border-[var(--border)] overflow-hidden">
         <div className="flex items-center justify-between px-4 py-2 bg-[var(--bg-elevated)] border-b border-[var(--border)]">
@@ -175,13 +187,24 @@ export const docsComponents = {
             Open full demo →
           </a>
         </div>
-        <iframe
-          src={demoUrl}
-          className="w-full"
-          style={{ height: "500px" }}
-          sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-          loading="lazy"
-        />
+        <DocsTabs items={["Demo", "Code"]}>
+          <DocsTab value="Demo">
+            <iframe
+              src={demoUrl}
+              style={iframeStyle}
+              sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+              loading="lazy"
+            />
+          </DocsTab>
+          <DocsTab value="Code">
+            <iframe
+              src={codeUrl}
+              style={iframeStyle}
+              sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+              loading="lazy"
+            />
+          </DocsTab>
+        </DocsTabs>
       </div>
     );
   },
