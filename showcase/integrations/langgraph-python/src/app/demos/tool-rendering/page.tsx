@@ -18,7 +18,6 @@ import {
   CopilotChat,
   useRenderTool,
   useDefaultRenderTool,
-  useConfigureSuggestions,
 } from "@copilotkit/react-core/v2";
 import { z } from "zod";
 import { WeatherCard } from "./weather-card";
@@ -27,6 +26,8 @@ import {
   CustomCatchallRenderer,
   type CatchallToolStatus,
 } from "./custom-catchall-renderer";
+import { parseJsonResult } from "./parse-json-result";
+import { useSuggestions } from "./suggestions";
 
 interface WeatherResult {
   city?: string;
@@ -40,15 +41,6 @@ interface FlightSearchResult {
   origin?: string;
   destination?: string;
   flights?: Flight[];
-}
-
-function parseJsonResult<T>(result: unknown): T {
-  if (!result) return {} as T;
-  try {
-    return (typeof result === "string" ? JSON.parse(result) : result) as T;
-  } catch {
-    return {} as T;
-  }
 }
 
 export default function ToolRenderingDemo() {
@@ -135,27 +127,7 @@ function Chat() {
   );
   // @endregion[catchall-renderer]
 
-  useConfigureSuggestions({
-    suggestions: [
-      {
-        title: "Weather in SF",
-        message: "What's the weather in San Francisco?",
-      },
-      {
-        title: "Find flights",
-        message: "Find flights from SFO to JFK.",
-      },
-      {
-        title: "Stock price",
-        message: "What's the current price of AAPL?",
-      },
-      {
-        title: "Roll a d20",
-        message: "Roll a 20-sided die.",
-      },
-    ],
-    available: "always",
-  });
+  useSuggestions();
 
   return (
     <CopilotChat agentId="tool-rendering" className="h-full rounded-2xl" />
