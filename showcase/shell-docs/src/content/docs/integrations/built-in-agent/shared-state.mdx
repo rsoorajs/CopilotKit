@@ -20,7 +20,7 @@ Shared state lets your frontend and agent stay in sync. The agent can update sta
 Use the `useAgent` hook to access the agent's current state:
 
 ```tsx title="app/page.tsx"
-import { useAgent } from "@copilotkit/react-core/v2"; // [!code highlight]
+import { useAgent } from "@copilotkit/react-core"; // [!code highlight]
 
 function TaskBoard() {
   // [!code highlight:3]
@@ -53,7 +53,7 @@ function TaskBoard() {
 You can also push state from the frontend to the agent:
 
 ```tsx title="app/page.tsx"
-import { useAgent } from "@copilotkit/react-core/v2";
+import { useAgent } from "@copilotkit/react-core";
 
 function SettingsPanel() {
   const { agent } = useAgent();
@@ -89,8 +89,8 @@ No additional backend configuration is required — state tools are available to
 Here's a complete example where the agent can add and manage tasks:
 
 ```tsx title="app/page.tsx"
-import { CopilotChat } from "@copilotkit/react-core/v2";
-import { useAgent } from "@copilotkit/react-core/v2";
+import { CopilotChat } from "@copilotkit/react-core";
+import { useAgent } from "@copilotkit/react-core";
 
 function TodoApp() {
   const { agent } = useAgent();

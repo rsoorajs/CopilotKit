@@ -16,7 +16,7 @@ A provider component that exposes localized labels, agent and thread IDs, and op
 ### Signature
 
 ```tsx
-import { CopilotChatConfigurationProvider } from "@copilotkit/react-core/v2";
+import { CopilotChatConfigurationProvider } from "@copilotkit/react-core";
 
 <CopilotChatConfigurationProvider
   labels={...}
@@ -61,7 +61,7 @@ import { CopilotChatConfigurationProvider } from "@copilotkit/react-core/v2";
 ### Signature
 
 ```tsx
-import { useCopilotChatConfiguration } from "@copilotkit/react-core/v2";
+import { useCopilotChatConfiguration } from "@copilotkit/react-core";
 
 function useCopilotChatConfiguration(): CopilotChatConfigurationValue | null;
 ```
@@ -136,7 +136,7 @@ The `CopilotChatLabels` type defines all customizable text strings used by the c
 import {
   CopilotChatConfigurationProvider,
   useCopilotChatConfiguration,
-} from "@copilotkit/react-core/v2";
+} from "@copilotkit/react-core";
 
 function App() {
   return (
@@ -193,7 +193,7 @@ function SupportChat() {
 import {
   CopilotChatConfigurationProvider,
   useCopilotChatConfiguration,
-} from "@copilotkit/react-core/v2";
+} from "@copilotkit/react-core";
 
 function App() {
   return (

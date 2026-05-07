@@ -19,8 +19,8 @@ import {
   <CodePanel>
     ```tsx title="app.tsx"
     import { CopilotKit } from "@copilotkit/react-core";
-    import { CopilotSidebar } from "@copilotkit/react-core/v2";
-    import "@copilotkit/react-ui/v2/styles.css";
+    import { CopilotSidebar } from "@copilotkit/react-core";
+    import "@copilotkit/react-core/styles.css";
 
     export default function App() {
       return (
@@ -35,7 +35,7 @@ import {
   </CodePanel>
   <CodePanel>
     ```tsx title="chat.tsx"
-    import { useAgent } from "@copilotkit/react-core/v2";
+    import { useAgent } from "@copilotkit/react-core";
 
     export default function Chat() {
       const { run, messages, isRunning } = useAgent();
@@ -57,7 +57,7 @@ import {
   <CodePanel>
     ```tsx title="weather-card.tsx"
     import { z } from "zod";
-    import { useComponent } from "@copilotkit/react-core/v2";
+    import { useComponent } from "@copilotkit/react-core";
 
     useComponent({
       name: "showWeather",

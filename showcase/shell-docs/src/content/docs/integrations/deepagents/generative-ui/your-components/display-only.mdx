@@ -32,7 +32,7 @@ For components that need user interaction, see [Interactive](/deepagents/generat
     Use the `useComponent` hook to register a React component. The agent will be able to call it by name, and CopilotKit will render it with the tool arguments as props.
 
     ```tsx title="app/page.tsx"
-    import { useComponent } from "@copilotkit/react-core/v2"; // [!code highlight]
+    import { useComponent } from "@copilotkit/react-core"; // [!code highlight]
     import { z } from "zod";
 
     const weatherSchema = z.object({

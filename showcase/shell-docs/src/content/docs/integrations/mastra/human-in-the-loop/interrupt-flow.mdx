@@ -92,7 +92,7 @@ Interrupt-based HITL is ideal when a tool needs to pause its own execution to co
   Call `resolve()` with the user's response to resume execution.
 
   ```tsx title="ui/app/page.tsx"
-  import { useInterrupt } from "@copilotkit/react-core/v2"; // [!code highlight]
+  import { useInterrupt } from "@copilotkit/react-core"; // [!code highlight]
   // ...
 
   function YourMainContent() {
@@ -185,7 +185,7 @@ interrupt to the correct handler. The `eventValue.toolName` field identifies whi
   ### Route interrupts with `enabled`
 
   ```tsx title="ui/app/page.tsx"
-  import { useInterrupt } from "@copilotkit/react-core/v2";
+  import { useInterrupt } from "@copilotkit/react-core";
 
   function YourMainContent() {
     // ...
@@ -234,7 +234,7 @@ Use the `handler` property to transform interrupt data or resolve interrupts pro
 The return value of `handler` is passed to `render` as the `result` argument.
 
 ```tsx title="ui/app/page.tsx"
-import { useInterrupt } from "@copilotkit/react-core/v2";
+import { useInterrupt } from "@copilotkit/react-core";
 
 function YourMainContent() {
   const [user] = useState({ role: "admin" });

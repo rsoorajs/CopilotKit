@@ -174,7 +174,7 @@ Before you begin, you'll need the following:
         ### Install CopilotKit packages
 
         ```npm
-        npm install @copilotkit/react-ui @copilotkit/react-core @copilotkit/runtime
+        npm install @copilotkit/react-core @copilotkit/runtime
         ```
     </Step>
     <Step>
@@ -265,7 +265,7 @@ Before you begin, you'll need the following:
         ```tsx title="app/layout.tsx"
         // [!code highlight:2]
         import { CopilotKit } from "@copilotkit/react-core";
-        import "@copilotkit/react-ui/v2/styles.css";
+        import "@copilotkit/react-core/styles.css";
 
         // ...
 
@@ -291,8 +291,8 @@ Before you begin, you'll need the following:
     ```tsx title="app/page.tsx"
     "use client";
 
-    import { CopilotSidebar } from "@copilotkit/react-core/v2";
-    import { useDefaultRenderTool } from "@copilotkit/react-core/v2";
+    import { CopilotSidebar } from "@copilotkit/react-core";
+    import { useDefaultRenderTool } from "@copilotkit/react-core";
 
     export default function Page() {
         useDefaultRenderTool({

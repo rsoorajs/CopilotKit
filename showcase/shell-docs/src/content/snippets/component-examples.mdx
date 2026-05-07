@@ -9,7 +9,7 @@ import { Tabs, Tab } from "fumadocs-ui/components/tabs";
 
     ```tsx
     // [!code word:CopilotPopup]
-    import { CopilotPopup } from "@copilotkit/react-core/v2";
+    import { CopilotPopup } from "@copilotkit/react-core";
 
     export function YourApp() {
       return (
@@ -34,7 +34,7 @@ import { Tabs, Tab } from "fumadocs-ui/components/tabs";
 
     ```tsx
     // [!code word:CopilotSidebar]
-    import { CopilotSidebar } from "@copilotkit/react-core/v2";
+    import { CopilotSidebar } from "@copilotkit/react-core";
 
     export function YourApp() {
       return (
@@ -59,7 +59,7 @@ import { Tabs, Tab } from "fumadocs-ui/components/tabs";
 
     ```tsx
     // [!code word:CopilotChat]
-    import { CopilotChat } from "@copilotkit/react-core/v2";
+    import { CopilotChat } from "@copilotkit/react-core";
 
     export function YourComponent() {
       return (
@@ -80,8 +80,8 @@ import { Tabs, Tab } from "fumadocs-ui/components/tabs";
     CopilotKit also offers **fully custom headless UI**, through the `useAgent` and `useCopilotKit` hooks. Everything built with the built-in UI (and more) can be implemented with the headless UI, providing deep customizability.
 
     ```tsx
-    import { useAgent } from "@copilotkit/react-core/v2";
-    import { useCopilotKit } from "@copilotkit/react-core/v2";
+    import { useAgent } from "@copilotkit/react-core";
+    import { useCopilotKit } from "@copilotkit/react-core";
     import { randomUUID } from "@copilotkit/shared/v2";
 
     export function CustomChatInterface() {

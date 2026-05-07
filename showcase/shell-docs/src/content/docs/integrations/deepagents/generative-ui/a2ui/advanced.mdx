@@ -65,7 +65,7 @@ Use `useRenderTool` to intercept the `render_a2ui` tool call and show your compo
 ```tsx title="src/hooks/use-a2ui-progress.tsx"
 "use client";
 
-import { useRenderTool } from "@copilotkit/react-core/v2";
+import { useRenderTool } from "@copilotkit/react-core";
 import { z } from "zod";
 import { A2UIProgress } from "@/components/a2ui-progress";
 
@@ -163,7 +163,7 @@ The resulting `A2UIUserAction` will include the resolved context:
 For custom frontend logic, register a handler with `useA2UIActionHandler`. Your handler receives every action and the pre-declared ops (if any), and decides whether to handle it:
 
 ```tsx
-import { useA2UIActionHandler } from "@copilotkit/react-core/v2";
+import { useA2UIActionHandler } from "@copilotkit/react-core";
 
 // Handle a specific action with custom ops
 useA2UIActionHandler((action, declaredOps) => {
@@ -207,7 +207,7 @@ To completely replace the resolution logic, pass a custom `onAction` to `createA
 import {
   createA2UIMessageRenderer,
   resolveDeclaredOps,
-} from "@copilotkit/react-core/v2";
+} from "@copilotkit/react-core";
 
 const activityRenderers = [
   createA2UIMessageRenderer({

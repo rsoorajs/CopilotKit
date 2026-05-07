@@ -301,7 +301,7 @@ hideTOC: true
           ### Install CopilotKit packages
 
           ```npm
-          npm install @copilotkit/react-ui @copilotkit/react-core @copilotkit/runtime @ag-ui/client
+          npm install @copilotkit/react-core @copilotkit/runtime @ag-ui/client
           ```
       </Step>
       <Step>
@@ -344,7 +344,7 @@ hideTOC: true
 
           ```tsx title="app/layout.tsx"
           import { CopilotKit } from "@copilotkit/react-core"; // [!code highlight]
-          import "@copilotkit/react-ui/v2/styles.css";
+          import "@copilotkit/react-core/styles.css";
           import './globals.css';
 
           // ...
@@ -369,7 +369,7 @@ hideTOC: true
         Add the CopilotSidebar component to your page:
 
         ```tsx title="app/page.tsx"
-        import { CopilotSidebar } from "@copilotkit/react-core/v2"; // [!code highlight:1]
+        import { CopilotSidebar } from "@copilotkit/react-core"; // [!code highlight:1]
 
         export default function Page() {
           return (

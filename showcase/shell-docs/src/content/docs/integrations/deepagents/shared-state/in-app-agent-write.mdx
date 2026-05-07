@@ -72,7 +72,7 @@ when your agent is calling tools. CopilotKit allows you to fully customize how t
     `useAgent` gives you access to the agent, including its state. You can update state by calling `agent.setState`.
 
     ```tsx title="ui/app/page.tsx"
-    import { useAgent } from "@copilotkit/react-core/v2"; // [!code highlight]
+    import { useAgent } from "@copilotkit/react-core"; // [!code highlight]
 
     // Example usage in a pseudo React component
     function YourMainContent() {
@@ -123,7 +123,7 @@ The new agent state will be used next time the agent runs.
 If you want to re-run it manually, use `agent.runAgent` after updating state.
 
 ```tsx title="ui/app/page.tsx"
-import { useAgent } from "@copilotkit/react-core/v2"; // [!code highlight]
+import { useAgent } from "@copilotkit/react-core"; // [!code highlight]
 
 // ...
 

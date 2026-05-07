@@ -11,7 +11,7 @@ description: "React hook for accessing AG-UI agent instances"
 ## Signature
 
 ```tsx
-import { useAgent } from "@copilotkit/react-core/v2";
+import { useAgent } from "@copilotkit/react-core";
 
 function useAgent(options?: UseAgentProps): { agent: AbstractAgent }
 ```
@@ -22,7 +22,7 @@ function useAgent(options?: UseAgentProps): { agent: AbstractAgent }
   Configuration object for the hook.
 
   <PropertyReference name="agentId" type="string" default='"default"'>
-    ID of the agent to retrieve. Must match an agent configured in `CopilotKitProvider`.
+    ID of the agent to retrieve. Must match an agent configured in `CopilotKit`.
   </PropertyReference>
 
   <PropertyReference name="threadId" type="string">
@@ -41,7 +41,7 @@ function useAgent(options?: UseAgentProps): { agent: AbstractAgent }
   <PropertyReference name="throttleMs" type="number" default="provider.defaultThrottleMs ?? 0">
     Throttle interval (in milliseconds) for React re-renders triggered by `OnMessagesChanged` notifications. Useful to reduce re-render frequency during streaming, where new tokens can fire many updates per second.
 
-    The default is resolved as a cascade: `throttleMs ?? provider.defaultThrottleMs ?? 0`. When you omit `throttleMs`, the hook inherits `defaultThrottleMs` from the enclosing `CopilotKitProvider`; when neither is set, the floor is `0` (no throttling). Passing `throttleMs={0}` explicitly disables throttling even when the provider specifies a non-zero `defaultThrottleMs`.
+    The default is resolved as a cascade: `throttleMs ?? provider.defaultThrottleMs ?? 0`. When you omit `throttleMs`, the hook inherits `defaultThrottleMs` from the enclosing `CopilotKit`; when neither is set, the floor is `0` (no throttling). Passing `throttleMs={0}` explicitly disables throttling even when the provider specifies a non-zero `defaultThrottleMs`.
 
     Uses a **leading+trailing** pattern:
     - First update fires immediately (no delay for the initial token)
@@ -164,7 +164,7 @@ function useAgent(options?: UseAgentProps): { agent: AbstractAgent }
 ### Basic Usage
 
 ```tsx
-import { useAgent } from "@copilotkit/react-core/v2";
+import { useAgent } from "@copilotkit/react-core";
 
 function AgentStatus() {
   const { agent } = useAgent();
@@ -182,7 +182,7 @@ function AgentStatus() {
 ### Accessing and Updating State
 
 ```tsx
-import { useAgent } from "@copilotkit/react-core/v2";
+import { useAgent } from "@copilotkit/react-core";
 
 function StateController() {
   const { agent } = useAgent();
@@ -202,7 +202,7 @@ function StateController() {
 
 ```tsx
 import { useEffect } from "react";
-import { useAgent } from "@copilotkit/react-core/v2";
+import { useAgent } from "@copilotkit/react-core";
 
 function EventListener() {
   const { agent } = useAgent();
@@ -223,7 +223,7 @@ function EventListener() {
 ### Multiple Agents
 
 ```tsx
-import { useAgent } from "@copilotkit/react-core/v2";
+import { useAgent } from "@copilotkit/react-core";
 
 function MultiAgentView() {
   const { agent: primary } = useAgent({ agentId: "primary" });
@@ -241,7 +241,7 @@ function MultiAgentView() {
 ### Optimizing Re-renders
 
 ```tsx
-import { useAgent, UseAgentUpdate } from "@copilotkit/react-core/v2";
+import { useAgent, UseAgentUpdate } from "@copilotkit/react-core";
 
 // Only re-render when messages change
 function MessageCount() {
@@ -256,7 +256,7 @@ function MessageCount() {
 ### Throttling Streaming Re-renders
 
 ```tsx
-import { useAgent } from "@copilotkit/react-core/v2";
+import { useAgent } from "@copilotkit/react-core";
 
 // During streaming, coalesce rapid token updates into ~10 renders/sec
 function StreamingChat() {

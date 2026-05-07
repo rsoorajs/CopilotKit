@@ -335,7 +335,7 @@ is a situation where a user and an agent are working together to solve a problem
     Now we can utilize `useAgent` with a `render` function to render the state of our agent **in the chat**.
 
     ```tsx title="app/page.tsx"
-    import { useAgent } from "@copilotkit/react-core/v2";
+    import { useAgent } from "@copilotkit/react-core";
 
     // For type safety, define the state type matching your agent's state snapshot
     type AgentState = {
@@ -375,7 +375,7 @@ is a situation where a user and an agent are working together to solve a problem
     other than the chat.
 
     ```tsx title="app/page.tsx"
-    import { useAgent } from "@copilotkit/react-core/v2"; // [!code highlight]
+    import { useAgent } from "@copilotkit/react-core"; // [!code highlight]
     // ...
 
     // Define the state type matching your agent's state snapshot
