@@ -20,6 +20,7 @@ import {
 } from "@/components/react/tailored-content";
 import { FrameworkTabs } from "@/components/framework-tabs";
 import { OpsPlatformCTA } from "@/components/react/ops-platform-cta";
+import { IframeSwitcher as RealIframeSwitcher } from "@/components/content";
 import { PropertyReference } from "@/components/property-reference";
 import { IntegrationGrid } from "@/components/integration-grid";
 import { DocsLandingNext } from "@/components/docs-landing-next";
@@ -301,35 +302,7 @@ export const docsComponents = {
   SharedContent: ({ children }: { children: React.ReactNode }) => (
     <div>{children}</div>
   ),
-  IframeSwitcher: ({
-    children,
-    src,
-    title,
-  }: {
-    children?: React.ReactNode;
-    src?: string;
-    title?: string;
-  }) =>
-    src ? (
-      <div
-        style={{
-          border: "1px solid var(--border)",
-          borderRadius: "0.5rem",
-          overflow: "hidden",
-          marginBottom: "1rem",
-        }}
-      >
-        <iframe
-          src={src}
-          title={title || "Embedded content"}
-          style={{ width: "100%", height: "400px", border: "none" }}
-          sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-          loading="lazy"
-        />
-      </div>
-    ) : (
-      <div>{children}</div>
-    ),
+  IframeSwitcher: RealIframeSwitcher,
   IframeSwitcherGroup: ({ children }: { children: React.ReactNode }) => (
     <div>{children}</div>
   ),
