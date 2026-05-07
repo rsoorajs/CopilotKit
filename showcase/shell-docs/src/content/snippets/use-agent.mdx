@@ -5,7 +5,7 @@
     First, import `useAgent` from the v2 package:
 
     ```tsx title="page.tsx"
-    import { useAgent } from "@copilotkit/react-core"; // [!code highlight]
+    import { useAgent } from "@copilotkit/react-core/v2"; // [!code highlight]
     ```
 
   </Step>
@@ -93,8 +93,8 @@
     Use `copilotkit.runAgent()` to trigger your agent programmatically:
 
     ```tsx title="page.tsx"
-    import { useAgent } from "@copilotkit/react-core";
-    import { useCopilotKit } from "@copilotkit/react-core";
+    import { useAgent } from "@copilotkit/react-core/v2";
+    import { useCopilotKit } from "@copilotkit/react-core/v2";
     import { randomUUID } from "@copilotkit/shared/v2";
 
     export function RunAgent() {
@@ -190,7 +190,7 @@ You can subscribe to agent events using the `subscribe()` method. This is useful
 
 ```tsx title="page.tsx"
 import { useEffect } from "react";
-import { useAgent } from "@copilotkit/react-core";
+import { useAgent } from "@copilotkit/react-core/v2";
 import type { AgentSubscriber } from "@ag-ui/client";
 
 export function EventLogger() {
@@ -237,7 +237,7 @@ The `AgentSubscriber` interface provides:
 You can customize how agent tool calls are displayed in your UI. First, define your tool renderers:
 
 ```tsx title="components/weather-tool.tsx"
-import { defineToolCallRenderer } from "@copilotkit/react-core";
+import { defineToolCallRenderer } from "@copilotkit/react-core/v2";
 
 // [!code highlight:6]
 export const weatherToolRender = defineToolCallRenderer({
@@ -269,7 +269,7 @@ function WeatherCard({
 Register your tool renderers with CopilotKit:
 
 ```tsx title="layout.tsx"
-import { CopilotKit } from "@copilotkit/react-core";
+import { CopilotKit } from "@copilotkit/react-core/v2";
 import { weatherToolRender } from "./components/weather-tool";
 
 export default function RootLayout({ children }) {
@@ -288,7 +288,7 @@ export default function RootLayout({ children }) {
 Then use `useRenderToolCall` to render tool calls from agent messages:
 
 ```tsx title="components/message-list.tsx"
-import { useAgent, useRenderToolCall } from "@copilotkit/react-core";
+import { useAgent, useRenderToolCall } from "@copilotkit/react-core/v2";
 
 export function MessageList() {
   const { agent } = useAgent();
@@ -328,7 +328,7 @@ Here's a full example combining all concepts into an interactive agent dashboard
 ```tsx title="page.tsx"
 "use client";
 
-import { useAgent } from "@copilotkit/react-core";
+import { useAgent } from "@copilotkit/react-core/v2";
 
 export default function AgentDashboard() {
   const { agent } = useAgent();

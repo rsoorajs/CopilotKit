@@ -146,7 +146,7 @@ You can use this when you need to update agent state from your application — f
     will update the agent state and trigger a rerender of anything that depends on the agent state.
 
     ```tsx title="ui/app/page.tsx"
-    import { useAgent } from "@copilotkit/react-core"; // [!code highlight]
+    import { useAgent } from "@copilotkit/react-core/v2"; // [!code highlight]
 
     // Define the agent state type, should match the actual state of your agent
     type AgentState = {
@@ -202,7 +202,7 @@ If you want to re-run it manually, use `copilotkit.runAgent()`.
 The agent will be re-run with the latest updated state. You can also add a hint message before re-running.
 
 ```tsx title="ui/app/page.tsx"
-import { useAgent, useCopilotKit } from "@copilotkit/react-core";
+import { useAgent, useCopilotKit } from "@copilotkit/react-core/v2";
 
 // ...
 

@@ -54,7 +54,7 @@ Use `useCopilotChatHeadless_c` to access messages, a send function, and loading 
 ```tsx title="src/app/page.tsx"
 "use client";
 import { useState } from "react";
-import { useCopilotChatHeadless_c } from "@copilotkit/react-core";
+import { useCopilotChatHeadless_c } from "@copilotkit/react-core/v2";
 
 export default function Home() {
   const { messages, sendMessage, isLoading } = useCopilotChatHeadless_c();
@@ -112,7 +112,7 @@ You can render generative UI either via `useFrontendTool` / `useComponent`, or b
 Register a frontend tool and attach a render function. CopilotKit inserts your component wherever that tool call appears in the message stream:
 
 ```tsx title="src/app/components/chat.tsx"
-import { useFrontendTool } from "@copilotkit/react-core";
+import { useFrontendTool } from "@copilotkit/react-core/v2";
 
 export const Chat = () => {
   const { messages } = useCopilotChatHeadless_c();
@@ -187,7 +187,7 @@ Use `useCopilotChatSuggestions` to generate and display prompt suggestions in yo
 import {
   useCopilotChatHeadless_c,
   useCopilotChatSuggestions,
-} from "@copilotkit/react-core";
+} from "@copilotkit/react-core/v2";
 import { useEffect } from "react";
 
 export const Chat = () => {
@@ -252,7 +252,7 @@ Tool-based HITL pauses tool execution until the user responds. The response beco
 import {
   useFrontendTool,
   useCopilotChatHeadless_c,
-} from "@copilotkit/react-core";
+} from "@copilotkit/react-core/v2";
 
 export const Chat = () => {
   const { messages } = useCopilotChatHeadless_c();

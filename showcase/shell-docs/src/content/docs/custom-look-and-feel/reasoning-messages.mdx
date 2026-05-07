@@ -76,8 +76,8 @@ receives these props:
 | `onClick` | `() => void` | Toggle handler (only present when `hasContent` is `true`) |
 
 ```tsx
-import { CopilotChat } from "@copilotkit/react-core";
-import "@copilotkit/react-core/styles.css";
+import { CopilotChat } from "@copilotkit/react-core/v2";
+import "@copilotkit/react-core/v2/styles.css";
 
 function CustomHeader({
   isOpen,
@@ -178,9 +178,9 @@ without reimplementing them:
 ```tsx
 import {
   CopilotChatReasoningMessage,
-} from "@copilotkit/react-core";
-import { CopilotChat } from "@copilotkit/react-core";
-import "@copilotkit/react-core/styles.css";
+} from "@copilotkit/react-core/v2";
+import { CopilotChat } from "@copilotkit/react-core/v2";
+import "@copilotkit/react-core/v2/styles.css";
 
 function MyReasoningLayout(props: React.ComponentProps<typeof CopilotChatReasoningMessage>) {
   return (

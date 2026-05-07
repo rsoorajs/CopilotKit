@@ -11,7 +11,7 @@ CopilotKit provides a visual error console for local development and a programma
 ## Quick setup
 
 ```tsx
-import { CopilotKit } from "@copilotkit/react-core";
+import { CopilotKit } from "@copilotkit/react-core/v2";
 
 export default function App() {
   return (
@@ -44,7 +44,7 @@ The v2 API provides an `onError` callback on both `CopilotKit` and `CopilotChat`
 Catches every error across the entire application:
 
 ```tsx
-import { CopilotKit } from "@copilotkit/react-core";
+import { CopilotKit } from "@copilotkit/react-core/v2";
 
 <CopilotKit
   runtimeUrl="/api/copilotkit"
@@ -65,7 +65,7 @@ import { CopilotKit } from "@copilotkit/react-core";
 Scoped to a specific chat's agent — fires **in addition to** the provider-level handler:
 
 ```tsx
-import { CopilotChat } from "@copilotkit/react-core";
+import { CopilotChat } from "@copilotkit/react-core/v2";
 
 <CopilotChat
   agentId="my-agent"

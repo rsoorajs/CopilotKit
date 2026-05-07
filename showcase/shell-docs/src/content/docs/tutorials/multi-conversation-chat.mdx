@@ -40,7 +40,7 @@ A chat application with a thread sidebar — similar to ChatGPT or Claude's conv
     Create a two-panel layout: a sidebar for the thread list on the left, and the chat area on the right. We'll use a simple flexbox layout.
 
     ```tsx title="App.tsx"
-    import { CopilotKit } from "@copilotkit/react-core";
+    import { CopilotKit } from "@copilotkit/react-core/v2";
 
     export default function App() {
       return (
@@ -65,7 +65,7 @@ A chat application with a thread sidebar — similar to ChatGPT or Claude's conv
     Use `useThreads` to fetch the thread list and render it. Each thread shows its name (or "New conversation" if unnamed) and the time it was last updated.
 
     ```tsx title="ThreadSidebar.tsx"
-    import { useThreads } from "@copilotkit/react-core"; // [!code highlight]
+    import { useThreads } from "@copilotkit/react-core/v2"; // [!code highlight]
     import { useState } from "react";
 
     export function ThreadSidebar() {
@@ -113,7 +113,7 @@ A chat application with a thread sidebar — similar to ChatGPT or Claude's conv
 
     ```tsx title="ThreadRow.tsx"
     import { useState } from "react";
-    import type { Thread } from "@copilotkit/react-core";
+    import type { Thread } from "@copilotkit/react-core/v2";
 
     interface ThreadRowProps {
       thread: Thread;
@@ -196,7 +196,7 @@ A chat application with a thread sidebar — similar to ChatGPT or Claude's conv
     The chat panel listens for thread selection events and passes the active `threadId` to `CopilotChat`. When no thread is selected, starting a conversation creates a new thread automatically.
 
     ```tsx title="ChatPanel.tsx"
-    import { CopilotChat } from "@copilotkit/react-core"; // [!code highlight]
+    import { CopilotChat } from "@copilotkit/react-core/v2"; // [!code highlight]
     import { useState, useEffect } from "react";
 
     export function ChatPanel() {

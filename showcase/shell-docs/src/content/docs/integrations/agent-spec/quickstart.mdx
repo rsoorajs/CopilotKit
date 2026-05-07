@@ -343,8 +343,8 @@ hideTOC: true
           Wrap your application with the CopilotKit provider:
 
           ```tsx title="app/layout.tsx"
-          import { CopilotKit } from "@copilotkit/react-core"; // [!code highlight]
-          import "@copilotkit/react-core/styles.css";
+          import { CopilotKit } from "@copilotkit/react-core/v2"; // [!code highlight]
+          import "@copilotkit/react-core/v2/styles.css";
           import './globals.css';
 
           // ...
@@ -369,7 +369,7 @@ hideTOC: true
         Add the CopilotSidebar component to your page:
 
         ```tsx title="app/page.tsx"
-        import { CopilotSidebar } from "@copilotkit/react-core"; // [!code highlight:1]
+        import { CopilotSidebar } from "@copilotkit/react-core/v2"; // [!code highlight:1]
 
         export default function Page() {
           return (

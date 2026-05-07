@@ -161,8 +161,8 @@ If you're looking to add an MCP App into an existing application, let's walk thr
 
     ```tsx title="app/layout.tsx"
     // [!code highlight:2]
-    import { CopilotKit } from "@copilotkit/react-core";
-    import "@copilotkit/react-core/styles.css";
+    import { CopilotKit } from "@copilotkit/react-core/v2";
+    import "@copilotkit/react-core/v2/styles.css";
 
     // ...
 
@@ -189,7 +189,7 @@ If you're looking to add an MCP App into an existing application, let's walk thr
     ```tsx title="app/page.tsx"
     "use client";
 
-    import { CopilotSidebar } from "@copilotkit/react-core";
+    import { CopilotSidebar } from "@copilotkit/react-core/v2";
 
     export default function Page() {
         return (

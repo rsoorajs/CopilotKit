@@ -15,8 +15,8 @@ Use headless UI when the slot system isn't enough — for example, when you need
 Use `useAgent` to get the agent instance (messages, state, execution status) and `useCopilotKit` to run the agent.
 
 ```tsx title="components/custom-chat.tsx"
-import { useAgent } from "@copilotkit/react-core";
-import { useCopilotKit } from "@copilotkit/react-core";
+import { useAgent } from "@copilotkit/react-core/v2";
+import { useCopilotKit } from "@copilotkit/react-core/v2";
 import { randomUUID } from "@copilotkit/shared/v2";
 
 export function CustomChat() {

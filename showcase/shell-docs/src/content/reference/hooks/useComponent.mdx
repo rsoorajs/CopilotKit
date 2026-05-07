@@ -17,7 +17,7 @@ Use this when you want a visual component renderer without writing a full fronte
 ```tsx
 import { z } from "zod";
 import type { ComponentType } from "react";
-import { useComponent } from "@copilotkit/react-core";
+import { useComponent } from "@copilotkit/react-core/v2";
 
 function useComponent<TSchema extends z.ZodTypeAny | undefined = undefined>(
   config: {

@@ -102,7 +102,7 @@ For further reading, check out the [Model Context Protocol](https://modelcontext
         ```tsx
         "use client";
 
-        import { CopilotKit } from "@copilotkit/react-core";
+        import { CopilotKit } from "@copilotkit/react-core/v2";
 
         export default function App() {
           return (
@@ -122,7 +122,7 @@ For further reading, check out the [Model Context Protocol](https://modelcontext
         "use client";
 
         import { useEffect } from "react";
-        import { useCopilotKit } from "@copilotkit/react-core";
+        import { useCopilotKit } from "@copilotkit/react-core/v2";
 
         function McpServerManager() {
           const { setMcpServers } = useCopilotKit();
@@ -151,7 +151,7 @@ For further reading, check out the [Model Context Protocol](https://modelcontext
         ```tsx
         "use client";
 
-        import { CopilotChat } from "@copilotkit/react-core";
+        import { CopilotChat } from "@copilotkit/react-core/v2";
 
         export default function ChatInterface() {
           return (
@@ -176,7 +176,7 @@ For further reading, check out the [Model Context Protocol](https://modelcontext
         import {
           useFrontendTool,
           CatchAllActionRenderProps,
-        } from "@copilotkit/react-core";
+        } from "@copilotkit/react-core/v2";
 
         export function ToolRenderer() {
           useFrontendTool({
@@ -200,7 +200,7 @@ For further reading, check out the [Model Context Protocol](https://modelcontext
         ```tsx
         "use client";
 
-        import { CopilotKit, CopilotChat } from "@copilotkit/react-core";
+        import { CopilotKit, CopilotChat } from "@copilotkit/react-core/v2";
 
         export default function Page() {
           return (

@@ -61,7 +61,7 @@ CopilotKit threads enable persistent, resumable multi-turn conversations. The `u
     Use the `useThreads` hook to fetch and manage threads for a specific agent. The hook returns the thread list, loading state, and mutation methods.
 
     ```tsx title="ThreadSidebar.tsx"
-    import { useThreads } from "@copilotkit/react-core"; // [!code highlight]
+    import { useThreads } from "@copilotkit/react-core/v2"; // [!code highlight]
 
     function ThreadSidebar() {
       const { // [!code highlight:6]
@@ -103,7 +103,7 @@ CopilotKit threads enable persistent, resumable multi-turn conversations. The `u
     When a user selects a thread, pass its `threadId` to your chat component. The chat clears the current messages, fetches the selected thread's history, and replays it. If the agent is still running on that thread, the chat picks up the live stream.
 
     ```tsx title="App.tsx"
-    import { CopilotChat } from "@copilotkit/react-core"; // [!code highlight]
+    import { CopilotChat } from "@copilotkit/react-core/v2"; // [!code highlight]
     import { useState } from "react";
 
     function App() {

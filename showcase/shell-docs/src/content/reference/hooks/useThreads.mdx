@@ -20,7 +20,7 @@ Threads are sorted by most recently updated first. The hook supports cursor-base
 ## Signature
 
 ```tsx
-import { useThreads } from "@copilotkit/react-core";
+import { useThreads } from "@copilotkit/react-core/v2";
 
 function useThreads(input: UseThreadsInput): UseThreadsResult
 ```
@@ -98,7 +98,7 @@ function useThreads(input: UseThreadsInput): UseThreadsResult
 ## Usage
 
 ```tsx title="ThreadList.tsx"
-import { useThreads } from "@copilotkit/react-core"; // [!code highlight]
+import { useThreads } from "@copilotkit/react-core/v2"; // [!code highlight]
 
 function ThreadList() {
   const {

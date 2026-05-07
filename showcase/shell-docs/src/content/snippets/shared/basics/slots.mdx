@@ -13,7 +13,7 @@ Slots are recursive — you can drill into nested sub-components at any depth.
 The simplest way to customize a slot. Pass a Tailwind class string and it will be merged with the default component's classes.
 
 ```tsx title="page.tsx"
-import { CopilotChat } from "@copilotkit/react-core";
+import { CopilotChat } from "@copilotkit/react-core/v2";
 
 export function Chat() {
   return (
@@ -46,7 +46,7 @@ Pass an object to override specific props on the default component. This is usef
 For full control, pass your own React component. It receives all the same props as the default component.
 
 ```tsx title="page.tsx"
-import { CopilotChat } from "@copilotkit/react-core";
+import { CopilotChat } from "@copilotkit/react-core/v2";
 
 // [!code highlight:8]
 const CustomMessageView = ({ messages, isRunning }) => (
@@ -148,7 +148,7 @@ Override a specific button inside the assistant message toolbar:
 For complete layout control, use the `children` render function pattern. This gives you pre-built slot elements that you can arrange however you want.
 
 ```tsx title="page.tsx"
-import { CopilotChat } from "@copilotkit/react-core";
+import { CopilotChat } from "@copilotkit/react-core/v2";
 
 export function Chat() {
   return (

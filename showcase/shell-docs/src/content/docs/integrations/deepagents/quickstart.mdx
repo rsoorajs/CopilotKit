@@ -336,8 +336,8 @@ Before you begin, you'll need the following:
         Wrap your application with the CopilotKit provider:
 
         ```tsx title="app/layout.tsx"
-        import { CopilotKit } from "@copilotkit/react-core";
-        import "@copilotkit/react-core/styles.css";
+        import { CopilotKit } from "@copilotkit/react-core/v2";
+        import "@copilotkit/react-core/v2/styles.css";
 
         // ...
 
@@ -362,8 +362,8 @@ Before you begin, you'll need the following:
         ```tsx title="app/page.tsx"
         "use client";
 
-        import { CopilotSidebar } from "@copilotkit/react-core";
-        import { useDefaultRenderTool } from "@copilotkit/react-core";
+        import { CopilotSidebar } from "@copilotkit/react-core/v2";
+        import { useDefaultRenderTool } from "@copilotkit/react-core/v2";
 
         export default function Page() {
             useDefaultRenderTool({
