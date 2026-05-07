@@ -12,6 +12,7 @@ interface IframeSwitcherProps {
 }
 
 export function IframeSwitcher({
+  id,
   exampleUrl,
   codeUrl,
   exampleLabel = "Demo",
@@ -27,23 +28,25 @@ export function IframeSwitcher({
   };
 
   return (
-    <Tabs items={[exampleLabel, codeLabel]}>
-      <Tab value={exampleLabel}>
-        <iframe
-          src={exampleUrl}
-          style={iframeStyle}
-          sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-          loading="lazy"
-        />
-      </Tab>
-      <Tab value={codeLabel}>
-        <iframe
-          src={codeUrl}
-          style={iframeStyle}
-          sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-          loading="lazy"
-        />
-      </Tab>
-    </Tabs>
+    <div id={id}>
+      <Tabs items={[exampleLabel, codeLabel]}>
+        <Tab value={exampleLabel}>
+          <iframe
+            src={exampleUrl}
+            style={iframeStyle}
+            sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+            loading="lazy"
+          />
+        </Tab>
+        <Tab value={codeLabel}>
+          <iframe
+            src={codeUrl}
+            style={iframeStyle}
+            sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+            loading="lazy"
+          />
+        </Tab>
+      </Tabs>
+    </div>
   );
 }
