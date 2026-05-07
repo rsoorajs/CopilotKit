@@ -2,6 +2,11 @@
 
 import React from "react";
 
+// @region[notes-card-render]
+// Read-side render: this card reflects the agent-authored `notes` slice
+// of shared state. The parent page passes `state.notes` in; we never
+// touch agent state ourselves — we just render it. The Clear button is
+// a small write-back, exposed as an `onClear` prop.
 export function NotesCard({
   notes,
   onClear,
@@ -52,3 +57,4 @@ export function NotesCard({
     </div>
   );
 }
+// @endregion[notes-card-render]

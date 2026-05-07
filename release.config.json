@@ -6,6 +6,7 @@
         "@copilotkit/a2ui-renderer",
         "@copilotkit/core",
         "@copilotkit/react-core",
+        "@copilotkit/react-native",
         "@copilotkit/react-textarea",
         "@copilotkit/react-ui",
         "@copilotkit/runtime",
@@ -18,11 +19,6 @@
       ],
       "versionSource": "@copilotkit/react-core",
       "sharedVersion": true
-    },
-    "cli": {
-      "packages": ["copilotkit"],
-      "versionSource": "copilotkit",
-      "sharedVersion": false
     },
     "angular": {
       "packages": ["@copilotkitnext/angular"],

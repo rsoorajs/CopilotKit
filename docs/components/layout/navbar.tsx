@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "fumadocs-core/link";
 import { usePathname } from "next/navigation";
+import { usePostHog } from "posthog-js/react";
 import { DocsLayoutProps } from "fumadocs-ui/layouts/docs";
 // Components
 import { Logo } from "@/app/logo";
@@ -50,7 +51,7 @@ export const LEFT_LINKS: NavbarLink[] = [
   {
     icon: <CloudIcon />,
     label: "Free Developer Access",
-    href: "https://cloud.copilotkit.ai",
+    href: "https://dashboard.operations.copilotkit.ai/?utm_source=docs&utm_medium=cta&utm_campaign=intelligence&utm_content=navbar",
     target: "_blank",
     showExternalLinkIcon: true,
   },
@@ -59,7 +60,7 @@ export const LEFT_LINKS: NavbarLink[] = [
 const RIGHT_LINKS: NavbarLink[] = [
   {
     icon: <CloudIcon />,
-    href: "https://cloud.copilotkit.ai",
+    href: "https://dashboard.operations.copilotkit.ai/?utm_source=docs&utm_medium=cta&utm_campaign=intelligence&utm_content=navbar",
     target: "_blank",
     label: "Free Developer Access",
   },
@@ -79,6 +80,12 @@ const Navbar = ({ pageTree }: NavbarProps) => {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [lastDocsPath, setLastDocsPath] = useState<string | null>(null);
   const pathname = usePathname();
+  const posthog = usePostHog();
+
+  const handleTalkToEngineersClick = () => {
+    posthog?.capture("talk_to_us_clicked", { location: "docs_nav" });
+    window.location.href = "https://copilotkit.ai/contact-us";
+  };
 
   // Read sessionStorage on client only to avoid hydration mismatch (tab-specific)
   useEffect(() => {
@@ -121,6 +128,10 @@ const Navbar = ({ pageTree }: NavbarProps) => {
       window.removeEventListener("resize", handleResize);
     };
   }, [isMobileSidebarOpen]);
+
+  const handleTryForFreeClick = (location: string) => {
+    posthog?.capture("try_for_free_clicked", { location });
+  };
 
   const handleToggleTheme = () => {
     document.documentElement.classList.toggle("dark");
@@ -167,6 +178,12 @@ const Navbar = ({ pageTree }: NavbarProps) => {
                     <Link
                       href={href}
                       target={link.target}
+                      onClick={
+                        link.label === "Free Developer Access"
+                          ? () =>
+                              handleTryForFreeClick("docs_navbar_left")
+                          : undefined
+                      }
                       className={`h-full ${
                         activeRoute === link.href ? "opacity-100" : "opacity-50"
                       } hover:opacity-100 transition-opacity duration-300`}
@@ -208,14 +225,14 @@ const Navbar = ({ pageTree }: NavbarProps) => {
             alt="Slanted end border"
             width={29}
             height={72}
-            className="hidden -ml-px dark:inline-block shrink-0 w-[24px] h-[60px] xl:w-[29px] xl:h-[72px] object-cover"
+            className="hidden -ml-px dark:inline-block shrink-0 h-full w-auto object-cover"
           />
           <Image
             src="/images/navbar/slanted-end-border-light.svg"
             alt="Slanted end border"
             width={29}
             height={72}
-            className="-ml-px dark:hidden shrink-0 w-[24px] h-[60px] xl:w-[29px] xl:h-[72px] object-cover"
+            className="-ml-px dark:hidden shrink-0 h-full w-auto object-cover"
           />
         </div>
 
@@ -225,20 +242,29 @@ const Navbar = ({ pageTree }: NavbarProps) => {
             alt="Slanted start border"
             width={29}
             height={72}
-            className="hidden -mr-px dark:inline-block shrink-0 w-[24px] h-[60px] xl:w-[29px] xl:h-[72px] object-cover"
+            className="hidden -mr-px dark:inline-block shrink-0 h-full w-auto object-cover"
           />
           <Image
             src="/images/navbar/slanted-start-border-light.svg"
             alt="Slanted start border"
             width={29}
             height={72}
-            className="-mr-px dark:hidden shrink-0 w-[24px] h-[60px] xl:w-[29px] xl:h-[72px] object-cover"
+            className="-mr-px dark:hidden shrink-0 h-full w-auto object-cover"
           />
 
           <div
             className="flex gap-1 items-center pr-2 w-max h-full rounded-r-2xl border border-l-0 backdrop-blur-lg md:pr-4 shrink-0 border-border"
             style={{ backgroundColor: "var(--sidebar)" }}
           >
+            <button
+              type="button"
+              onClick={handleTalkToEngineersClick}
+              className="hidden [@media(width>=1400px)]:flex items-center h-9 px-4 mr-2 text-sm font-medium rounded-full border border-border bg-transparent text-muted-foreground hover:text-[#7076D5] hover:border-[#7076D5] hover:bg-[#7076D5]/10 transition-colors duration-200 cursor-pointer whitespace-nowrap"
+              aria-label="Talk to our engineers"
+            >
+              Talk to Our Engineers
+            </button>
+
             {RIGHT_LINKS.map((link) => {
               // Only show Free Developer Access at narrow widths (between 768px and 1028px)
               const isIconOnlyLink = link.label === "Free Developer Access";
@@ -248,6 +274,11 @@ const Navbar = ({ pageTree }: NavbarProps) => {
                   key={link.href}
                   href={link.href}
                   target={link.target}
+                  onClick={
+                    link.label === "Free Developer Access"
+                      ? () => handleTryForFreeClick("docs_navbar_right")
+                      : undefined
+                  }
                   className={`${isIconOnlyLink ? "[@media(width>=1028px)]:hidden [@media(width<768px)]:hidden" : "hidden"} justify-center items-center w-11 h-full md:flex`}
                   title={link.label}
                   suppressHydrationWarning={link.target === "_blank"}

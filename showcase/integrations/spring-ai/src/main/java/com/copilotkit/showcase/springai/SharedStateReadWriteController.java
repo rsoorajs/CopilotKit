@@ -99,6 +99,7 @@ public class SharedStateReadWriteController {
 
     @PostMapping("/shared-state-read-write/run")
     public ResponseEntity<SseEmitter> run(@RequestBody AgUiParameters params) throws Exception {
+        MessageListFilter.filterNulls(params);
         SharedStateAgent agent = new SharedStateAgent(chatModel);
         SseEmitter emitter = agUiService.runAgent(agent, params);
         return ResponseEntity.ok()
@@ -212,7 +213,7 @@ public class SharedStateReadWriteController {
                         deferredEvents.add(toolCallResultEvent(
                                 toolCallId,
                                 setNotesHandler.lastResult(),
-                                messageId,
+                                UUID.randomUUID().toString(),
                                 Role.tool));
                         subscriber.onNewToolCall(call);
                     });
@@ -233,10 +234,12 @@ public class SharedStateReadWriteController {
                 return;
             }
 
-            this.emitEvent(textMessageEndEvent(messageId), subscriber);
+            // Emit tool call events BEFORE textMessageEnd so the frontend's
+            // useRenderTool sees them while the message is still "open".
             for (BaseEvent ev : deferredEvents) {
                 this.emitEvent(ev, subscriber);
             }
+            this.emitEvent(textMessageEndEvent(messageId), subscriber);
             subscriber.onNewMessage(assistantMessage);
             this.emitEvent(runFinishedEvent(threadId, runId), subscriber);
             subscriber.onRunFinalized(
@@ -351,8 +354,11 @@ public class SharedStateReadWriteController {
             deferredEvents.add(toolCallStartEvent(parentMessageId, "set_notes", toolCallId));
             deferredEvents.add(toolCallArgsEvent(argsJson, toolCallId));
             deferredEvents.add(toolCallEndEvent(toolCallId));
+            // Tool result message must have its own unique messageId — reusing
+            // parentMessageId causes React deduplicateMessages() to overwrite
+            // the assistant message with the tool message in the Map.
             deferredEvents.add(toolCallResultEvent(
-                    toolCallId, result, parentMessageId, Role.tool));
+                    toolCallId, result, UUID.randomUUID().toString(), Role.tool));
             deferredEvents.add(stateSnapshotEvent(state));
 
             return result;

@@ -143,10 +143,17 @@ function CategorySection({
             </td>
             {visibleIntegrations.map((int) => {
               const cell = cellIndex.get(`${int.slug}/${feature.id}`);
-              const cellStatus = cell?.status ?? "unshipped";
               const depth: DepthResult = cell
                 ? deriveDepth(cell, liveStatus)
-                : { achieved: 0, isRegression: false };
+                : {
+                    achieved: 0,
+                    maxPossible: 0,
+                    isRegression: false,
+                    unsupported: false,
+                  };
+              const cellStatus = depth.unsupported
+                ? "unsupported"
+                : (cell?.status ?? "unshipped");
 
               const isSelected =
                 selectedCell?.slug === int.slug &&
@@ -175,7 +182,7 @@ function CategorySection({
                     <DepthChip
                       depth={depth.achieved}
                       status={cellStatus}
-                      regression={depth.isRegression}
+                      maxDepth={depth.maxPossible}
                     />
                   </button>
                   {isSelected && (
@@ -285,8 +292,11 @@ export function CellMatrix({
     if (filter === "gaps") {
       return visibleIntegrations.some((int) => {
         const cell = cellIndex.get(`${int.slug}/${featureId}`);
-        // Unshipped = structural gap
+        // Unshipped = structural gap. Unsupported is NOT a gap — the
+        // framework architecturally cannot support it, so it's not work
+        // we expect to do.
         if (!cell || cell.status === "unshipped") return true;
+        if (cell.status === "unsupported") return false;
         // Red probes = functional gap (cell exists but failing)
         if (cell.feature !== null) {
           const cellState = resolveCell(liveStatus, int.slug, cell.feature);

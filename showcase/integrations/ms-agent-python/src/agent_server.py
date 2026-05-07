@@ -20,13 +20,16 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
 from agents.agent import create_agent
+from agents.voice_agent import create_voice_agent
 from agents.a2ui_dynamic import create_agent as create_a2ui_dynamic_agent
 from agents.a2ui_fixed import create_agent as create_a2ui_fixed_agent
 from agents.agent_config_agent import create_agent_config_agent
 from agents.beautiful_chat import create_beautiful_chat_agent
 from agents.byoc_hashbrown_agent import create_byoc_hashbrown_agent
 from agents.byoc_json_render_agent import create_byoc_json_render_agent
+from agents.gen_ui_tool_based_agent import create_gen_ui_tool_based_agent
 from agents.hitl_in_app_agent import create_hitl_in_app_agent
+from agents.hitl_in_chat_agent import create_hitl_in_chat_agent
 from agents.interrupt_agent import create_interrupt_agent
 from agents.mcp_apps_agent import create_mcp_apps_agent
 from agents.multimodal_agent import create_multimodal_agent
@@ -62,6 +65,7 @@ def _build_chat_client(model_override: str | None = None) -> BaseChatClient:
 
 chat_client = _build_chat_client()
 my_agent = create_agent(chat_client)
+voice_agent = create_voice_agent(chat_client)
 agent_config_agent = create_agent_config_agent(chat_client)
 reasoning_agent = create_reasoning_agent(chat_client)
 tool_rendering_reasoning_chain_agent = create_tool_rendering_reasoning_chain_agent(
@@ -74,7 +78,9 @@ open_gen_ui_advanced_agent = create_open_gen_ui_advanced_agent(chat_client)
 byoc_hashbrown_agent = create_byoc_hashbrown_agent(chat_client)
 byoc_json_render_agent = create_byoc_json_render_agent(chat_client)
 mcp_apps_agent = create_mcp_apps_agent(chat_client)
+gen_ui_tool_based_agent = create_gen_ui_tool_based_agent(chat_client)
 hitl_in_app_agent = create_hitl_in_app_agent(chat_client)
+hitl_in_chat_agent = create_hitl_in_chat_agent(chat_client)
 interrupt_agent = create_interrupt_agent(chat_client)
 shared_state_read_write_agent = create_shared_state_read_write_agent(chat_client)
 subagents_agent = create_subagents_agent(chat_client)
@@ -132,11 +138,16 @@ add_agent_framework_fastapi_endpoint(app=app, agent=byoc_hashbrown_agent, path="
 add_agent_framework_fastapi_endpoint(app=app, agent=byoc_json_render_agent, path="/byoc-json-render")
 add_agent_framework_fastapi_endpoint(app=app, agent=mcp_apps_agent, path="/mcp-apps")
 add_agent_framework_fastapi_endpoint(app=app, agent=hitl_in_app_agent, path="/hitl-in-app")
+add_agent_framework_fastapi_endpoint(app=app, agent=hitl_in_chat_agent, path="/hitl-in-chat")
+add_agent_framework_fastapi_endpoint(
+    app=app, agent=gen_ui_tool_based_agent, path="/gen-ui-tool-based"
+)
 add_agent_framework_fastapi_endpoint(app=app, agent=interrupt_agent, path="/interrupt-adapted")
 add_agent_framework_fastapi_endpoint(
     app=app, agent=shared_state_read_write_agent, path="/shared-state-read-write"
 )
 add_agent_framework_fastapi_endpoint(app=app, agent=subagents_agent, path="/subagents")
+add_agent_framework_fastapi_endpoint(app=app, agent=voice_agent, path="/voice")
 
 # Shared agent for the rest of the demos (must be last: `/` is a catch-all).
 add_agent_framework_fastapi_endpoint(app=app, agent=my_agent, path="/")

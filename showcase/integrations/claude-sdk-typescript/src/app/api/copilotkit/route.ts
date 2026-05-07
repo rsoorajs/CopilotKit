@@ -46,6 +46,7 @@ const agentNames = [
   "frontend_tools",
   "frontend-tools-async",
   "hitl-in-chat",
+  "hitl-in-chat-booking",
   "hitl-in-app",
   "readonly-state-agent-context",
   // runtime-injected demos (A2UI, open-gen-ui, mcp-apps live on dedicated
@@ -64,6 +65,17 @@ const agentNames = [
   "voice-demo",
   "agent-config-demo",
   "auth-demo",
+  // Interrupt-adapted scheduling demos — both use useFrontendTool with an
+  // async handler to simulate LangGraph interrupt(); the backend is the same
+  // pass-through agent.
+  "gen-ui-interrupt",
+  "interrupt-headless",
+  // showcase-fill-186 ports — pass-through agents driven by frontend tooling
+  "tool-rendering-default-catchall",
+  "tool-rendering-custom-catchall",
+  "tool-rendering-reasoning-chain",
+  "agentic-chat-reasoning",
+  "reasoning-default-render",
 ];
 
 const agents: Record<string, AbstractAgent> = {};

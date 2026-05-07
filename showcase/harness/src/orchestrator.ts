@@ -30,7 +30,7 @@ import { createProbeLoader } from "./probes/loader/probe-loader.js";
 import { buildProbeInvoker } from "./probes/loader/probe-invoker.js";
 import type { ProbeConfig } from "./probes/loader/schema.js";
 import type { ProbeRegistry } from "./probes/types.js";
-import { createProbeRunWriter } from "./probes/run-history.js";
+import { createProbeRunWriter, sweepStaleRuns } from "./probes/run-history.js";
 import type { ProbeRunWriter } from "./probes/run-history.js";
 import { aimockWiringDriver } from "./probes/drivers/aimock-wiring.js";
 import { pinDriftDriver } from "./probes/drivers/pin-drift.js";
@@ -269,10 +269,21 @@ export async function boot(opts: BootOptions = {}): Promise<{
   // later — caches, batching) is shared across invokers.
   const runWriter = createProbeRunWriter(pb);
 
+  try {
+    const swept = await sweepStaleRuns(pb);
+    if (swept > 0) {
+      logger.info("boot.swept-stale-runs", { swept });
+    }
+  } catch (err) {
+    logger.error("boot.sweep-stale-runs-failed", {
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+
   const poolSize = process.env.BROWSER_POOL_SIZE
     ? parseInt(process.env.BROWSER_POOL_SIZE, 10) || 4
     : 4;
-  const browserPool = new BrowserPool(poolSize);
+  const browserPool = new BrowserPool(poolSize, undefined, logger);
   let browserPoolReady = false;
   try {
     await browserPool.init();
@@ -891,10 +902,14 @@ export function registerAllProbeDrivers(
       createE2eSmokeDriver({ launcher: createPooledE2eSmokeLauncher(pool) }),
     );
     probeRegistry.register(
-      createE2eDemosDriver({ launcher: createPooledE2eDemosLauncher(pool) }),
+      createE2eDemosDriver({
+        launcher: createPooledE2eDemosLauncher(pool, logger),
+      }),
     );
     probeRegistry.register(
-      createE2eDeepDriver({ launcher: createPooledE2eDeepLauncher(pool) }),
+      createE2eDeepDriver({
+        launcher: createPooledE2eDeepLauncher(pool, logger),
+      }),
     );
     probeRegistry.register(
       createE2eParityDriver({ launcher: createPooledE2eParityLauncher(pool) }),

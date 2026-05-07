@@ -40,6 +40,7 @@ const agentNames = [
   "hitl-in-app",
   "readonly-state-agent-context",
   "headless-complete",
+  "beautiful-chat",
 ];
 
 // Demos with dedicated FastAPI endpoints (their own state schema, tool
@@ -48,6 +49,17 @@ const agentNames = [
 const dedicatedAgentPaths: Record<string, string> = {
   "shared-state-read-write": "/shared-state-read-write",
   subagents: "/subagents",
+  // Reasoning demos share a single backend that emits AG-UI
+  // REASONING_MESSAGE_* events (parsed out of <reasoning>...</reasoning>
+  // blocks the model emits). The two demo cells differ only on the
+  // frontend slot configuration.
+  "agentic-chat-reasoning": "/reasoning",
+  "reasoning-default-render": "/reasoning",
+  "tool-rendering-reasoning-chain": "/tool-rendering-reasoning-chain",
+  "hitl-in-chat": "/hitl-in-chat",
+  "hitl-in-chat-booking": "/hitl-in-chat",
+  "gen-ui-interrupt": "/interrupt-adapted",
+  "interrupt-headless": "/interrupt-adapted",
 };
 
 const agents: Record<string, AbstractAgent> = {};

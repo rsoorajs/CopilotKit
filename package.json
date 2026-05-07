@@ -28,7 +28,10 @@
     "publint": "nx run-many -t publint --projects=packages/**",
     "attw": "nx run-many -t attw --projects=packages/**",
     "check:packages": "nx run-many -t publint,attw --projects=packages/**",
-    "validate:model-names": "tsx scripts/validate-doc-model-names.ts"
+    "validate:model-names": "tsx scripts/validate-doc-model-names.ts",
+    "parity:sync": "tsx examples/integrations/_parity/sync.ts",
+    "parity:verify": "tsx examples/integrations/_parity/verify.ts",
+    "parity:check": "tsx examples/integrations/_parity/verify.ts --no-color"
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.18.2",
@@ -79,7 +82,7 @@
     },
     "overrides": {
       "streamdown>react": "^19.0.0",
-      "@types/react": "^19.1.0",
+      "@types/react": "19.1.8",
       "@types/react-dom": "^19.0.2",
       "react": "19.2.3",
       "react-dom": "19.2.3",

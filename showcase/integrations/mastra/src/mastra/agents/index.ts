@@ -100,13 +100,13 @@ export const weatherAgent = new Agent({
   id: "weather-agent",
   name: "Weather Agent",
   tools: {
-    weatherTool,
-    queryDataTool,
-    manageSalesTodosTool,
-    getSalesTodosTool,
-    scheduleMeetingTool,
-    searchFlightsTool,
-    generateA2uiTool,
+    get_weather: weatherTool,
+    query_data: queryDataTool,
+    manage_sales_todos: manageSalesTodosTool,
+    get_sales_todos: getSalesTodosTool,
+    schedule_meeting: scheduleMeetingTool,
+    search_flights: searchFlightsTool,
+    generate_a2ui: generateA2uiTool,
   },
   model: openai("gpt-4o"),
   instructions: "You are a helpful assistant.",
@@ -269,3 +269,198 @@ If a delegation's \`status\` field is \`"failed"\`, treat it as a real error: do
   }),
 });
 // @endregion[subagents-supervisor]
+
+/**
+ * Lightweight Mastra agent backing the MCP Apps demo.
+ *
+ * Defines no bespoke tools — the CopilotKit runtime is wired with
+ * `mcpApps: { servers: [...] }` (see
+ * `src/app/api/copilotkit-mcp-apps/route.ts`). The runtime auto-applies the
+ * MCP Apps middleware, which injects the remote MCP server's tools into
+ * each request and emits the activity events the built-in
+ * `MCPAppsActivityRenderer` renders in chat as sandboxed iframes.
+ */
+export const mcpAppsAgent = new Agent({
+  id: "mcp-apps-agent",
+  name: "MCP Apps Agent",
+  model: openai("gpt-4o-mini"),
+  instructions: `You draw simple diagrams in Excalidraw via the MCP tool.
+
+SPEED MATTERS. Produce a correct-enough diagram fast; do not optimize for polish. Target: one tool call, done in seconds.
+
+When the user asks for a diagram:
+1. Call \`create_view\` ONCE with 3-5 elements total: shapes + arrows + an optional title text.
+2. Use straightforward shapes (rectangle, ellipse, diamond) with plain \`label\` fields (\`{"text": "...", "fontSize": 18}\`) on them.
+3. Connect with arrows. Endpoints can be element centers or simple coordinates.
+4. Include ONE \`cameraUpdate\` at the END of the elements array that frames the whole diagram (600x450 or 800x600).
+5. Reply with ONE short sentence describing what you drew.
+
+Every element needs a unique string \`id\` (e.g. \`"b1"\`, \`"a1"\`, \`"title"\`). Standard sizes: rectangles 160x70, ellipses/diamonds 120x80, 40-80px gap between shapes.
+
+Do NOT call \`read_me\`, do NOT iterate, do NOT make multiple calls. Ship on the first shot.`,
+  memory: new Memory({
+    storage: new LibSQLStore({
+      id: "mcp-apps-agent-memory",
+      url: WORKING_MEMORY_DB_URL,
+    }),
+    options: {
+      workingMemory: {
+        enabled: true,
+        schema: AgentState,
+      },
+    },
+  }),
+});
+
+// @region[byoc-hashbrown-agent]
+/**
+ * Mastra agent backing the byoc-hashbrown demo.
+ *
+ * The demo page wraps CopilotChat in the HashBrownDashboard provider and
+ * overrides the assistant message slot with a renderer that consumes
+ * hashbrown-shaped structured output via `@hashbrownai/react`'s `useUiKit`
+ * + `useJsonParser`.
+ *
+ * The system prompt forces the model to emit a single JSON envelope
+ * `{ "ui": [ { <componentName>: { "props": { ... } } }, ... ] }` matching
+ * the schema consumed by `useSalesDashboardKit()` in the frontend renderer.
+ * Without this prompt the default weatherAgent produces plain text, which
+ * `useJsonParser` parses as `null` and the dashboard renders nothing.
+ */
+export const byocHashbrownAgent = new Agent({
+  id: "byoc-hashbrown-agent",
+  name: "BYOC Hashbrown Agent",
+  model: openai("gpt-4o-mini"),
+  instructions: `You are a sales analytics assistant that replies by emitting a single JSON
+object consumed by a streaming JSON parser on the frontend.
+
+ALWAYS respond with a single JSON object of the form:
+
+{
+  "ui": [
+    { <componentName>: { "props": { ... } } },
+    ...
+  ]
+}
+
+Do NOT wrap the response in code fences. Do NOT include any preface or
+explanation outside the JSON object. The response MUST be valid JSON.
+
+Available components and their prop schemas:
+
+- "metric": { "props": { "label": string, "value": string } }
+    A KPI card. \`value\` is a pre-formatted string like "$1.2M" or "248".
+
+- "pieChart": { "props": { "title": string, "data": string } }
+    A donut chart. \`data\` is a JSON-encoded STRING (embedded JSON) of an
+    array of {label, value} objects with at least 3 segments, e.g.
+    "data": "[{\\"label\\":\\"Enterprise\\",\\"value\\":600000}]".
+
+- "barChart": { "props": { "title": string, "data": string } }
+    A vertical bar chart. \`data\` is a JSON-encoded STRING of an array of
+    {label, value} objects with at least 3 bars, typically time-ordered.
+
+- "dealCard": { "props": { "title": string, "stage": string, "value": number } }
+    A single sales deal. \`stage\` MUST be one of: "prospect", "qualified",
+    "proposal", "negotiation", "closed-won", "closed-lost". \`value\` is a
+    raw number (no currency symbol or comma).
+
+- "Markdown": { "props": { "children": string } }
+    Short explanatory text. Use for section headings and brief summaries.
+    Standard markdown is supported in \`children\`.
+
+Rules:
+- Always produce plausible sample data when the user asks for a dashboard or
+  chart — do not refuse for lack of data.
+- Prefer 3-6 rows of data in charts; keep labels short.
+- Use "Markdown" for short headings or linking sentences between visual
+  components. Do not emit long prose.
+- Do not emit components that are not listed above.
+- \`data\` props on charts MUST be a JSON STRING — escape inner quotes.
+
+Example response (sales dashboard):
+{"ui":[{"Markdown":{"props":{"children":"## Q4 Sales Summary"}}},{"metric":{"props":{"label":"Total Revenue","value":"$1.2M"}}},{"metric":{"props":{"label":"New Customers","value":"248"}}},{"pieChart":{"props":{"title":"Revenue by Segment","data":"[{\\"label\\":\\"Enterprise\\",\\"value\\":600000},{\\"label\\":\\"SMB\\",\\"value\\":400000},{\\"label\\":\\"Startup\\",\\"value\\":200000}]"}}},{"barChart":{"props":{"title":"Monthly Revenue","data":"[{\\"label\\":\\"Oct\\",\\"value\\":350000},{\\"label\\":\\"Nov\\",\\"value\\":400000},{\\"label\\":\\"Dec\\",\\"value\\":450000}]"}}}]}`,
+  memory: new Memory({
+    storage: new LibSQLStore({
+      id: "byoc-hashbrown-agent-memory",
+      url: WORKING_MEMORY_DB_URL,
+    }),
+    options: {
+      workingMemory: {
+        enabled: true,
+        schema: AgentState,
+      },
+    },
+  }),
+});
+// @endregion[byoc-hashbrown-agent]
+
+/**
+ * Vision-capable Mastra agent backing the Multimodal Attachments demo.
+ *
+ * gpt-4o supports image and PDF attachments in the messages array. The
+ * AG-UI Mastra adapter forwards user-message `content` parts (image_url /
+ * file) verbatim to the model. Kept on a dedicated agent (and dedicated
+ * route) so the vision-tier cost is scoped to exactly the cell that
+ * exercises it.
+ */
+// @region[interrupt-agent]
+/**
+ * Scheduling agent for the interrupt-adapted demos (gen-ui-interrupt,
+ * interrupt-headless).
+ *
+ * This agent powers the "Strategy B" adaptation of the LangGraph interrupt
+ * demos. LangGraph has a native `interrupt()` primitive with
+ * checkpoint/resume; Mastra does not. Instead, we register a frontend tool
+ * (`schedule_meeting`) via `useFrontendTool` with an async handler. The
+ * handler returns a Promise that only resolves once the user picks a time
+ * slot (or cancels), producing the same UX as `interrupt()`.
+ *
+ * The agent defines NO backend tools — `schedule_meeting` is satisfied
+ * entirely by the frontend. The system prompt directs the model to always
+ * call `schedule_meeting` when asked to book/schedule.
+ */
+export const interruptAgent = new Agent({
+  id: "interrupt-agent",
+  name: "Interrupt Agent",
+  tools: {},
+  model: openai("gpt-4o-mini"),
+  instructions: `You are a scheduling assistant. Whenever the user asks you to book a call or schedule a meeting, you MUST call the \`schedule_meeting\` tool. Pass a short \`topic\` describing the purpose of the meeting and, if known, an \`attendee\` describing who the meeting is with.
+
+The \`schedule_meeting\` tool is implemented on the client: it surfaces a time-picker UI to the user and returns the user's selection. After the tool returns, briefly confirm whether the meeting was scheduled and at what time, or note that the user cancelled. Do NOT ask for approval yourself — always call the tool and let the picker handle the decision.
+
+Keep responses short and friendly. After you finish executing tools, always send a brief final assistant message summarizing what happened so the message persists.`,
+  memory: new Memory({
+    storage: new LibSQLStore({
+      id: "interrupt-agent-memory",
+      url: WORKING_MEMORY_DB_URL,
+    }),
+    options: {
+      workingMemory: {
+        enabled: true,
+        schema: AgentState,
+      },
+    },
+  }),
+});
+// @endregion[interrupt-agent]
+
+export const multimodalAgent = new Agent({
+  id: "multimodal-demo",
+  name: "Multimodal Agent",
+  model: openai("gpt-4o"),
+  instructions:
+    "You are a helpful assistant with vision and document capabilities. When the user shares an image or PDF, examine it carefully and answer their question about it. Be concise and specific — describe what you actually see, not what you guess might be there.",
+  memory: new Memory({
+    storage: new LibSQLStore({
+      id: "multimodal-agent-memory",
+      url: WORKING_MEMORY_DB_URL,
+    }),
+    options: {
+      workingMemory: {
+        enabled: true,
+        schema: AgentState,
+      },
+    },
+  }),
+});

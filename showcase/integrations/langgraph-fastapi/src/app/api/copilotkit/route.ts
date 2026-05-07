@@ -79,6 +79,13 @@ agents["interrupt-headless"] = createAgent("interrupt_agent");
 agents["frontend_tools"] = createAgent("frontend_tools");
 agents["frontend-tools-async"] = createAgent("frontend_tools_async");
 agents["hitl-in-app"] = createAgent("hitl_in_app");
+// In-Chat HITL via the high-level `useHumanInTheLoop` hook — backend
+// agent has zero tools; the frontend-registered `book_call` tool is
+// injected into the LLM's tool list by `CopilotKitMiddleware`. Both
+// the canonical `hitl-in-chat` demo and the `hitl-in-chat-booking`
+// alias share the same backend graph.
+agents["hitl-in-chat"] = createAgent("hitl_in_chat");
+agents["hitl-in-chat-booking"] = createAgent("hitl_in_chat");
 // HITL step-selection: dedicated graph with tools=[] + CopilotKitMiddleware.
 // The `human_in_the_loop` alias in the neutral-assistant loop above maps to
 // `sample_agent` which has 7+ backend tools and a custom AgentState — the

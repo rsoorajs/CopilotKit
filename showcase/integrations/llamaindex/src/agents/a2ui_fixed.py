@@ -8,9 +8,8 @@ model at runtime via a `display_flight` tool. The tool result is an
 detects and forwards to the frontend renderer.
 """
 
-from __future__ import annotations
-
 import json
+import os
 from pathlib import Path
 from typing import Annotated
 
@@ -87,8 +86,12 @@ SYSTEM_PROMPT = (
 )
 
 
+_openai_kwargs = {}
+if os.environ.get("OPENAI_BASE_URL"):
+    _openai_kwargs["api_base"] = os.environ["OPENAI_BASE_URL"]
+
 a2ui_fixed_router = get_ag_ui_workflow_router(
-    llm=OpenAI(model="gpt-4o-mini"),
+    llm=OpenAI(model="gpt-4o-mini", **_openai_kwargs),
     frontend_tools=[],
     backend_tools=[display_flight],
     system_prompt=SYSTEM_PROMPT,

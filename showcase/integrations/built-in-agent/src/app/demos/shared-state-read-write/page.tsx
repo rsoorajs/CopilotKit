@@ -32,10 +32,14 @@ export default function SharedStateReadWrite() {
 }
 
 function Demo() {
+  // @region[use-agent]
+  // @region[use-agent-read]
   const { agent } = useAgent({
     agentId: "default",
     updates: [UseAgentUpdate.OnStateChanged],
   });
+  // @endregion[use-agent-read]
+  // @endregion[use-agent]
 
   useEffect(() => {
     if (!agent.state || Object.keys(agent.state).length === 0) {
@@ -48,12 +52,16 @@ function Demo() {
   const ingredients = recipe.ingredients ?? defaultRecipe.ingredients;
   const steps = recipe.steps ?? defaultRecipe.steps;
 
+  // @region[set-state]
+  // @region[use-agent-write]
   function setTitle(next: string) {
     agent.state = {
       ...(agent.state as object),
       title: next,
     } as unknown as typeof agent.state;
   }
+  // @endregion[use-agent-write]
+  // @endregion[set-state]
 
   return (
     <main className="p-8 grid grid-cols-2 gap-8">

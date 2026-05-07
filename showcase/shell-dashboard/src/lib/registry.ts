@@ -1,7 +1,7 @@
 import registryData from "@/data/registry.json";
 import { sortOrder } from "./sort-order";
 
-export type FeatureKind = "primary" | "testing";
+export type FeatureKind = "primary" | "testing" | "docs-only";
 
 export interface Feature {
   id: string;
@@ -46,6 +46,13 @@ export interface Integration {
   sort_order?: number;
   features: string[];
   demos: Demo[];
+  /**
+   * Feature IDs the integration's framework cannot architecturally support
+   * (e.g. lacks a graph-interrupt primitive or MCP tool runtime). Cells for
+   * these IDs render as "Not supported" rather than the unshipped "no demo"
+   * marker. Source: `not_supported_features:` in the integration's manifest.
+   */
+  not_supported_features?: string[];
   /**
    * Per-column docs link overrides sourced from
    * `showcase/integrations/<slug>/docs-links.json`. The `shell_docs_path` is a

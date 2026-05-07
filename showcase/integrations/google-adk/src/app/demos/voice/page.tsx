@@ -1,39 +1,69 @@
 "use client";
 
-import React from "react";
-import {
-  CopilotKit,
-  CopilotChat,
-  useConfigureSuggestions,
-} from "@copilotkit/react-core/v2";
+import { useCallback } from "react";
+import { CopilotKit } from "@copilotkit/react-core";
+import { CopilotChat } from "@copilotkit/react-core/v2";
+import { SampleAudioButton } from "./sample-audio-button";
 
-export default function VoiceDemo() {
+const RUNTIME_URL = "/api/copilotkit-voice";
+const AGENT_ID = "voice-demo";
+const SAMPLE_TEXT = "What is the weather in Tokyo?";
+
+// Voice demo (Google ADK). Two affordances on this page:
+//
+// 1. The default mic button rendered by <CopilotChat /> when the runtime at
+//    RUNTIME_URL advertises `audioFileTranscriptionEnabled: true`.
+// 2. A "Play sample" button that synchronously injects a canned phrase into
+//    the composer (bypasses mic perms and the runtime entirely so Playwright
+//    + screenshot flows work too). Real transcription only flows through the
+//    mic path.
+export default function VoiceDemoPage() {
+  const handleTranscribed = useCallback((text: string) => {
+    if (typeof document === "undefined") return;
+    const textarea = document.querySelector<HTMLTextAreaElement>(
+      '[data-testid="copilot-chat-textarea"]',
+    );
+    if (!textarea) {
+      console.warn(
+        "[voice-demo] could not find copilot-chat-textarea to populate",
+      );
+      return;
+    }
+    const nativeSetter = Object.getOwnPropertyDescriptor(
+      window.HTMLTextAreaElement.prototype,
+      "value",
+    )?.set;
+    if (nativeSetter) {
+      nativeSetter.call(textarea, text);
+    } else {
+      textarea.value = text;
+    }
+    textarea.dispatchEvent(new Event("input", { bubbles: true }));
+    textarea.focus();
+  }, []);
+
   return (
-    <CopilotKit runtimeUrl="/api/copilotkit" agent="voice">
-      <DemoContent />
-    </CopilotKit>
-  );
-}
-
-function DemoContent() {
-  useConfigureSuggestions({
-    suggestions: [
-      { title: "Try voice", message: "Tap the mic and ask me anything." },
-      { title: "Quick tip", message: "Give me one productivity tip." },
-    ],
-    available: "always",
-  });
-
-  return (
-    <div className="flex justify-center items-center h-screen w-full bg-gradient-to-br from-purple-50 to-pink-50">
-      <div className="h-full w-full max-w-4xl">
-        {/* The voice button is rendered by CopilotChat's default input slot
-            when @copilotkit/voice is installed and the runtime exposes a
-            transcribe endpoint — passing an empty `input={{}}` prop here
-            previously overrode that default with no override at all. We
-            omit the prop entirely so the default slot stays active. */}
-        <CopilotChat agentId="voice" className="h-full rounded-2xl" />
+    <CopilotKit
+      runtimeUrl={RUNTIME_URL}
+      agent={AGENT_ID}
+      useSingleEndpoint={false}
+    >
+      <div className="flex h-screen flex-col gap-3 p-6">
+        <header>
+          <h1 className="text-lg font-semibold">Voice input</h1>
+          <p className="text-sm text-black/60 dark:text-white/60">
+            Click the microphone to record, or play the bundled sample audio.
+            Speech is transcribed into the input field — you click send.
+          </p>
+        </header>
+        <SampleAudioButton
+          onTranscribed={handleTranscribed}
+          sampleText={SAMPLE_TEXT}
+        />
+        <div className="min-h-0 flex-1 overflow-hidden rounded-md border border-black/10 dark:border-white/10">
+          <CopilotChat agentId={AGENT_ID} className="h-full" />
+        </div>
       </div>
-    </div>
+    </CopilotKit>
   );
 }

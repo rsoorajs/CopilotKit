@@ -13,15 +13,6 @@ below are the ones where those primitives are genuinely unavailable.
 
 ### LangGraph graph-control primitives (no Spring AI equivalent)
 
-- **gen-ui-interrupt** — Spring AI has no `interrupt` primitive. The
-  `SpringAIAgent` runs a single `ChatClient` call to completion on each
-  HTTP request; there is no graph-level pause/resume API to carry client
-  input across suspensions. LangGraph-specific.
-
-- **interrupt-headless** — Same missing primitive as `gen-ui-interrupt`.
-  No way to pause a `SpringAIAgent` run and resume it from client-supplied
-  state.
-
 - **subagents** — Ported using the tool-composition pattern (each
   sub-agent is a separate `ChatClient` call wired as a supervisor tool;
   see `SubagentsController`). This deviates from LangGraph's
@@ -38,7 +29,9 @@ below are the ones where those primitives are genuinely unavailable.
   token deltas, but the `ag-ui:spring-ai` adapter does not expose a
   mid-stream state-delta emission API comparable to LangGraph's
   `copilotkit_emit_state`. Per-token state patches cannot be forwarded
-  through the AG-UI channel with the current integration.
+  through the AG-UI channel with the current integration. The demo cell
+  is shipped as a stub frontend (`src/app/demos/shared-state-streaming/`)
+  so the UI lights up when the adapter exposes mid-stream emission.
 
 - **byoc-json-render** — Relies on a streaming structured-output primitive
   (LangGraph's `with_structured_output` + incremental JSON streaming that
@@ -46,24 +39,41 @@ below are the ones where those primitives are genuinely unavailable.
   AI has `BeanOutputConverter` / `ParameterizedTypeReference` structured
   output, but it resolves on the FINAL response only — it does not emit
   partial schema-conformant objects during the stream. The BYOC renderer
-  needs per-token JSON to progressively paint the UI.
+  needs per-token JSON to progressively paint the UI. Additionally,
+  `@json-render/core` and `@json-render/react` are not currently
+  dependencies of the Spring AI showcase package.
 
-- **byoc-hashbrown** — Same missing primitive as `byoc-json-render`.
-  Hashbrown's catalog-driven renderer expects per-token JSON deltas
-  shaped against a strict schema.
+## Ported with caveats
 
-### Command-only
+- **gen-ui-interrupt** — Ported using **Strategy B** (the same approach
+  used by MS Agent Python). Spring AI has no `interrupt()` primitive, so
+  the backend agent (`InterruptAgentController`) provides a scheduling
+  system prompt with NO backend tool callbacks. The `schedule_meeting`
+  tool is registered entirely on the frontend via `useFrontendTool` with
+  an async handler that renders a `TimePickerCard` and blocks until the
+  user picks a slot or cancels. The UX is identical to the LangGraph
+  version.
 
-- **cli-start** — Not a runnable demo cell; it's a command-line starter
-  snippet (`npx degit …`). Not applicable here.
+- **interrupt-headless** — Same Strategy B adaptation as
+  `gen-ui-interrupt`, but the time-picker popup renders in the app
+  surface (outside the chat) instead of inline. Both demos share the
+  same backend agent (`InterruptAgentController`).
 
-## Notes on ported-but-adapter-limited demos
+- **byoc-hashbrown** — Ported. The hashbrown UI kit
+  (`@hashbrownai/react@0.5.0-beta.4`) consumes streaming text and uses
+  `useJsonParser` to progressively assemble UI from partial JSON. Spring
+  AI's `ChatClient.stream()` streams text tokens, so the hashbrown
+  parser tolerates the per-token feed. Final-shape correctness depends on
+  the model following the example prompt — there is no guarantee like
+  LangGraph's `with_structured_output`.
 
-A few ported demos depend on AG-UI events that the current `ag-ui:spring-ai`
-adapter does not always emit:
+- **gen-ui-tool-based** — Ported using `useComponent` per-tool renderers
+  bound to `render_bar_chart` / `render_pie_chart` tools. Args stream as
+  partial JSON; the Zod schemas accept partials so the chart components
+  can render once enough fields are present.
 
 - **agentic-chat-reasoning**, **reasoning-default-render**,
-  **tool-rendering-reasoning-chain** — the frontend code is wired for
+  **tool-rendering-reasoning-chain** — frontend code is wired for
   `REASONING_MESSAGE_*` events; when the adapter begins forwarding OpenAI
   reasoning content (and/or a reasoning-capable model is wired through),
   the reasoning UI lights up automatically. Until then the chat behaves
@@ -88,8 +98,9 @@ adapter does not always emit:
 
 The full ported list lives in `manifest.yaml`. Highlights include:
 agentic-chat, tool-rendering (default + custom + catchall), frontend-tools
-(+ async), hitl-in-chat, hitl-in-app, prebuilt-sidebar / popup, chat-slots,
-chat-customization-css, headless-simple, headless-complete, beautiful-chat,
-auth, readonly-state-agent-context, open-gen-ui (+ advanced), voice,
-agent-config, a2ui-fixed-schema, declarative-gen-ui, multimodal, and the
-three reasoning variants.
+(+ async), hitl-in-chat (+ booking variant), hitl-in-app, prebuilt-sidebar
+/ popup, chat-slots, chat-customization-css, headless-simple,
+headless-complete, beautiful-chat, auth, readonly-state-agent-context,
+open-gen-ui (+ advanced), voice, agent-config, a2ui-fixed-schema,
+declarative-gen-ui, multimodal, gen-ui-tool-based, mcp-apps,
+byoc-hashbrown, and the three reasoning variants.

@@ -100,7 +100,7 @@ function Layout() {
     available: "always",
   });
 
-  // @region[headless-frontend-tool-schedule-meeting]
+  // @region[headless-promise-primitives]
   useFrontendTool({
     name: "schedule_meeting",
     description:
@@ -140,7 +140,7 @@ function Layout() {
     // reads the `pending` state set inside the handler.
     render: () => null,
   });
-  // @endregion[headless-frontend-tool-schedule-meeting]
+  // @endregion[headless-promise-primitives]
 
   return (
     <div className="grid h-screen grid-cols-[1fr_420px] bg-[#FAFAFC]">

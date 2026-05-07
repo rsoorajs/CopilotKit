@@ -1,0 +1,17 @@
+{
+  "_comment": "D5 fixture for /demos/gen-ui-interrupt. Two-turn flow: trigger interrupt that yields gen-UI, then resolve. Substrings 'request the gen-ui interrupt' and 'confirm the gen-ui choice' are unique.",
+  "fixtures": [
+    {
+      "match": { "userMessage": "request the gen-ui interrupt" },
+      "response": {
+        "content": "The agent paused at a gen-UI interrupt and rendered a choice component for the user. Choose to continue."
+      }
+    },
+    {
+      "match": { "userMessage": "confirm the gen-ui choice" },
+      "response": {
+        "content": "Gen-UI interrupt resolved. The agent received the user's choice and resumed, completing the workflow."
+      }
+    }
+  ]
+}

@@ -4,13 +4,15 @@ category: enterprise-platform
 language: java
 logo: /logos/spring-ai.svg
 description: >-
-  CopilotKit integration with Spring AI. Java-based agent backend with a broad
+  CopilotKit integration with Spring AI. Java-based agent backend with full
   feature coverage including frontend tools, in-chat and in-app human-in-the-
-  loop, generative UI, per-tool renderers, agent context, and prebuilt chat
-  surfaces (sidebar / popup / slots / headless). Demos that depend on
-  LangGraph-specific primitives (interrupt, multi-agent orchestration, per-
-  token state streaming, MCP-driven UI) are documented as skipped in
-  PARITY_NOTES.md.
+  loop, generative UI, per-tool renderers, agent context, interrupt-adapted
+  scheduling (Strategy B), per-token state streaming, and prebuilt chat
+  surfaces (sidebar / popup / slots / headless).
+  loop, generative UI, per-tool renderers, agent context, per-token state
+  streaming, and prebuilt chat surfaces (sidebar / popup / slots / headless).
+  Demos that depend on LangGraph-specific primitives (interrupt, multi-agent
+  orchestration, MCP-driven UI) are documented as skipped in PARITY_NOTES.md.
 partner_docs: null
 repo: https://github.com/CopilotKit/CopilotKit/tree/main/showcase/integrations/spring-ai
 copilotkit_version: 2.0.0
@@ -25,14 +27,18 @@ interaction_modalities:
   - embedded
   - chat
 features:
+  - cli-start
   - agentic-chat
   - agentic-chat-reasoning
   - reasoning-default-render
   - tool-rendering-reasoning-chain
+  - tool-rendering-default-catchall
+  - tool-rendering-custom-catchall
   - chat-customization-css
   - frontend-tools
   - frontend-tools-async
   - gen-ui-agent
+  - gen-ui-tool-based
   - open-gen-ui
   - open-gen-ui-advanced
   - declarative-gen-ui
@@ -51,9 +57,19 @@ features:
   - multimodal
   - agent-config
   - hitl-in-chat
+  - hitl-in-chat-booking
   - hitl-in-app
   - hitl
   - tool-rendering
+  - mcp-apps
+  - byoc-hashbrown
+  - byoc-json-render
+  - shared-state-streaming
+  - gen-ui-interrupt
+  - interrupt-headless
+a2ui_pattern: schema-inline
+agent_config_pattern: shared-state
+auth_pattern: runtime-onrequest
 demos:
   - id: agentic-chat
     name: Agentic Chat
@@ -322,6 +338,18 @@ demos:
       - src/app/demos/shared-state-read-write/preferences-card.tsx
       - src/app/demos/shared-state-read-write/notes-card.tsx
       - src/app/api/copilotkit-shared-state-read-write/route.ts
+  - id: shared-state-streaming
+    name: Shared State Streaming
+    description: Per-token state streaming — the agent's write_document tool streams content into state.document via STATE_SNAPSHOT events; the frontend renders the growing document live
+    tags:
+      - agent-state
+    route: /demos/shared-state-streaming
+    animated_preview_url:
+    highlight:
+      - src/main/java/com/copilotkit/showcase/springai/SharedStateStreamingController.java
+      - src/app/demos/shared-state-streaming/page.tsx
+      - src/app/demos/shared-state-streaming/document-view.tsx
+      - src/app/api/copilotkit-shared-state-streaming/route.ts
   - id: subagents
     name: Sub-Agents
     description: Supervisor delegates to research / writing / critique sub-agents (each its own ChatClient call). Every delegation appends a Delegation entry to state.delegations and emits a STATE_SNAPSHOT for a live UI log
@@ -386,6 +414,125 @@ demos:
     route: /demos/tool-rendering
     animated_preview_url:
     highlight:
-      - src/app/demos/tool-rendering/agent.ts
+      - src/main/java/com/copilotkit/showcase/springai/tools/WeatherTool.java
       - src/app/demos/tool-rendering/page.tsx
       - src/app/api/copilotkit/route.ts
+  - id: cli-start
+    name: CLI Start Command
+    description: Copy-paste command to clone the canonical Spring AI starter
+    tags:
+      - chat-ui
+    command: "npx copilotkit@latest init --framework spring-ai"
+  - id: gen-ui-tool-based
+    name: Tool-Based Generative UI
+    description: Frontend registers per-tool component renderers via useComponent; the Spring agent calls render tools that paint chart components inline in the chat
+    tags:
+      - generative-ui
+    route: /demos/gen-ui-tool-based
+    animated_preview_url:
+    highlight:
+      - src/app/demos/gen-ui-tool-based/page.tsx
+      - src/app/demos/gen-ui-tool-based/bar-chart.tsx
+      - src/app/demos/gen-ui-tool-based/pie-chart.tsx
+      - src/app/api/copilotkit/route.ts
+  - id: tool-rendering-default-catchall
+    name: Tool Rendering (Default Catch-all)
+    description: Out-of-the-box tool rendering — the Spring backend defines tools; the frontend adds zero custom renderers and relies on CopilotKit's built-in default UI
+    tags:
+      - generative-ui
+    route: /demos/tool-rendering-default-catchall
+    animated_preview_url:
+    highlight:
+      - src/app/demos/tool-rendering-default-catchall/page.tsx
+      - src/main/java/com/copilotkit/showcase/springai/AgentConfig.java
+      - src/app/api/copilotkit/route.ts
+  - id: tool-rendering-custom-catchall
+    name: Tool Rendering (Custom Catch-all)
+    description: Single branded wildcard renderer via useDefaultRenderTool — the same app-designed card paints every Spring tool call
+    tags:
+      - generative-ui
+    route: /demos/tool-rendering-custom-catchall
+    animated_preview_url:
+    highlight:
+      - src/app/demos/tool-rendering-custom-catchall/page.tsx
+      - src/app/demos/tool-rendering-custom-catchall/custom-catchall-renderer.tsx
+      - src/main/java/com/copilotkit/showcase/springai/AgentConfig.java
+      - src/app/api/copilotkit/route.ts
+  - id: hitl-in-chat-booking
+    name: In-Chat HITL (Booking)
+    description: Time-picker card rendered inline via useHumanInTheLoop for a booking flow against the Spring AI agent
+    tags:
+      - interactivity
+    route: /demos/hitl-in-chat
+    animated_preview_url:
+    highlight:
+      - src/app/demos/hitl-in-chat/page.tsx
+      - src/app/demos/hitl-in-chat/time-picker-card.tsx
+      - src/app/api/copilotkit/route.ts
+  - id: mcp-apps
+    name: MCP Apps
+    description: MCP server-driven UI via the runtime mcpApps middleware; sandboxed iframe rendered via the built-in MCPAppsActivityRenderer
+    tags:
+      - generative-ui
+    route: /demos/mcp-apps
+    animated_preview_url:
+    highlight:
+      - src/app/demos/mcp-apps/page.tsx
+      - src/app/api/copilotkit-mcp-apps/route.ts
+  - id: byoc-hashbrown
+    name: BYOC Hashbrown
+    description: Streaming hashbrown UI kit (MetricCard + PieChart + BarChart + DealCard) rendered by @hashbrownai/react against the Spring AI ChatClient stream
+    tags:
+      - generative-ui
+    route: /demos/byoc-hashbrown
+    animated_preview_url:
+    highlight:
+      - src/app/demos/byoc-hashbrown/page.tsx
+      - src/app/demos/byoc-hashbrown/hashbrown-renderer.tsx
+      - src/app/demos/byoc-hashbrown/metric-card.tsx
+      - src/app/demos/byoc-hashbrown/charts/bar-chart.tsx
+      - src/app/demos/byoc-hashbrown/charts/pie-chart.tsx
+      - src/app/demos/byoc-hashbrown/types.ts
+      - src/app/demos/byoc-hashbrown/suggestions.ts
+      - src/app/api/copilotkit/route.ts
+  - id: gen-ui-interrupt
+    name: Generative UI (Interrupt)
+    description: Time-picker card rendered inline via useFrontendTool with an async handler that blocks until the user picks a slot — Strategy B adaptation of LangGraph's interrupt() primitive
+    tags:
+      - interactivity
+    route: /demos/gen-ui-interrupt
+    animated_preview_url:
+    highlight:
+      - src/main/java/com/copilotkit/showcase/springai/InterruptAgentController.java
+      - src/app/demos/gen-ui-interrupt/page.tsx
+      - src/app/demos/gen-ui-interrupt/time-picker-card.tsx
+      - src/app/api/copilotkit/route.ts
+  - id: interrupt-headless
+    name: Headless Interrupt
+    description: Time-picker popup rendered in the app surface (outside the chat) via useFrontendTool with an async handler — headless variant of the interrupt-adapted pattern
+    tags:
+      - interactivity
+    route: /demos/interrupt-headless
+    animated_preview_url:
+    highlight:
+      - src/main/java/com/copilotkit/showcase/springai/InterruptAgentController.java
+      - src/app/demos/interrupt-headless/page.tsx
+      - src/app/api/copilotkit/route.ts
+  - id: byoc-json-render
+    name: BYOC JSON Render
+    description: Zero-tool agent emits a flat-spec JSON object rendered by @json-render/react against a Zod-validated catalog of MetricCard, BarChart, and PieChart components
+    tags:
+      - generative-ui
+    route: /demos/byoc-json-render
+    animated_preview_url:
+    highlight:
+      - src/app/demos/byoc-json-render/page.tsx
+      - src/app/demos/byoc-json-render/json-render-renderer.tsx
+      - src/app/demos/byoc-json-render/catalog.ts
+      - src/app/demos/byoc-json-render/registry.tsx
+      - src/app/demos/byoc-json-render/metric-card.tsx
+      - src/app/demos/byoc-json-render/charts/bar-chart.tsx
+      - src/app/demos/byoc-json-render/charts/pie-chart.tsx
+      - src/app/demos/byoc-json-render/suggestions.ts
+      - src/main/java/com/copilotkit/showcase/springai/ByocJsonRenderController.java
+      - src/app/api/copilotkit-byoc-json-render/route.ts

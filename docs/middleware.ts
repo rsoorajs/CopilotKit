@@ -4,6 +4,7 @@ import type { NextRequest } from "next/server";
 // All framework slugs for pattern-based redirects
 const FRAMEWORKS = [
   "langgraph",
+  "deepagents",
   "adk",
   "agno",
   "crewai-flows",
@@ -148,6 +149,6 @@ export const config = {
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      */
-    "/((?!api|_next/static|_next/image|favicon.ico).*)",
+    "/((?!api|ingest|_next/static|_next/image|favicon.ico).*)",
   ],
 };

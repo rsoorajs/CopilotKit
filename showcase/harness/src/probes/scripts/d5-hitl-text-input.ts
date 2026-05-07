@@ -140,11 +140,24 @@ const script: D5Script = {
           );
         }
         const baselineCount = await readAssistantCount(hitlPage);
+        console.debug("[d5-hitl-text-input] picking time slot", {
+          baselineCount,
+        });
         await pickTimeSlot(hitlPage);
+        console.debug(
+          "[d5-hitl-text-input] waiting for follow-up assistant message",
+          {
+            baselineCount,
+          },
+        );
         const followup = await waitForNextAssistantMessage(
           hitlPage,
           baselineCount,
         );
+        console.debug("[d5-hitl-text-input] checking follow-up tokens", {
+          expectedTokens: [...REFERENCE_TOKENS],
+          followupSnippet: followup.slice(0, 300),
+        });
         for (const token of REFERENCE_TOKENS) {
           if (!followup.includes(token)) {
             throw new Error(
@@ -152,6 +165,7 @@ const script: D5Script = {
             );
           }
         }
+        console.debug("[d5-hitl-text-input] all token assertions passed");
       },
     },
   ],

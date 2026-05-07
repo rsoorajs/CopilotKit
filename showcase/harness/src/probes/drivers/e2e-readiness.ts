@@ -144,7 +144,9 @@ export interface E2eDemosBrowser {
   close(): Promise<void>;
 }
 
-export type E2eDemosBrowserLauncher = () => Promise<E2eDemosBrowser>;
+export type E2eDemosBrowserLauncher = (
+  abortSignal?: AbortSignal,
+) => Promise<E2eDemosBrowser>;
 
 /**
  * Per-demo metadata surfaced by the resolver. `route` is the path segment
@@ -247,40 +249,93 @@ const READY_SELECTORS = [
  *  budget, starving subsequent selectors of time). */
 const READY_SELECTOR_COMPOUND = READY_SELECTORS.join(", ");
 
-const defaultLauncher: E2eDemosBrowserLauncher =
-  async (): Promise<E2eDemosBrowser> => {
-    const mod = (await import("playwright")) as typeof import("playwright");
-    const browser = await mod.chromium.launch({
-      headless: true,
-      args: ["--no-sandbox", "--disable-dev-shm-usage"],
-    });
-    return {
-      async newContext(): Promise<E2eDemosBrowserContext> {
-        const ctx = await browser.newContext();
-        return {
-          async newPage(): Promise<E2eDemosPage> {
-            const page = await ctx.newPage();
-            return {
-              goto: (url, opts) => page.goto(url, opts),
-              waitForSelector: (sel, opts) => page.waitForSelector(sel, opts),
-              close: () => page.close(),
-            };
-          },
-          close: () => ctx.close(),
-        };
-      },
-      close: () => browser.close(),
-    };
+const defaultLauncher: E2eDemosBrowserLauncher = async (
+  _abortSignal?: AbortSignal,
+): Promise<E2eDemosBrowser> => {
+  // _abortSignal is ignored here: the default launcher dedicates a
+  // chromium per call and lets the driver's finally block close it. The
+  // pooled launcher (createPooledE2eDemosLauncher) is the path that
+  // actually needs prompt release on abort.
+  const mod = (await import("playwright")) as typeof import("playwright");
+  const browser = await mod.chromium.launch({
+    headless: true,
+    args: ["--no-sandbox", "--disable-dev-shm-usage"],
+  });
+  return {
+    async newContext(): Promise<E2eDemosBrowserContext> {
+      const ctx = await browser.newContext();
+      return {
+        async newPage(): Promise<E2eDemosPage> {
+          const page = await ctx.newPage();
+          return {
+            goto: (url, opts) => page.goto(url, opts),
+            waitForSelector: (sel, opts) => page.waitForSelector(sel, opts),
+            close: () => page.close(),
+          };
+        },
+        close: () => ctx.close(),
+      };
+    },
+    close: () => browser.close(),
   };
+};
 
 export function createPooledE2eDemosLauncher(
   pool: BrowserPool,
+  logger?: { warn(event: string, meta?: Record<string, unknown>): void },
 ): E2eDemosBrowserLauncher {
-  return async (): Promise<E2eDemosBrowser> => {
+  return async (abortSignal?: AbortSignal): Promise<E2eDemosBrowser> => {
     const browser = await pool.acquire();
+
+    // Track whether the browser was force-released by an abort so the
+    // driver's normal `browser.close()` in the finally block doesn't
+    // double-release the same slot. Mirrors createPooledE2eDeepLauncher's
+    // pattern (see e2e-deep.ts) — pool starvation under outer-timeout was
+    // the documented motivation there and the same race exists here:
+    // Promise.race in the invoker abandons the driver promise but the
+    // driver continues iterating demos with the pooled browser held until
+    // the loop drains. Without this listener the slot stays in-use across
+    // probe ticks and the next tick can't acquire it.
+    let forceReleased = false;
+    const openContexts = new Set<{ close(): Promise<void> }>();
+
+    if (abortSignal) {
+      const onAbort = (): void => {
+        if (forceReleased) return;
+        forceReleased = true;
+        const ctxCount = openContexts.size;
+        const stats = pool.stats();
+        logger?.warn("probe.e2e-demos.pool-abort-release", {
+          openContexts: ctxCount,
+          poolAvailable: stats.available,
+          poolInUse: stats.inUse,
+          poolSize: stats.size,
+        });
+        const contextClosePromises = Array.from(openContexts).map((ctx) =>
+          ctx.close().catch(() => {}),
+        );
+        void Promise.allSettled(contextClosePromises).then(() => {
+          pool.release(browser);
+          logger?.warn("probe.e2e-demos.pool-abort-released", {
+            closedContexts: ctxCount,
+            poolAvailable: pool.stats().available,
+          });
+        });
+      };
+      if (abortSignal.aborted) {
+        forceReleased = true;
+        logger?.warn("probe.e2e-demos.pool-pre-aborted-release");
+        pool.release(browser);
+      } else {
+        abortSignal.addEventListener("abort", onAbort, { once: true });
+      }
+    }
+
     return {
       async newContext(): Promise<E2eDemosBrowserContext> {
         const ctx = await browser.newContext();
+        const ctxHandle = { close: () => ctx.close() };
+        openContexts.add(ctxHandle);
         return {
           async newPage(): Promise<E2eDemosPage> {
             const page = await ctx.newPage();
@@ -290,10 +345,14 @@ export function createPooledE2eDemosLauncher(
               close: () => page.close(),
             };
           },
-          close: () => ctx.close(),
+          close: async () => {
+            openContexts.delete(ctxHandle);
+            await ctx.close();
+          },
         };
       },
       close: async () => {
+        if (forceReleased) return;
         pool.release(browser);
       },
     };
@@ -562,7 +621,12 @@ export function createE2eDemosDriver(
       let browser: E2eDemosBrowser | undefined;
       try {
         try {
-          browser = await launcher();
+          // Pass abort.signal so a pooled launcher can release the slot
+          // immediately when the outer-timeout (or external abort) fires,
+          // instead of holding the browser until this run() drains all
+          // remaining demos. The default (per-call chromium) launcher
+          // ignores the signal; only the pooled path needs this.
+          browser = await launcher(abort.signal);
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err);
           ctx.logger.warn("probe.e2e-demos.launcher-error", { slug, err: msg });

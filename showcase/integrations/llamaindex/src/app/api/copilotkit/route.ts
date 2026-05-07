@@ -24,18 +24,15 @@ function createAgent(subpath: string = "") {
 // render slots).
 const sharedAgentNames = [
   "agentic_chat",
-  "human_in_the_loop",
   "tool-rendering",
   "tool-rendering-default-catchall",
   "tool-rendering-custom-catchall",
-  "gen-ui-tool-based",
   "gen-ui-agent",
   "shared-state-read",
   "shared-state-write",
   "shared-state-streaming",
   "frontend_tools",
   "frontend_tools_async",
-  "hitl_in_app",
   "prebuilt_sidebar",
   "prebuilt_popup",
   "chat_slots",
@@ -43,6 +40,7 @@ const sharedAgentNames = [
   "headless_simple",
   "headless_complete",
   "readonly_state_agent_context",
+  "human_in_the_loop",
 ];
 
 // Specialized routers live at dedicated subpaths on the agent_server so the
@@ -54,7 +52,15 @@ const specializedAgents: Record<string, string> = {
   "reasoning-default-render": "/reasoning",
   "tool-rendering-reasoning-chain": "/tool-rendering-reasoning-chain",
   "shared-state-read-write": "/shared-state-read-write",
+  "gen-ui-tool-based": "/gen-ui-tool-based",
+  "beautiful-chat": "/beautiful-chat",
+  hitl_in_app: "/hitl-in-app",
   subagents: "/subagents",
+  // Interrupt-adapted scheduling demos — both gen-ui-interrupt and
+  // interrupt-headless share the same backend agent; only the frontend
+  // UX differs (inline picker in chat vs. external popup).
+  "gen-ui-interrupt": "/interrupt",
+  "interrupt-headless": "/interrupt",
 };
 
 const agents: Record<string, AbstractAgent> = {};

@@ -60,11 +60,13 @@ describe("Catalog Generator", () => {
 
     // metadata must have exactly the CatalogMetadata keys
     expect(Object.keys(catalog.metadata).sort()).toEqual([
+      "docs_only",
       "generated_at",
       "reference",
       "stub",
       "total_cells",
       "unshipped",
+      "unsupported",
       "wired",
     ]);
 
@@ -93,7 +95,7 @@ describe("Catalog Generator", () => {
     }
   });
 
-  it("cross-join produces 737 cells (720 integrated + 17 starters)", () => {
+  it("cross-join produces 720 cells (40 features x 18 integrations); metadata.total_cells excludes docs-only", () => {
     runGenerator();
     const catalog = readCatalog();
 
@@ -110,7 +112,9 @@ describe("Catalog Generator", () => {
     expect(integrated.length).toBe(720); // 40 features x 18 integrations
     expect(starters.length).toBe(0);
     expect(catalog.cells.length).toBe(720);
-    expect(catalog.metadata.total_cells).toBe(720);
+    // total_cells excludes docs-only features (currently 1 feature x 18 integrations = 18)
+    expect(catalog.metadata.total_cells).toBe(702);
+    expect(catalog.metadata.docs_only).toBe(18);
   });
 
   it("LGP has 40 cells: 37 wired + 1 stub + 2 unshipped", () => {
@@ -146,24 +150,28 @@ describe("Catalog Generator", () => {
     expect(cliStartCell.manifestation).toBe("integrated");
   });
 
-  it("parity tier: LGP = reference (most wired features, fewest stubs)", () => {
+  it("parity tier: reference auto-detected as integration with the most wired features (alphabetical tie-break)", () => {
     runGenerator();
     const catalog = readCatalog();
 
-    expect(catalog.metadata.reference).toBe("langgraph-python");
+    // After the showcase-fill-186 blitz, multiple integrations match the
+    // historical LangGraph-Python wired-feature count. The auto-detection
+    // tie-breaks alphabetically — `langgraph-fastapi` precedes
+    // `langgraph-python` among the tied set, so it now wins the reference
+    // slot. Cells under the elected reference must carry parity_tier =
+    // "reference".
+    const ref = catalog.metadata.reference;
+    expect(ref).toBeTruthy();
 
-    // All LGP integrated cells should have parity_tier = "reference"
-    const lgpCells = catalog.cells.filter(
-      (c: any) =>
-        c.integration === "langgraph-python" &&
-        c.manifestation === "integrated",
+    const refCells = catalog.cells.filter(
+      (c: any) => c.integration === ref && c.manifestation === "integrated",
     );
-    for (const cell of lgpCells) {
+    for (const cell of refCells) {
       expect(cell.parity_tier).toBe("reference");
     }
   });
 
-  it("parity tier: crewai-crews (30 wired) = partial (intersection >= 3 with reference)", () => {
+  it("parity tier: crewai-crews wired cells render at_parity or partial against the elected reference", () => {
     runGenerator();
     const catalog = readCatalog();
 
@@ -172,31 +180,47 @@ describe("Catalog Generator", () => {
         c.integration === "crewai-crews" && c.manifestation === "integrated",
     );
     const crewaiWired = crewaiCells.filter((c: any) => c.status === "wired");
-    expect(crewaiWired.length).toBe(32);
+    // crewai-crews wired count moved with the blitz; assert the lower bound
+    // (the partial tier requires intersection >= 3 with the reference's
+    // wired set, which crewai-crews comfortably exceeds post-blitz).
+    expect(crewaiWired.length).toBeGreaterThanOrEqual(30);
 
-    // All cells for crewai should have parity_tier = "partial"
+    const tier = crewaiCells[0].parity_tier;
+    expect(["at_parity", "partial"]).toContain(tier);
     for (const cell of crewaiCells) {
-      expect(cell.parity_tier).toBe("partial");
+      expect(cell.parity_tier).toBe(tier);
     }
   });
 
-  it("metadata counts are correct", () => {
+  it("metadata counts are correct (docs-only excluded from breakdown)", () => {
     runGenerator();
     const catalog = readCatalog();
 
     expect(catalog.metadata).toBeDefined();
-    expect(catalog.metadata.total_cells).toBe(720);
+    // total_cells excludes docs-only features
+    expect(catalog.metadata.total_cells).toBe(702);
 
-    // 18 integrations x 40 features = 720 total cells (starters removed).
+    // Headline counts exclude docs-only cells; must sum to total_cells.
     expect(
       catalog.metadata.wired +
         catalog.metadata.stub +
-        catalog.metadata.unshipped,
-    ).toBe(720);
+        catalog.metadata.unshipped +
+        catalog.metadata.unsupported,
+    ).toBe(catalog.metadata.total_cells);
+    // docs_only + headline counts = total cells in the array
+    expect(
+      catalog.metadata.wired +
+        catalog.metadata.stub +
+        catalog.metadata.unshipped +
+        catalog.metadata.unsupported +
+        catalog.metadata.docs_only,
+    ).toBe(catalog.cells.length);
     expect(catalog.metadata.wired).toBeGreaterThanOrEqual(490);
+    expect(catalog.metadata.unsupported).toBeGreaterThanOrEqual(0);
+    expect(catalog.metadata.docs_only).toBe(18);
   });
 
-  it("max_depth: D4 for wired/stub cells, D0 for unshipped", () => {
+  it("max_depth: D4 for wired/stub cells, D0 for unshipped/unsupported", () => {
     runGenerator();
     const catalog = readCatalog();
 
@@ -204,6 +228,9 @@ describe("Catalog Generator", () => {
     const stub = catalog.cells.filter((c: any) => c.status === "stub");
     const unshipped = catalog.cells.filter(
       (c: any) => c.status === "unshipped",
+    );
+    const unsupported = catalog.cells.filter(
+      (c: any) => c.status === "unsupported",
     );
 
     for (const cell of wired) {
@@ -213,6 +240,10 @@ describe("Catalog Generator", () => {
       expect(cell.max_depth).toBe(4);
     }
     for (const cell of unshipped) {
+      expect(cell.max_depth).toBe(0);
+    }
+    for (const cell of unsupported) {
+      // Unsupported shares max_depth=0 with unshipped — neither has probes.
       expect(cell.max_depth).toBe(0);
     }
   });

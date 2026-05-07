@@ -3,6 +3,7 @@
   "dockerfile_lines": [],
   "dependencies": ["."],
   "graphs": {
+    "sample_agent": "./graph.ts:graph",
     "starterAgent": "./graph.ts:graph",
     "beautiful_chat": "./beautiful-chat.ts:graph",
     "headless_complete": "./headless-complete.ts:graph",
@@ -20,6 +21,7 @@
     "frontend_tools": "./frontend-tools.ts:graph",
     "frontend_tools_async": "./frontend-tools-async.ts:graph",
     "hitl_in_app": "./hitl-in-app.ts:graph",
+    "hitl_in_chat": "./hitl-in-chat.ts:graph",
     "readonly_state_agent_context": "./readonly-state.ts:graph",
     "byoc_hashbrown": "./byoc-hashbrown.ts:graph",
     "byoc_json_render": "./byoc-json-render.ts:graph",

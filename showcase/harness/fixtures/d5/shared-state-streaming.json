@@ -1,0 +1,11 @@
+{
+  "_comment": "D5 fixture for /demos/shared-state-streaming. Substring 'stream the counter to 5' is unique.",
+  "fixtures": [
+    {
+      "match": { "userMessage": "stream the counter to 5" },
+      "response": {
+        "content": "Streaming state updates: counter advanced from 0 through 1, 2, 3, 4 to 5. Each intermediate value was reflected in the shared state and visible to the UI mid-stream."
+      }
+    }
+  ]
+}

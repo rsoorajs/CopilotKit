@@ -69,9 +69,14 @@ string like ""$289"". Keep any chat reply to one short sentence.",
             ]);
     }
 
-    // The fixed-schema flight component tree. Frontend renders this via a
-    // registered catalog (`copilotkit://flight-fixed-catalog`). Matches the
-    // LangGraph reference at src/agents/a2ui_schemas/flight_schema.json.
+    // @region[backend-schema-json-load]
+    // The fixed-schema flight component tree. .NET doesn't ship a
+    // JSON-loading helper analogous to LangGraph Python's
+    // `a2ui.load_schema(...)`, so the schema is declared inline as a
+    // C# array — equivalent to deserialising a `flight_schema.json`
+    // file at startup. Matches the LangGraph reference at
+    // `src/agents/a2ui_schemas/flight_schema.json`. Frontend renders
+    // this via the registered catalog (`copilotkit://flight-fixed-catalog`).
     private static readonly object[] FlightSchema = new object[]
     {
         new { id = "root", component = "Card", child = "content" },
@@ -121,6 +126,7 @@ string like ""$289"". Keep any chat reply to one short sentence.",
         },
         new { id = "bookButtonLabel", component = "Text", text = "Book flight" },
     };
+    // @endregion[backend-schema-json-load]
 
     // @region[backend-render-operations]
     [Description("Show a flight card for the given trip. Use short airport codes (e.g. SFO, JFK) for origin/destination and a price string like $289.")]

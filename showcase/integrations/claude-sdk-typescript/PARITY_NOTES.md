@@ -17,15 +17,27 @@ does not implement are skipped below.
 - `agent-config` — `forwardedProps` arrives verbatim on `RunAgentInput` at the Claude agent; `agent_server.ts` builds the system prompt from `tone` / `expertise` / `responseLength` per run. No LangGraph `configurable` repacking needed because the pass-through doesn't use LangGraph config semantics.
 - `auth` — framework-agnostic port using `createCopilotRuntimeHandler` + `hooks.onRequest` with the shared `DEMO_AUTH_HEADER`; `useDemoAuth` defaults to `true`, `ChatErrorBoundary` catches render-time errors in the signed-out state.
 
-## Skipped demos
+## New demos (showcase-fill-186)
+
+- `tool-rendering-default-catchall` / `tool-rendering-custom-catchall` —
+  ported by registering the mock tool suite (`get_weather`, `search_flights`,
+  `get_stock_price`, `roll_dice`) via `useFrontendTool` on the page itself.
+  The Claude Agent SDK pass-through forwards these to the Anthropic Messages
+  API, so the catch-all renderer paints every result without backend agent
+  changes.
+- `agentic-chat-reasoning` / `reasoning-default-render` /
+  `tool-rendering-reasoning-chain` — `agent_server.ts` now opts into
+  Anthropic extended thinking (`thinking: { type: "enabled" }`) on the new
+  `/reasoning` endpoint and forwards `thinking_delta` events as AG-UI
+  `REASONING_MESSAGE_START | CONTENT | END`. Default model is
+  Claude 3.7 Sonnet; override via `CLAUDE_REASONING_MODEL`. A dedicated Next.js
+  runtime route (`/api/copilotkit-reasoning/route.ts`) wires those agent ids
+  to the new endpoint. Reasoning-chain reuses per-tool renderers + a wildcard
+  catch-all.
+
+## Blocked demos
 
 - `beautiful-chat` — flagship cell that composes A2UI (dynamic + fixed schema), OpenGenerativeUI, and MCP Apps through a single combined runtime alongside agent-authored tools; porting requires dedicated Claude agent branches for each feature, not a single pass-through.
 - `headless-complete` — multi-component chat surface assumes backend-authored tools (`get_weather`, `highlight_note`, `display_stock`) defined in the LangGraph `headless_complete` graph; the pass-through has no equivalent agent.
 - `a2ui-fixed-schema` — relies on the backend graph's `display_flight` tool emitting an `a2ui_operations` container via `a2ui.render(...)`; the pass-through agent cannot synthesise that backend-defined tool.
-- `tool-rendering-default-catchall` — requires the backend `tool_rendering` graph's mock tools (`get_weather`, `search_flights`, `get_stock_price`, `roll_dice`) so the frontend can render them with zero custom renderers; no equivalent toolset exists on the pass-through.
-- `tool-rendering-custom-catchall` — same blocker as `tool-rendering-default-catchall` (backend-authored tool suite).
-- `gen-ui-interrupt` — requires LangGraph's `interrupt()` primitive and the `on_interrupt` custom event; Claude Agent SDK and the pass-through have no equivalent.
-- `interrupt-headless` — same LangGraph `interrupt()` dependency as `gen-ui-interrupt`.
-- `agentic-chat-reasoning` — requires per-token reasoning/thinking stream events on AG-UI; the pass-through does not currently forward Claude extended-thinking blocks as AG-UI reasoning events.
-- `reasoning-default-render` — same thinking-stream dependency as `agentic-chat-reasoning`.
-- `tool-rendering-reasoning-chain` — same thinking-stream dependency as `agentic-chat-reasoning`.
+- `hitl-in-chat` / `hitl-in-chat-booking` / `gen-ui-interrupt` / `interrupt-headless` — all require LangGraph's `interrupt()` primitive and the `on_interrupt` custom event; the Claude Agent SDK has no equivalent suspend/resume primitive that pauses a run mid-tool and rehydrates from a typed `Command(resume=...)`. (Frontend-side approval flows already work — see `hitl-in-app`.)

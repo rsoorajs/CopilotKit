@@ -50,8 +50,14 @@ from agents.beautiful_chat import BeautifulChat
 from agents.byoc_hashbrown_agent import ByocHashbrown
 from agents.byoc_json_render_agent import ByocJsonRender
 from agents.declarative_gen_ui import DeclarativeGenUI
+from agents.mcp_apps_agent import MCPApps
+from agents.interrupt_crew import InterruptScheduling
 from agents.shared_state_read_write import shared_state_read_write_flow
 from agents.subagents import subagents_flow
+try:
+    from agents.tool_rendering import tool_rendering_flow
+except ImportError:
+    tool_rendering_flow = None
 
 app = FastAPI(title="CrewAI (Crews) Agent Server")
 
@@ -410,6 +416,7 @@ add_crewai_crew_fastapi_endpoint(app, A2UIFixedSchema(), "/a2ui-fixed-schema")
 add_crewai_crew_fastapi_endpoint(app, ByocHashbrown(), "/byoc-hashbrown")
 add_crewai_crew_fastapi_endpoint(app, ByocJsonRender(), "/byoc-json-render")
 add_crewai_crew_fastapi_endpoint(app, BeautifulChat(), "/beautiful-chat")
+add_crewai_crew_fastapi_endpoint(app, MCPApps(), "/mcp-apps")
 
 # Per-demo dedicated `Flow` (not Crew) endpoints. The shared
 # `ChatWithCrewFlow` cannot host these demos because it has no per-tool
@@ -422,6 +429,12 @@ add_crewai_flow_fastapi_endpoint(
     app, shared_state_read_write_flow, "/shared-state-read-write"
 )
 add_crewai_flow_fastapi_endpoint(app, subagents_flow, "/subagents")
+if tool_rendering_flow is not None:
+    add_crewai_flow_fastapi_endpoint(app, tool_rendering_flow, "/tool-rendering")
+
+add_crewai_crew_fastapi_endpoint(
+    app, InterruptScheduling(), "/interrupt-adapted"
+)
 
 add_crewai_crew_fastapi_endpoint(app, LatestAiDevelopment(), "/")
 

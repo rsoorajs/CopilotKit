@@ -41,6 +41,7 @@ from ag_ui.core import (
     ToolCallStartEvent,
     ToolCallArgsEvent,
     ToolCallEndEvent,
+    ToolCallResultEvent,
     RunAgentInput,
 )
 from fastapi import Request
@@ -676,10 +677,11 @@ async def handle_run(request: Request) -> StreamingResponse:
                         tool_call_id=call_id,
                     ))
 
-                    # For backend tools, execute and stream the result as text.
-                    # Both the oai-path and the content-JSON path below fan
-                    # out through ``_run_backend_tool`` so sanitization and
-                    # off-thread execution behave identically.
+                    # For backend tools, execute and emit the result as a
+                    # ToolCallResultEvent so the CopilotKit runtime can
+                    # transition the useRenderTool status from "executing"
+                    # to "complete". Without this event the frontend card
+                    # stays stuck in a loading state.
                     if tool_name not in FRONTEND_TOOL_NAMES:
                         tool_cls = _TOOL_BY_NAME.get(tool_name)
                         result: str | None = None
@@ -689,9 +691,12 @@ async def handle_run(request: Request) -> StreamingResponse:
                             )
 
                         if result:
-                            msg_id = str(uuid.uuid4())
-                            for line in emit_text_block(msg_id, result):
-                                yield line
+                            yield _sse_line(ToolCallResultEvent(
+                                type=EventType.TOOL_CALL_RESULT,
+                                tool_call_id=call_id,
+                                message_id=str(uuid.uuid4()),
+                                content=result,
+                            ))
 
                 # Close the parent message that wraps the tool calls.
                 yield _sse_line(TextMessageEndEvent(
@@ -784,10 +789,12 @@ async def handle_run(request: Request) -> StreamingResponse:
                             f"{exc.__class__.__name__}"
                         )
                     })
-                    for line in emit_text_block(
-                        str(uuid.uuid4()), err_payload
-                    ):
-                        yield line
+                    yield _sse_line(ToolCallResultEvent(
+                        type=EventType.TOOL_CALL_RESULT,
+                        tool_call_id=tool_call_id,
+                        message_id=str(uuid.uuid4()),
+                        content=err_payload,
+                    ))
                     yield _sse_line(TextMessageEndEvent(
                         type=EventType.TEXT_MESSAGE_END,
                         message_id=ct_parent_id,
@@ -799,8 +806,12 @@ async def handle_run(request: Request) -> StreamingResponse:
                     ))
                     raise
                 if result:
-                    for line in emit_text_block(message_id, result):
-                        yield line
+                    yield _sse_line(ToolCallResultEvent(
+                        type=EventType.TOOL_CALL_RESULT,
+                        tool_call_id=tool_call_id,
+                        message_id=str(uuid.uuid4()),
+                        content=result,
+                    ))
 
             # Close the parent message that wraps the tool call.
             yield _sse_line(TextMessageEndEvent(

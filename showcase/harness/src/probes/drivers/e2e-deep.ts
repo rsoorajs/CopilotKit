@@ -4,18 +4,17 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { z } from "zod";
 import { truncateUtf8 } from "../../render/filters.js";
 import { showcaseShapeSchema } from "../discovery/railway-services.js";
-import {
-  D5_REGISTRY,
-  type D5BuildContext,
-  type D5FeatureType,
-  type D5Script,
-  isD5FeatureType,
+import { D5_REGISTRY, isD5FeatureType } from "../helpers/d5-registry.js";
+import type {
+  D5BuildContext,
+  D5FeatureType,
+  D5Script,
 } from "../helpers/d5-registry.js";
 import { demosToFeatureTypes } from "../helpers/d5-feature-mapping.js";
-import {
-  runConversation,
-  type ConversationResult,
-  type Page,
+import { runConversation } from "../helpers/conversation-runner.js";
+import type {
+  ConversationResult,
+  Page,
 } from "../helpers/conversation-runner.js";
 import type { ProbeDriver } from "../types.js";
 import type { ProbeContext, ProbeResult } from "../../types/index.js";
@@ -54,6 +53,15 @@ import type { BrowserPool } from "../helpers/browser-pool.js";
  * — no real browser, no filesystem scan, deterministic registry state.
  */
 
+/**
+ * Grace period (ms) after a Railway deployment's `createdAt` during
+ * which the driver skips all features for the service. Eliminates
+ * deploy-churn false-reds without sacrificing probe efficiency — a
+ * rolling deploy that finishes in <2 min never triggers a browser
+ * launch, and the service is probed normally on the next tick.
+ */
+export const DEPLOY_CHURN_GRACE_MS = 120_000;
+
 const inputSchema = z
   .object({
     key: z.string().min(1),
@@ -83,6 +91,18 @@ const inputSchema = z
      */
     demos: z.array(z.string()).optional(),
     shape: showcaseShapeSchema.optional(),
+    /**
+     * ISO-8601 timestamp of the service's latest Railway deployment,
+     * populated by the `railway-services` discovery source from
+     * `latestDeployment.createdAt`. When the deployment is younger
+     * than `DEPLOY_CHURN_GRACE_MS` the driver skips all features
+     * with a green note instead of launching a browser — deploy
+     * churn is not a failure.
+     *
+     * Empty string or absent → no grace check (backwards compat
+     * with static YAML targets and older discovery records).
+     */
+    deployedAt: z.string().optional(),
   })
   .passthrough()
   .refine((v) => !!(v.backendUrl ?? v.publicUrl), {
@@ -202,7 +222,9 @@ export interface E2eDeepBrowser {
   close(): Promise<void>;
 }
 
-export type E2eDeepBrowserLauncher = () => Promise<E2eDeepBrowser>;
+export type E2eDeepBrowserLauncher = (
+  abortSignal?: AbortSignal,
+) => Promise<E2eDeepBrowser>;
 
 /**
  * Script loader — invoked once per driver invocation (the registry is
@@ -335,6 +357,7 @@ const defaultLauncher: E2eDeepBrowserLauncher =
               fill: (s, v, o) => page.fill(s, v, o),
               press: (s, k, o) => page.press(s, k, o),
               evaluate: <R>(fn: () => R) => page.evaluate(fn),
+              inputValue: (s) => page.inputValue(s),
               goto: (url, opts) =>
                 page.goto(url, opts as Parameters<typeof page.goto>[1]),
               close: () => page.close(),
@@ -361,12 +384,67 @@ const defaultLauncher: E2eDeepBrowserLauncher =
 
 export function createPooledE2eDeepLauncher(
   pool: BrowserPool,
+  logger?: { warn(event: string, meta?: Record<string, unknown>): void },
 ): E2eDeepBrowserLauncher {
-  return async (): Promise<E2eDeepBrowser> => {
+  return async (abortSignal?: AbortSignal): Promise<E2eDeepBrowser> => {
     const browser = await pool.acquire();
+
+    // Track whether the browser was force-released by an abort so the
+    // driver's normal `browser.close()` in the finally block doesn't
+    // double-release (BrowserPool.release is a no-op for unknown refs
+    // after the browserToSlot entry is removed, but the close() would
+    // fail on an already-closed browser without the guard).
+    let forceReleased = false;
+
+    // Track open browser contexts so abort can close them before
+    // releasing the browser back to the pool. Without this, orphaned
+    // contexts keep the browser busy and the pool slot is effectively
+    // dead until the contexts are GC'd or the browser process crashes.
+    const openContexts = new Set<{ close(): Promise<void> }>();
+
+    // Abort listener: when the invoker's timeout fires, the abort
+    // signal triggers. Force-close all open contexts and release the
+    // browser back to the pool immediately so the next probe run can
+    // acquire it. This prevents pool starvation when Promise.race
+    // abandons the driver promise but the driver keeps running with
+    // the pooled browser held.
+    if (abortSignal) {
+      const onAbort = (): void => {
+        if (forceReleased) return;
+        forceReleased = true;
+        const ctxCount = openContexts.size;
+        const stats = pool.stats();
+        logger?.warn("probe.e2e-deep.pool-abort-release", {
+          openContexts: ctxCount,
+          poolAvailable: stats.available,
+          poolInUse: stats.inUse,
+          poolSize: stats.size,
+        });
+        const contextClosePromises = Array.from(openContexts).map((ctx) =>
+          ctx.close().catch(() => {}),
+        );
+        void Promise.allSettled(contextClosePromises).then(() => {
+          pool.release(browser);
+          logger?.warn("probe.e2e-deep.pool-abort-released", {
+            closedContexts: ctxCount,
+            poolAvailable: pool.stats().available,
+          });
+        });
+      };
+      if (abortSignal.aborted) {
+        forceReleased = true;
+        logger?.warn("probe.e2e-deep.pool-pre-aborted-release");
+        pool.release(browser);
+      } else {
+        abortSignal.addEventListener("abort", onAbort, { once: true });
+      }
+    }
+
     return {
       async newContext(): Promise<E2eDeepBrowserContext> {
         const ctx = await browser.newContext();
+        const ctxHandle = { close: () => ctx.close() };
+        openContexts.add(ctxHandle);
         return {
           async newPage(): Promise<E2eDeepPage> {
             const page = await ctx.newPage();
@@ -394,6 +472,7 @@ export function createPooledE2eDeepLauncher(
               fill: (s, v, o) => page.fill(s, v, o),
               press: (s, k, o) => page.press(s, k, o),
               evaluate: <R>(fn: () => R) => page.evaluate(fn),
+              inputValue: (s) => page.inputValue(s),
               goto: (url, opts) =>
                 page.goto(url, opts as Parameters<typeof page.goto>[1]),
               close: () => page.close(),
@@ -411,10 +490,14 @@ export function createPooledE2eDeepLauncher(
             };
             return wrapped;
           },
-          close: () => ctx.close(),
+          close: async () => {
+            openContexts.delete(ctxHandle);
+            await ctx.close();
+          },
         };
       },
       close: async () => {
+        if (forceReleased) return;
         pool.release(browser);
       },
     };
@@ -561,6 +644,60 @@ export function createE2eDeepDriver(
         };
       }
 
+      // Deploy-churn grace window: if the service deployed within the
+      // last DEPLOY_CHURN_GRACE_MS, skip ALL features with a green note.
+      // Deploy churn is not a failure — the service is still warming up
+      // and probing it would produce false reds. The skip fires BEFORE
+      // the script loader and browser launch so we don't pay any of
+      // those costs for a service in the grace window.
+      if (input.deployedAt && input.deployedAt.length > 0) {
+        const deployedAtMs = Date.parse(input.deployedAt);
+        if (Number.isFinite(deployedAtMs)) {
+          const ageMs = ctx.now().getTime() - deployedAtMs;
+          if (ageMs >= 0 && ageMs < DEPLOY_CHURN_GRACE_MS) {
+            const ageSec = Math.round(ageMs / 1000);
+            const graceSec = Math.round(DEPLOY_CHURN_GRACE_MS / 1000);
+            const skipNote = `skipped: deploy in progress (${ageSec}s ago)`;
+            ctx.logger.info("probe.e2e-deep.deploy-churn-skip", {
+              slug,
+              deployedAt: input.deployedAt,
+              ageMs,
+              graceMs: DEPLOY_CHURN_GRACE_MS,
+            });
+
+            for (const ft of requestedFeatures) {
+              await sideEmit(ctx, {
+                key: `d5:${slug}/${ft}`,
+                state: "green",
+                signal: {
+                  slug,
+                  featureType: ft,
+                  backendUrl,
+                  note: skipNote,
+                },
+                observedAt: ctx.now().toISOString(),
+              });
+            }
+
+            return {
+              key: input.key,
+              state: "green",
+              signal: {
+                shape: "package",
+                slug,
+                backendUrl,
+                total: requestedFeatures.length,
+                passed: 0,
+                failed: [],
+                skipped: requestedFeatures.map(String),
+                note: `deploy-churn skip: deployed ${ageSec}s ago (grace: ${graceSec}s)`,
+              },
+              observedAt,
+            };
+          }
+        }
+      }
+
       // Populate the registry. Idempotent in tests via the injected
       // loader; production loader scans the scripts dir on each call,
       // but the registry's double-registration throw guards against
@@ -574,6 +711,13 @@ export function createE2eDeepDriver(
           err: err instanceof Error ? err.message : String(err),
         });
       }
+
+      const serviceStart = Date.now();
+      ctx.logger.info("probe.e2e-deep.service-start", {
+        slug,
+        featureCount: requestedFeatures.length,
+        backendUrl,
+      });
 
       // Partition features into "registered" (script available) vs
       // "skipped" (no script). The skipped set short-circuits before
@@ -678,7 +822,7 @@ export function createE2eDeepDriver(
       let browser: E2eDeepBrowser | undefined;
       try {
         try {
-          browser = await launcher();
+          browser = await launcher(abort.signal);
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err);
           ctx.logger.warn("probe.e2e-deep.launcher-error", { slug, err: msg });
@@ -738,6 +882,7 @@ export function createE2eDeepDriver(
           const url = `${backendUrl}${route}`;
 
           await sem.acquire();
+          const featureStart = Date.now();
           try {
             if (abort.signal.aborted) {
               await sideEmit(ctx, {
@@ -756,7 +901,22 @@ export function createE2eDeepDriver(
                 },
                 observedAt: ctx.now().toISOString(),
               });
-              return { ft, ok: false as const };
+              ctx.logger.info("probe.e2e-deep.feature-complete", {
+                slug,
+                featureType: ft,
+                pass: false,
+                errorDesc: timedOut
+                  ? `timeout after ${timeoutMs}ms`
+                  : "aborted",
+                durationMs: Date.now() - featureStart,
+              });
+              return {
+                ft,
+                ok: false as const,
+                errorDesc: timedOut
+                  ? `timeout after ${timeoutMs}ms`
+                  : "aborted",
+              };
             }
 
             const featureResult = await runFeature({
@@ -789,6 +949,12 @@ export function createE2eDeepDriver(
                 },
                 observedAt: ctx.now().toISOString(),
               });
+              ctx.logger.info("probe.e2e-deep.feature-complete", {
+                slug,
+                featureType: ft,
+                pass: true,
+                durationMs: Date.now() - featureStart,
+              });
               return { ft, ok: true as const };
             } else {
               await sideEmit(ctx, {
@@ -811,7 +977,18 @@ export function createE2eDeepDriver(
                 },
                 observedAt: ctx.now().toISOString(),
               });
-              return { ft, ok: false as const };
+              ctx.logger.info("probe.e2e-deep.feature-complete", {
+                slug,
+                featureType: ft,
+                pass: false,
+                errorDesc: featureResult.errorDesc,
+                durationMs: Date.now() - featureStart,
+              });
+              return {
+                ft,
+                ok: false as const,
+                errorDesc: featureResult.errorDesc,
+              };
             }
           } finally {
             sem.release();
@@ -824,6 +1001,7 @@ export function createE2eDeepDriver(
         // so `settled[i]` corresponds to `runnable[i]`.
         let passed = 0;
         const failed: string[] = [];
+        const featureErrors: string[] = [];
         for (let i = 0; i < settled.length; i++) {
           const outcome = settled[i]!;
           if (outcome.status === "fulfilled") {
@@ -831,20 +1009,27 @@ export function createE2eDeepDriver(
               passed++;
             } else {
               failed.push(outcome.value.ft);
+              if (outcome.value.errorDesc) {
+                featureErrors.push(
+                  `${outcome.value.ft}: ${outcome.value.errorDesc}`,
+                );
+              }
             }
           } else {
             // Rejected promise — should not happen since runFeature
             // catches internally, but guard defensively.
             const ft = runnable[i]!;
+            const errMsg =
+              outcome.reason instanceof Error
+                ? outcome.reason.message
+                : String(outcome.reason);
             ctx.logger.error("probe.e2e-deep.feature-promise-rejected", {
               slug,
               featureType: ft,
-              err:
-                outcome.reason instanceof Error
-                  ? outcome.reason.message
-                  : String(outcome.reason),
+              err: errMsg,
             });
             failed.push(ft);
+            featureErrors.push(`${ft}: ${errMsg}`);
             try {
               await sideEmit(ctx, {
                 key: `d5:${slug}/${ft}`,
@@ -854,10 +1039,7 @@ export function createE2eDeepDriver(
                   featureType: ft,
                   backendUrl,
                   errorClass: "promise-rejected",
-                  errorDesc:
-                    outcome.reason instanceof Error
-                      ? outcome.reason.message
-                      : String(outcome.reason),
+                  errorDesc: errMsg,
                 },
                 observedAt: ctx.now().toISOString(),
               });
@@ -868,6 +1050,15 @@ export function createE2eDeepDriver(
         }
 
         const aggregateGreen = failed.length === 0;
+        ctx.logger.info("probe.e2e-deep.service-complete", {
+          slug,
+          passed,
+          failed: failed.length,
+          skipped: skipped.length,
+          total: requestedFeatures.length,
+          state: aggregateGreen ? "green" : "red",
+          durationMs: Date.now() - serviceStart,
+        });
         return {
           key: input.key,
           state: aggregateGreen ? "green" : "red",
@@ -879,6 +1070,8 @@ export function createE2eDeepDriver(
             passed,
             failed,
             skipped,
+            failureSummary:
+              featureErrors.length > 0 ? featureErrors.join("; ") : undefined,
           },
           observedAt,
         };
@@ -947,6 +1140,13 @@ async function runFeature(opts: {
     context = await browser.newContext();
     page = await context.newPage();
 
+    console.debug("[e2e-deep] runFeature — navigating", {
+      url,
+      pageTimeoutMs,
+      featureType: buildCtx.featureType,
+      slug: buildCtx.integrationSlug,
+    });
+
     // Navigate. The conversation-runner's first action is a
     // chat-input selector probe with its own short timeout, so we
     // don't need to waitForSelector again here — a clean goto is
@@ -956,8 +1156,13 @@ async function runFeature(opts: {
         waitUntil: "load",
         timeout: pageTimeoutMs,
       });
+      console.debug("[e2e-deep] runFeature — navigation complete", { url });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
+      console.debug("[e2e-deep] runFeature — navigation FAILED", {
+        url,
+        error: msg,
+      });
       return {
         ok: false,
         errorClass: "goto-error",
@@ -970,6 +1175,12 @@ async function runFeature(opts: {
     // Without this, the SSR'd textarea is visible but Enter has no
     // handler, so the first turn's keypress is a no-op and the probe
     // times out waiting for an assistant response that never comes.
+    const hydrationStart = Date.now();
+    console.debug("[e2e-deep] runFeature — waiting for React hydration", {
+      url,
+      timeout: 15_000,
+    });
+    let hydrated = false;
     try {
       await page.waitForFunction(
         () => {
@@ -991,16 +1202,54 @@ async function runFeature(opts: {
         },
         { timeout: 15_000 },
       );
+      hydrated = true;
+      console.debug("[e2e-deep] runFeature — React hydration detected", {
+        url,
+      });
     } catch {
       // Non-fatal — proceed anyway; worst case is a downstream timeout
       // error that's more diagnosable than "assistant did not respond".
+      console.debug(
+        "[e2e-deep] runFeature — React hydration wait timed out (proceeding anyway)",
+        {
+          url,
+        },
+      );
     }
+    console.info("[e2e-deep] runFeature — hydration-timing", {
+      slug: buildCtx.integrationSlug,
+      featureType: buildCtx.featureType,
+      hydrated,
+      hydrationMs: Date.now() - hydrationStart,
+    });
 
     const turns = script.buildTurns(buildCtx);
+    console.debug("[e2e-deep] runFeature — built conversation turns", {
+      turnCount: turns.length,
+      featureType: buildCtx.featureType,
+      slug: buildCtx.integrationSlug,
+    });
     const conversation = await runConversation(page, turns);
 
     if (conversation.failure_turn !== undefined) {
+      console.debug("[e2e-deep] runFeature — conversation FAILED", {
+        featureType: buildCtx.featureType,
+        slug: buildCtx.integrationSlug,
+        failureTurn: conversation.failure_turn,
+        turnsCompleted: conversation.turns_completed,
+        totalTurns: conversation.total_turns,
+        error: conversation.error,
+      });
       const diagnostics = await captureDiagnostics(page);
+      console.warn(
+        "[e2e-deep] runFeature — FLAP DIAGNOSTICS",
+        JSON.stringify({
+          slug: buildCtx.integrationSlug,
+          featureType: buildCtx.featureType,
+          error: conversation.error?.slice(0, 200),
+          diagnostics,
+        }),
+      );
       return {
         ok: false,
         errorClass: "conversation-error",
@@ -1013,6 +1262,12 @@ async function runFeature(opts: {
       };
     }
 
+    console.debug("[e2e-deep] runFeature — conversation succeeded", {
+      featureType: buildCtx.featureType,
+      slug: buildCtx.integrationSlug,
+      turnsCompleted: conversation.turns_completed,
+      turnDurations: conversation.turn_durations_ms,
+    });
     return { ok: true, conversation };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);

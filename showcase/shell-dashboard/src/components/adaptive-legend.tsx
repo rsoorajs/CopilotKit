@@ -4,6 +4,8 @@
  * currently active overlays.
  */
 
+import { useState } from "react";
+
 type Overlay = "links" | "depth" | "health" | "parity" | "docs";
 
 export interface AdaptiveLegendProps {
@@ -36,48 +38,55 @@ function LinksLegend() {
 
 function DepthLegend() {
   return (
-    <>
-      <LegendItem>
-        <span className="font-semibold text-[var(--text-secondary)]">
-          D0-D4
-        </span>
-        integration wiring depth (D0 = listed, D4 = full tool rendering)
-      </LegendItem>
-      <LegendItem>
-        <span className="text-[var(--danger)] font-medium">▼</span>
-        depth regression from previous run
-      </LegendItem>
-    </>
+    <LegendItem>
+      <span className="font-semibold text-[var(--text-secondary)]">
+        L1-L4 Strip
+      </span>
+      per-integration health levels shown in column header
+    </LegendItem>
   );
 }
 
 function HealthLegend() {
   return (
     <>
+      {/* Depth explanations in ascending order */}
       <LegendItem>
-        <span className="font-semibold text-[var(--text-secondary)]">
-          L1-L4 Strip
-        </span>
-        per-integration health levels shown in column header
+        <span className="font-semibold text-[var(--text-secondary)]">D2</span>
+        API: responds to a basic CopilotKit API call
       </LegendItem>
       <LegendItem>
-        <span className="text-[var(--ok)]">E2E ✓</span>/
+        <span className="font-semibold text-[var(--text-secondary)]">D3</span>
+        Page Load: demo page loads in a browser
+      </LegendItem>
+      <LegendItem>
+        <span className="font-semibold text-[var(--text-secondary)]">D4</span>
+        Round Trip (RT): single message, full-stack response verification
+      </LegendItem>
+      <LegendItem>
+        <span className="font-semibold text-[var(--text-secondary)]">D5</span>
+        Conversation (CV): multi-turn scripted dialogue with tool calls and
+        content assertions
+      </LegendItem>
+      {/* Regression indicator */}
+      <LegendItem>
+        <span className="text-[var(--danger)] font-medium">▼</span>
+        depth regression from previous run
+      </LegendItem>
+      {/* D4/D5 color chips */}
+      <LegendItem>
+        <span className="text-[var(--ok)]">D4 ✓</span>/
         <span className="text-[var(--amber)]">~</span>/
         <span className="text-[var(--danger)]">✗</span>
-        end-to-end smoke (green &lt;6h / amber stale / red fail)
+        round-trip check (green &lt;6h / amber stale / red fail)
       </LegendItem>
       <LegendItem>
         <span className="text-[var(--ok)]">D5</span>/
         <span className="text-[var(--amber)]">D5</span>/
         <span className="text-[var(--danger)]">D5</span>
-        depth-5 tool rendering (green pass / amber stale / red fail)
+        conversation check (green pass / amber stale / red fail)
       </LegendItem>
-      <LegendItem>
-        <span className="text-[var(--ok)]">D6</span>/
-        <span className="text-[var(--amber)]">D6</span>/
-        <span className="text-[var(--danger)]">D6</span>
-        depth-6 multi-agent (green pass / amber stale / red fail)
-      </LegendItem>
+      {/* Status symbols */}
       <LegendItem>
         <span className="text-[var(--text-muted)]">?</span>
         probe has not yet ticked since deploy
@@ -163,17 +172,38 @@ function AlwaysLegend() {
 /* ------------------------------------------------------------------ */
 
 export function AdaptiveLegend({ overlays }: AdaptiveLegendProps) {
+  const [open, setOpen] = useState(true);
+
   return (
     <div
       data-testid="adaptive-legend"
-      className="fixed bottom-0 left-0 right-0 z-40 px-8 py-3 flex flex-wrap gap-x-6 gap-y-2 text-xs text-[var(--text-muted)] bg-[var(--bg-surface)] border-t border-[var(--border)]"
+      className="fixed bottom-0 left-0 right-0 z-40 bg-[var(--bg-surface)] border-t border-[var(--border)]"
     >
-      {overlays.has("links") && <LinksLegend />}
-      {overlays.has("depth") && <DepthLegend />}
-      {overlays.has("health") && <HealthLegend />}
-      {overlays.has("parity") && <ParityLegend />}
-      {overlays.has("docs") && <DocsLegend />}
-      <AlwaysLegend />
+      <div className="flex items-center px-4 py-1.5">
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          className="flex items-center gap-1 text-[10px] uppercase tracking-wider font-medium text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer bg-transparent border-none p-0"
+        >
+          <span
+            className="inline-block transition-transform"
+            style={{ transform: open ? "rotate(90deg)" : "rotate(0deg)" }}
+          >
+            ▶
+          </span>
+          Legend
+        </button>
+      </div>
+      {open && (
+        <div className="px-8 pb-3 flex flex-wrap gap-x-6 gap-y-2 text-xs text-[var(--text-muted)]">
+          {overlays.has("links") && <LinksLegend />}
+          {overlays.has("depth") && <DepthLegend />}
+          {overlays.has("health") && <HealthLegend />}
+          {overlays.has("parity") && <ParityLegend />}
+          {overlays.has("docs") && <DocsLegend />}
+          <AlwaysLegend />
+        </div>
+      )}
     </div>
   );
 }

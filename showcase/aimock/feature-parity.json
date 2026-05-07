@@ -2,6 +2,44 @@
   "fixtures": [
     {
       "match": {
+        "toolCallId": "call_fp_generate_a2ui_sales_dashboard_001"
+      },
+      "response": {
+        "content": "Here's your sales dashboard \u2014 total revenue is $1.2M (+12% MoM), 342 new customers, and 4.2% conversion. The pie shows revenue split by category and the bar chart tracks monthly sales."
+      }
+    },
+    {
+      "match": {
+        "userMessage": "with total revenue, new customers, and conversion rate metrics",
+        "toolName": "render_a2ui"
+      },
+      "response": {
+        "toolCalls": [
+          {
+            "id": "call_fp_render_a2ui_sales_dashboard_001",
+            "name": "render_a2ui",
+            "arguments": "{\"surfaceId\":\"beautiful-chat-sales-dashboard\",\"catalogId\":\"copilotkit://app-dashboard-catalog\",\"components\":[{\"id\":\"root\",\"component\":\"Column\",\"children\":[\"row-metrics\",\"row-charts\"],\"gap\":16},{\"id\":\"row-metrics\",\"component\":\"Row\",\"children\":[\"card-revenue\",\"card-customers\",\"card-conversion\"],\"gap\":16},{\"id\":\"card-revenue\",\"component\":\"DashboardCard\",\"title\":\"Total Revenue\",\"child\":\"metric-revenue\"},{\"id\":\"metric-revenue\",\"component\":\"Metric\",\"label\":\"Total Revenue\",\"value\":\"$1.2M\",\"trend\":\"up\",\"trendValue\":\"+12% MoM\"},{\"id\":\"card-customers\",\"component\":\"DashboardCard\",\"title\":\"New Customers\",\"child\":\"metric-customers\"},{\"id\":\"metric-customers\",\"component\":\"Metric\",\"label\":\"New Customers\",\"value\":\"342\",\"trend\":\"up\",\"trendValue\":\"+8% MoM\"},{\"id\":\"card-conversion\",\"component\":\"DashboardCard\",\"title\":\"Conversion Rate\",\"child\":\"metric-conversion\"},{\"id\":\"metric-conversion\",\"component\":\"Metric\",\"label\":\"Conversion Rate\",\"value\":\"4.2%\",\"trend\":\"neutral\"},{\"id\":\"row-charts\",\"component\":\"Row\",\"children\":[\"card-pie\",\"card-bar\"],\"gap\":16},{\"id\":\"card-pie\",\"component\":\"DashboardCard\",\"title\":\"Revenue by Category\",\"child\":\"pie-revenue\"},{\"id\":\"pie-revenue\",\"component\":\"PieChart\",\"data\":[{\"label\":\"Electronics\",\"value\":42000},{\"label\":\"Clothing\",\"value\":28000},{\"label\":\"Food\",\"value\":18000},{\"label\":\"Books\",\"value\":12000}]},{\"id\":\"card-bar\",\"component\":\"DashboardCard\",\"title\":\"Monthly Sales\",\"child\":\"bar-monthly\"},{\"id\":\"bar-monthly\",\"component\":\"BarChart\",\"data\":[{\"label\":\"Jan\",\"value\":50000},{\"label\":\"Feb\",\"value\":62000},{\"label\":\"Mar\",\"value\":58000},{\"label\":\"Apr\",\"value\":71000},{\"label\":\"May\",\"value\":80000},{\"label\":\"Jun\",\"value\":92000}]}]}"
+          }
+        ]
+      }
+    },
+    {
+      "match": {
+        "userMessage": "with total revenue, new customers, and conversion rate metrics",
+        "toolName": "generate_a2ui"
+      },
+      "response": {
+        "toolCalls": [
+          {
+            "id": "call_fp_generate_a2ui_sales_dashboard_001",
+            "name": "generate_a2ui",
+            "arguments": "{}"
+          }
+        ]
+      }
+    },
+    {
+      "match": {
         "toolCallId": "call_fp_get_weather_001"
       },
       "response": {
@@ -86,6 +124,86 @@
     },
     {
       "match": {
+        "toolCallId": "call_fp_pie_chart_001"
+      },
+      "response": {
+        "content": "Pie chart rendered above — Electronics is the largest slice, followed by Clothing, Food, and Books."
+      }
+    },
+    {
+      "match": {
+        "toolCallId": "call_fp_bar_chart_001"
+      },
+      "response": {
+        "content": "Bar chart rendered above — Salaries dominate monthly spend, with Rent, Marketing, and Travel rounding out the breakdown."
+      }
+    },
+    {
+      "match": {
+        "toolCallId": "call_fp_pie_chart_002"
+      },
+      "response": {
+        "content": "Pie chart rendered above — Organic Search drives most traffic, followed by Direct, Social, and Referral."
+      }
+    },
+    {
+      "match": {
+        "toolCallId": "call_fp_pie_chart_003"
+      },
+      "response": {
+        "content": "Pie chart rendered above — Apple and Samsung lead, with Xiaomi third and the long tail under \"Others\"."
+      }
+    },
+    {
+      "match": {
+        "toolCallId": "call_fp_bar_chart_002"
+      },
+      "response": {
+        "content": "Bar chart rendered above — Q4 was the strongest quarter, with Q2 close behind."
+      }
+    },
+    {
+      "match": {
+        "toolCallId": "call_fp_pie_chart_004"
+      },
+      "response": {
+        "content": "Pie chart rendered above — Electronics is the largest slice, followed by Clothing, Food, and Books."
+      }
+    },
+    {
+      "match": {
+        "toolCallId": "call_fp_bar_chart_003"
+      },
+      "response": {
+        "content": "Bar chart rendered above — monthly expenses ranged from $12k in January to $15.8k in April."
+      }
+    },
+    {
+      "match": {
+        "toolCallId": "call_fp_schedule_time_001"
+      },
+      "response": {
+        "content": "Meeting scheduled — calendar invite is on its way."
+      }
+    },
+    {
+      "match": {
+        "toolCallId": "call_fp_search_flights_001"
+      },
+      "response": {
+        "content": "Two flights shown above — United at $349 (08:00) and Delta at $289 (10:15), both on time."
+      }
+    },
+    {
+      "match": {
+        "toolCallId": "call_fp_toggle_theme_001"
+      },
+      "response": {
+        "content": "Theme toggled."
+      }
+    },
+    {
+      "match": {
         "userMessage": "good name for a goldfish"
       },
       "response": {
@@ -106,6 +224,14 @@
       },
       "response": {
         "content": "We named the goldfish Bubbles, and the tank The Bubble Bowl."
+      }
+    },
+    {
+      "match": {
+        "userMessage": "What is the largest continent?"
+      },
+      "response": {
+        "content": "Asia is the largest continent — about 30% of Earth's land area, home to over 4.6 billion people."
       }
     },
     {
@@ -215,6 +341,7 @@
       "response": {
         "toolCalls": [
           {
+            "id": "call_fp_pie_chart_001",
             "name": "pieChart",
             "arguments": "{\"title\":\"Revenue by Category\",\"description\":\"Breakdown of revenue across product categories\",\"data\":[{\"label\":\"Electronics\",\"value\":42000},{\"label\":\"Clothing\",\"value\":28000},{\"label\":\"Food\",\"value\":18000},{\"label\":\"Books\",\"value\":12000}]}"
           }
@@ -228,6 +355,7 @@
       "response": {
         "toolCalls": [
           {
+            "id": "call_fp_bar_chart_001",
             "name": "barChart",
             "arguments": "{\"title\":\"Expenses by Category\",\"description\":\"Monthly expense breakdown\",\"data\":[{\"label\":\"Rent\",\"value\":15000},{\"label\":\"Salaries\",\"value\":80000},{\"label\":\"Marketing\",\"value\":12000},{\"label\":\"Travel\",\"value\":5000}]}"
           }
@@ -241,6 +369,7 @@
       "response": {
         "toolCalls": [
           {
+            "id": "call_fp_pie_chart_002",
             "name": "render_pie_chart",
             "arguments": "{\"title\":\"Website Traffic by Source\",\"description\":\"Traffic sources this month\",\"data\":[{\"label\":\"Organic Search\",\"value\":45},{\"label\":\"Direct\",\"value\":25},{\"label\":\"Social\",\"value\":18},{\"label\":\"Referral\",\"value\":12}]}"
           }
@@ -254,6 +383,7 @@
       "response": {
         "toolCalls": [
           {
+            "id": "call_fp_pie_chart_003",
             "name": "render_pie_chart",
             "arguments": "{\"title\":\"Smartphone Market Share\",\"description\":\"Global smartphone market share by brand\",\"data\":[{\"label\":\"Apple\",\"value\":28},{\"label\":\"Samsung\",\"value\":22},{\"label\":\"Xiaomi\",\"value\":14},{\"label\":\"Others\",\"value\":36}]}"
           }
@@ -267,10 +397,59 @@
       "response": {
         "toolCalls": [
           {
+            "id": "call_fp_bar_chart_002",
             "name": "render_bar_chart",
             "arguments": "{\"title\":\"Quarterly Sales\",\"description\":\"Sales across Q1-Q4\",\"data\":[{\"label\":\"Q1\",\"value\":145000},{\"label\":\"Q2\",\"value\":178000},{\"label\":\"Q3\",\"value\":162000},{\"label\":\"Q4\",\"value\":215000}]}"
           }
         ]
+      }
+    },
+    {
+      "match": {
+        "userMessage": "Show me the sales dashboard with metrics and a revenue chart"
+      },
+      "response": {
+        "content": "{\"root\":\"revenue-metric\",\"elements\":{\"revenue-metric\":{\"type\":\"MetricCard\",\"props\":{\"label\":\"Revenue (Q3)\",\"value\":\"$1.24M\",\"trend\":\"+18% vs Q2\"},\"children\":[\"revenue-bar\"]},\"revenue-bar\":{\"type\":\"BarChart\",\"props\":{\"title\":\"Monthly revenue\",\"description\":\"Revenue by month across Q3\",\"data\":[{\"label\":\"Jul\",\"value\":380000},{\"label\":\"Aug\",\"value\":410000},{\"label\":\"Sep\",\"value\":450000}]}}}}"
+      }
+    },
+    {
+      "match": {
+        "userMessage": "Break down revenue by category as a pie chart"
+      },
+      "response": {
+        "content": "{\"root\":\"category-pie\",\"elements\":{\"category-pie\":{\"type\":\"PieChart\",\"props\":{\"title\":\"Revenue by category\",\"description\":\"Share of total revenue by product category\",\"data\":[{\"label\":\"Enterprise\",\"value\":540000},{\"label\":\"SMB\",\"value\":310000},{\"label\":\"Self-serve\",\"value\":220000},{\"label\":\"Partner\",\"value\":170000}]}}}}"
+      }
+    },
+    {
+      "match": {
+        "userMessage": "Show me monthly expenses as a bar chart"
+      },
+      "response": {
+        "content": "{\"root\":\"expense-bar\",\"elements\":{\"expense-bar\":{\"type\":\"BarChart\",\"props\":{\"title\":\"Monthly expenses\",\"description\":\"Operating expenses by month\",\"data\":[{\"label\":\"Jul\",\"value\":210000},{\"label\":\"Aug\",\"value\":225000},{\"label\":\"Sep\",\"value\":240000}]}}}}"
+      }
+    },
+    {
+      "match": {
+        "userMessage": "Show me a Q4 sales dashboard. Include a total-revenue metric card, a pie chart of revenue by segment, and a bar chart of monthly revenue."
+      },
+      "response": {
+        "content": "{\"ui\":[{\"Markdown\":{\"props\":{\"children\":\"## Q4 Sales Summary\"}}},{\"metric\":{\"props\":{\"label\":\"Total Revenue\",\"value\":\"$1.2M\"}}},{\"pieChart\":{\"props\":{\"title\":\"Revenue by Segment\",\"data\":\"[{\\\"label\\\":\\\"Enterprise\\\",\\\"value\\\":600000},{\\\"label\\\":\\\"SMB\\\",\\\"value\\\":400000},{\\\"label\\\":\\\"Startup\\\",\\\"value\\\":200000}]\"}}},{\"barChart\":{\"props\":{\"title\":\"Monthly Revenue\",\"data\":\"[{\\\"label\\\":\\\"Oct\\\",\\\"value\\\":350000},{\\\"label\\\":\\\"Nov\\\",\\\"value\\\":400000},{\\\"label\\\":\\\"Dec\\\",\\\"value\\\":450000}]\"}}}]}"
+      }
+    },
+    {
+      "match": {
+        "userMessage": "Break down Q4 revenue by product category as a pie chart. Include at least four segments with realistic sample values."
+      },
+      "response": {
+        "content": "{\"ui\":[{\"pieChart\":{\"props\":{\"title\":\"Q4 Revenue by Product Category\",\"data\":\"[{\\\"label\\\":\\\"Software\\\",\\\"value\\\":500000},{\\\"label\\\":\\\"Hardware\\\",\\\"value\\\":300000},{\\\"label\\\":\\\"Consulting\\\",\\\"value\\\":150000},{\\\"label\\\":\\\"Subscriptions\\\",\\\"value\\\":50000}]\"}}}]}"
+      }
+    },
+    {
+      "match": {
+        "userMessage": "Show me monthly operating expenses for the last six months as a bar chart with one bar per month."
+      },
+      "response": {
+        "content": "{\"ui\":[{\"barChart\":{\"props\":{\"title\":\"Monthly Operating Expenses\",\"data\":\"[{\\\"label\\\":\\\"Apr\\\",\\\"value\\\":205000},{\\\"label\\\":\\\"May\\\",\\\"value\\\":215000},{\\\"label\\\":\\\"Jun\\\",\\\"value\\\":222000},{\\\"label\\\":\\\"Jul\\\",\\\"value\\\":228000},{\\\"label\\\":\\\"Aug\\\",\\\"value\\\":234000},{\\\"label\\\":\\\"Sep\\\",\\\"value\\\":241000}]\"}}}]}"
       }
     },
     {
@@ -280,6 +459,7 @@
       "response": {
         "toolCalls": [
           {
+            "id": "call_fp_pie_chart_004",
             "name": "render_pie_chart",
             "arguments": "{\"title\":\"Revenue by Category\",\"description\":\"Revenue breakdown by product category\",\"data\":[{\"label\":\"Electronics\",\"value\":42000},{\"label\":\"Clothing\",\"value\":28000},{\"label\":\"Food\",\"value\":18000},{\"label\":\"Books\",\"value\":12000}]}"
           }
@@ -293,6 +473,7 @@
       "response": {
         "toolCalls": [
           {
+            "id": "call_fp_bar_chart_003",
             "name": "render_bar_chart",
             "arguments": "{\"title\":\"Monthly Expenses\",\"description\":\"Expense breakdown by month\",\"data\":[{\"label\":\"Jan\",\"value\":12000},{\"label\":\"Feb\",\"value\":14500},{\"label\":\"Mar\",\"value\":13200},{\"label\":\"Apr\",\"value\":15800}]}"
           }
@@ -306,6 +487,7 @@
       "response": {
         "toolCalls": [
           {
+            "id": "call_fp_schedule_time_001",
             "name": "scheduleTime",
             "arguments": "{\"reasonForScheduling\":\"Learn about CopilotKit\",\"meetingDuration\":30}"
           }
@@ -319,6 +501,7 @@
       "response": {
         "toolCalls": [
           {
+            "id": "call_fp_search_flights_001",
             "name": "search_flights",
             "arguments": "{\"flights\":[{\"airline\":\"United Airlines\",\"airlineLogo\":\"https://www.google.com/s2/favicons?domain=united.com&sz=128\",\"flightNumber\":\"UA123\",\"origin\":\"SFO\",\"destination\":\"JFK\",\"date\":\"Tue, Apr 15\",\"departureTime\":\"08:00\",\"arrivalTime\":\"16:30\",\"duration\":\"5h 30m\",\"status\":\"On Time\",\"statusColor\":\"#22c55e\",\"price\":\"$349\",\"currency\":\"USD\"},{\"airline\":\"Delta\",\"airlineLogo\":\"https://www.google.com/s2/favicons?domain=delta.com&sz=128\",\"flightNumber\":\"DL456\",\"origin\":\"SFO\",\"destination\":\"JFK\",\"date\":\"Tue, Apr 15\",\"departureTime\":\"10:15\",\"arrivalTime\":\"18:45\",\"duration\":\"5h 30m\",\"status\":\"On Time\",\"statusColor\":\"#22c55e\",\"price\":\"$289\",\"currency\":\"USD\"}]}"
           }
@@ -332,6 +515,7 @@
       "response": {
         "toolCalls": [
           {
+            "id": "call_fp_toggle_theme_001",
             "name": "toggleTheme",
             "arguments": "{}"
           }
@@ -376,6 +560,30 @@
       },
       "response": {
         "content": "The attached image is the CopilotKit logo — a clean, geometric mark used across CopilotKit branding."
+      }
+    },
+    {
+      "match": {
+        "userMessage": "Plan a 3-day Tokyo trip for a solo traveler interested in food, art, and architecture. Keep it concise."
+      },
+      "response": {
+        "content": "Here's a tight 3-day Tokyo loop for a solo traveler who wants food, art, and architecture in equal measure.\n\n**Day 1 — Shibuya & Harajuku**\n- Morning: breakfast at a kissaten in Shibuya, then walk Cat Street to Harajuku.\n- Afternoon: Nezu Museum (architecture by Kengo Kuma + traditional garden).\n- Evening: izakaya in Nonbei Yokocho.\n\n**Day 2 — Roppongi & Ginza**\n- Morning: Mori Art Museum and the Tokyo City View deck.\n- Afternoon: stroll Ginza, stop into Itoya, lunch at a sushi counter.\n- Evening: jazz at a Ginza basement bar.\n\n**Day 3 — Yanaka & Asakusa**\n- Morning: Yanaka Ginza for old-Tokyo atmosphere and craft shops.\n- Afternoon: Senso-ji and the Asakusa back-streets; consider the Sumida River walk to the Tadao Ando-designed 21_21 if you want one more architecture stop.\n- Evening: ramen near Ueno before catching the train.\n\nLet me know if you want a vegetarian variant or a more architecture-heavy version."
+      }
+    },
+    {
+      "match": {
+        "userMessage": "Explain retrieval-augmented generation as if I were 12. Use a simple analogy."
+      },
+      "response": {
+        "content": "Imagine you're taking an open-book test.\n\nA regular language model is like a kid who studied really hard but isn't allowed to look at the textbook during the test — they have to answer from memory, and sometimes they confidently make stuff up.\n\nRetrieval-Augmented Generation (RAG) is the same kid, but now they're allowed to flip through the textbook before answering each question. First they look up the relevant pages (that's the *retrieval* step), then they write the answer using what they just read (that's the *generation* step).\n\nSo RAG = \"look it up, then answer.\" The model still talks like itself, but the facts come from the book instead of from its memory — which means fewer made-up answers, and you can swap the book out whenever your information changes."
+      }
+    },
+    {
+      "match": {
+        "userMessage": "Draft a short, upbeat launch email announcing a new AI-powered chat feature. 3 short paragraphs max."
+      },
+      "response": {
+        "content": "**Subject:** Meet your new AI co-pilot — now built right into the app\n\nHi there,\n\nWe just shipped something we're really excited about: an AI-powered chat that lives inside the product you already use. Ask it questions, hand off tasks, or just have it summarize what you're looking at — it has full context of your workspace, so you don't have to copy-paste anything.\n\nIt's rolling out today to every account, no setup required. Open the app, look for the new chat button in the corner, and try it on your messiest task. We'd love to hear what you build with it.\n\n— The team"
       }
     },
     {
@@ -509,6 +717,52 @@
           {
             "name": "search_flights",
             "arguments": "{\"flights\":[{\"airline\":\"Air France\",\"airlineLogo\":\"https://www.google.com/s2/favicons?domain=airfrance.com&sz=128\",\"flightNumber\":\"AF85\",\"origin\":\"SFO\",\"destination\":\"CDG\",\"date\":\"Mon, Apr 21\",\"departureTime\":\"16:00\",\"arrivalTime\":\"11:30+1\",\"duration\":\"10h 30m\",\"status\":\"On Time\",\"statusColor\":\"#22c55e\",\"price\":\"$780\",\"currency\":\"USD\"},{\"airline\":\"United Airlines\",\"airlineLogo\":\"https://www.google.com/s2/favicons?domain=united.com&sz=128\",\"flightNumber\":\"UA990\",\"origin\":\"SFO\",\"destination\":\"CDG\",\"date\":\"Mon, Apr 21\",\"departureTime\":\"18:15\",\"arrivalTime\":\"13:45+1\",\"duration\":\"10h 30m\",\"status\":\"On Time\",\"statusColor\":\"#22c55e\",\"price\":\"$720\",\"currency\":\"USD\"}]}"
+          }
+        ]
+      }
+    },
+    {
+      "match": {
+        "toolCallId": "call_hitl_book_intro_sales_001"
+      },
+      "response": {
+        "content": "Booked the intro call with the sales team for the time you selected — calendar invite is on its way."
+      }
+    },
+    {
+      "match": {
+        "userMessage": "Please book an intro call with the sales team to discuss pricing.",
+        "toolName": "book_call"
+      },
+      "response": {
+        "toolCalls": [
+          {
+            "id": "call_hitl_book_intro_sales_001",
+            "name": "book_call",
+            "arguments": "{\"topic\":\"Intro call — discuss pricing\",\"attendee\":\"Sales team\"}"
+          }
+        ]
+      }
+    },
+    {
+      "match": {
+        "toolCallId": "call_hitl_book_1on1_alice_001"
+      },
+      "response": {
+        "content": "Booked the 1:1 with Alice for the time you selected — calendar invite is on its way."
+      }
+    },
+    {
+      "match": {
+        "userMessage": "Schedule a 1:1 with Alice next week to review Q2 goals.",
+        "toolName": "book_call"
+      },
+      "response": {
+        "toolCalls": [
+          {
+            "id": "call_hitl_book_1on1_alice_001",
+            "name": "book_call",
+            "arguments": "{\"topic\":\"1:1 with Alice — review Q2 goals\",\"attendee\":\"Alice\"}"
           }
         ]
       }
@@ -659,22 +913,6 @@
             "arguments": "{\"sides\":20}"
           }
         ]
-      }
-    },
-    {
-      "match": {
-        "userMessage": "Break down revenue by category as a pie chart"
-      },
-      "response": {
-        "content": "{\"root\":\"category-pie\",\"elements\":{\"category-pie\":{\"type\":\"PieChart\",\"props\":{\"title\":\"Revenue by category\",\"description\":\"Share of total revenue by product category\",\"data\":[{\"label\":\"Enterprise\",\"value\":540000},{\"label\":\"SMB\",\"value\":310000},{\"label\":\"Self-serve\",\"value\":220000},{\"label\":\"Partner\",\"value\":170000}]}}}}"
-      }
-    },
-    {
-      "match": {
-        "userMessage": "Show me monthly expenses as a bar chart"
-      },
-      "response": {
-        "content": "{\"root\":\"expense-bar\",\"elements\":{\"expense-bar\":{\"type\":\"BarChart\",\"props\":{\"title\":\"Monthly expenses\",\"description\":\"Operating expenses by month\",\"data\":[{\"label\":\"Jul\",\"value\":210000},{\"label\":\"Aug\",\"value\":225000},{\"label\":\"Sep\",\"value\":240000}]}}}}"
       }
     }
   ]

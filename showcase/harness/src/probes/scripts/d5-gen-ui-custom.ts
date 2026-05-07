@@ -4,8 +4,9 @@
  * Probes the showcase's `/demos/gen-ui-tool-based` page against
  * whichever frontend-defined tool the integration registers:
  *
- *   - **langgraph-python** registers `render_pie_chart` via `useComponent`
- *     (renders a donut SVG chart).
+ *   - **langgraph-python**, **ms-agent-python**, and **spring-ai** register
+ *     chart tools (`render_pie_chart` / `render_bar_chart`) via `useComponent`
+ *     (renders donut/bar SVG charts).
  *   - **All other integrations** register `generate_haiku` via
  *     `useFrontendTool` (renders a HaikuCard with Japanese/English text
  *     and an optional image).
@@ -35,10 +36,19 @@ import {
 } from "./_gen-ui-shared.js";
 
 /**
- * The only integration that registers `render_pie_chart`.
- * All others use the `generate_haiku` / HaikuCard pattern.
+ * Integrations that register chart tools (`render_pie_chart` and/or
+ * `render_bar_chart`) via `useComponent`. All others use the
+ * `generate_haiku` / HaikuCard pattern via `useFrontendTool`.
+ *
+ *   - langgraph-python: `render_pie_chart` only
+ *   - ms-agent-python:  `render_bar_chart` + `render_pie_chart`
+ *   - spring-ai:        `render_bar_chart` + `render_pie_chart`
  */
-const PIE_CHART_INTEGRATION = "langgraph-python";
+const CHART_INTEGRATIONS = new Set([
+  "langgraph-python",
+  "ms-agent-python",
+  "spring-ai",
+]);
 
 /**
  * Lower-bound for the donut chart's drawing-child count (pie chart path).
@@ -62,12 +72,17 @@ const PIE_CHART_FOLLOWUP_TOKENS = ["pie", "chart"] as const;
 const PIE_CHART_USER_MESSAGE = "Show me a pie chart of revenue by category";
 const HAIKU_USER_MESSAGE = "Write me a haiku about nature";
 
-function isPieChartIntegration(slug: string): boolean {
-  return slug === PIE_CHART_INTEGRATION;
+function isChartIntegration(slug: string): boolean {
+  return CHART_INTEGRATIONS.has(slug);
 }
 
 export function buildTurns(ctx: D5BuildContext): ConversationTurn[] {
-  const usePieChart = isPieChartIntegration(ctx.integrationSlug);
+  const usePieChart = isChartIntegration(ctx.integrationSlug);
+  console.debug("[d5-gen-ui-custom] buildTurns", {
+    slug: ctx.integrationSlug,
+    usePieChart,
+    userMessage: usePieChart ? PIE_CHART_USER_MESSAGE : HAIKU_USER_MESSAGE,
+  });
 
   return [
     {
@@ -76,16 +91,25 @@ export function buildTurns(ctx: D5BuildContext): ConversationTurn[] {
         // 1. Cascade-find the rendered component. Gen-UI components
         //    surface through the same selector hooks regardless of which
         //    tool fired.
+        console.debug("[d5-gen-ui-custom] waiting for gen-UI component");
         const matchedSelector = await waitForGenUiComponent(page);
+        console.debug("[d5-gen-ui-custom] gen-UI component found", {
+          matchedSelector,
+        });
 
         if (usePieChart) {
-          // --- Pie chart path (langgraph-python only) ---
+          // --- Pie chart path (chart integrations) ---
+          console.debug("[d5-gen-ui-custom] asserting pie chart shape");
           await assertPieChartShape(page, matchedSelector);
 
           // Narration check: the second-leg LLM response must
           // mention the chart. Token-level so wording drift doesn't
           // fail the probe.
           const text = (await readLastAssistantText(page)).toLowerCase();
+          console.debug("[d5-gen-ui-custom] pie chart follow-up text check", {
+            expectedTokens: [...PIE_CHART_FOLLOWUP_TOKENS],
+            assistantText: text.slice(0, 300),
+          });
           const missing = PIE_CHART_FOLLOWUP_TOKENS.filter(
             (tok) => !text.includes(tok),
           );
@@ -102,7 +126,9 @@ export function buildTurns(ctx: D5BuildContext): ConversationTurn[] {
           // `followUp: false`, so there is no second-leg narration.
           // The structural check alone (card rendered with children
           // + text) is sufficient for the custom tier.
+          console.debug("[d5-gen-ui-custom] asserting haiku card shape");
           await assertHaikuCardShape(page, matchedSelector);
+          console.debug("[d5-gen-ui-custom] haiku card assertion passed");
         }
       },
     },
@@ -110,7 +136,7 @@ export function buildTurns(ctx: D5BuildContext): ConversationTurn[] {
 }
 
 /**
- * Assert the SVG donut chart shape (langgraph-python's `render_pie_chart`).
+ * Assert the SVG chart shape (chart integrations' `render_pie_chart`).
  */
 async function assertPieChartShape(
   page: Page,
@@ -135,7 +161,7 @@ async function assertPieChartShape(
 }
 
 /**
- * Assert the haiku card shape (all non-LGP integrations' `generate_haiku`).
+ * Assert the haiku card shape (all non-chart integrations' `generate_haiku`).
  *
  * The HaikuCard component renders:
  *   - `[data-testid="haiku-card"]` wrapper div

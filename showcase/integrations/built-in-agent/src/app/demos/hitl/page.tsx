@@ -16,6 +16,7 @@ export default function HITL() {
 }
 
 function Demo() {
+  // @region[hitl-hook]
   useHumanInTheLoop({
     name: "approveAction",
     description:
@@ -26,6 +27,7 @@ function Demo() {
     }),
     render: ApprovalCard,
   });
+  // @endregion[hitl-hook]
 
   return (
     <main className="p-8">

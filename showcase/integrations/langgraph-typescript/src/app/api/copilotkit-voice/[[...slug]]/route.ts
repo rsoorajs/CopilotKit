@@ -49,6 +49,7 @@ const voiceDemoAgent = new LangGraphAgent({
  * the real OpenAI-backed service; any upstream Whisper error keeps its
  * natural categorization.
  */
+// @region[transcription-service-guard]
 class GuardedOpenAITranscriptionService extends TranscriptionService {
   private delegate: TranscriptionServiceOpenAI | null;
 
@@ -71,6 +72,7 @@ class GuardedOpenAITranscriptionService extends TranscriptionService {
     return this.delegate.transcribeFile(options);
   }
 }
+// @endregion[transcription-service-guard]
 
 // Cache the runtime + handler across invocations so the transcription service
 // is constructed once per Node process instead of per request. The guarded
@@ -81,6 +83,7 @@ let cachedHandler: ((req: Request) => Promise<Response>) | null = null;
 function getHandler(): (req: Request) => Promise<Response> {
   if (cachedHandler) return cachedHandler;
 
+  // @region[voice-runtime]
   const runtime = new CopilotRuntime({
     // @ts-ignore -- Published CopilotRuntime agents type wraps Record in
     // MaybePromise<NonEmptyRecord<...>> which rejects plain Records; fixed in
@@ -111,3 +114,4 @@ export const POST = (req: NextRequest) => getHandler()(req);
 export const GET = (req: NextRequest) => getHandler()(req);
 export const PUT = (req: NextRequest) => getHandler()(req);
 export const DELETE = (req: NextRequest) => getHandler()(req);
+// @endregion[voice-runtime]

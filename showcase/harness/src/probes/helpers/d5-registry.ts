@@ -40,9 +40,57 @@ export type D5FeatureType =
   | "hitl-steps"
   | "hitl-text-input"
   | "gen-ui-headless"
+  | "gen-ui-headless-complete"
   | "gen-ui-custom"
   | "mcp-apps"
-  | "subagents";
+  | "subagents"
+  // Chat-surface family (LGP coverage wave) — assert the surface renders
+  // and (where applicable) round-trips a chat message inside its scope.
+  | "chat-slots"
+  | "chat-css"
+  | "prebuilt-sidebar"
+  | "prebuilt-popup"
+  // Platform family — auth flow, file uploads, runtime agent config.
+  | "auth"
+  | "multimodal"
+  | "agent-config"
+  // Frontend-tools family — sync vs async result settling.
+  | "frontend-tools"
+  | "frontend-tools-async"
+  // Reasoning family — reasoning/thinking block + final answer.
+  | "reasoning-display"
+  | "tool-rendering-reasoning-chain"
+  // State family — streaming state updates and read-only agent context.
+  | "shared-state-streaming"
+  | "readonly-state-context"
+  // Generative-UI family — declarative, A2UI fixed-schema, open-shape, agent-driven.
+  | "gen-ui-declarative"
+  | "gen-ui-a2ui-fixed"
+  | "gen-ui-open"
+  | "gen-ui-agent"
+  // Interrupt family — LangGraph-interrupt-driven HITL (distinct from
+  // useHumanInTheLoop hook patterns).
+  | "interrupt-headless"
+  | "gen-ui-interrupt"
+  // BYOC family — bring-your-own-component structured-output rendering
+  // (one literal covers hashbrown + json-render via preNavigateRoute).
+  | "byoc"
+  // Voice family — voice input/output.
+  | "voice"
+  // Beautiful Chat family — one literal per pill on /demos/beautiful-chat
+  // because CopilotKit v2 only renders the FIRST useComponent tool call
+  // in a conversation. Splitting into per-pill scripts means each probe
+  // gets its own browser launch (fresh page, fresh conversation), which
+  // sidesteps the multi-turn rendering quirk. CATALOG_TO_D5_KEY maps
+  // `beautiful-chat` to all five listed literals; `isD5Green` requires
+  // every listed key to be green for the cell to advance to D5. See
+  // `_beautiful-chat-shared.ts` for the full rationale and the
+  // Excalidraw / Calculator / Sales Dashboard / Task Manager exclusions.
+  | "beautiful-chat-toggle-theme"
+  | "beautiful-chat-pie-chart"
+  | "beautiful-chat-bar-chart"
+  | "beautiful-chat-search-flights"
+  | "beautiful-chat-schedule-meeting";
 
 /**
  * Closed-set runtime mirror of `D5FeatureType`. Kept in lock-step with
@@ -58,9 +106,36 @@ const D5_FEATURE_TYPES: readonly D5FeatureType[] = [
   "hitl-steps",
   "hitl-text-input",
   "gen-ui-headless",
+  "gen-ui-headless-complete",
   "gen-ui-custom",
   "mcp-apps",
   "subagents",
+  "chat-slots",
+  "chat-css",
+  "prebuilt-sidebar",
+  "prebuilt-popup",
+  "auth",
+  "multimodal",
+  "agent-config",
+  "frontend-tools",
+  "frontend-tools-async",
+  "reasoning-display",
+  "tool-rendering-reasoning-chain",
+  "shared-state-streaming",
+  "readonly-state-context",
+  "gen-ui-declarative",
+  "gen-ui-a2ui-fixed",
+  "gen-ui-open",
+  "gen-ui-agent",
+  "interrupt-headless",
+  "gen-ui-interrupt",
+  "byoc",
+  "voice",
+  "beautiful-chat-toggle-theme",
+  "beautiful-chat-pie-chart",
+  "beautiful-chat-bar-chart",
+  "beautiful-chat-search-flights",
+  "beautiful-chat-schedule-meeting",
 ] as const satisfies readonly D5FeatureType[];
 
 /**

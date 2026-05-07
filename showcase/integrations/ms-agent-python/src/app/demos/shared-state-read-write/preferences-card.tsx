@@ -33,6 +33,12 @@ export interface PreferencesCardProps {
  * injects the entire shared state (including these preferences) as a system
  * context message into the conversation, so the agent's reply visibly adapts.
  */
+// @region[preferences-card-render]
+// Write-side render: every edit here bubbles up through `onChange`, and
+// the parent pipes it straight into `agent.setState({ preferences: ... })`.
+// Nothing in this component knows about the agent directly — that's
+// intentional: the card is a plain controlled form, and the agent state
+// wiring lives one layer up.
 export function PreferencesCard({ value, onChange }: PreferencesCardProps) {
   const set = <K extends keyof Preferences>(key: K, v: Preferences[K]) =>
     onChange({ ...value, [key]: v });
@@ -141,3 +147,4 @@ export function PreferencesCard({ value, onChange }: PreferencesCardProps) {
     </div>
   );
 }
+// @endregion[preferences-card-render]

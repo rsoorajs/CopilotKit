@@ -9,7 +9,6 @@ on:
         type: choice
         options:
           - monorepo
-          - cli
           - angular
       suffix:
         description: "Version suffix (e.g. 'fix-user-issue'). Leave blank for timestamp."

@@ -16,9 +16,8 @@ const mockState = {
   initial: [] as Record<string, unknown>[],
   listener: null as Listener | null,
   failRemaining: 0,
-  // Capture the options passed to getList / subscribe so tests can
+  // Capture the options passed to getFullList / subscribe so tests can
   // assert server-side filter is forwarded (not client-side only).
-  // (Initial fetch now uses paginated getList, not getFullList.)
   lastInitialGetListOpts: undefined as unknown,
   lastSubscribeOpts: undefined as unknown,
   // Make getList (heartbeat) fail on demand to drive reconnection.
@@ -50,30 +49,24 @@ vi.mock("../lib/pb", () => {
         return out;
       },
       collection: (_name: string) => ({
-        getList: vi.fn(
-          async (page: number, perPage: number, opts?: unknown) => {
+        // getFullList is used by the initial fetch (replaces paginated getList).
+        // Returns a plain array, respecting the `batch` option as a cap.
+        getFullList: vi.fn(
+          async (opts?: { batch?: number; filter?: string }) => {
             mockState.getListCalls += 1;
-            // Heuristic: the initial fetch uses perPage > 1 (our hook sends
-            // INITIAL_PAGE_SIZE = 200). The heartbeat uses getList(1, 1).
-            const isInitial = perPage > 1;
-            if (isInitial) {
-              mockState.lastInitialGetListOpts = opts;
-              if (mockState.failRemaining > 0) {
-                mockState.failRemaining -= 1;
-                throw new Error("pb-unreachable");
-              }
-              const start = (page - 1) * perPage;
-              return {
-                items: mockState.initial.slice(start, start + perPage),
-                page,
-                perPage,
-                totalItems: mockState.initial.length,
-                totalPages: Math.max(
-                  1,
-                  Math.ceil(mockState.initial.length / perPage),
-                ),
-              };
+            mockState.lastInitialGetListOpts = opts;
+            if (mockState.failRemaining > 0) {
+              mockState.failRemaining -= 1;
+              throw new Error("pb-unreachable");
             }
+            const cap = opts?.batch ?? Infinity;
+            return mockState.initial.slice(0, cap);
+          },
+        ),
+        // getList is still used for heartbeat pings (getList(1, 1)).
+        getList: vi.fn(
+          async (_page: number, _perPage: number, _opts?: unknown) => {
+            mockState.getListCalls += 1;
             if (mockState.heartbeatFailRemaining > 0) {
               mockState.heartbeatFailRemaining -= 1;
               throw new Error("heartbeat-fail");

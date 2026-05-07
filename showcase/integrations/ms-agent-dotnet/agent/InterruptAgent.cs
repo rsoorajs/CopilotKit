@@ -65,6 +65,7 @@ public sealed class InterruptAgentFactory
             });
     }
 
+    // @region[backend-tool-call]
     public AIAgent CreateInterruptAgent()
     {
         var chatClient = _openAiClient.GetChatClient("gpt-4o-mini").AsIChatClient();
@@ -75,8 +76,9 @@ public sealed class InterruptAgentFactory
         // and returns a generic "unscheduled" message. When the frontend
         // has the tool registered (the intended demo path), AG-UI forwards
         // the frontend tool definition and the client handles the call —
-        // this backend tool acts only as a schema hint for the model when
-        // the frontend tool isn't yet available.
+        // the frontend handler returns a Promise that only resolves once
+        // the user picks a slot, which is the MS Agent shim for the
+        // LangGraph `interrupt()` pause/resume primitive.
         //
         // The parameters intentionally mirror the LangGraph reference's
         // `schedule_meeting(topic, attendee)` signature so the model's
@@ -97,6 +99,7 @@ user cancelled.",
 
         return new SharedStateAgent(chatClientAgent, _jsonSerializerOptions, _loggerFactory.CreateLogger<SharedStateAgent>());
     }
+    // @endregion[backend-tool-call]
 
     // =================
     // Tools

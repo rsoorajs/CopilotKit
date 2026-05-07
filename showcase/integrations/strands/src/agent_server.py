@@ -96,6 +96,7 @@ from starlette.responses import JSONResponse  # noqa: E402
 
 from ag_ui_strands import create_strands_app  # noqa: E402  (must follow instrumentor patch)
 from agents.agent import build_showcase_agent  # noqa: E402  (must follow instrumentor patch)
+from agents.voice_agent import build_voice_agent  # noqa: E402  (must follow instrumentor patch)
 
 load_dotenv()
 
@@ -104,9 +105,17 @@ load_dotenv()
 # not at arbitrary module-import time.
 agui_agent = build_showcase_agent()
 
+# Voice agent: tool-free, for voice demos that only need transcription + chat.
+voice_agui_agent = build_voice_agent()
+voice_app = create_strands_app(voice_agui_agent, "/")
+
 # Create the FastAPI app from the AG-UI Strands integration
 agent_path = os.getenv("AGENT_PATH", "/")
 app = create_strands_app(agui_agent, agent_path)
+
+# Mount the voice agent as a sub-application at /voice so the Next.js
+# voice runtime can point HttpAgent at AGENT_URL/voice/ for tool-free chat.
+app.mount("/voice", voice_app)
 
 
 # Serve /health via middleware so it short-circuits BEFORE route resolution.

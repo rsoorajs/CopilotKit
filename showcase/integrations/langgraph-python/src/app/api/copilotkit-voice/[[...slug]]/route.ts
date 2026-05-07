@@ -34,12 +34,10 @@ import { TranscriptionServiceOpenAI } from "@copilotkit/voice";
 import OpenAI from "openai";
 
 const LANGGRAPH_URL =
-  process.env.AGENT_URL ||
-  process.env.LANGGRAPH_DEPLOYMENT_URL ||
-  "http://localhost:8123";
+  process.env.LANGGRAPH_DEPLOYMENT_URL || "http://localhost:8123";
 
 const voiceDemoAgent = new LangGraphAgent({
-  deploymentUrl: `${LANGGRAPH_URL}/`,
+  deploymentUrl: LANGGRAPH_URL,
   graphId: "sample_agent",
 });
 
@@ -48,7 +46,13 @@ const voiceDemoAgent = new LangGraphAgent({
  * OPENAI_API_KEY is not configured. When the key is present we delegate to
  * the real OpenAI-backed service; any upstream Whisper error keeps its
  * natural categorization.
+ *
+ * Note: The `new OpenAI({ apiKey })` call below intentionally omits
+ * `baseURL` so the SDK falls through to `process.env.OPENAI_BASE_URL`.
+ * In D5 tests this env var points at aimock, giving deterministic
+ * transcription responses without hitting real Whisper.
  */
+// @region[transcription-service-guard]
 class GuardedOpenAITranscriptionService extends TranscriptionService {
   private delegate: TranscriptionServiceOpenAI | null;
 
@@ -71,6 +75,7 @@ class GuardedOpenAITranscriptionService extends TranscriptionService {
     return this.delegate.transcribeFile(options);
   }
 }
+// @endregion[transcription-service-guard]
 
 // Cache the runtime + handler across invocations so the transcription service
 // is constructed once per Node process instead of per request. The guarded
@@ -81,6 +86,7 @@ let cachedHandler: ((req: Request) => Promise<Response>) | null = null;
 function getHandler(): (req: Request) => Promise<Response> {
   if (cachedHandler) return cachedHandler;
 
+  // @region[voice-runtime]
   const runtime = new CopilotRuntime({
     // @ts-ignore -- Published CopilotRuntime agents type wraps Record in
     // MaybePromise<NonEmptyRecord<...>> which rejects plain Records; fixed in
@@ -111,3 +117,4 @@ export const POST = (req: NextRequest) => getHandler()(req);
 export const GET = (req: NextRequest) => getHandler()(req);
 export const PUT = (req: NextRequest) => getHandler()(req);
 export const DELETE = (req: NextRequest) => getHandler()(req);
+// @endregion[voice-runtime]

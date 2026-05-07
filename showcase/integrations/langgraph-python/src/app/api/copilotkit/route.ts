@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 import {
   CopilotRuntime,
   ExperimentalEmptyAdapter,
@@ -15,11 +16,20 @@ console.log(
   `[copilotkit/route] LANGSMITH_API_KEY: ${process.env.LANGSMITH_API_KEY ? "set" : "not set"}`,
 );
 
-function createAgent(graphId: string = "sample_agent") {
+function createAgent(
+  graphId: string = "sample_agent",
+  options: { recursionLimit?: number } = {},
+) {
+  // LangGraph's `recursion_limit` defaults to 25 (langchain_core), and
+  // `with_config` in Python doesn't propagate when the graph is invoked via
+  // the langgraph server's runs API — the wrapper isn't visible to the
+  // assistant config. Bake the limit into `assistantConfig` here so it
+  // travels with every run we kick off through this route.
   return new LangGraphAgent({
     deploymentUrl: LANGGRAPH_URL,
     graphId,
     langsmithApiKey: process.env.LANGSMITH_API_KEY || "",
+    assistantConfig: { recursion_limit: options.recursionLimit ?? 100 },
   });
 }
 
@@ -72,9 +82,12 @@ agents["frontend-tools-async"] = createAgent("frontend_tools_async");
 agents["gen-ui-agent"] = createAgent("gen_ui_agent");
 // Tool-Based Generative UI — chart-viz system prompt lives in its own graph.
 agents["gen-ui-tool-based"] = createAgent("gen_ui_tool_based");
-// Reasoning variants.
-agents["agentic-chat-reasoning"] = createAgent("reasoning_agent");
-agents["reasoning-default-render"] = createAgent("reasoning_agent");
+// Reasoning variants. The Custom demo (`reasoning-custom`) and the
+// Default demo (`reasoning-default`) both share the same backend graph;
+// the only difference is whether the frontend overrides the
+// `messageView.reasoningMessage` slot.
+agents["reasoning-custom"] = createAgent("reasoning_agent");
+agents["reasoning-default"] = createAgent("reasoning_agent");
 // Interrupt variants.
 agents["gen-ui-interrupt"] = createAgent("interrupt_agent");
 agents["interrupt-headless"] = createAgent("interrupt_agent");

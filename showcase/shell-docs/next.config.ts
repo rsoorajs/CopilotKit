@@ -47,6 +47,25 @@ if (!process.env.NEXT_PUBLIC_SHELL_URL) {
 }
 
 const nextConfig: NextConfig = {
+  async rewrites() {
+    return {
+      beforeFiles: [
+        // PostHog reverse proxy — routes analytics through this host so
+        // requests bypass ad blockers / tracking-protection that target
+        // the *.i.posthog.com hostname directly. Mirrors docs/.
+        {
+          source: "/ingest/static/:path*",
+          destination: "https://eu-assets.i.posthog.com/static/:path*",
+        },
+        {
+          source: "/ingest/:path*",
+          destination: "https://eu.i.posthog.com/:path*",
+        },
+      ],
+      afterFiles: [],
+      fallback: [],
+    };
+  },
   async redirects() {
     return [
       {
@@ -315,6 +334,55 @@ const nextConfig: NextConfig = {
         source: "/concepts/three-types-of-gen-ui",
         destination: "/concepts/generative-ui-overview",
         permanent: true,
+      },
+
+      // Stale pages hidden pre-launch. 302 (not permanent) — these
+      // URLs may be restored once the underlying content is rewritten.
+      // Tutorials are broken end-to-end and pulled from nav; files
+      // remain on disk under content/docs/tutorials/ for post-launch
+      // rewrite.
+      {
+        source: "/tutorials/:path*",
+        destination: "/",
+        permanent: false,
+      },
+      // Old-name straggler from the coding-agents rename; the page
+      // moved to /coding-agents.
+      {
+        source: "/coding-agent-setup",
+        destination: "/coding-agents",
+        permanent: false,
+      },
+      // Orphaned broken stub.
+      {
+        source: "/copilot-suggestions",
+        destination: "/",
+        permanent: false,
+      },
+      // AI-slop placeholder pulled from nav until properly authored;
+      // file stays on disk for rewrite.
+      {
+        source: "/generative-ui/open-json-ui",
+        destination: "/generative-ui",
+        permanent: false,
+      },
+      // ~1-year-old migration target, no longer a meaningful jump-off
+      // point.
+      {
+        source: "/migrate/1.10.X",
+        destination: "/migrate/v2",
+        permanent: false,
+      },
+
+      // ag-ui-middleware moved into the agentic-protocols group so it
+      // appears in the sidebar under AG-UI rather than as an orphan
+      // root page. 302 (not 301) since the new home is recent and we
+      // want flexibility to revisit placement without burning the
+      // permanent-redirect cache.
+      {
+        source: "/ag-ui-middleware",
+        destination: "/agentic-protocols/ag-ui-middleware",
+        permanent: false,
       },
     ];
   },

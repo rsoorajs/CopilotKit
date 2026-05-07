@@ -1,3 +1,4 @@
+from pathlib import Path
 from textwrap import dedent
 from pydantic import BaseModel, Field
 from pydantic_ai import Agent, RunContext
@@ -7,6 +8,7 @@ from pydantic_ai.models.openai import OpenAIResponsesModel
 
 # load environment variables
 from dotenv import load_dotenv
+load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 load_dotenv()
 
 # =====

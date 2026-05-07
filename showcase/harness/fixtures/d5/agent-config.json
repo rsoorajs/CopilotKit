@@ -1,0 +1,11 @@
+{
+  "_comment": "D5 fixture for /demos/agent-config. The agent reads tone/expertise/responseLength from CopilotKit provider properties and builds its system prompt per turn. The D5 script verifies that a chat round-trip works (agent picks up the config and answers); the canned response here is generic but mentions 'tone' so the assertion can substring-check that the agent received and acknowledged the config keys. Substring 'introduce yourself per your config' is unique.",
+  "fixtures": [
+    {
+      "match": { "userMessage": "introduce yourself per your config" },
+      "response": {
+        "content": "Hello — I'm operating with the configured tone, expertise, and responseLength forwarded by the CopilotKit provider. Adjust the controls above the chat and my system prompt will rebuild on the next turn."
+      }
+    }
+  ]
+}

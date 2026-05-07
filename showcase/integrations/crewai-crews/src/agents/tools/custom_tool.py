@@ -20,6 +20,7 @@ from tools import (
 from typing import Any, List
 
 
+# @region[weather-tool-backend]
 class GetWeatherInput(BaseModel):
     """Input schema for GetWeatherTool."""
     location: str = Field(..., description="The location to get weather for.")
@@ -32,6 +33,7 @@ class GetWeatherTool(BaseTool):
 
     def _run(self, location: str) -> str:
         return json.dumps(get_weather_impl(location))
+# @endregion[weather-tool-backend]
 
 
 class QueryDataInput(BaseModel):

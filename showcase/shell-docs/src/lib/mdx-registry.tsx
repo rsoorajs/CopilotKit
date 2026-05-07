@@ -19,9 +19,12 @@ import {
   TailoredContentOption as RealTailoredContentOption,
 } from "@/components/react/tailored-content";
 import { FrameworkTabs } from "@/components/framework-tabs";
+import { OpsPlatformCTA } from "@/components/react/ops-platform-cta";
 import { PropertyReference } from "@/components/property-reference";
 import { IntegrationGrid } from "@/components/integration-grid";
 import { DocsLandingNext } from "@/components/docs-landing-next";
+import { WhenFrameworkHas } from "@/components/when-framework-has";
+import { AgentCoreCommandTabs } from "@/components/agentcore-command-tabs";
 import { getRegistry } from "@/lib/registry";
 
 const Callout = DocsCallout;
@@ -79,6 +82,7 @@ export const docsComponents = {
   Accordions,
   Accordion,
   PropertyReference,
+  OpsPlatformCTA,
   FeatureIntegrations: ({ feature }: { feature?: string }) => {
     if (!feature) {
       warnSilentNull("FeatureIntegrations", "no `feature` prop provided");
@@ -190,8 +194,9 @@ export const docsComponents = {
   ThreadsEarlyAccess: ({ children }: { children: React.ReactNode }) => (
     <>
       <Callout type="info">
-        <strong>Early access:</strong> Threads and the Intelligence Platform are
-        in early access. APIs may change before general availability.
+        <strong>Early access:</strong> Threads and the Enterprise Intelligence
+        Platform are in early access. APIs may change before general
+        availability.
       </Callout>
       {children}
     </>
@@ -216,6 +221,12 @@ export const docsComponents = {
   ),
   IntegrationGrid,
   DocsLandingNext,
+  // The base registration here works whenever the consumer passes
+  // `framework` explicitly. The framework-scoped renderer (DocsPageView)
+  // overrides this to inject `defaultFramework` from the URL — same
+  // pattern as <Snippet>.
+  WhenFrameworkHas,
+  AgentCoreCommandTabs,
   FeatureGrid: ({ children }: { children?: React.ReactNode }) => (
     <div
       style={{

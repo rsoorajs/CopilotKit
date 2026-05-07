@@ -14,23 +14,36 @@ import {
 
 const STORAGE_KEY = "dashboard:overlays";
 const HASH_PREFIX = "matrix:";
+const OPS_PROBE_PREFIX = "ops:probe=";
 
 // ---------------------------------------------------------------------------
 // URL hash helpers
 // ---------------------------------------------------------------------------
 
-/** Parse the current URL hash into a tab + overlay set, handling legacy redirects. */
+/** Parse the current URL hash into tab + overlay set + optional probe ID. */
 function parseHash(): {
-  tab: "matrix" | "ops";
+  tab: "matrix" | "baseline" | "ops";
   overlays: OverlaySet | null;
+  probeId: string | null;
 } {
   const raw =
     typeof window !== "undefined" ? window.location.hash.slice(1) : "";
-  if (!raw) return { tab: "matrix", overlays: null };
+  if (!raw) return { tab: "matrix", overlays: null, probeId: null };
+
+  // #ops:probe=<id> — ops tab with probe detail drilldown
+  if (raw.startsWith(OPS_PROBE_PREFIX)) {
+    const probeId = decodeURIComponent(raw.slice(OPS_PROBE_PREFIX.length));
+    return { tab: "ops", overlays: null, probeId: probeId || null };
+  }
+
+  // #baseline — switch to baseline tab
+  if (raw === "baseline") {
+    return { tab: "baseline", overlays: null, probeId: null };
+  }
 
   // #ops — switch to ops tab
   if (raw === "ops") {
-    return { tab: "ops", overlays: null };
+    return { tab: "ops", overlays: null, probeId: null };
   }
 
   // Legacy redirect check
@@ -38,15 +51,15 @@ function parseHash(): {
     const mapped = LEGACY_REDIRECTS[raw];
     // "status" redirects to ops tab
     if (mapped.length === 0) {
-      return { tab: "ops", overlays: null };
+      return { tab: "ops", overlays: null, probeId: null };
     }
     const set = new Set(mapped) as OverlaySet;
-    return { tab: "matrix", overlays: set };
+    return { tab: "matrix", overlays: set, probeId: null };
   }
 
   // #matrix or #matrix:links,depth,...
   if (raw === "matrix") {
-    return { tab: "matrix", overlays: null };
+    return { tab: "matrix", overlays: null, probeId: null };
   }
 
   if (raw.startsWith(HASH_PREFIX)) {
@@ -55,28 +68,50 @@ function parseHash(): {
       ALL_OVERLAYS.includes(p as Overlay),
     );
     if (valid.length > 0) {
-      return { tab: "matrix", overlays: new Set(valid) as OverlaySet };
+      return {
+        tab: "matrix",
+        overlays: new Set(valid) as OverlaySet,
+        probeId: null,
+      };
     }
-    return { tab: "matrix", overlays: null };
+    return { tab: "matrix", overlays: null, probeId: null };
   }
 
-  return { tab: "matrix", overlays: null };
+  return { tab: "matrix", overlays: null, probeId: null };
 }
 
-/** Replace hash via replaceState (no history entry, no navigation). */
-function writeHash(tab: "matrix" | "ops", overlays?: OverlaySet): void {
+/**
+ * Write the URL hash. When `push` is true, creates a new browser history
+ * entry (pushState) so back/forward navigation works. When false, uses
+ * replaceState (used for initial mount sync to avoid polluting history).
+ */
+function writeHash(
+  tab: "matrix" | "baseline" | "ops",
+  overlays?: OverlaySet,
+  probeId?: string | null,
+  push = false,
+): void {
   if (typeof window === "undefined") return;
+  const method = push ? "pushState" : "replaceState";
+
+  if (tab === "baseline") {
+    window.history[method](null, "", "#baseline");
+    return;
+  }
   if (tab === "ops") {
-    window.history.replaceState(null, "", "#ops");
+    const hash = probeId
+      ? `#${OPS_PROBE_PREFIX}${encodeURIComponent(probeId)}`
+      : "#ops";
+    window.history[method](null, "", hash);
     return;
   }
   if (overlays && overlays.size > 0) {
     const sorted = [...overlays].sort(
       (a, b) => ALL_OVERLAYS.indexOf(a) - ALL_OVERLAYS.indexOf(b),
     );
-    window.history.replaceState(null, "", `#${HASH_PREFIX}${sorted.join(",")}`);
+    window.history[method](null, "", `#${HASH_PREFIX}${sorted.join(",")}`);
   } else {
-    window.history.replaceState(null, "", "#matrix");
+    window.history[method](null, "", "#matrix");
   }
 }
 
@@ -114,13 +149,15 @@ function saveToStorage(overlays: OverlaySet): void {
 
 export interface UseOverlaysReturn {
   overlays: OverlaySet;
-  activeTab: "matrix" | "ops";
+  activeTab: "matrix" | "baseline" | "ops";
   toggle: (overlay: Overlay) => void;
   applyPreset: (presetId: string) => void;
-  setTab: (tab: "matrix" | "ops") => void;
+  setTab: (tab: "matrix" | "baseline" | "ops") => void;
   activePreset: string | null;
   showFilters: boolean;
   has: (overlay: Overlay) => boolean;
+  selectedProbeId: string | null;
+  selectProbe: (probeId: string | null) => void;
 }
 
 export function useOverlays(): UseOverlaysReturn {
@@ -129,15 +166,23 @@ export function useOverlays(): UseOverlaysReturn {
   const [overlays, setOverlays] = useState<OverlaySet>(
     () => new Set(DEFAULT_OVERLAYS) as OverlaySet,
   );
-  const [activeTab, setActiveTabRaw] = useState<"matrix" | "ops">("matrix");
+  const [activeTab, setActiveTabRaw] = useState<"matrix" | "baseline" | "ops">(
+    "matrix",
+  );
+  const [selectedProbeId, setSelectedProbeIdRaw] = useState<string | null>(
+    null,
+  );
 
   // Sync from URL hash / localStorage after hydration
   useEffect(() => {
-    const { tab, overlays: fromHash } = parseHash();
+    const { tab, overlays: fromHash, probeId } = parseHash();
     const resolved =
-      fromHash ?? loadFromStorage() ?? (new Set(DEFAULT_OVERLAYS) as OverlaySet);
+      fromHash ??
+      loadFromStorage() ??
+      (new Set(DEFAULT_OVERLAYS) as OverlaySet);
     setOverlays(resolved);
     setActiveTabRaw(tab);
+    setSelectedProbeIdRaw(probeId);
   }, []);
 
   // On mount, write hash to reflect actual state (handles legacy redirects
@@ -145,14 +190,30 @@ export function useOverlays(): UseOverlaysReturn {
   useEffect(() => {
     if (!initialized.current) {
       initialized.current = true;
-      writeHash(activeTab, overlays);
+      writeHash(activeTab, overlays, selectedProbeId, false);
     }
-  }, [activeTab, overlays]);
+  }, [activeTab, overlays, selectedProbeId]);
+
+  // Listen for browser back/forward navigation
+  useEffect(() => {
+    function onPopState() {
+      const { tab, overlays: fromHash, probeId } = parseHash();
+      const resolved =
+        fromHash ??
+        loadFromStorage() ??
+        (new Set(DEFAULT_OVERLAYS) as OverlaySet);
+      setOverlays(resolved);
+      setActiveTabRaw(tab);
+      setSelectedProbeIdRaw(probeId);
+    }
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
 
   // Sync hash + localStorage whenever overlays change after initialization.
   const updateOverlays = useCallback((next: OverlaySet) => {
     setOverlays(next);
-    writeHash("matrix", next);
+    writeHash("matrix", next, null, true);
     saveToStorage(next);
   }, []);
 
@@ -167,7 +228,7 @@ export function useOverlays(): UseOverlaysReturn {
       } else {
         next.add(overlay);
       }
-      writeHash("matrix", next);
+      writeHash("matrix", next, null, true);
       saveToStorage(next);
       return next;
     });
@@ -184,12 +245,18 @@ export function useOverlays(): UseOverlaysReturn {
   );
 
   const setTab = useCallback(
-    (tab: "matrix" | "ops") => {
+    (tab: "matrix" | "baseline" | "ops") => {
       setActiveTabRaw(tab);
-      writeHash(tab, overlays);
+      setSelectedProbeIdRaw(null);
+      writeHash(tab, overlays, null, true);
     },
     [overlays],
   );
+
+  const selectProbe = useCallback((probeId: string | null) => {
+    setSelectedProbeIdRaw(probeId);
+    writeHash("ops", undefined, probeId, true);
+  }, []);
 
   const activePreset = useMemo(() => {
     for (const preset of PRESETS) {
@@ -222,5 +289,7 @@ export function useOverlays(): UseOverlaysReturn {
     activePreset,
     showFilters,
     has,
+    selectedProbeId,
+    selectProbe,
   };
 }

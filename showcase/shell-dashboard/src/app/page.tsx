@@ -14,9 +14,13 @@ import { OverlayToggleBar } from "@/components/overlay-toggle-bar";
 import { ComposedCell } from "@/components/composed-cell";
 import { AdaptiveStatsBar } from "@/components/adaptive-stats-bar";
 import { AdaptiveLegend } from "@/components/adaptive-legend";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { BaselineTab } from "@/components/baseline-tab";
 import type { ParityTier } from "@/components/parity-badge";
 import { getDocsStatus } from "@/lib/docs-status";
+import { deriveDepth } from "@/components/depth-utils";
 import type { CatalogCell } from "@/components/depth-utils";
+import type { DepthDistribution } from "@/components/adaptive-stats-bar";
 import catalog from "@/data/catalog.json";
 import type { CatalogData } from "@/data/catalog-types";
 
@@ -57,8 +61,16 @@ export default function Page() {
   );
 
   // Overlay state management (handles URL hash + localStorage persistence)
-  const { overlays, activeTab, toggle, applyPreset, setTab, activePreset } =
-    useOverlays();
+  const {
+    overlays,
+    activeTab,
+    toggle,
+    applyPreset,
+    setTab,
+    activePreset,
+    selectedProbeId,
+    selectProbe,
+  } = useOverlays();
 
   // Build a cell-lookup map: integration slug + feature id -> CatalogCell
   const cellLookup = useMemo(() => {
@@ -71,20 +83,30 @@ export default function Page() {
     return map;
   }, []);
 
-  // Compute health stats from column tallies (aggregate across integrations)
-  // Reuse the computeColumnTally logic from feature-grid.
-  // For the stats bar, we aggregate from catalog cell data.
+  // Compute health stats using the SAME color logic as the depth chips.
+  // A cell's chip color depends on achieved vs maxPossible (from deriveDepth),
+  // so the stats bar matches what's visually displayed in the table.
   const healthStats = useMemo(() => {
     let green = 0;
     let amber = 0;
     let red = 0;
     for (const cell of catalogData.cells) {
-      if (cell.status === "wired") green++;
-      else if (cell.status === "stub") amber++;
-      // unshipped doesn't count as red for health
+      if (cell.status !== "wired" || cell.feature === null) continue;
+      const result = deriveDepth(cell as CatalogCell, liveStatus);
+      if (result.unsupported) continue;
+      const { achieved, maxPossible } = result;
+      if (achieved === 0) {
+        green++; // D0 = no probe data yet, not a failure
+      } else if (achieved >= maxPossible) {
+        green++; // At ceiling — same as green chip
+      } else if (maxPossible - achieved <= 2) {
+        amber++; // 1-2 below max — same as amber chip
+      } else {
+        red++; // 3+ below max — same as red chip
+      }
     }
     return { green, amber, red };
-  }, []);
+  }, [liveStatus]);
 
   // Compute parity tier counts
   const parityStats = useMemo(() => {
@@ -126,6 +148,27 @@ export default function Page() {
     return { ok, missing, notFound, error };
   }, []);
 
+  // Compute depth distribution across all wired cells — re-derives whenever
+  // live-status changes since depth is a function of probe states.
+  const depthDistribution = useMemo((): DepthDistribution => {
+    const dist: DepthDistribution = {
+      d5: 0,
+      d4: 0,
+      d3: 0,
+      d2: 0,
+      d1: 0,
+      d0: 0,
+    };
+    for (const cell of catalogData.cells) {
+      if (cell.status !== "wired" || cell.feature === null) continue;
+      const result = deriveDepth(cell, liveStatus);
+      if (result.unsupported) continue;
+      const key = `d${result.achieved}` as keyof DepthDistribution;
+      dist[key]++;
+    }
+    return dist;
+  }, [liveStatus]);
+
   // renderCell callback wrapping ComposedCell
   const renderCell = useCallback(
     (ctx: CellContext) => {
@@ -153,7 +196,19 @@ export default function Page() {
               : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
           }`}
         >
-          Matrix
+          Coverage
+        </button>
+        <button
+          type="button"
+          data-testid="tab-baseline"
+          onClick={() => setTab("baseline")}
+          className={`px-4 py-2.5 text-sm font-medium transition-colors cursor-pointer ${
+            activeTab === "baseline"
+              ? "text-[var(--accent)] border-b-2 border-[var(--accent)] -mb-px"
+              : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
+          }`}
+        >
+          Baseline
         </button>
         <button
           type="button"
@@ -167,6 +222,9 @@ export default function Page() {
         >
           Ops
         </button>
+        <div className="ml-auto flex items-center pr-1">
+          <ThemeToggle />
+        </div>
       </div>
 
       {activeTab === "matrix" && (
@@ -189,6 +247,7 @@ export default function Page() {
                 healthStats={healthStats}
                 parityStats={parityStats}
                 docsStats={docsStats}
+                depthDistribution={depthDistribution}
               />
             </div>
             <FeatureGrid
@@ -205,9 +264,16 @@ export default function Page() {
         </>
       )}
 
+      {activeTab === "baseline" && <BaselineTab />}
+
       {activeTab === "ops" && (
         <div className="flex-1 min-h-0 overflow-auto">
-          <StatusTab entries={probeEntries} onTrigger={handleTrigger} />
+          <StatusTab
+            entries={probeEntries}
+            onTrigger={handleTrigger}
+            selectedProbeId={selectedProbeId}
+            onSelectProbe={selectProbe}
+          />
         </div>
       )}
     </div>

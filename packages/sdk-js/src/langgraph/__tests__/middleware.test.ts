@@ -18,6 +18,7 @@
  */
 
 import { describe, it, expect } from "vitest";
+import * as z from "zod";
 import {
   AIMessage,
   HumanMessage,
@@ -27,6 +28,7 @@ import {
 import {
   copilotkitMiddleware,
   createCopilotkitMiddleware,
+  zodState,
 } from "../middleware";
 
 // ---------------------------------------------------------------------------
@@ -493,5 +495,117 @@ describe("afterAgent", () => {
     ]);
     expect(result!.copilotkit.interceptedToolCalls).toBeUndefined();
     expect(result!.copilotkit.originalAIMessageId).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// zodState — Standard-Schema JSON-schema augmentation
+// ---------------------------------------------------------------------------
+//
+// Contract: a Zod v4 schema only carries `~standard.validate` + `vendor`, so
+// LangGraph's `isStandardJSONSchema()` returns false and the field is dropped
+// from `output_schema`. `zodState` patches `~standard.jsonSchema.input` onto
+// the schema so the field survives serialization and reaches the frontend
+// via AG-UI `STATE_SNAPSHOT` events.
+
+type JsonSchema = {
+  type?: string;
+  properties?: Record<string, unknown>;
+};
+type StdJson = { jsonSchema?: { input: () => JsonSchema } };
+const standardOf = (s: object): StdJson | undefined =>
+  (s as { "~standard"?: StdJson })["~standard"];
+const hasZodV4ToJsonSchema = (): boolean =>
+  typeof (z as { toJSONSchema?: unknown }).toJSONSchema === "function";
+
+describe("zodState", () => {
+  it("attaches a ~standard.jsonSchema.input hook to a Zod schema", () => {
+    const schema = z.object({ name: z.string() });
+    expect(standardOf(schema)?.jsonSchema).toBeUndefined();
+
+    const wrapped = zodState(schema);
+
+    const std = standardOf(wrapped);
+    expect(std?.jsonSchema).toBeDefined();
+    expect(typeof std?.jsonSchema?.input).toBe("function");
+  });
+
+  it("returns a plain object from input() (real JSON Schema when zod v4 is available, else `{}`)", () => {
+    // The contract langgraph cares about is just "input() returns an
+    // object" — `isStandardJSONSchema()` doesn't introspect the shape.
+    // When zod v4's `toJSONSchema` is present we get the real schema;
+    // otherwise we get `{}`, which is still enough for the field to
+    // appear in `output_schema` (langgraph-api treats it as opaque).
+    const schema = z.object({ todos: z.array(z.string()) });
+    const wrapped = zodState(schema);
+
+    const json = standardOf(wrapped)?.jsonSchema?.input();
+
+    expect(json).toBeTypeOf("object");
+    expect(json).not.toBeNull();
+    if (hasZodV4ToJsonSchema()) {
+      expect(json?.type).toBe("object");
+      expect(json?.properties?.todos).toBeDefined();
+    }
+  });
+
+  it("caches the JSON Schema across calls (input() returns the same object)", () => {
+    const schema = z.object({ x: z.string() });
+    const wrapped = zodState(schema);
+    const std = standardOf(wrapped);
+
+    const a = std?.jsonSchema?.input();
+    const b = std?.jsonSchema?.input();
+
+    expect(a).toBe(b);
+  });
+
+  it("does not overwrite an existing jsonSchema hook", () => {
+    const schema = z.object({ x: z.string() });
+    const preset: StdJson["jsonSchema"] = { input: () => ({}) };
+    const std = standardOf(schema);
+    expect(std).toBeDefined();
+    std!.jsonSchema = preset;
+
+    zodState(schema);
+
+    expect(standardOf(schema)?.jsonSchema).toBe(preset);
+  });
+
+  it("returns the same reference (mutates rather than copies)", () => {
+    const schema = z.object({ x: z.string() });
+    expect(zodState(schema)).toBe(schema);
+  });
+
+  it("is a no-op for a value without ~standard metadata", () => {
+    const plain = { foo: "bar" };
+    expect(() => zodState(plain)).not.toThrow();
+    expect(zodState(plain)).toBe(plain);
+  });
+
+  it("works on optional / array / default-wrapped schemas (state-field shapes)", () => {
+    const todos = zodState(
+      z.array(z.object({ id: z.string(), text: z.string() })).default(() => []),
+    );
+
+    const std = standardOf(todos);
+    expect(std).toBeDefined();
+    expect(std?.jsonSchema).toBeDefined();
+    const json = std?.jsonSchema?.input();
+    expect(json).toBeTypeOf("object");
+    if (hasZodV4ToJsonSchema()) {
+      expect(json?.type).toBe("array");
+    }
+  });
+
+  it("makes the wrapped field pass a StandardJSONSchemaV1-style probe", () => {
+    // Mirrors what LangGraph's isStandardJSONSchema() looks for: an `input`
+    // function on `~standard.jsonSchema` that returns a plain object.
+    const schema = zodState(z.object({ liked: z.array(z.string()) }));
+    const std = standardOf(schema);
+
+    expect(std?.jsonSchema).toBeDefined();
+    expect(typeof std?.jsonSchema?.input).toBe("function");
+    expect(typeof std?.jsonSchema?.input()).toBe("object");
   });
 });

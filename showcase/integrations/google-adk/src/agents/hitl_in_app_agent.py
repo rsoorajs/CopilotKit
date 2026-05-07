@@ -10,6 +10,7 @@ as the tool result.
 from __future__ import annotations
 
 from google.adk.agents import LlmAgent
+from ag_ui_adk import AGUIToolset
 
 from agents.shared_chat import get_model
 
@@ -27,5 +28,5 @@ hitl_in_app_agent = LlmAgent(
     name="HitlInAppAgent",
     model=get_model(),
     instruction=_INSTRUCTION,
-    tools=[],
+    tools=[AGUIToolset()],
 )

@@ -1,0 +1,17 @@
+{
+  "_comment": "D5 fixture for /demos/open-gen-ui and /demos/open-gen-ui-advanced. Multi-turn for the advanced flow; first turn covers basic open-shape, second covers an advanced multi-step flow. Substrings 'render an open gen-ui element' and 'continue the advanced gen-ui flow' are unique.",
+  "fixtures": [
+    {
+      "match": { "userMessage": "render an open gen-ui element" },
+      "response": {
+        "content": "The open gen-UI element was rendered. The LLM produced an arbitrary-shape JSON payload and the renderer materialized it as a UI block."
+      }
+    },
+    {
+      "match": { "userMessage": "continue the advanced gen-ui flow" },
+      "response": {
+        "content": "The advanced gen-UI flow continued with the second-step component. The chained payloads from turns 1 and 2 form the complete advanced gen-UI sequence."
+      }
+    }
+  ]
+}

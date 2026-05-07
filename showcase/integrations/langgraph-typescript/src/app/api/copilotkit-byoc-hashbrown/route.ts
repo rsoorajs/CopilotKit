@@ -23,7 +23,7 @@ const LANGGRAPH_URL =
   process.env.LANGGRAPH_DEPLOYMENT_URL || "http://localhost:8123";
 
 const byocHashbrownAgent = new LangGraphAgent({
-  deploymentUrl: LANGGRAPH_URL,
+  deploymentUrl: `${LANGGRAPH_URL}/`,
   graphId: "byoc_hashbrown",
   langsmithApiKey: process.env.LANGSMITH_API_KEY || "",
 });

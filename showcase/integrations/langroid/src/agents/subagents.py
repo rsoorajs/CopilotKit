@@ -71,6 +71,10 @@ class Delegation(TypedDict):
 # =====================================================================
 
 
+# @region[subagent-setup]
+# In Langroid, each sub-agent is a `lr.ChatAgent` with a single-task
+# `system_message` and no tools. The supervisor only ever sees the
+# sub-agent's final-message content — no shared memory, no shared tools.
 _RESEARCH_SYSTEM = (
     "You are a research sub-agent. Given a topic, produce a concise "
     "bulleted list of 3-5 key facts. No preamble, no closing."
@@ -148,6 +152,7 @@ def _build_sub_agent(name: str) -> lr.ChatAgent:
         system_message=system_prompt,
     )
     return lr.ChatAgent(agent_config)
+# @endregion[subagent-setup]
 
 
 async def _invoke_sub_agent(name: str, task: str) -> str:
@@ -188,6 +193,12 @@ async def _invoke_sub_agent(name: str, task: str) -> str:
 # =====================================================================
 
 
+# @region[supervisor-delegation-tools]
+# In Langroid, the supervisor delegates by emitting a tool call against
+# one of these `ToolMessage` subclasses. The SSE adapter intercepts the
+# call (rather than letting Langroid dispatch to `.handle`), runs the
+# matching sub-agent, records a `Delegation` into shared state, and
+# returns the sub-agent's output as the tool result.
 class _SubAgentTool(ToolMessage):
     """Base class for the three supervisor delegation tools.
 
@@ -246,6 +257,7 @@ _SUPERVISOR_TOOLS: tuple[type[ToolMessage], ...] = (
     WritingAgentTool,
     CritiqueAgentTool,
 )
+# @endregion[supervisor-delegation-tools]
 
 _SUB_AGENT_NAMES: frozenset[str] = frozenset(
     t.default_value("request") for t in _SUPERVISOR_TOOLS

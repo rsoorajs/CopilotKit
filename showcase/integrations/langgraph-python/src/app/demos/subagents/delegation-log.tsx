@@ -11,7 +11,7 @@ export interface Delegation {
   id: string;
   sub_agent: SubAgentName;
   task: string;
-  status: "running" | "completed" | "failed";
+  status: "completed";
   result: string;
 }
 

@@ -1,6 +1,76 @@
 import { createMiddleware, AIMessage, SystemMessage } from "langchain";
 import type { InteropZodObject } from "@langchain/core/utils/types";
+import type {
+  StandardJSONSchemaV1,
+  StandardSchemaV1,
+} from "@standard-schema/spec";
 import * as z from "zod";
+
+type WithJsonSchema<T> = T extends { "~standard": infer S }
+  ? Omit<T, "~standard"> & {
+      "~standard": S &
+        StandardJSONSchemaV1.Props<
+          S extends StandardSchemaV1.Props<infer I, any> ? I : unknown,
+          S extends StandardSchemaV1.Props<any, infer O> ? O : unknown
+        >;
+    }
+  : T;
+
+/**
+ * Augment a Standard-Schema–compatible schema (e.g. Zod) with a
+ * `~standard.jsonSchema.input` hook so LangGraph's
+ * `getJsonSchemaFromSchema` (called from `StateSchema.getJsonSchema`)
+ * can serialize the field.
+ *
+ * Without this, Zod v4 fields carry `~standard.validate` + `vendor` only,
+ * and `isStandardJSONSchema()` returns false, so the field is silently
+ * dropped from the graph's `output_schema`. That makes AG-UI
+ * `STATE_SNAPSHOT` events filter the field out of the payload sent to
+ * the frontend even though the underlying thread state has the value.
+ *
+ * Use this on any custom state field you want visible to the frontend
+ * via `useAgent().state.*`.
+ *
+ * @example
+ * ```ts
+ * import { zodState } from "@copilotkit/sdk-js/langgraph";
+ *
+ * const stateSchema = z.object({
+ *   todos: zodState(z.array(TodoSchema).default(() => [])),
+ * });
+ * ```
+ */
+export function zodState<T extends object>(schema: T): WithJsonSchema<T> {
+  const std = (schema as { "~standard"?: { jsonSchema?: unknown } })[
+    "~standard"
+  ];
+  if (std && typeof std === "object" && !("jsonSchema" in std)) {
+    let cached: Record<string, unknown> | undefined;
+    std.jsonSchema = {
+      input: () => {
+        if (cached) return cached;
+        // Prefer zod-v4's native `toJSONSchema` when available. Falls back to
+        // an empty object, which is sufficient for the field to appear in the
+        // graph's output_schema (langgraph-api treats it as an opaque field).
+        try {
+          const maybeV4ToJsonSchema = (
+            z as unknown as {
+              toJSONSchema?: (s: unknown) => Record<string, unknown>;
+            }
+          ).toJSONSchema;
+          cached =
+            typeof maybeV4ToJsonSchema === "function"
+              ? maybeV4ToJsonSchema(schema)
+              : {};
+        } catch {
+          cached = {};
+        }
+        return cached;
+      },
+    };
+  }
+  return schema as WithJsonSchema<T>;
+}
 
 /**
  * Internal/framework state keys that should never be auto-surfaced to the
@@ -215,14 +285,16 @@ const createAppContextBeforeAgent = (state, runtime) => {
  * ```
  */
 const copilotKitStateSchema = z.object({
-  copilotkit: z
-    .object({
-      actions: z.array(z.any()),
-      context: z.any().optional(),
-      interceptedToolCalls: z.array(z.any()).optional(),
-      originalAIMessageId: z.string().optional(),
-    })
-    .optional(),
+  copilotkit: zodState(
+    z
+      .object({
+        actions: z.array(z.any()),
+        context: z.any().optional(),
+        interceptedToolCalls: z.array(z.any()).optional(),
+        originalAIMessageId: z.string().optional(),
+      })
+      .optional(),
+  ),
 });
 
 const buildMiddlewareInput = (exposeState: ExposeStateOption) => ({

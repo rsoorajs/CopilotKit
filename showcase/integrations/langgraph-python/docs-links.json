@@ -37,7 +37,7 @@
       "og_docs_url": "https://docs.copilotkit.ai/langgraph/custom-look-and-feel/headless-ui",
       "shell_docs_path": "/custom-look-and-feel/headless-ui"
     },
-    "agentic-chat-reasoning": {
+    "reasoning-custom": {
       "og_docs_url": "https://docs.copilotkit.ai/custom-look-and-feel/reasoning-messages",
       "shell_docs_path": "/custom-look-and-feel/reasoning-messages"
     },
@@ -129,29 +129,9 @@
       "og_docs_url": "https://docs.copilotkit.ai/langgraph/multi-agent-flows",
       "shell_docs_path": "/multi-agent-flows"
     },
-    "voice": {
-      "og_docs_url": "https://docs.copilotkit.ai/langgraph/voice",
-      "shell_docs_path": null
-    },
-    "multimodal": {
-      "og_docs_url": null,
-      "shell_docs_path": null
-    },
     "auth": {
-      "og_docs_url": "https://docs.copilotkit.ai/langgraph/authentication",
-      "shell_docs_path": "/authentication"
-    },
-    "agent-config": {
-      "og_docs_url": null,
-      "shell_docs_path": null
-    },
-    "byoc-hashbrown": {
-      "og_docs_url": "https://docs.copilotkit.ai/langgraph/byoc-hashbrown",
-      "shell_docs_path": "/byoc-hashbrown"
-    },
-    "byoc-json-render": {
-      "og_docs_url": null,
-      "shell_docs_path": null
+      "og_docs_url": "https://docs.copilotkit.ai/langgraph/auth",
+      "shell_docs_path": "/auth"
     }
   }
 }

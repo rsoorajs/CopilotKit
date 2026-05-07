@@ -1,7 +1,9 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import {
   createE2eDeepDriver,
+  createPooledE2eDeepLauncher,
   D5_SCRIPT_FILE_MATCHER,
+  DEPLOY_CHURN_GRACE_MS,
   e2eDeepDriver,
   FEATURE_CONCURRENCY,
   Semaphore,
@@ -147,9 +149,10 @@ function mkWriter(): {
 function mkCtx(
   writer?: ProbeResultWriter,
   env: Record<string, string | undefined> = {},
+  nowFn?: () => Date,
 ): ProbeContext {
   return {
-    now: () => new Date("2026-04-25T00:00:00Z"),
+    now: nowFn ?? (() => new Date("2026-04-25T00:00:00Z")),
     logger,
     env,
     writer,
@@ -532,7 +535,7 @@ describe("e2e-deep driver", () => {
     //   - `tool-rendering-default-catchall` → `tool-rendering`
     //   - `shared-state-read-write` → BOTH `shared-state-read` AND
     //     `shared-state-write` (one-to-many)
-    //   - `voice` is unmapped and silently dropped.
+    //   - `voice` → `voice` (mapped, but no script → skipped).
     // Only the shared-state script is registered, so
     // `tool-rendering` lands in `skipped[]` — the test exercises
     // both the mapping AND the closed-set filter without paying
@@ -561,26 +564,26 @@ describe("e2e-deep driver", () => {
       demos: [
         "tool-rendering-default-catchall", // → tool-rendering (skipped, no script)
         "shared-state-read-write", // → shared-state-read + shared-state-write (run)
-        "voice", // unmapped → dropped
+        "voice", // → voice (skipped, no script)
       ],
       shape: "package",
     });
 
     expect(result.state).toBe("green");
     const sig = result.signal as E2eDeepAggregateSignal;
-    // 3 mapped D5 types: tool-rendering (skipped) + shared-state-read
-    // + shared-state-write (both run). `voice` was dropped before
-    // counting.
-    expect(sig.total).toBe(3);
+    // 4 mapped D5 types: tool-rendering (skipped) + shared-state-read
+    // + shared-state-write (both run) + voice (skipped, no script).
+    expect(sig.total).toBe(4);
     expect(sig.passed).toBe(2);
     expect(sig.failed).toEqual([]);
-    expect(sig.skipped).toEqual(["tool-rendering"]);
+    expect(sig.skipped).toEqual(["tool-rendering", "voice"]);
 
     const sideKeys = writes.map((w) => w.key).sort();
     expect(sideKeys).toEqual([
       "d5:langgraph-python/shared-state-read",
       "d5:langgraph-python/shared-state-write",
       "d5:langgraph-python/tool-rendering",
+      "d5:langgraph-python/voice",
     ]);
   });
 
@@ -1080,5 +1083,571 @@ describe("e2e-deep graceful degradation (FEATURE_CONCURRENCY=1 equivalent)", () 
     expect(state.contextsOpened).toBe(2);
     expect(state.contextsClosed).toBe(2);
     expect(state.closed).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------
+// Pool starvation fix — verifies that createPooledE2eDeepLauncher
+// releases browsers back to the pool when the abort signal fires,
+// preventing cascading starvation when Promise.race abandons the
+// driver promise on timeout.
+// ---------------------------------------------------------------------
+describe("createPooledE2eDeepLauncher abort release", () => {
+  /**
+   * Minimal fake pool that tracks acquire/release calls. Uses a simple
+   * array of fake browsers with an available/in-use split. The fake
+   * browsers satisfy the Playwright Browser interface just enough for
+   * the pooled launcher to call newContext() on them.
+   */
+  function makeFakePool(size: number) {
+    interface FakeBrowser {
+      id: number;
+      newContext(): Promise<{
+        newPage(): Promise<{
+          on: (event: string, handler: (...args: unknown[]) => void) => void;
+          waitForSelector: () => Promise<void>;
+          fill: () => Promise<void>;
+          press: () => Promise<void>;
+          evaluate: () => Promise<unknown>;
+          goto: () => Promise<void>;
+          close: () => Promise<void>;
+          click: () => Promise<void>;
+          waitForFunction: () => Promise<void>;
+        }>;
+        close(): Promise<void>;
+      }>;
+      close(): Promise<void>;
+    }
+
+    const browsers: FakeBrowser[] = [];
+    for (let i = 0; i < size; i++) {
+      let contextsClosed = 0;
+      browsers.push({
+        id: i,
+        async newContext() {
+          return {
+            async newPage() {
+              return {
+                on: () => {},
+                waitForSelector: async () => {},
+                fill: async () => {},
+                press: async () => {},
+                evaluate: async () => 0,
+                goto: async () => {},
+                close: async () => {},
+                click: async () => {},
+                waitForFunction: async () => {},
+              };
+            },
+            async close() {
+              contextsClosed++;
+            },
+          };
+        },
+        async close() {},
+      });
+    }
+
+    const available = [...browsers];
+    const releaseLog: number[] = [];
+    const acquireLog: number[] = [];
+
+    const pool = {
+      async acquire(): Promise<unknown> {
+        const browser = available.shift();
+        if (!browser) throw new Error("FakePool: no browsers available");
+        acquireLog.push(browser.id);
+        return browser;
+      },
+      release(browser: unknown): void {
+        const fb = browser as FakeBrowser;
+        releaseLog.push(fb.id);
+        available.push(fb);
+      },
+      stats() {
+        return {
+          size,
+          available: available.length,
+          inUse: size - available.length,
+          totalRecycles: 0,
+        };
+      },
+      // Expose internals for assertions.
+      get _available() {
+        return available;
+      },
+      get _releaseLog() {
+        return releaseLog;
+      },
+      get _acquireLog() {
+        return acquireLog;
+      },
+    };
+
+    return pool;
+  }
+
+  it("releases browser back to pool when abort signal fires (prevents starvation)", async () => {
+    const pool = makeFakePool(2);
+    // Cast: the fake pool satisfies BrowserPool structurally for the
+    // subset of methods createPooledE2eDeepLauncher uses.
+    const launcher = createPooledE2eDeepLauncher(
+      pool as unknown as import("../helpers/browser-pool.js").BrowserPool,
+    );
+
+    // Acquire both browsers through the launcher.
+    const abortCtrl1 = new AbortController();
+    const abortCtrl2 = new AbortController();
+    const browser1 = await launcher(abortCtrl1.signal);
+    const browser2 = await launcher(abortCtrl2.signal);
+
+    // Both browsers are now in use — pool should have 0 available.
+    expect(pool.stats().available).toBe(0);
+    expect(pool.stats().inUse).toBe(2);
+
+    // Simulate timeout: abort signal fires for browser1.
+    abortCtrl1.abort();
+
+    // Give the abort handler's async context-close + release a tick.
+    await new Promise((r) => setTimeout(r, 10));
+
+    // Browser1 should be released back to the pool.
+    expect(pool._releaseLog).toContain(0);
+    expect(pool.stats().available).toBe(1);
+
+    // The driver's finally block eventually calls browser.close() —
+    // verify it's a no-op (doesn't double-release).
+    await browser1.close();
+    // Still only 1 release for browser 0.
+    expect(pool._releaseLog.filter((id) => id === 0)).toHaveLength(1);
+
+    // Browser2 is still held — normal close releases it.
+    await browser2.close();
+    expect(pool._releaseLog).toContain(1);
+    expect(pool.stats().available).toBe(2);
+  });
+
+  it("closes open contexts before releasing on abort", async () => {
+    const pool = makeFakePool(1);
+    const launcher = createPooledE2eDeepLauncher(
+      pool as unknown as import("../helpers/browser-pool.js").BrowserPool,
+    );
+
+    const abortCtrl = new AbortController();
+    const browser = await launcher(abortCtrl.signal);
+
+    // Open a context (simulates the driver opening a page).
+    const ctx = await browser.newContext();
+    const _page = await ctx.newPage();
+
+    // Abort fires — should close context then release.
+    abortCtrl.abort();
+    await new Promise((r) => setTimeout(r, 10));
+
+    // Browser released back to pool.
+    expect(pool._releaseLog).toHaveLength(1);
+    expect(pool.stats().available).toBe(1);
+  });
+
+  it("handles already-aborted signal (releases immediately)", async () => {
+    const pool = makeFakePool(1);
+    const launcher = createPooledE2eDeepLauncher(
+      pool as unknown as import("../helpers/browser-pool.js").BrowserPool,
+    );
+
+    // Pre-aborted signal.
+    const abortCtrl = new AbortController();
+    abortCtrl.abort();
+
+    const browser = await launcher(abortCtrl.signal);
+
+    // Should be released immediately (synchronously after acquire).
+    expect(pool._releaseLog).toHaveLength(1);
+    expect(pool.stats().available).toBe(1);
+
+    // Driver's close is a no-op.
+    await browser.close();
+    expect(pool._releaseLog).toHaveLength(1);
+  });
+
+  it("full pool starvation scenario: all slots acquired, timeout releases them for next run", async () => {
+    const POOL_SIZE = 4;
+    const pool = makeFakePool(POOL_SIZE);
+    const launcher = createPooledE2eDeepLauncher(
+      pool as unknown as import("../helpers/browser-pool.js").BrowserPool,
+    );
+
+    // Simulate a probe run that acquires all 4 pool slots.
+    const abortCtrls = Array.from(
+      { length: POOL_SIZE },
+      () => new AbortController(),
+    );
+    const browsers = await Promise.all(
+      abortCtrls.map((ac) => launcher(ac.signal)),
+    );
+
+    // Pool is fully exhausted.
+    expect(pool.stats().available).toBe(0);
+    expect(pool.stats().inUse).toBe(POOL_SIZE);
+
+    // Simulate timeout: abort all signals (as the invoker would).
+    for (const ac of abortCtrls) ac.abort();
+    await new Promise((r) => setTimeout(r, 20));
+
+    // All browsers should be released back to the pool.
+    expect(pool.stats().available).toBe(POOL_SIZE);
+    expect(pool._releaseLog).toHaveLength(POOL_SIZE);
+
+    // Next probe run can now acquire all 4 browsers.
+    const nextAbortCtrls = Array.from(
+      { length: POOL_SIZE },
+      () => new AbortController(),
+    );
+    const nextBrowsers = await Promise.all(
+      nextAbortCtrls.map((ac) => launcher(ac.signal)),
+    );
+    expect(pool.stats().available).toBe(0);
+    expect(pool.stats().inUse).toBe(POOL_SIZE);
+
+    // Clean up: normal close for the second run.
+    for (const b of nextBrowsers) await b.close();
+    expect(pool.stats().available).toBe(POOL_SIZE);
+
+    // Driver's finally block for the first run — all no-ops.
+    for (const b of browsers) await b.close();
+    // No extra releases — still POOL_SIZE total from the abort +
+    // POOL_SIZE from the second run's normal close.
+    expect(pool._releaseLog).toHaveLength(POOL_SIZE * 2);
+  });
+
+  it("no-abort path: browser released normally via close()", async () => {
+    const pool = makeFakePool(1);
+    const launcher = createPooledE2eDeepLauncher(
+      pool as unknown as import("../helpers/browser-pool.js").BrowserPool,
+    );
+
+    // No abort signal at all (backwards compat with defaultLauncher).
+    const browser = await launcher();
+    expect(pool.stats().available).toBe(0);
+
+    await browser.close();
+    expect(pool._releaseLog).toHaveLength(1);
+    expect(pool.stats().available).toBe(1);
+  });
+});
+
+// ---------------------------------------------------------------------
+// Deploy-churn grace window — verifies that the driver skips all
+// features for a service that deployed within DEPLOY_CHURN_GRACE_MS,
+// emitting green side rows with a skip note and an aggregate green.
+// ---------------------------------------------------------------------
+describe("e2e-deep deploy-churn grace window", () => {
+  beforeEach(() => {
+    __clearD5RegistryForTesting();
+  });
+
+  it("DEPLOY_CHURN_GRACE_MS is 120_000 (2 minutes)", () => {
+    expect(DEPLOY_CHURN_GRACE_MS).toBe(120_000);
+  });
+
+  it("skips all features when deployedAt is within the grace window", async () => {
+    registerD5Script(
+      makeScript({
+        featureTypes: ["agentic-chat"],
+        fixtureFile: "agentic-chat.json",
+        buildTurns: () => [{ input: "hello" }],
+      }),
+    );
+    registerD5Script(
+      makeScript({
+        featureTypes: ["tool-rendering"],
+        fixtureFile: "tool-rendering.json",
+        buildTurns: () => [{ input: "weather" }],
+      }),
+    );
+
+    let launched = false;
+    const driver = createE2eDeepDriver({
+      launcher: async () => {
+        launched = true;
+        const { browser } = makeBrowser([{}, {}]);
+        return browser;
+      },
+      scriptLoader: async () => {
+        /* no-op */
+      },
+    });
+    const { writer, writes } = mkWriter();
+
+    // Service deployed 30 seconds ago — well within the 120s grace.
+    const now = new Date("2026-04-25T00:02:00Z");
+    const deployedAt = new Date("2026-04-25T00:01:30Z").toISOString();
+
+    const result = await driver.run(
+      mkCtx(writer, {}, () => now),
+      {
+        key: "e2e-deep:showcase-langgraph-python",
+        publicUrl: "https://showcase-langgraph-python.example.com",
+        name: "showcase-langgraph-python",
+        features: ["agentic-chat", "tool-rendering"],
+        shape: "package",
+        deployedAt,
+      },
+    );
+
+    // No browser launched — the skip fires before chromium.
+    expect(launched).toBe(false);
+
+    expect(result.state).toBe("green");
+    const sig = result.signal as E2eDeepAggregateSignal;
+    expect(sig.total).toBe(2);
+    expect(sig.passed).toBe(0);
+    expect(sig.failed).toEqual([]);
+    expect(sig.skipped).toEqual(["agentic-chat", "tool-rendering"]);
+    expect(sig.note).toMatch(/deploy-churn skip/);
+    expect(sig.note).toMatch(/30s ago/);
+
+    // Both features emitted as green side rows with skip note.
+    expect(writes).toHaveLength(2);
+    for (const w of writes) {
+      expect(w.state).toBe("green");
+      const fSig = w.signal as E2eDeepFeatureSignal;
+      expect(fSig.note).toMatch(/skipped: deploy in progress/);
+      expect(fSig.note).toMatch(/30s ago/);
+    }
+  });
+
+  it("proceeds normally when deployedAt is older than the grace window", async () => {
+    registerD5Script(
+      makeScript({
+        featureTypes: ["agentic-chat"],
+        fixtureFile: "agentic-chat.json",
+        buildTurns: () => [{ input: "hello" }],
+      }),
+    );
+
+    const { browser } = makeBrowser([{}]);
+    const driver = createE2eDeepDriver({
+      launcher: async () => browser,
+      scriptLoader: async () => {
+        /* no-op */
+      },
+    });
+    const { writer, writes } = mkWriter();
+
+    // Service deployed 5 minutes ago — outside the 120s grace.
+    const now = new Date("2026-04-25T00:05:00Z");
+    const deployedAt = new Date("2026-04-25T00:00:00Z").toISOString();
+
+    const result = await driver.run(
+      mkCtx(writer, {}, () => now),
+      {
+        key: "e2e-deep:showcase-langgraph-python",
+        publicUrl: "https://showcase-langgraph-python.example.com",
+        name: "showcase-langgraph-python",
+        features: ["agentic-chat"],
+        shape: "package",
+        deployedAt,
+      },
+    );
+
+    // Normal execution — the feature ran.
+    expect(result.state).toBe("green");
+    const sig = result.signal as E2eDeepAggregateSignal;
+    expect(sig.passed).toBe(1);
+    expect(sig.note).toBeUndefined();
+
+    expect(writes).toHaveLength(1);
+    expect(writes[0]!.state).toBe("green");
+    const fSig = writes[0]!.signal as E2eDeepFeatureSignal;
+    expect(fSig.note).toBeUndefined();
+  });
+
+  it("proceeds normally when deployedAt is absent (backwards compat)", async () => {
+    registerD5Script(
+      makeScript({
+        featureTypes: ["agentic-chat"],
+        fixtureFile: "agentic-chat.json",
+        buildTurns: () => [{ input: "hello" }],
+      }),
+    );
+
+    const { browser } = makeBrowser([{}]);
+    const driver = createE2eDeepDriver({
+      launcher: async () => browser,
+      scriptLoader: async () => {
+        /* no-op */
+      },
+    });
+    const { writer, writes } = mkWriter();
+
+    const result = await driver.run(mkCtx(writer), {
+      key: "e2e-deep:showcase-langgraph-python",
+      publicUrl: "https://showcase-langgraph-python.example.com",
+      name: "showcase-langgraph-python",
+      features: ["agentic-chat"],
+      shape: "package",
+      // No deployedAt field — legacy input shape.
+    });
+
+    // Normal execution.
+    expect(result.state).toBe("green");
+    const sig = result.signal as E2eDeepAggregateSignal;
+    expect(sig.passed).toBe(1);
+  });
+
+  it("proceeds normally when deployedAt is an empty string", async () => {
+    registerD5Script(
+      makeScript({
+        featureTypes: ["agentic-chat"],
+        fixtureFile: "agentic-chat.json",
+        buildTurns: () => [{ input: "hello" }],
+      }),
+    );
+
+    const { browser } = makeBrowser([{}]);
+    const driver = createE2eDeepDriver({
+      launcher: async () => browser,
+      scriptLoader: async () => {
+        /* no-op */
+      },
+    });
+    const { writer } = mkWriter();
+
+    const result = await driver.run(mkCtx(writer), {
+      key: "e2e-deep:showcase-langgraph-python",
+      publicUrl: "https://showcase-langgraph-python.example.com",
+      name: "showcase-langgraph-python",
+      features: ["agentic-chat"],
+      shape: "package",
+      deployedAt: "",
+    });
+
+    expect(result.state).toBe("green");
+    const sig = result.signal as E2eDeepAggregateSignal;
+    expect(sig.passed).toBe(1);
+  });
+
+  it("proceeds normally when deployedAt is an unparseable string", async () => {
+    registerD5Script(
+      makeScript({
+        featureTypes: ["agentic-chat"],
+        fixtureFile: "agentic-chat.json",
+        buildTurns: () => [{ input: "hello" }],
+      }),
+    );
+
+    const { browser } = makeBrowser([{}]);
+    const driver = createE2eDeepDriver({
+      launcher: async () => browser,
+      scriptLoader: async () => {
+        /* no-op */
+      },
+    });
+    const { writer } = mkWriter();
+
+    const result = await driver.run(mkCtx(writer), {
+      key: "e2e-deep:showcase-langgraph-python",
+      publicUrl: "https://showcase-langgraph-python.example.com",
+      name: "showcase-langgraph-python",
+      features: ["agentic-chat"],
+      shape: "package",
+      deployedAt: "not-a-date",
+    });
+
+    // Unparseable date → no skip, normal execution.
+    expect(result.state).toBe("green");
+    const sig = result.signal as E2eDeepAggregateSignal;
+    expect(sig.passed).toBe(1);
+  });
+
+  it("skips at exactly 0s age (just deployed)", async () => {
+    registerD5Script(
+      makeScript({
+        featureTypes: ["agentic-chat"],
+        fixtureFile: "agentic-chat.json",
+      }),
+    );
+
+    let launched = false;
+    const driver = createE2eDeepDriver({
+      launcher: async () => {
+        launched = true;
+        const { browser } = makeBrowser([{}]);
+        return browser;
+      },
+      scriptLoader: async () => {
+        /* no-op */
+      },
+    });
+    const { writer, writes } = mkWriter();
+
+    const now = new Date("2026-04-25T00:00:00Z");
+
+    const result = await driver.run(
+      mkCtx(writer, {}, () => now),
+      {
+        key: "e2e-deep:showcase-mastra",
+        publicUrl: "https://showcase-mastra.example.com",
+        name: "showcase-mastra",
+        features: ["agentic-chat"],
+        shape: "package",
+        deployedAt: now.toISOString(), // ageMs === 0
+      },
+    );
+
+    expect(launched).toBe(false);
+    expect(result.state).toBe("green");
+    const sig = result.signal as E2eDeepAggregateSignal;
+    expect(sig.note).toMatch(/deploy-churn skip/);
+    expect(sig.note).toMatch(/0s ago/);
+
+    expect(writes).toHaveLength(1);
+    expect((writes[0]!.signal as E2eDeepFeatureSignal).note).toMatch(
+      /skipped: deploy in progress/,
+    );
+  });
+
+  it("does NOT skip when age equals exactly DEPLOY_CHURN_GRACE_MS (boundary)", async () => {
+    registerD5Script(
+      makeScript({
+        featureTypes: ["agentic-chat"],
+        fixtureFile: "agentic-chat.json",
+        buildTurns: () => [{ input: "hello" }],
+      }),
+    );
+
+    const { browser } = makeBrowser([{}]);
+    const driver = createE2eDeepDriver({
+      launcher: async () => browser,
+      scriptLoader: async () => {
+        /* no-op */
+      },
+    });
+    const { writer } = mkWriter();
+
+    // deployedAt exactly 120_000ms (2 min) ago — boundary, should NOT skip.
+    const now = new Date("2026-04-25T00:02:00Z");
+    const deployedAt = new Date(
+      now.getTime() - DEPLOY_CHURN_GRACE_MS,
+    ).toISOString();
+
+    const result = await driver.run(
+      mkCtx(writer, {}, () => now),
+      {
+        key: "e2e-deep:showcase-langgraph-python",
+        publicUrl: "https://showcase-langgraph-python.example.com",
+        name: "showcase-langgraph-python",
+        features: ["agentic-chat"],
+        shape: "package",
+        deployedAt,
+      },
+    );
+
+    // Should proceed normally (ageMs === DEPLOY_CHURN_GRACE_MS, not <).
+    expect(result.state).toBe("green");
+    const sig = result.signal as E2eDeepAggregateSignal;
+    expect(sig.passed).toBe(1);
+    expect(sig.note).toBeUndefined();
   });
 });

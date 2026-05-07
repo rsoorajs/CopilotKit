@@ -20,13 +20,17 @@ function parseJsonResult<T>(result: unknown): T {
 
 export default function ToolRenderingDemo() {
   return (
-    <CopilotKit runtimeUrl="/api/copilotkit" agent="tool-rendering">
+    <CopilotKit
+      runtimeUrl="/api/copilotkit-tool-rendering"
+      agent="tool-rendering"
+    >
       <Chat />
     </CopilotKit>
   );
 }
 
 function Chat() {
+  // @region[render-weather-tool]
   useRenderTool({
     name: "get_weather",
     parameters: z.object({
@@ -61,6 +65,7 @@ function Chat() {
       );
     },
   });
+  // @endregion[render-weather-tool]
 
   useConfigureSuggestions({
     suggestions: [

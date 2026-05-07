@@ -41,6 +41,79 @@ See `manifest.yaml` for the authoritative list.
   `onRequest` hook that rejects requests lacking a static Bearer token.
   Authenticated target is the Agno main agent at `/agui`.
 
+### Fourth pass (manifest fill — first half)
+
+- `cli-start` — informational demo entry (no route/agent) advertising the
+  copy-paste starter command for Agno. Mirrors the canonical
+  `langgraph-python` cli-start cell.
+- `gen-ui-tool-based` — already shipped as a haiku-renderer demo (frontend-only
+  via `useFrontendTool` + `render`); now declared in `manifest.yaml` so the
+  showcase picks it up. Wired to the main agent under the `gen-ui-tool-based`
+  alias in `src/app/api/copilotkit/route.ts`.
+- `hitl-in-chat-booking` — manifest entry pointing at the existing
+  `hitl-in-chat` time-picker booking surface (same files, distinct cell). The
+  Agno main agent's `book_call` external-execution tool already drives this
+  flow.
+
+### Fifth pass (manifest fill — second half)
+
+- `mcp-apps` — runtime `mcpApps.servers` middleware against the public
+  Excalidraw MCP server. Backed by a no-tools Agno agent
+  (`mcp_apps_agent.py`) mounted at `/mcp-apps/agui` so the LLM only sees the
+  MCP-injected toolset.
+- `open-gen-ui` / `open-gen-ui-advanced` — shared dedicated runtime
+  (`/api/copilotkit-ogui`) with the `openGenerativeUI` flag that wires the
+  middleware. Backed by a no-tools Agno agent (`open_gen_ui_agent.py`)
+  mounted at `/open-gen-ui/agui`. Advanced cell adds host-side sandbox
+  functions (`evaluateExpression`, `notifyHost`) on the provider.
+- `agent-config` — typed config object (tone/expertise/responseLength)
+  forwarded via the provider's `properties` prop. The Agno backend mounts a
+  custom AGUI handler at `/agent-config/agui` (`agent_server.py::
+_run_agent_config`) that reads `RunAgentInput.forwarded_props` and builds
+  a per-request Agno Agent from `agents.agent_config_agent.build_agent(...)`
+  before delegating to the stock AGUI stream mapper. Agno has no
+  LangGraph-style configurable channel, so the per-request factory is the
+  cleanest path to dynamic system prompts here.
+- `voice` — V2 runtime under `/api/copilotkit-voice` with a guarded
+  `TranscriptionServiceOpenAI`. Targets the Agno main agent at `/agui` for
+  the chat side; transcription is purely runtime-side.
+- `multimodal` — vision-capable Agno agent (`multimodal_agent.py`, gpt-4o)
+  on its own `/multimodal/agui` interface, scoped via
+  `/api/copilotkit-multimodal`. Image attachments forward natively; PDF
+  flattening helper (`_maybe_flatten_pdf_part`) lives next to the agent for
+  use if the AGUI converter needs assistance.
+- `byoc-hashbrown` — dedicated `/api/copilotkit-byoc-hashbrown` runtime +
+  `byoc_hashbrown_agent.py` whose system prompt steers the LLM toward the
+  hashbrown UI-kit envelope shape (`{ "ui": [...] }`).
+- `byoc-json-render` — dedicated `/api/copilotkit-byoc-json-render` runtime
+  - `byoc_json_render_agent.py` whose system prompt steers the LLM toward
+    the json-render flat element-tree spec (`{ root, elements }`).
+
+### Sixth pass (A2UI fixed schema)
+
+- `a2ui-fixed-schema` — dedicated `/api/copilotkit-a2ui-fixed-schema`
+  runtime with `injectA2UITool: false`. New `a2ui_fixed_agent.py`
+  mounted at `/a2ui-fixed-schema/agui` ships
+  `flight_schema.json` + `booked_schema.json` and a single
+  `display_flight` tool that emits an `a2ui_operations` container
+  _directly_ — no secondary LLM call — so the LLM only fills in data
+  (origin/destination/airline/price). `booked_schema.json` is shipped
+  as a sibling for when the SDK exposes per-button action handlers
+  for fixed-schema surfaces.
+
+### Seventh pass (A2UI dynamic schema)
+
+- `declarative-gen-ui` — dedicated `/api/copilotkit-declarative-gen-ui`
+  runtime with `injectA2UITool: false`. New `a2ui_dynamic_agent.py`
+  mounted at `/declarative-gen-ui/agui` owns its own `generate_a2ui`
+  tool. Unlike the main agent's hardcoded-catalog `generate_a2ui`, this
+  agent's tool reads the registered client catalog from
+  `run_context.session_state["copilotkit"]["context"]` and feeds it to
+  the secondary OpenAI client, so the rendered components stay in sync
+  with whatever catalog the frontend registers via `<CopilotKit
+a2ui={{ catalog }}>`. See `src/app/demos/declarative-gen-ui/README.md`
+  for the differences vs. the main-agent path.
+
 ### Third pass (state + multi-agent recovery)
 
 - `shared-state-read-write` — bidirectional shared state with the UI
@@ -105,10 +178,6 @@ follow-up parity pass rather than faked in.
   an Agno agent
 - `agent-config` — dedicated `/api/copilotkit-agent-config` runtime with typed
   config forwarding; needs Agno dynamic-system-prompt wiring per-request
-- `declarative-gen-ui` (A2UI dynamic) — dedicated runtime + frontend A2UI
-  catalog; the existing Agno `main` agent already exposes `generate_a2ui`,
-  but the declarative-gen-ui cell expects a different runtime surface
-- `a2ui-fixed-schema` — dedicated runtime + fixed-schema catalog
 - `mcp-apps` — requires Agno MCP client/server wiring; Agno has
   `agno.tools.mcp.MCPTools` but integration with the AGUI adapter's
   activity-message surface wasn't verified
