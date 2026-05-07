@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 
-// QA reference: qa/agentic-chat-reasoning.md
-// Demo source: src/app/demos/agentic-chat-reasoning/{page.tsx, reasoning-block.tsx}
+// QA reference: qa/reasoning-custom.md
+// Demo source: src/app/demos/reasoning-custom/{page.tsx, reasoning-block.tsx}
 //
 // The demo mounts a custom `reasoningMessage` slot (`ReasoningBlock`) that
 // renders an amber banner with `data-testid="reasoning-block"`. The label
@@ -22,11 +22,11 @@ import { test, expect } from "@playwright/test";
 
 const REASONING_PROMPT = "show your reasoning step by step";
 
-test.describe("Agentic Chat (Reasoning)", () => {
+test.describe("Reasoning: Custom", () => {
   test.setTimeout(120_000);
 
   test.beforeEach(async ({ page }) => {
-    await page.goto("/demos/agentic-chat-reasoning");
+    await page.goto("/demos/reasoning-custom");
   });
 
   test("page loads with chat input", async ({ page }) => {
