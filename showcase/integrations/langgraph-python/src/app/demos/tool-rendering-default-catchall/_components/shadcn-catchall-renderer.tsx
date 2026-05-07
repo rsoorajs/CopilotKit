@@ -1,55 +1,51 @@
 "use client";
 
 import React from "react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "./_components/card";
-import { Badge } from "./_components/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "./card";
+import { Badge } from "./badge";
 
-// ShadCN-styled catch-all renderer for the tool-rendering-custom-catchall
-// cell. A single wildcard renderer handles every tool call — name,
-// status, arguments, and result rendered inside a shadcn <Card />.
+// Catch-all tool-call renderer for the tool-rendering-default-catchall
+// demo, restyled with inline-cloned shadcn primitives. The demo's
+// conceptual point is unchanged: a SINGLE wildcard renderer paints every
+// tool call (no per-tool renderers). We just give that wildcard a
+// shadcn-flavored visual.
 
 export type CatchallToolStatus = "inProgress" | "executing" | "complete";
 
-export interface CustomCatchallRendererProps {
+export interface ShadcnCatchallRendererProps {
   name: string;
   status: CatchallToolStatus;
   parameters: unknown;
   result: string | undefined;
 }
 
-export function CustomCatchallRenderer({
+export function ShadcnCatchallRenderer({
   name,
   status,
   parameters,
   result,
-}: CustomCatchallRendererProps) {
+}: ShadcnCatchallRendererProps) {
   const parsedResult = parseResult(result);
   const done = status === "complete";
 
   return (
     <Card
-      data-testid="custom-catchall-card"
+      data-testid="shadcn-catchall-card"
       data-tool-name={name}
       data-status={status}
       className="my-3 overflow-hidden"
     >
       <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b border-neutral-200 bg-neutral-50/60 py-3">
         <div className="flex items-center gap-2">
+          <span className="text-[10px] font-medium uppercase tracking-wider text-neutral-500">
+            Tool
+          </span>
           <CardTitle
-            data-testid="custom-catchall-tool-name"
+            data-testid="shadcn-catchall-tool-name"
             className="font-mono text-sm text-neutral-900"
           >
             {name}
           </CardTitle>
-          <CardDescription className="text-[10px] uppercase tracking-wider text-neutral-500">
-            tool call
-          </CardDescription>
         </div>
         <StatusBadge status={status} />
       </CardHeader>
@@ -57,7 +53,7 @@ export function CustomCatchallRenderer({
       <CardContent className="grid gap-3 p-4 text-sm">
         <Section label="Arguments">
           <pre
-            data-testid="custom-catchall-args"
+            data-testid="shadcn-catchall-args"
             className="overflow-x-auto rounded-md border border-neutral-200 bg-neutral-50 p-2.5 font-mono text-xs text-neutral-900"
           >
             {safeStringify(parameters)}
@@ -67,7 +63,7 @@ export function CustomCatchallRenderer({
         <Section label="Result">
           {done ? (
             <pre
-              data-testid="custom-catchall-result"
+              data-testid="shadcn-catchall-result"
               className="overflow-x-auto rounded-md border border-emerald-200 bg-emerald-50 p-2.5 font-mono text-xs text-neutral-900"
             >
               {parsedResult !== undefined
@@ -103,13 +99,9 @@ function Section({
 }
 
 function StatusBadge({ status }: { status: CatchallToolStatus }) {
-  const { label, variant, dot } = describeStatus(status);
+  const { label, variant } = describeStatus(status);
   return (
-    <Badge data-testid="custom-catchall-status" variant={variant}>
-      <span
-        className={`inline-block h-1.5 w-1.5 rounded-full ${dot}`}
-        aria-hidden
-      />
+    <Badge data-testid="shadcn-catchall-status" variant={variant}>
       {label}
     </Badge>
   );
@@ -117,28 +109,15 @@ function StatusBadge({ status }: { status: CatchallToolStatus }) {
 
 function describeStatus(status: CatchallToolStatus): {
   label: string;
-  variant: "warning" | "secondary" | "success";
-  dot: string;
+  variant: "secondary" | "warning" | "success";
 } {
   switch (status) {
     case "inProgress":
-      return {
-        label: "streaming",
-        variant: "warning",
-        dot: "bg-amber-500 animate-pulse",
-      };
+      return { label: "streaming", variant: "warning" };
     case "executing":
-      return {
-        label: "running",
-        variant: "secondary",
-        dot: "bg-neutral-500 animate-pulse",
-      };
+      return { label: "running", variant: "secondary" };
     case "complete":
-      return {
-        label: "done",
-        variant: "success",
-        dot: "bg-emerald-500",
-      };
+      return { label: "done", variant: "success" };
   }
 }
 
