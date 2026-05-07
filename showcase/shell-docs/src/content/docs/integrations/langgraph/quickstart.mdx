@@ -48,18 +48,24 @@ Before you begin, you'll need the following:
                 ### Run our CLI
 
                 ```bash
-                # Python (default)
+                npx copilotkit@latest create
+                ```
+
+                The CLI walks you through:
+
+                - **Project name**
+                - **Enterprise Intelligence Platform** — persistent threads, observability, and the inspector. Choose **Yes** to scaffold a project pre-wired for the platform (the CLI walks you through sign-up, or you can [create an account](https://dashboard.operations.copilotkit.ai/?utm_source=docs&utm_medium=cta&utm_campaign=intelligence&utm_content=docs_cli_prompt) first), or **No** for a standard LangGraph setup.
+                - **Framework** — pick **LangGraph (Python)** or **LangGraph (JavaScript)** when prompted.
+
+                Or skip the prompts and pin a framework directly:
+
+                ```bash
+                # Python
                 npx copilotkit@latest create --framework langgraph-py
 
                 # JavaScript
                 npx copilotkit@latest create --framework langgraph-js
                 ```
-
-                The CLI prompts for a project name, then scaffolds the LangGraph starter pre-wired for CopilotKit.
-
-                <Callout type="info" title="Want persistent threads, observability, and the inspector?">
-                  Run `npx copilotkit@latest create --intelligence` instead to scaffold a LangGraph-Python project pre-wired for the [Enterprise Intelligence Platform](https://dashboard.operations.copilotkit.ai/?utm_source=docs&utm_medium=cta&utm_campaign=intelligence&utm_content=docs_cli_prompt). Threads support for other frameworks is coming soon.
-                </Callout>
             </Step>
             <Step>
                 ### Install dependencies
