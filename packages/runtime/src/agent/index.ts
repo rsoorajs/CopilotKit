@@ -51,6 +51,7 @@ import { jsonSchema as aiJsonSchema } from "ai";
 import { convertAISDKStream } from "./converters/aisdk";
 import { convertTanStackStream } from "./converters/tanstack";
 import type { StreamableHTTPClientTransportOptions } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
+import { INTELLIGENCE_USER_ID_HEADER } from "../v2/runtime/intelligence-platform/client";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
 import { randomUUID } from "@copilotkit/shared";
@@ -1200,29 +1201,29 @@ export class BuiltInAgent extends AbstractAgent {
               | { auth?: { copilotkitIntelligence?: unknown } }
               | undefined
           )?.auth;
-          const cki = auth?.copilotkitIntelligence as
+          const cpki = auth?.copilotkitIntelligence as
             | { userId?: unknown; apiKey?: unknown; mcpUrl?: unknown }
             | undefined;
-          const ckiUserId =
-            typeof cki?.userId === "string" ? cki.userId : undefined;
-          const ckiApiKey =
-            typeof cki?.apiKey === "string" ? cki.apiKey : undefined;
-          const ckiMcpUrl =
-            typeof cki?.mcpUrl === "string" ? cki.mcpUrl : undefined;
+          const cpkiUserId =
+            typeof cpki?.userId === "string" ? cpki.userId : undefined;
+          const cpkiApiKey =
+            typeof cpki?.apiKey === "string" ? cpki.apiKey : undefined;
+          const cpkiMcpUrl =
+            typeof cpki?.mcpUrl === "string" ? cpki.mcpUrl : undefined;
           if (
-            ckiUserId &&
-            ckiApiKey &&
-            ckiMcpUrl &&
-            !allMcpServers.some((s) => s.type === "http" && s.url === ckiMcpUrl)
+            cpkiUserId &&
+            cpkiApiKey &&
+            cpkiMcpUrl &&
+            !allMcpServers.some((s) => s.type === "http" && s.url === cpkiMcpUrl)
           ) {
             allMcpServers.push({
               type: "http",
-              url: ckiMcpUrl,
+              url: cpkiMcpUrl,
               options: {
                 fetch: async (req, init) => {
                   const headers = new Headers(init?.headers);
-                  headers.set("Authorization", `Bearer ${ckiApiKey}`);
-                  headers.set("X-Cpki-User-Id", ckiUserId);
+                  headers.set("Authorization", `Bearer ${cpkiApiKey}`);
+                  headers.set(INTELLIGENCE_USER_ID_HEADER, cpkiUserId);
                   return globalThis.fetch(req, { ...init, headers });
                 },
               },

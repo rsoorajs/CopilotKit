@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { BasicAgent } from "../../../../agent";
+import { INTELLIGENCE_USER_ID_HEADER } from "../client";
 import { LLMock, MCPMock } from "@copilotkit/aimock";
 import { streamText } from "ai";
 import {
@@ -128,7 +129,7 @@ describe("BuiltInAgent — Intelligence MCP auto-attach via forwardedProps", () 
       expect(recorder.records.length).toBeGreaterThan(0);
       for (const headers of recorder.records) {
         expect(headers["authorization"]).toBe("Bearer cpk-proj_short_long");
-        expect(headers["x-cpki-user-id"]).toBe("jordan-beamson");
+        expect(headers[INTELLIGENCE_USER_ID_HEADER]).toBe("jordan-beamson");
       }
     } finally {
       recorder.restore();
@@ -203,7 +204,7 @@ describe("BuiltInAgent — Intelligence MCP auto-attach via forwardedProps", () 
               userFetchCalls++;
               const h = new Headers(init?.headers ?? {});
               h.set("Authorization", "Bearer user-supplied");
-              h.set("X-Cpki-User-Id", "explicit-user");
+              h.set(INTELLIGENCE_USER_ID_HEADER, "explicit-user");
               return globalThis.fetch(input, { ...init, headers: h });
             },
           },
@@ -235,7 +236,7 @@ describe("BuiltInAgent — Intelligence MCP auto-attach via forwardedProps", () 
       // Only the user's fetch wrapper hit the wire — auto-attach skipped.
       for (const headers of recorder.records) {
         expect(headers["authorization"]).toBe("Bearer user-supplied");
-        expect(headers["x-cpki-user-id"]).toBe("explicit-user");
+        expect(headers[INTELLIGENCE_USER_ID_HEADER]).toBe("explicit-user");
       }
       expect(userFetchCalls).toBeGreaterThan(0);
     } finally {
