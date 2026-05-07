@@ -31,7 +31,9 @@ export function MetricCard({ label, value, trend }: MetricCardComponentProps) {
   );
 }
 
-function inferTrendDirection(trend: string | null | undefined): "up" | "down" | "neutral" {
+function inferTrendDirection(
+  trend: string | null | undefined,
+): "up" | "down" | "neutral" {
   const t = trend?.trim();
   if (!t) return "neutral";
   if (t.startsWith("+")) return "up";

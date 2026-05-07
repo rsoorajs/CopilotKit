@@ -28,8 +28,8 @@ export function DemoLayout({
           </h1>
           <p className="text-sm text-[#57575B] max-w-2xl">
             The UI writes preferences into agent state and reads back the
-            agent&apos;s scratch pad. Open the chat popup in the corner and
-            ask the agent to remember something.
+            agent&apos;s scratch pad. Open the chat popup in the corner and ask
+            the agent to remember something.
           </p>
         </header>
 

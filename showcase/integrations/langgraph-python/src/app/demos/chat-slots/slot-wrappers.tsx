@@ -95,7 +95,9 @@ export function CustomUserMessage(props: CopilotChatUserMessageProps) {
 // messageView.reasoningMessage
 // Only renders when the message stream contains reasoning content.
 // =====================================================================
-export function CustomReasoningMessage(props: CopilotChatReasoningMessageProps) {
+export function CustomReasoningMessage(
+  props: CopilotChatReasoningMessageProps,
+) {
   return (
     <SlotMarker
       color="rose"
@@ -194,11 +196,7 @@ export const CustomSuggestionContainer = React.forwardRef<
   React.HTMLAttributes<HTMLDivElement>
 >(function CustomSuggestionContainer(props, ref) {
   return (
-    <SlotMarker
-      color="cyan"
-      label="SuggestionView.Container"
-      className="my-2"
-    >
+    <SlotMarker color="cyan" label="SuggestionView.Container" className="my-2">
       <div ref={ref} {...props} />
     </SlotMarker>
   );

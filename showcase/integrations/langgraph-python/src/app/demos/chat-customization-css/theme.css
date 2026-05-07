@@ -51,11 +51,9 @@
     "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 
   --halcyon-shadow-soft:
-    0 1px 0 rgba(26, 23, 20, 0.04),
-    0 12px 32px -18px rgba(26, 23, 20, 0.18);
+    0 1px 0 rgba(26, 23, 20, 0.04), 0 12px 32px -18px rgba(26, 23, 20, 0.18);
   --halcyon-shadow-ember:
-    0 1px 0 rgba(196, 74, 31, 0.18),
-    0 14px 36px -16px rgba(196, 74, 31, 0.42);
+    0 1px 0 rgba(196, 74, 31, 0.18), 0 14px 36px -16px rgba(196, 74, 31, 0.42);
 }
 /* @endregion[design-tokens] */
 
@@ -268,21 +266,13 @@
   background: var(--halcyon-ember);
 }
 
-.chat-css-demo-scope
-  .copilotKitMessage.copilotKitAssistantMessage
-  .prose,
-.chat-css-demo-scope
-  .copilotKitMessage.copilotKitAssistantMessage
-  .prose p {
+.chat-css-demo-scope .copilotKitMessage.copilotKitAssistantMessage .prose,
+.chat-css-demo-scope .copilotKitMessage.copilotKitAssistantMessage .prose p {
   font-family: var(--halcyon-serif);
   font-size: inherit;
   color: inherit;
   line-height: 1.7;
-  font-feature-settings:
-    "ss01",
-    "ss02",
-    "ss03",
-    "kern";
+  font-feature-settings: "ss01", "ss02", "ss03", "kern";
   margin: 0 0 0.85em;
 }
 
@@ -301,22 +291,13 @@
   line-height: 1.15;
 }
 
-.chat-css-demo-scope
-  .copilotKitMessage.copilotKitAssistantMessage
-  .prose
-  h1 {
+.chat-css-demo-scope .copilotKitMessage.copilotKitAssistantMessage .prose h1 {
   font-size: 2rem;
 }
-.chat-css-demo-scope
-  .copilotKitMessage.copilotKitAssistantMessage
-  .prose
-  h2 {
+.chat-css-demo-scope .copilotKitMessage.copilotKitAssistantMessage .prose h2 {
   font-size: 1.55rem;
 }
-.chat-css-demo-scope
-  .copilotKitMessage.copilotKitAssistantMessage
-  .prose
-  h3 {
+.chat-css-demo-scope .copilotKitMessage.copilotKitAssistantMessage .prose h3 {
   font-size: 1.25rem;
 }
 
@@ -329,17 +310,15 @@
   padding-left: 1.4em;
 }
 
-.chat-css-demo-scope
-  .copilotKitMessage.copilotKitAssistantMessage
-  .prose
-  li {
+.chat-css-demo-scope .copilotKitMessage.copilotKitAssistantMessage .prose li {
   margin: 0.25em 0;
 }
 
 .chat-css-demo-scope
   .copilotKitMessage.copilotKitAssistantMessage
   .prose
-  ol > li::marker {
+  ol
+  > li::marker {
   color: var(--halcyon-ember);
   font-feature-settings: "tnum";
   font-weight: 500;
@@ -348,7 +327,8 @@
 .chat-css-demo-scope
   .copilotKitMessage.copilotKitAssistantMessage
   .prose
-  ul > li::marker {
+  ul
+  > li::marker {
   color: var(--halcyon-ember);
 }
 
@@ -381,10 +361,7 @@
 }
 
 /* Inline code — small ember chip on a tinted card. */
-.chat-css-demo-scope
-  .copilotKitMessage.copilotKitAssistantMessage
-  .prose
-  code {
+.chat-css-demo-scope .copilotKitMessage.copilotKitAssistantMessage .prose code {
   font-family: var(--halcyon-mono);
   font-size: 0.86em;
   font-weight: 500;
@@ -397,10 +374,7 @@
 
 /* Code block — dark ink card flipped against the parchment. The contrast
  * is deliberate; it reads like a code excerpt set in a printed book. */
-.chat-css-demo-scope
-  .copilotKitMessage.copilotKitAssistantMessage
-  .prose
-  pre,
+.chat-css-demo-scope .copilotKitMessage.copilotKitAssistantMessage .prose pre,
 .chat-css-demo-scope
   .copilotKitMessage.copilotKitAssistantMessage
   div[data-streamdown="code-block"]
@@ -431,10 +405,7 @@
 }
 
 /* Anchor links — ember underline in classic editorial style. */
-.chat-css-demo-scope
-  .copilotKitMessage.copilotKitAssistantMessage
-  .prose
-  a {
+.chat-css-demo-scope .copilotKitMessage.copilotKitAssistantMessage .prose a {
   color: var(--halcyon-ember);
   text-decoration-line: underline;
   text-decoration-color: color-mix(
@@ -455,10 +426,7 @@
 }
 
 /* Horizontal rule — short, centered, ornament-like. */
-.chat-css-demo-scope
-  .copilotKitMessage.copilotKitAssistantMessage
-  .prose
-  hr {
+.chat-css-demo-scope .copilotKitMessage.copilotKitAssistantMessage .prose hr {
   border: none;
   height: 1px;
   background: var(--halcyon-rule);

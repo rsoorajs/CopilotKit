@@ -2,12 +2,7 @@
 
 import React, { useState } from "react";
 import { Button } from "./_components/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "./_components/card";
+import { Card, CardContent, CardHeader, CardTitle } from "./_components/card";
 import { Checkbox } from "./_components/checkbox";
 import { Badge } from "./_components/badge";
 import type { Step } from "./step-selector";
@@ -68,9 +63,7 @@ export function StepsFeedback({
                           ? {
                               ...s,
                               status:
-                                s.status === "enabled"
-                                  ? "disabled"
-                                  : "enabled",
+                                s.status === "enabled" ? "disabled" : "enabled",
                             }
                           : s,
                       ),

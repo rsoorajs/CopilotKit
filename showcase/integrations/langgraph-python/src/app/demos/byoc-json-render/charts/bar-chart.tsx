@@ -63,7 +63,9 @@ export function BarChart({ title, description, data }: BarChartComponentProps) {
           {title}
         </h3>
         {description ? (
-          <p className="text-sm text-[var(--muted-foreground)]">{description}</p>
+          <p className="text-sm text-[var(--muted-foreground)]">
+            {description}
+          </p>
         ) : null}
       </div>
       <div className="p-6 pt-2">
@@ -73,7 +75,11 @@ export function BarChart({ title, description, data }: BarChartComponentProps) {
               data={data}
               margin={{ top: 12, right: 12, bottom: 4, left: -8 }}
             >
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke="var(--border)"
+                vertical={false}
+              />
               <XAxis
                 dataKey="label"
                 tick={{ fontSize: 12, fill: "var(--muted-foreground)" }}
@@ -98,7 +104,9 @@ export function BarChart({ title, description, data }: BarChartComponentProps) {
                 maxBarSize={48}
                 shape={(props: unknown) => {
                   const p = props as Record<string, unknown>;
-                  return <AnimatedBar {...p} isNew={isNew(p.index as number)} />;
+                  return (
+                    <AnimatedBar {...p} isNew={isNew(p.index as number)} />
+                  );
                 }}
               >
                 {data.map((_, i) => (

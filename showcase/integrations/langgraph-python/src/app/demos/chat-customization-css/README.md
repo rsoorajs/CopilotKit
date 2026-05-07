@@ -75,7 +75,7 @@ You'll see:
 - Fonts load from Google Fonts via `@import` at the top of `theme.css`
   so the demo is self-contained — copy the file into another project and
   the theme works end-to-end
-- Reach for slots (see `chat-slots`) when you need to change *what* a
+- Reach for slots (see `chat-slots`) when you need to change _what_ a
   piece renders, not just how it looks; reach for CSS — like this demo —
   when the default structure is fine and you only need a different
   visual identity

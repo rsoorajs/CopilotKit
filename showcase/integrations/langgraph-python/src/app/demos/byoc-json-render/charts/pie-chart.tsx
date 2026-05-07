@@ -13,7 +13,11 @@ export interface PieChartComponentProps {
   data: PieChartDatum[];
 }
 
-function DonutChart({ data, size = 240, strokeWidth = 40 }: {
+function DonutChart({
+  data,
+  size = 240,
+  strokeWidth = 40,
+}: {
   data: PieChartDatum[];
   size?: number;
   strokeWidth?: number;
@@ -25,10 +29,16 @@ function DonutChart({ data, size = 240, strokeWidth = 40 }: {
 
   let accumulated = 0;
   const slices = data.map((item, i) => {
-    const arc = (total > 0 ? (Number(item.value) || 0) / total : 0) * circumference;
+    const arc =
+      (total > 0 ? (Number(item.value) || 0) / total : 0) * circumference;
     const dashoffset = -accumulated;
     accumulated += arc;
-    return { arc, gap: circumference - arc, dashoffset, color: CHART_COLORS[i % CHART_COLORS.length] };
+    return {
+      arc,
+      gap: circumference - arc,
+      dashoffset,
+      color: CHART_COLORS[i % CHART_COLORS.length],
+    };
   });
 
   return (
@@ -38,7 +48,14 @@ function DonutChart({ data, size = 240, strokeWidth = 40 }: {
       className="block mx-auto"
       style={{ maxWidth: size, transform: "scaleX(-1)" }}
     >
-      <circle cx={center} cy={center} r={radius} fill="none" stroke="var(--secondary)" strokeWidth={strokeWidth} />
+      <circle
+        cx={center}
+        cy={center}
+        r={radius}
+        fill="none"
+        stroke="var(--secondary)"
+        strokeWidth={strokeWidth}
+      />
       {slices.map((s, i) => (
         <circle
           key={i}
@@ -60,7 +77,9 @@ function DonutChart({ data, size = 240, strokeWidth = 40 }: {
 
 export function PieChart({ title, description, data }: PieChartComponentProps) {
   const hasData = Array.isArray(data) && data.length > 0;
-  const total = hasData ? data.reduce((sum, d) => sum + (Number(d.value) || 0), 0) : 0;
+  const total = hasData
+    ? data.reduce((sum, d) => sum + (Number(d.value) || 0), 0)
+    : 0;
 
   return (
     <div
@@ -72,7 +91,9 @@ export function PieChart({ title, description, data }: PieChartComponentProps) {
           {title}
         </h3>
         {description ? (
-          <p className="text-sm text-[var(--muted-foreground)]">{description}</p>
+          <p className="text-sm text-[var(--muted-foreground)]">
+            {description}
+          </p>
         ) : null}
       </div>
       <div className="p-6 pt-4">
@@ -87,9 +108,13 @@ export function PieChart({ title, description, data }: PieChartComponentProps) {
                   <div key={i} className="flex items-center gap-3 text-sm">
                     <span
                       className="inline-block h-3 w-3 rounded-full shrink-0"
-                      style={{ backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }}
+                      style={{
+                        backgroundColor: CHART_COLORS[i % CHART_COLORS.length],
+                      }}
                     />
-                    <span className="flex-1 text-[var(--foreground)] truncate">{item.label}</span>
+                    <span className="flex-1 text-[var(--foreground)] truncate">
+                      {item.label}
+                    </span>
                     <span className="text-[var(--muted-foreground)] tabular-nums">
                       {val.toLocaleString()}
                     </span>

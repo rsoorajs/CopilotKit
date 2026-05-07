@@ -11,7 +11,9 @@ import type { JsonRenderSpec } from "./types";
 
 const ALLOWED_TYPES = new Set(["MetricCard", "BarChart", "PieChart"]);
 
-export function JsonRenderAssistantMessage(props: CopilotChatAssistantMessageProps) {
+export function JsonRenderAssistantMessage(
+  props: CopilotChatAssistantMessageProps,
+) {
   const content =
     typeof props.message.content === "string" ? props.message.content : "";
   const spec = useMemo(() => parseSpec(content), [content]);
@@ -77,13 +79,19 @@ function extractJsonObject(raw: string): string | null {
   let escape = false;
   for (let i = start; i < candidate.length; i++) {
     const ch = candidate[i];
-    if (escape) { escape = false; continue; }
+    if (escape) {
+      escape = false;
+      continue;
+    }
     if (inString) {
       if (ch === "\\") escape = true;
       else if (ch === '"') inString = false;
       continue;
     }
-    if (ch === '"') { inString = true; continue; }
+    if (ch === '"') {
+      inString = true;
+      continue;
+    }
     if (ch === "{") depth++;
     else if (ch === "}" && --depth === 0) return candidate.slice(start, i + 1);
   }

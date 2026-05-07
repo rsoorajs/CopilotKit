@@ -85,5 +85,4 @@ test.describe("A2UI Fixed Schema (flight card)", () => {
       { timeout: 10_000 },
     );
   });
-
 });

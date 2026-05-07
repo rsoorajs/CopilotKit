@@ -38,7 +38,10 @@ export function GenericToolCard({
         </CardTitle>
         {!isComplete && (
           <CardAction>
-            <Badge variant="secondary" className="gap-1 text-[10px] font-normal">
+            <Badge
+              variant="secondary"
+              className="gap-1 text-[10px] font-normal"
+            >
               <Loader2 className="h-3 w-3 animate-spin" />
               running
             </Badge>

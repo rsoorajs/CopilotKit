@@ -18,10 +18,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
-const palette: Record<
-  string,
-  { card: string; chip: string; text: string }
-> = {
+const palette: Record<string, { card: string; chip: string; text: string }> = {
   yellow: {
     card: "border-yellow-300 bg-yellow-50 dark:border-yellow-900 dark:bg-yellow-950/40",
     chip: "bg-yellow-200 text-yellow-900 dark:bg-yellow-800 dark:text-yellow-50",

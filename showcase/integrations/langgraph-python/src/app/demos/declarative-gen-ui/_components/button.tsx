@@ -31,8 +31,7 @@ const SIZE_CLASSES: Record<ButtonSize, string> = {
   lg: "h-10 px-6 text-sm rounded-md",
 };
 
-export interface ButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
   size?: ButtonSize;
 }

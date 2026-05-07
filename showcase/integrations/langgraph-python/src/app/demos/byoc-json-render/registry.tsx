@@ -13,7 +13,11 @@ export const { registry } = defineRegistry(catalog, {
         {children}
       </div>
     ),
-    BarChart: ({ props }) => <BarChart {...(props as BarChartComponentProps)} />,
-    PieChart: ({ props }) => <PieChart {...(props as PieChartComponentProps)} />,
+    BarChart: ({ props }) => (
+      <BarChart {...(props as BarChartComponentProps)} />
+    ),
+    PieChart: ({ props }) => (
+      <PieChart {...(props as PieChartComponentProps)} />
+    ),
   },
 });

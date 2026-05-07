@@ -19,7 +19,8 @@ type MultimodalPart =
   | { type: "text"; text: string }
   | {
       type: "image" | "audio" | "video" | "document";
-      source: { type: "data"; value: string; mimeType: string }
+      source:
+        | { type: "data"; value: string; mimeType: string }
         | { type: "url"; value: string; mimeType?: string };
       metadata?: { filename?: string; size?: number } & Record<string, unknown>;
     };

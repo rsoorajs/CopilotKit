@@ -60,9 +60,7 @@ export function MessageList({ messages }: { messages: Message[] }) {
 
         if (m.role === "assistant") {
           const toolCalls =
-            "toolCalls" in m && Array.isArray(m.toolCalls)
-              ? m.toolCalls
-              : [];
+            "toolCalls" in m && Array.isArray(m.toolCalls) ? m.toolCalls : [];
           return (
             <AssistantBubble
               key={m.id}

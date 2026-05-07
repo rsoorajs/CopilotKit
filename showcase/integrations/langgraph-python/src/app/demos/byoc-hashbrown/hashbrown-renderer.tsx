@@ -38,14 +38,30 @@ function parseChartData(data: string): ChartSlice[] | null {
   }
 }
 
-function PieChartWithStringData({ title, data }: { title: string; data: string }) {
+function PieChartWithStringData({
+  title,
+  data,
+}: {
+  title: string;
+  data: string;
+}) {
   const parsed = parseChartData(data);
-  return parsed ? <PieChart title={title} description="" data={parsed} /> : null;
+  return parsed ? (
+    <PieChart title={title} description="" data={parsed} />
+  ) : null;
 }
 
-function BarChartWithStringData({ title, data }: { title: string; data: string }) {
+function BarChartWithStringData({
+  title,
+  data,
+}: {
+  title: string;
+  data: string;
+}) {
   const parsed = parseChartData(data);
-  return parsed ? <BarChart title={title} description="" data={parsed} /> : null;
+  return parsed ? (
+    <BarChart title={title} description="" data={parsed} />
+  ) : null;
 }
 
 const STAGE_COLORS: Record<SalesStage, string> = {
@@ -171,7 +187,11 @@ function useSalesDashboardKit() {
 type Kit = ReturnType<typeof useSalesDashboardKit>;
 const HashBrownKitContext = createContext<Kit | null>(null);
 
-export function HashBrownDashboard({ children }: { children?: React.ReactNode }) {
+export function HashBrownDashboard({
+  children,
+}: {
+  children?: React.ReactNode;
+}) {
   const kit = useSalesDashboardKit();
   return (
     <HashBrownKitContext.Provider value={kit}>
@@ -211,7 +231,9 @@ export function HashBrownRenderMessage({
 }) {
   const kit = useContext(HashBrownKitContext);
   if (!kit)
-    throw new Error("HashBrownRenderMessage must be used within HashBrownDashboard");
+    throw new Error(
+      "HashBrownRenderMessage must be used within HashBrownDashboard",
+    );
   if (message.role !== "assistant") return null;
   return <AssistantMessage content={message.content ?? ""} kit={kit} />;
 }

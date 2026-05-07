@@ -14,12 +14,12 @@ export function MainContent() {
           Popup demo
         </h1>
         <p className="max-w-lg text-base leading-relaxed text-muted-foreground">
-          The pre-built <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-sm">
+          The pre-built{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-sm">
             &lt;CopilotPopup /&gt;
           </code>{" "}
-          floats above the page. A launcher bubble sits in the corner and
-          opens an overlay chat — your existing layout keeps its shape
-          underneath.
+          floats above the page. A launcher bubble sits in the corner and opens
+          an overlay chat — your existing layout keeps its shape underneath.
         </p>
       </div>
     </main>

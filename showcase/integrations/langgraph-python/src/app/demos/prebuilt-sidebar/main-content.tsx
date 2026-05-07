@@ -14,7 +14,8 @@ export function MainContent() {
           Sidebar demo
         </h1>
         <p className="max-w-lg text-base leading-relaxed text-muted-foreground">
-          The pre-built <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-sm">
+          The pre-built{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-sm">
             &lt;CopilotSidebar /&gt;
           </code>{" "}
           docks to the edge of the viewport and pushes this page&apos;s content

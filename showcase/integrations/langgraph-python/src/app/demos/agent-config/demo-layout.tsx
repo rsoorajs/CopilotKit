@@ -28,7 +28,10 @@ export function DemoLayout({
         onResponseLengthChange={onResponseLengthChange}
       />
       <div className="flex-1 overflow-hidden rounded-md border border-[var(--border)]">
-        <CopilotChat agentId="agent-config-demo" className="h-full rounded-md" />
+        <CopilotChat
+          agentId="agent-config-demo"
+          className="h-full rounded-md"
+        />
       </div>
     </div>
   );

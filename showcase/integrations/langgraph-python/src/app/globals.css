@@ -121,7 +121,9 @@ body {
 
 .demo-card:hover {
   border-color: color-mix(in oklab, var(--ring) 70%, var(--border));
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(0, 0, 0, 0.04);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.04),
+    0 4px 16px rgba(0, 0, 0, 0.04);
   transform: translateY(-1px);
   background: var(--card);
 }

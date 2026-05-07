@@ -26,8 +26,7 @@ const sizeClasses: Record<Size, string> = {
   lg: "h-11 rounded-md px-6",
 };
 
-export interface ButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant;
   size?: Size;
 }
