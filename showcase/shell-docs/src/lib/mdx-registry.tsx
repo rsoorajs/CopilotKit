@@ -167,7 +167,11 @@ export const docsComponents = {
     // `getDocsFolder` performs the same translation used elsewhere in
     // shell-docs so both URL variants resolve to the right viewer entry.
     const upstreamFramework = getDocsFolder(integration);
-    const codeUrl = `https://feature-viewer.copilotkit.ai/${upstreamFramework}/feature/${demo}?view=code&sidebar=false&codeLayout=tabs`;
+    // Feature-viewer slugs are underscore-form (`agentic_chat`,
+    // `human_in_the_loop`); the registry uses dash-form (`agentic-chat`).
+    // Translate so the Code iframe resolves.
+    const codeFeatureSlug = demo.replace(/-/g, "_");
+    const codeUrl = `https://feature-viewer.copilotkit.ai/${upstreamFramework}/feature/${codeFeatureSlug}?view=code&sidebar=false&codeLayout=tabs`;
     const iframeStyle: React.CSSProperties = {
       width: "100%",
       height: "500px",
